@@ -1,0 +1,151 @@
+---
+alwaysApply: true
+description: Audit logging system for tracking all system actions with user context and change history
+---
+
+# Audit Logging System
+
+## Overview
+Complete audit trail system tracking all system actions with user, timestamp, IP address, and change details.
+
+## Components
+
+### 1. AuditLog Model
+**Location**: `app/Models/AuditLog.php`
+**Fields**:
+- `user_id` - Who performed the action
+- `action` - What was done (created, updated, deleted, login_success, etc.)
+- `model_type` - Which model was affected
+- `model_id` - Which record was affected
+- `old_values` - JSON of previous values
+- `new_values` - JSON of new values
+- `ip_address` - Request IP
+- `user_agent` - Browser/client info
+
+### 2. Auditable Trait
+**Location**: `app/Traits/Auditable.php`
+**Purpose**: Automatically log model changes
+
+**Usage**:
+```php
+use App\Traits\Auditable;
+
+class Product extends Model
+{
+    use Auditable;
+}
+```
+
+**What it logs**:
+- Model creation (all attributes)
+- Model updates (changed attributes only)
+- Model deletion (all attributes)
+
+### 3. AuditLogService
+**Location**: `app/Services/AuditLogService.php`
+**Purpose**: Centralized logging methods
+
+**Key Methods**:
+```php
+// Generic logging
+AuditLogService::log(
+    action: 'custom_action',
+    modelType: Product::class,
+    modelId: $product->id,
+    oldValues: ['price' => 100],
+    newValues: ['price' => 120]
+);
+
+// Authentication logging
+AuditLogService::logAuthAttempt($email, $success, $reason);
+AuditLogService::logLogout();
+
+// Inventory logging
+AuditLogService::logInventoryAdjustment($productId, $oldQty, $newQty, $reason);
+```
+
+### 4. AuditLogMiddleware
+**Location**: `app/Http/Middleware/AuditLogMiddleware.php`
+**Purpose**: Log HTTP requests to admin routes
+
+**What it logs**:
+- POST, PUT, PATCH, DELETE requests
+- Only on `/admin/*` routes
+- URL, method, status code
+
+## When to Use Each Method
+
+### Automatic (Auditable Trait)
+Use for standard CRUD operations on models:
+- Product changes
+- Category changes
+- User profile updates
+
+### Manual (AuditLogService)
+Use for:
+- Authentication events
+- Custom business operations
+- Inventory adjustments
+- Order status changes
+- Actions not tied to a single model
+
+### Middleware (AuditLogMiddleware)
+Automatically logs all admin HTTP operations.
+
+## Querying Audit Logs
+
+### Get logs for a specific model
+```php
+$product = Product::find($id);
+$logs = $product->auditLogs()->latest()->get();
+```
+
+### Get logs by user
+```php
+$logs = AuditLog::where('user_id', $userId)
+    ->latest()
+    ->paginate(20);
+```
+
+### Get logs by action type
+```php
+$logs = AuditLog::where('action', 'login_failed')
+    ->where('created_at', '>=', now()->subDay())
+    ->get();
+```
+
+### Get logs for specific model type
+```php
+$logs = AuditLog::where('model_type', Product::class)
+    ->where('action', 'updated')
+    ->latest()
+    ->get();
+```
+
+## Best Practices
+
+1. **Always log sensitive operations**:
+   - Authentication attempts
+   - Inventory changes
+   - Order status changes
+   - Admin actions
+
+2. **Include context**:
+   - Use descriptive action names
+   - Store relevant old/new values
+   - Include reason codes when applicable
+
+3. **Don't log sensitive data**:
+   - Passwords (excluded by Auditable trait)
+   - Remember tokens
+   - API keys
+
+4. **Performance considerations**:
+   - Audit logs are created asynchronously where possible
+   - Index on `created_at`, `user_id`, `model_type` for fast queries
+   - Consider archiving old logs periodically
+
+5. **Compliance**:
+   - Audit logs help meet regulatory requirements
+   - Retain logs according to business/legal requirements
+   - Protect audit logs from unauthorized modification

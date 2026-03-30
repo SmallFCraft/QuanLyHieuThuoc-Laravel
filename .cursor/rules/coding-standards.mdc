@@ -1,0 +1,100 @@
+---
+alwaysApply: true
+description: Coding standards and conventions for Laravel project including naming, documentation, and best practices
+---
+
+# Coding Standards & Conventions
+
+## Naming Conventions
+- **Classes**: PascalCase (e.g., `CheckoutService`, `ProductController`)
+- **Methods/Properties**: camelCase (e.g., `processCheckout`, `totalAmount`)
+- **Database Columns**: snake_case (e.g., `stock_quantity`, `expiration_date`)
+- **Routes**: kebab-case (e.g., `/admin/products`, `/checkout/process`)
+
+## Code Documentation
+- PHPDoc blocks required on all public methods
+- Include `@param` and `@return` type hints
+- Add brief description of method purpose
+- Document exceptions with `@throws`
+
+Example:
+```php
+/**
+ * Process checkout with transaction safety.
+ *
+ * @param array $cartItems
+ * @param int $userId
+ * @param array $shippingInfo
+ * @return Order
+ * @throws \Exception
+ */
+public function processCheckout(array $cartItems, int $userId, array $shippingInfo): Order
+```
+
+## Type Hints
+- Always use full type hints on method parameters and return types
+- Use nullable types when appropriate (`?string`, `?int`)
+- Use array type hints with PHPDoc for structure (`array<int, string>`)
+
+## Service Layer Pattern
+- Business logic belongs in Services, not Controllers
+- Controllers should be thin: validate input, call service, return response
+- Services use dependency injection for testability
+- Use transactions for multi-step operations
+
+Example:
+```php
+// Controller
+public function process(Request $request)
+{
+    $validated = $request->validate([...]);
+    $order = $this->checkoutService->processCheckout(...);
+    return redirect()->route('checkout.success', $order->id);
+}
+
+// Service
+public function processCheckout(...): Order
+{
+    DB::beginTransaction();
+    try {
+        // Business logic here
+        DB::commit();
+        return $order;
+    } catch (\Exception $e) {
+        DB::rollBack();
+        throw $e;
+    }
+}
+```
+
+## Error Handling
+- Use try-catch blocks for operations that can fail
+- Log errors with context using `Log::error()`
+- Throw exceptions with user-friendly Vietnamese messages
+- Use specific exception types when appropriate
+
+## Validation
+- Use Form Request classes for complex validation
+- Custom Vietnamese validation messages
+- Validate at controller level before service calls
+- Re-validate critical data in services (defense in depth)
+
+## Database Operations
+- Use `lockForUpdate()` for inventory operations
+- Wrap multi-step operations in `DB::transaction()`
+- Use Eloquent relationships instead of manual joins
+- Add indexes on frequently queried columns
+
+## Security Best Practices
+- Never trust user input - always validate
+- Use parameterized queries (Eloquent does this)
+- Implement rate limiting on sensitive endpoints
+- Log all admin operations via AuditLogMiddleware
+- Use middleware for authorization checks
+- Soft delete instead of hard delete for data retention
+
+## Code Organization
+- Group related methods logically
+- Private helper methods at end of class
+- Keep methods focused and single-purpose
+- Extract complex logic into separate methods
