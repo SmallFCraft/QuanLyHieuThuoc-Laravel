@@ -1,6 +1,8 @@
 @import 'bootstrap/dist/css/bootstrap.min.css';
 /* Import Glassmorphism Design System */
 @import './glassmorphism.css';
+/* Import Search Autocomplete Styles */
+@import './search-autocomplete.css';
 
 @tailwind base;
 @tailwind components;

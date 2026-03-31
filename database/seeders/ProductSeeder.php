@@ -66,6 +66,8 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 500,
                 'reorder_point' => 100,
                 'batch_number' => 'PAR-2024-001',
+                'image' => 'products/medicine_01.jpg',
+                'image' => 'products/medicine_01.jpg',
             ],
             [
                 'category_id' => $painRelief,
@@ -77,6 +79,8 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 300,
                 'reorder_point' => 80,
                 'batch_number' => 'IBU-2024-001',
+                'image' => 'products/medicine_02.jpg',
+                'image' => 'products/medicine_02.jpg',
             ],
             [
                 'category_id' => $painRelief,
@@ -88,6 +92,8 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 400,
                 'reorder_point' => 100,
                 'batch_number' => 'ASP-2024-001',
+                'image' => 'products/medicine_03.jpg',
+                'image' => 'products/medicine_03.jpg',
             ],
             [
                 'category_id' => $painRelief,
@@ -99,6 +105,8 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 200,
                 'reorder_point' => 50,
                 'batch_number' => 'EFF-2024-001',
+                'image' => 'products/medicine_04.jpg',
+                'image' => 'products/medicine_04.jpg',
             ],
             [
                 'category_id' => $painRelief,
@@ -110,6 +118,8 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 350,
                 'reorder_point' => 90,
                 'batch_number' => 'HAP-2024-001',
+                'image' => 'products/medicine_05.jpg',
+                'image' => 'products/medicine_05.jpg',
             ],
             [
                 'category_id' => $painRelief,
@@ -121,6 +131,8 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 250,
                 'reorder_point' => 70,
                 'batch_number' => 'DIC-2024-001',
+                'image' => 'products/medicine_06.jpg',
+                'image' => 'products/medicine_06.jpg',
             ],
             [
                 'category_id' => $painRelief,
@@ -132,6 +144,8 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 180,
                 'reorder_point' => 60,
                 'batch_number' => 'MEL-2024-001',
+                'image' => 'products/medicine_07.jpg',
+                'image' => 'products/medicine_07.jpg',
             ],
             [
                 'category_id' => $painRelief,
@@ -143,6 +157,8 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 150,
                 'reorder_point' => 50,
                 'batch_number' => 'CEL-2024-001',
+                'image' => 'products/medicine_08.jpg',
+                'image' => 'products/medicine_08.jpg',
             ],
             [
                 'category_id' => $painRelief,
@@ -154,6 +170,8 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 220,
                 'reorder_point' => 65,
                 'batch_number' => 'KET-2024-001',
+                'image' => 'products/medicine_09.jpg',
+                'image' => 'products/medicine_09.jpg',
             ],
             [
                 'category_id' => $painRelief,
@@ -165,6 +183,8 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 280,
                 'reorder_point' => 75,
                 'batch_number' => 'NAP-2024-001',
+                'image' => 'products/medicine_10.jpg',
+                'image' => 'products/medicine_10.jpg',
             ],
 
             // Category 2: Kháng sinh (10 products)
@@ -178,6 +198,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 400,
                 'reorder_point' => 100,
                 'batch_number' => 'AMO-2024-001',
+                'image' => 'products/medicine_11.jpg',
             ],
             [
                 'category_id' => $antibiotics,
@@ -189,6 +210,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 250,
                 'reorder_point' => 70,
                 'batch_number' => 'AUG-2024-001',
+                'image' => 'products/medicine_12.jpg',
             ],
             [
                 'category_id' => $antibiotics,
@@ -200,6 +222,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 180,
                 'reorder_point' => 60,
                 'batch_number' => 'CEF-2024-001',
+                'image' => 'products/medicine_13.jpg',
             ],
             [
                 'category_id' => $antibiotics,
@@ -211,6 +234,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 150,
                 'reorder_point' => 50,
                 'batch_number' => 'AZI-2024-001',
+                'image' => 'products/medicine_14.jpg',
             ],
             [
                 'category_id' => $antibiotics,
@@ -222,6 +246,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 200,
                 'reorder_point' => 65,
                 'batch_number' => 'CIP-2024-001',
+                'image' => 'products/medicine_15.jpg',
             ],
             [
                 'category_id' => $antibiotics,
@@ -233,6 +258,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 120,
                 'reorder_point' => 40,
                 'batch_number' => 'LEV-2024-001',
+                'image' => 'products/medicine_16.jpg',
             ],
             [
                 'category_id' => $antibiotics,
@@ -244,6 +270,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 300,
                 'reorder_point' => 80,
                 'batch_number' => 'MET-2024-001',
+                'image' => 'products/medicine_17.jpg',
             ],
             [
                 'category_id' => $antibiotics,
@@ -255,6 +282,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 100,
                 'reorder_point' => 35,
                 'batch_number' => 'CLA-2024-001',
+                'image' => 'products/medicine_18.jpg',
             ],
             [
                 'category_id' => $antibiotics,
@@ -266,6 +294,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 280,
                 'reorder_point' => 75,
                 'batch_number' => 'CEP-2024-001',
+                'image' => 'products/medicine_19.jpg',
             ],
             [
                 'category_id' => $antibiotics,
@@ -277,6 +306,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 220,
                 'reorder_point' => 60,
                 'batch_number' => 'DOX-2024-001',
+                'image' => 'products/medicine_20.jpg',
             ],
 
             // Category 3: Vitamin và khoáng chất (10 products)
@@ -290,6 +320,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 500,
                 'reorder_point' => 120,
                 'batch_number' => 'VTC-2024-001',
+                'image' => 'products/medicine_21.jpg',
             ],
             [
                 'category_id' => $vitamins,
@@ -301,6 +332,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 350,
                 'reorder_point' => 90,
                 'batch_number' => 'VTB-2024-001',
+                'image' => 'products/medicine_22.jpg',
             ],
             [
                 'category_id' => $vitamins,
@@ -312,6 +344,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 300,
                 'reorder_point' => 80,
                 'batch_number' => 'CAL-2024-001',
+                'image' => 'products/medicine_23.jpg',
             ],
             [
                 'category_id' => $vitamins,
@@ -323,6 +356,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 250,
                 'reorder_point' => 70,
                 'batch_number' => 'OME-2024-001',
+                'image' => 'products/medicine_24.jpg',
             ],
             [
                 'category_id' => $vitamins,
@@ -334,6 +368,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 400,
                 'reorder_point' => 100,
                 'batch_number' => 'MUL-2024-001',
+                'image' => 'products/medicine_25.jpg',
             ],
             [
                 'category_id' => $vitamins,
@@ -345,6 +380,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 280,
                 'reorder_point' => 75,
                 'batch_number' => 'VTE-2024-001',
+                'image' => 'products/medicine_26.jpg',
             ],
             [
                 'category_id' => $vitamins,
@@ -356,6 +392,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 320,
                 'reorder_point' => 85,
                 'batch_number' => 'ZIN-2024-001',
+                'image' => 'products/medicine_27.jpg',
             ],
             [
                 'category_id' => $vitamins,
@@ -367,6 +404,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 260,
                 'reorder_point' => 70,
                 'batch_number' => 'IRO-2024-001',
+                'image' => 'products/medicine_28.jpg',
             ],
             [
                 'category_id' => $vitamins,
@@ -378,6 +416,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 200,
                 'reorder_point' => 60,
                 'batch_number' => 'MAG-2024-001',
+                'image' => 'products/medicine_29.jpg',
             ],
             [
                 'category_id' => $vitamins,
@@ -389,6 +428,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 150,
                 'reorder_point' => 50,
                 'batch_number' => 'COQ-2024-001',
+                'image' => 'products/medicine_30.jpg',
             ],
 
             // Category 4: Thuốc tiêu hóa (10 products)
@@ -402,6 +442,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 350,
                 'reorder_point' => 90,
                 'batch_number' => 'OME-2024-002',
+                'image' => 'products/medicine_31.jpg',
             ],
             [
                 'category_id' => $digestive,
@@ -413,6 +454,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 200,
                 'reorder_point' => 60,
                 'batch_number' => 'ESO-2024-001',
+                'image' => 'products/medicine_32.jpg',
             ],
             [
                 'category_id' => $digestive,
@@ -424,6 +466,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 400,
                 'reorder_point' => 100,
                 'batch_number' => 'DOM-2024-001',
+                'image' => 'products/medicine_33.jpg',
             ],
             [
                 'category_id' => $digestive,
@@ -435,6 +478,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 300,
                 'reorder_point' => 80,
                 'batch_number' => 'SME-2024-001',
+                'image' => 'products/medicine_34.jpg',
             ],
             [
                 'category_id' => $digestive,
@@ -446,6 +490,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 280,
                 'reorder_point' => 75,
                 'batch_number' => 'LOP-2024-001',
+                'image' => 'products/medicine_35.jpg',
             ],
             [
                 'category_id' => $digestive,
@@ -457,6 +502,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 250,
                 'reorder_point' => 70,
                 'batch_number' => 'BIS-2024-001',
+                'image' => 'products/medicine_36.jpg',
             ],
             [
                 'category_id' => $digestive,
@@ -468,6 +514,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 100,
                 'reorder_point' => 30,
                 'batch_number' => 'LAC-2024-001',
+                'image' => 'products/medicine_37.jpg',
             ],
             [
                 'category_id' => $digestive,
@@ -479,6 +526,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 320,
                 'reorder_point' => 85,
                 'batch_number' => 'RAN-2024-001',
+                'image' => 'products/medicine_38.jpg',
             ],
             [
                 'category_id' => $digestive,
@@ -490,6 +538,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 180,
                 'reorder_point' => 55,
                 'batch_number' => 'PRO-2024-001',
+                'image' => 'products/medicine_39.jpg',
             ],
             [
                 'category_id' => $digestive,
@@ -501,6 +550,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 260,
                 'reorder_point' => 70,
                 'batch_number' => 'SIM-2024-001',
+                'image' => 'products/medicine_40.jpg',
             ],
 
             // Category 5: Thuốc tim mạch (10 products)
@@ -514,6 +564,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 400,
                 'reorder_point' => 100,
                 'batch_number' => 'AML-2024-001',
+                'image' => 'products/medicine_41.jpg',
             ],
             [
                 'category_id' => $cardiovascular,
@@ -525,6 +576,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 350,
                 'reorder_point' => 90,
                 'batch_number' => 'LOS-2024-001',
+                'image' => 'products/medicine_42.jpg',
             ],
             [
                 'category_id' => $cardiovascular,
@@ -536,6 +588,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 300,
                 'reorder_point' => 80,
                 'batch_number' => 'ATO-2024-001',
+                'image' => 'products/medicine_43.jpg',
             ],
             [
                 'category_id' => $cardiovascular,
@@ -547,6 +600,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 250,
                 'reorder_point' => 70,
                 'batch_number' => 'BIS-2024-002',
+                'image' => 'products/medicine_44.jpg',
             ],
             [
                 'category_id' => $cardiovascular,
@@ -558,6 +612,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 200,
                 'reorder_point' => 60,
                 'batch_number' => 'CLO-2024-001',
+                'image' => 'products/medicine_45.jpg',
             ],
             [
                 'category_id' => $cardiovascular,
@@ -569,6 +624,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 280,
                 'reorder_point' => 75,
                 'batch_number' => 'ENA-2024-001',
+                'image' => 'products/medicine_46.jpg',
             ],
             [
                 'category_id' => $cardiovascular,
@@ -580,6 +636,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 260,
                 'reorder_point' => 70,
                 'batch_number' => 'MET-2024-002',
+                'image' => 'products/medicine_47.jpg',
             ],
             [
                 'category_id' => $cardiovascular,
@@ -591,6 +648,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 220,
                 'reorder_point' => 65,
                 'batch_number' => 'SIM-2024-002',
+                'image' => 'products/medicine_48.jpg',
             ],
             [
                 'category_id' => $cardiovascular,
@@ -602,6 +660,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 240,
                 'reorder_point' => 68,
                 'batch_number' => 'VAL-2024-001',
+                'image' => 'products/medicine_49.jpg',
             ],
             [
                 'category_id' => $cardiovascular,
@@ -613,6 +672,7 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 200,
                 'reorder_point' => 60,
                 'batch_number' => 'ISO-2024-001',
+                'image' => 'products/medicine_50.jpg',
             ],
         ];
     }

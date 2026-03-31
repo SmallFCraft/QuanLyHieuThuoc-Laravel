@@ -298,7 +298,7 @@
                                     @if($item['product']->image)
                                         <img src="{{ asset('storage/' . $item['product']->image) }}" 
                                              alt="{{ $item['product']->name }}" 
-                                             class="w-100 h-100 object-fit-cover">
+                                             class="w-100 h-100 object-fit-contain p-1">
                                     @else
                                         <div class="w-100 h-100 d-flex align-items-center justify-content-center">
                                             <i class="bi bi-capsule text-gray-300" style="font-size: 1.5rem;"></i>

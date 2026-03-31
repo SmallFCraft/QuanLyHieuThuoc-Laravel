@@ -1,5 +1,6 @@
 import './bootstrap';
 import './cart-add';
+import './search-autocomplete';
 
 import Alpine from 'alpinejs';
 

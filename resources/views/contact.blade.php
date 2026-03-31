@@ -115,7 +115,7 @@
                         </div>
                         <div>
                             <h6 class="fw-bold text-gray-800 mb-1">Địa chỉ</h6>
-                            <p class="text-gray-500 mb-0 small">123 Tôn Đức Thắng, Phường Bến Nghé, Quận 1, TP.HCM</p>
+                            <p class="text-gray-500 mb-0 small">Lê Văn Hiến, Ngũ Hành Sơn, Đà Nẵng</p>
                         </div>
                     </div>
                     

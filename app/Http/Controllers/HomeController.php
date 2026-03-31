@@ -35,7 +35,7 @@ class HomeController extends Controller
             ])
             ->having('available_products_count', '>', 0)
             ->orderBy('name')
-            ->limit(12)
+            ->limit(10)
             ->get();
 
         return view('home', compact('featuredProducts', 'categories'));

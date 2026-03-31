@@ -26,11 +26,13 @@ class CategoryController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:categories,name',
+            'icon' => 'nullable|string|max:50',
             'description' => 'nullable|string',
         ], [
             'name.required' => 'Tên danh mục là bắt buộc',
             'name.unique' => 'Tên danh mục đã tồn tại',
             'name.max' => 'Tên danh mục không được vượt quá 255 ký tự',
+            'icon.max' => 'Tên icon không được vượt quá 50 ký tự',
         ]);
 
         if ($validator->fails()) {
@@ -40,7 +42,7 @@ class CategoryController extends Controller
             ], 422);
         }
 
-        $category = Category::create($request->only(['name', 'description']));
+        $category = Category::create($request->only(['name', 'icon', 'description']));
 
         return response()->json([
             'success' => true,
@@ -56,11 +58,13 @@ class CategoryController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
+            'icon' => 'nullable|string|max:50',
             'description' => 'nullable|string',
         ], [
             'name.required' => 'Tên danh mục là bắt buộc',
             'name.unique' => 'Tên danh mục đã tồn tại',
             'name.max' => 'Tên danh mục không được vượt quá 255 ký tự',
+            'icon.max' => 'Tên icon không được vượt quá 50 ký tự',
         ]);
 
         if ($validator->fails()) {
@@ -70,7 +74,7 @@ class CategoryController extends Controller
             ], 422);
         }
 
-        $category->update($request->only(['name', 'description']));
+        $category->update($request->only(['name', 'icon', 'description']));
 
         return response()->json([
             'success' => true,

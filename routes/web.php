@@ -26,6 +26,7 @@ Route::get('/products', [ProductCatalogController::class, 'index'])->name('produ
 Route::get('/products/{id}', [ProductCatalogController::class, 'show'])->name('products.show');
 Route::get('/products/category/{id}', [ProductCatalogController::class, 'byCategory'])->name('products.category');
 Route::get('/search', [ProductCatalogController::class, 'search'])->name('products.search');
+Route::get('/api/search/suggestions', [ProductCatalogController::class, 'suggestions'])->name('products.suggestions');
 
 // Shopping cart routes
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -39,11 +40,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
     Route::get('/checkout/success/{id}', [CheckoutController::class, 'success'])->name('checkout.success');
 });
-
-// User dashboard
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 // Profile routes
 Route::middleware('auth')->group(function () {

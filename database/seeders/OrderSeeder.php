@@ -26,11 +26,11 @@ class OrderSeeder extends Seeder
 
         $statuses = ['Pending', 'Delivering', 'Completed', 'Cancelled'];
         $addresses = [
-            '123 Nguyễn Huệ, Quận 1, TP.HCM',
-            '456 Lê Lợi, Quận 3, TP.HCM',
-            '789 Trần Hưng Đạo, Quận 5, TP.HCM',
-            '321 Võ Văn Tần, Quận 3, TP.HCM',
-            '654 Hai Bà Trưng, Quận 1, TP.HCM',
+            'Lê Văn Hiến, Ngũ Hành Sơn, Đà Nẵng',
+            'Nguyễn Văn Linh, Hải Châu, Đà Nẵng',
+            'Trần Phú, Sơn Trà, Đà Nẵng',
+            'Võ Nguyên Giáp, Ngũ Hành Sơn, Đà Nẵng',
+            'Hoàng Sa, Thanh Khê, Đà Nẵng',
         ];
         
         $phones = [

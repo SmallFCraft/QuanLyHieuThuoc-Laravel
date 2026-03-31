@@ -23,6 +23,7 @@
                     <input type="text" name="q" placeholder="Tìm kiếm sản phẩm..." 
                            value="{{ $searchTerm ?? '' }}"
                            class="form-control border-start-0 rounded-end-pill shadow-none ps-0"
+                           autocomplete="off"
                            style="border-color: #e5e7eb;">
                 </div>
                 <button type="submit" class="btn btn-glass-success rounded-pill px-4 shadow-sm fw-medium border-0">
@@ -74,7 +75,7 @@
                                     @if($product->image)
                                         <img src="{{ asset('storage/' . $product->image) }}" 
                                              alt="{{ $product->name }}" 
-                                             class="w-100 h-100 object-fit-cover p-3" 
+                                             class="w-100 h-100 object-fit-contain p-2" 
                                              loading="lazy">
                                     @else
                                         <div class="w-100 h-100 d-flex align-items-center justify-content-center">

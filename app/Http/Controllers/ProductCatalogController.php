@@ -82,4 +82,54 @@ class ProductCatalogController extends Controller
 
         return view('products.index', compact('products', 'categories', 'searchTerm'));
     }
+
+    /**
+     * Get search suggestions for autocomplete.
+     */
+    public function suggestions(Request $request)
+    {
+        $query = $request->input('q', '');
+        
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        // Get product suggestions
+        $products = Product::notExpired()
+            ->where('stock_quantity', '>', 0)
+            ->where(function($q) use ($query) {
+                $q->where('name', 'like', '%' . $query . '%')
+                  ->orWhere('ingredients', 'like', '%' . $query . '%');
+            })
+            ->select('id', 'name', 'category_id', 'price', 'image')
+            ->with('category:id,name')
+            ->limit(8)
+            ->get();
+
+        // Get category suggestions
+        $categories = Category::where('name', 'like', '%' . $query . '%')
+            ->select('id', 'name')
+            ->limit(3)
+            ->get();
+
+        return response()->json([
+            'products' => $products->map(function($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'category' => $product->category->name,
+                    'price' => $product->formatted_price,
+                    'image_url' => $product->image_url,
+                    'url' => route('products.show', $product->id),
+                ];
+            }),
+            'categories' => $categories->map(function($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'url' => route('products.index', ['category' => $category->id]),
+                ];
+            }),
+        ]);
+    }
 }

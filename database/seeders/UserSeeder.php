@@ -35,7 +35,7 @@ class UserSeeder extends Seeder
                 'password' => 'User123',
                 'birth_date' => '1992-03-20',
                 'gender' => 'male',
-                'address' => '45 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
+                'address' => 'Lê Văn Hiến, Ngũ Hành Sơn, Đà Nẵng',
                 'phone' => '0901111222',
                 'role' => 'User',
                 'status' => 'active',

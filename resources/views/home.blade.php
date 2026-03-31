@@ -100,7 +100,7 @@
                     <span class="input-group-text border-0 bg-transparent ps-3 ps-md-4">
                         <i class="bi bi-search text-success"></i>
                     </span>
-                    <input type="search" id="home-search-q" name="q" value="{{ request('q') }}" class="form-control border-0 bg-transparent py-2 py-md-3 fs-6 fs-md-5 shadow-none" placeholder="Tìm thuốc, sản phẩm sức khỏe..." autocomplete="off" style="box-shadow: none !important; outline: none !important;">
+                    <input type="text" id="home-search-q" name="q" value="{{ request('q') }}" class="form-control border-0 bg-transparent py-2 py-md-3 fs-6 fs-md-5 shadow-none" placeholder="Tìm thuốc, sản phẩm sức khỏe..." autocomplete="off" style="box-shadow: none !important; outline: none !important;">
                     <button type="submit" class="btn btn-success rounded-pill px-4 px-md-5 fw-semibold shadow-sm ms-2 me-1" style="background: #10b981; border-color: #10b981; height: 100%; min-height: 48px;">
                         <span class="d-none d-sm-inline">Tìm kiếm</span>
                         <i class="bi bi-search d-sm-none"></i>
@@ -120,19 +120,19 @@
                     <span class="text-success fw-bold text-uppercase small" style="letter-spacing: 0.06em;">Khám phá</span>
                     <h2 class="h4 fw-bold text-dark mb-0 mt-1">Danh mục sản phẩm</h2>
                 </div>
-                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0">
                     Tất cả <i class="bi bi-arrow-right ms-1"></i>
                 </a>
             </div>
             <div class="row g-3">
                 @foreach($categories as $category)
-                    <div class="col-6 col-md-4 col-lg-3">
-                        <a href="{{ route('products.category', $category->id) }}" class="home-glass-panel p-3 p-md-4 rounded-4 text-center d-block text-decoration-none transition-all hover-scale-105" style="border: 1px solid rgba(16,185,129,0.15);">
-                            <div class="rounded-circle d-inline-flex mx-auto align-items-center justify-content-center mb-2" style="width: 50px; height: 50px; background: rgba(16,185,129,0.1); color: #059669;">
-                                <i class="bi bi-grid-fill fs-4"></i>
+                    <div class="col-6 col-md-4 col-lg-3 col-xl-2-4">
+                        <a href="{{ route('products.category', $category->id) }}" class="home-glass-panel p-3 rounded-4 text-center d-block text-decoration-none transition-all hover-scale-105" style="border: 1px solid rgba(16,185,129,0.15);">
+                            <div class="rounded-circle d-inline-flex mx-auto align-items-center justify-content-center mb-2" style="width: 50px; height: 50px; background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.08) 100%); color: #059669;">
+                                <i class="bi bi-{{ $category->icon ?? 'grid-fill' }}" style="font-size: 1.5rem;"></i>
                             </div>
-                            <span class="fw-semibold text-truncate d-block text-dark mb-1" title="{{ $category->name }}">{{ $category->name }}</span>
-                            <span class="small text-success">{{ $category->available_products_count }} sản phẩm</span>
+                            <span class="fw-semibold text-truncate d-block text-dark mb-1 small" title="{{ $category->name }}">{{ $category->name }}</span>
+                            <span class="small text-success" style="font-size: 0.75rem;">{{ $category->available_products_count }} sản phẩm</span>
                         </a>
                     </div>
                 @endforeach
@@ -145,14 +145,14 @@
     <section class="py-4 py-md-5 position-relative overflow-hidden" id="noi-bat">
         <div class="home-section-mesh" aria-hidden="true"></div>
         <div class="container position-relative">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
-                <div class="text-center text-md-start w-100 w-md-auto">
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-3">
+                <div class="text-center text-sm-start w-100 w-sm-auto">
                     <span class="text-success fw-bold text-uppercase small">Gợi ý hôm nay</span>
                     <h2 class="h3 fw-bold text-dark mt-1 mb-0">Sản phẩm nổi bật</h2>
                     <p class="text-muted small mb-0 mt-1 d-none d-md-block">Cập nhật mới, còn hạn dùng và đủ tồn kho.</p>
                 </div>
-                <a href="{{ route('products.index') }}" class="btn btn-outline-success rounded-pill px-4 align-self-center align-self-md-auto">
-                    Xem tất cả <i class="bi bi-arrow-right ms-2"></i>
+                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0">
+                    Tất cả <i class="bi bi-arrow-right ms-1"></i>
                 </a>
             </div>
 
@@ -163,7 +163,7 @@
                             <div class="position-relative overflow-hidden home-product-media" style="border-radius: 16px 16px 0 0; aspect-ratio: 1/1;">
                                 @if($product->image)
                                     <img src="{{ asset('storage/' . $product->image) }}"
-                                         class="w-100 h-100 object-fit-cover p-3"
+                                         class="w-100 h-100 object-fit-contain p-2"
                                          alt="{{ $product->name }}"
                                          loading="lazy">
                                 @else
@@ -315,7 +315,7 @@
                         <h2 class="h3 fw-bold text-dark mt-1">Thông tin hữu ích</h2>
                     </div>
                     <div class="home-faq-stack d-flex flex-column gap-3">
-                        <details class="home-faq-item" open>
+                        <details class="home-faq-item">
                             <summary class="home-faq-summary">Làm sao biết sản phẩm còn hạn và đủ tồn?</summary>
                             <div class="home-faq-body">
                                 Trên trang chi tiết sản phẩm hiển thị tồn kho; chúng tôi ưu tiên xuất theo FEFO (hết hạn trước — xuất trước). Sản phẩm hết hạn không được bán.

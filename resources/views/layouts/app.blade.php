@@ -20,6 +20,14 @@
         <style>
             body { font-family: 'Inter', sans-serif; }
             
+            /* Custom 5-column grid for categories */
+            @media (min-width: 1200px) {
+                .col-xl-2-4 {
+                    flex: 0 0 auto;
+                    width: 20%;
+                }
+            }
+            
             /* Navbar Base Styles */
             .navbar { min-height: 64px; }
             .navbar-brand { font-size: 1.25rem; font-weight: 700; }
@@ -229,7 +237,7 @@
                 <!-- Desktop Search -->
                 <div class="d-none d-lg-flex flex-grow-1 mx-4 desktop-search">
                     <form action="{{ route('products.search') }}" method="GET" class="w-100 position-relative">
-                        <input type="text" name="q" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="Tìm sản phẩm, thương hiệu..." style="background: rgba(16, 185, 129, 0.08); transition: all 0.3s ease;" onfocus="this.style.background='rgba(16, 185, 129, 0.12)'">
+                        <input type="text" name="q" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="Tìm sản phẩm, thương hiệu..." autocomplete="off" style="background: rgba(16, 185, 129, 0.08); transition: all 0.3s ease;" onfocus="this.style.background='rgba(16, 185, 129, 0.12)'">
                         <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-emerald-600"></i>
                     </form>
                 </div>
@@ -244,7 +252,7 @@
                     <!-- Mobile Search -->
                     <div class="d-lg-none mobile-search">
                         <form action="{{ route('products.search') }}" method="GET" class="position-relative">
-                            <input type="text" name="q" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="Tìm sản phẩm..." style="background: rgba(16, 185, 129, 0.08);">
+                            <input type="text" name="q" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="Tìm sản phẩm..." autocomplete="off" style="background: rgba(16, 185, 129, 0.08);">
                             <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-emerald-600"></i>
                         </form>
                     </div>
@@ -397,67 +405,181 @@
         </main>
 
         <!-- Footer -->
-        <footer class="mt-5 pt-5 pb-4 border-top" style="background: rgba(255,255,255,0.7); backdrop-filter: blur(10px);">
-            <div class="container">
-                <div class="row g-4 mb-4">
-                    <div class="col-lg-4 col-md-6 text-center text-md-start">
-                        <a class="navbar-brand fw-bold fs-4 d-flex justify-content-center justify-content-md-start align-items-center mb-3 text-dark text-decoration-none" href="{{ route('home') }}">
-                            <img src="{{ asset('images/logo.png') }}" alt="Logo" class="me-2" style="height: 40px; width: auto;">
-                            <span class="fs-5 text-emerald-800">Nhà Thuốc Sinh Thái</span>
-                        </a>
-                        <p class="text-gray-500 mb-4 pe-lg-4">
-                            Đồng hành cùng sức khỏe cộng đồng. Sản phẩm dược phẩm chuẩn chất lượng với sự tư vấn tận tâm.
-                        </p>
-                        <div class="d-flex gap-2 justify-content-center justify-content-md-start mb-4 mb-md-0">
-                            <a href="#" class="btn btn-sm btn-light rounded-circle text-emerald-600 shadow-sm" style="width:36px; height:36px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-facebook"></i></a>
-                            <a href="#" class="btn btn-sm btn-light rounded-circle text-emerald-600 shadow-sm" style="width:36px; height:36px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-twitter"></i></a>
-                            <a href="#" class="btn btn-sm btn-light rounded-circle text-emerald-600 shadow-sm" style="width:36px; height:36px; display:flex; align-items:center; justify-content:center;"><i class="bi bi-instagram"></i></a>
+        <footer class="position-relative mt-5 overflow-hidden">
+            <!-- Grid Background Pattern -->
+            <div class="position-absolute top-0 start-0 w-100 h-100" style="z-index: 0;">
+                <svg class="w-100 h-100" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <pattern id="footer-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(16, 185, 129, 0.08)" stroke-width="1"/>
+                        </pattern>
+                        <linearGradient id="footer-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:rgba(240, 253, 244, 0.95);stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:rgba(236, 253, 245, 0.98);stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#footer-gradient)"/>
+                    <rect width="100%" height="100%" fill="url(#footer-grid)"/>
+                </svg>
+            </div>
+            
+            <!-- Decorative Blobs -->
+            <div class="position-absolute" style="top: -50px; right: -50px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%); border-radius: 50%; z-index: 0;"></div>
+            <div class="position-absolute" style="bottom: -30px; left: -30px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%); border-radius: 50%; z-index: 0;"></div>
+            
+            <div class="container position-relative" style="z-index: 1;">
+                <!-- Main Footer Content -->
+                <div class="pt-5 pb-4">
+                    <div class="row g-4 mb-4">
+                        <!-- Brand Column -->
+                        <div class="col-lg-4 col-md-6">
+                            <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);">
+                                <a class="d-flex align-items-center mb-3 text-decoration-none" href="{{ route('home') }}">
+                                    <img src="{{ asset('images/logo.png') }}" alt="Logo" class="me-2" style="height: 40px; width: auto;">
+                                    <span class="fs-5 fw-bold text-emerald-800">Nhà Thuốc Sinh Thái</span>
+                                </a>
+                                <p class="text-gray-600 mb-4 small lh-lg">
+                                    Đồng hành cùng sức khỏe cộng đồng. Sản phẩm dược phẩm chuẩn chất lượng với sự tư vấn tận tâm.
+                                </p>
+                                <div class="d-flex gap-2">
+                                    <a href="#" class="btn btn-sm rounded-circle shadow-sm" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid rgba(16, 185, 129, 0.2);" title="Facebook">
+                                        <i class="bi bi-facebook"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-sm rounded-circle shadow-sm" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid rgba(16, 185, 129, 0.2);" title="Twitter">
+                                        <i class="bi bi-twitter"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-sm rounded-circle shadow-sm" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid rgba(16, 185, 129, 0.2);" title="Instagram">
+                                        <i class="bi bi-instagram"></i>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="col-lg-2 col-md-6 col-6 text-center text-md-start">
-                        <h6 class="fw-bold mb-3 text-gray-800">Danh mục</h6>
-                        <ul class="list-unstyled space-y-2">
-                            <li><a href="{{ route('products.index') }}" class="text-gray-500 text-decoration-none hover-text-emerald-600 transition-all">Sức khỏe</a></li>
-                            <li><a href="{{ route('products.index') }}" class="text-gray-500 text-decoration-none hover-text-emerald-600 transition-all">Làm đẹp</a></li>
-                            <li><a href="{{ route('products.index') }}" class="text-gray-500 text-decoration-none hover-text-emerald-600 transition-all">Mẹ & Bé</a></li>
-                            <li><a href="{{ route('products.index') }}" class="text-gray-500 text-decoration-none hover-text-emerald-600 transition-all">Thiết bị</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-lg-3 col-md-6 col-6 text-center text-md-start">
-                        <h6 class="fw-bold mb-3 text-gray-800">Hỗ trợ khách hàng</h6>
-                        <ul class="list-unstyled space-y-2">
-                            <li><a href="#" class="text-gray-500 text-decoration-none hover-text-emerald-600 transition-all">Mua hàng</a></li>
-                            <li><a href="#" class="text-gray-500 text-decoration-none hover-text-emerald-600 transition-all">Chính sách trả</a></li>
-                            <li><a href="#" class="text-gray-500 text-decoration-none hover-text-emerald-600 transition-all">Bảo mật</a></li>
-                            <li><a href="{{ route('contact') }}" class="text-gray-500 text-decoration-none hover-text-emerald-600 transition-all">Liên hệ ngay</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-lg-3 col-md-6 text-center text-md-start">
-                        <h6 class="fw-bold mb-3 text-gray-800">Thông tin liên hệ</h6>
-                        <ul class="list-unstyled space-y-3 d-inline-block text-start">
-                            <li class="d-flex align-items-start text-gray-500">
-                                <i class="bi bi-geo-alt-fill text-emerald-500 me-2 mt-1 flex-shrink-0"></i>
-                                <span>123 Tôn Đức Thắng, Phường Bến Nghé, Quận 1, TP.HCM</span>
-                            </li>
-                            <li class="d-flex align-items-center text-gray-500">
-                                <i class="bi bi-telephone-fill text-emerald-500 me-2 flex-shrink-0"></i>
-                                <span>1900 8888 (Miễn phí)</span>
-                            </li>
-                            <li class="d-flex align-items-center text-gray-500">
-                                <i class="bi bi-envelope-fill text-emerald-500 me-2 flex-shrink-0"></i>
-                                <span>cskh@nhathuocsinhthai.vn</span>
-                            </li>
-                        </ul>
+                        
+                        <!-- Links Columns -->
+                        <div class="col-lg-8 col-md-6">
+                            <div class="row g-3 h-100">
+                                <!-- Danh mục -->
+                                <div class="col-md-4 col-6">
+                                    <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
+                                        <h6 class="fw-bold mb-3 text-gray-800 d-flex align-items-center">
+                                            <i class="bi bi-grid-fill text-emerald-600 me-2"></i>
+                                            Danh mục
+                                        </h6>
+                                        <ul class="list-unstyled mb-0">
+                                            <li class="mb-2">
+                                                <a href="{{ route('products.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                    <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
+                                                    Sức khỏe
+                                                </a>
+                                            </li>
+                                            <li class="mb-2">
+                                                <a href="{{ route('products.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                    <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
+                                                    Làm đẹp
+                                                </a>
+                                            </li>
+                                            <li class="mb-2">
+                                                <a href="{{ route('products.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                    <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
+                                                    Mẹ & Bé
+                                                </a>
+                                            </li>
+                                            <li class="mb-0">
+                                                <a href="{{ route('products.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                    <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
+                                                    Thiết bị
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <!-- Hỗ trợ -->
+                                <div class="col-md-4 col-6">
+                                    <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
+                                        <h6 class="fw-bold mb-3 text-gray-800 d-flex align-items-center">
+                                            <i class="bi bi-headset text-emerald-600 me-2"></i>
+                                            Hỗ trợ
+                                        </h6>
+                                        <ul class="list-unstyled mb-0">
+                                            <li class="mb-2">
+                                                <a href="#" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                    <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
+                                                    Mua hàng
+                                                </a>
+                                            </li>
+                                            <li class="mb-2">
+                                                <a href="#" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                    <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
+                                                    Chính sách trả
+                                                </a>
+                                            </li>
+                                            <li class="mb-2">
+                                                <a href="#" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                    <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
+                                                    Bảo mật
+                                                </a>
+                                            </li>
+                                            <li class="mb-0">
+                                                <a href="{{ route('contact') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                    <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
+                                                    Liên hệ ngay
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <!-- Liên hệ -->
+                                <div class="col-md-4 col-12">
+                                    <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
+                                        <h6 class="fw-bold mb-3 text-gray-800 d-flex align-items-center">
+                                            <i class="bi bi-geo-alt-fill text-emerald-600 me-2"></i>
+                                            Liên hệ
+                                        </h6>
+                                        <ul class="list-unstyled mb-0">
+                                            <li class="mb-3 d-flex align-items-start">
+                                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-2" style="width: 28px; height: 28px; background: rgba(16, 185, 129, 0.15);">
+                                                    <i class="bi bi-geo-alt-fill text-emerald-600" style="font-size: 0.8rem;"></i>
+                                                </div>
+                                                <span class="text-gray-600 small">Lê Văn Hiến, Ngũ Hành Sơn, Đà Nẵng</span>
+                                            </li>
+                                            <li class="mb-3 d-flex align-items-center">
+                                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-2" style="width: 28px; height: 28px; background: rgba(16, 185, 129, 0.15);">
+                                                    <i class="bi bi-telephone-fill text-emerald-600" style="font-size: 0.8rem;"></i>
+                                                </div>
+                                                <span class="text-gray-600 small">1900 8888 (Miễn phí)</span>
+                                            </li>
+                                            <li class="mb-0 d-flex align-items-center">
+                                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-2" style="width: 28px; height: 28px; background: rgba(16, 185, 129, 0.15);">
+                                                    <i class="bi bi-envelope-fill text-emerald-600" style="font-size: 0.8rem;"></i>
+                                                </div>
+                                                <span class="text-gray-600 small">cskh@nhathuocsinhthai.vn</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
-                <hr class="my-4 text-gray-200">
-                
-                <div class="text-center text-gray-400 small">
-                    <p class="mb-0">&copy; {{ date('Y') }} Nhà Thuốc Sinh Thái. Developed by Phạm Trường Huy - ĐAPTTKHTTT.</p>
+                <!-- Footer Bottom -->
+                <div class="py-4 border-top" style="border-color: rgba(16, 185, 129, 0.15) !important;">
+                    <div class="glass-card px-4 py-3 rounded-4 border-0" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px);">
+                        <div class="row align-items-center g-3">
+                            <div class="col-md-6 text-center text-md-start">
+                                <p class="mb-0 text-gray-600 small">
+                                    &copy; {{ date('Y') }} <span class="fw-semibold text-emerald-700">Nhà Thuốc Sinh Thái</span>. All rights reserved.
+                                </p>
+                            </div>
+                            <div class="col-md-6 text-center text-md-end">
+                                <p class="mb-0 text-gray-500 small">
+                                    Developed by <span class="fw-semibold text-emerald-600">Phạm Trường Huy</span> - ĐAPTTKHTTT
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </footer>
