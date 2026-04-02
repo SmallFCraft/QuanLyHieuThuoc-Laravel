@@ -1,16 +1,22 @@
 <!-- Chatbot Widget Component -->
 <div x-data="chatbotWidget()" x-init="init()" @open-chatbot.window="if(!isOpen) toggleWidget()" class="chatbot-widget-container" :class="{ 'chatbot-active': isOpen }" data-user-name="{{ auth()->check() ? auth()->user()->name : '' }}" data-user-phone="{{ auth()->check() ? auth()->user()->phone : '' }}" data-user-email="{{ auth()->check() ? auth()->user()->email : '' }}" data-user-address="{{ auth()->check() ? auth()->user()->address : '' }}">
-    <!-- Floating Button -->
-    <button 
-        @click="toggleWidget()"
-        x-show="!isOpen"
-        class="chatbot-toggle-btn"
-        aria-label="Mở trợ lý AI"
-    >
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-        </svg>
-    </button>
+    <!-- Floating Button with Label -->
+    <div x-show="!isOpen" class="chatbot-toggle-wrapper">
+        <div class="chatbot-float-label" x-data="{ showLabel: true }" x-init="setTimeout(() => showLabel = false, 8000)" x-show="showLabel" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 transform translate-x-0" x-transition:leave-end="opacity-0 transform translate-x-4">
+            <span>Trợ lý AI 💬</span>
+            <div class="float-label-arrow"></div>
+        </div>
+        <button 
+            @click="toggleWidget()"
+            class="chatbot-toggle-btn"
+            aria-label="Mở trợ lý AI"
+        >
+            <span class="chatbot-pulse-ring"></span>
+            <svg style="width: 28px; height: 28px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+            </svg>
+        </button>
+    </div>
 
     <!-- Chat Window -->
     <div 
@@ -182,39 +188,39 @@
 
         <!-- Cart Preview -->
         <div x-show="cart && cart.count > 0" class="chatbot-cart-preview" style="display: none;">
-            <div style="padding: 16px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid rgba(255, 255, 255, 0.8);">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                    <h4 style="font-weight: 600; color: #065f46; font-size: 0.875rem; margin: 0;">
+            <div style="padding: 10px 14px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid rgba(255, 255, 255, 0.8);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <h4 style="font-weight: 600; color: #065f46; font-size: 0.8rem; margin: 0;">
                         Giỏ hàng (<span x-text="cart.count"></span>)
                     </h4>
-                    <button @click="showCartDetail = !showCartDetail" style="color: #047857; font-size: 0.75rem; text-decoration: none; background: none; border: none; cursor: pointer; padding: 0;">
+                    <button @click="showCartDetail = !showCartDetail" style="color: #047857; font-size: 0.7rem; text-decoration: none; background: none; border: none; cursor: pointer; padding: 0;">
                         <span x-text="showCartDetail ? 'Thu gọn' : 'Xem chi tiết'"></span>
                     </button>
                 </div>
                 
                 <!-- Cart Items Detail -->
-                <div x-show="showCartDetail" style="display: none; margin-bottom: 12px; max-height: 160px; overflow-y: auto;">
+                <div x-show="showCartDetail" style="display: none; margin-bottom: 8px; max-height: 140px; overflow-y: auto;">
                     <template x-for="item in cart.items" :key="item.product_id">
-                        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255,255,255,0.8); padding: 10px; border-radius: 6px; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255,255,255,0.8); padding: 6px 8px; border-radius: 4px; margin-bottom: 6px;">
                             <div style="flex: 1; min-width: 0;">
-                                <div style="font-weight: 500; color: #111827; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="item.name"></div>
-                                <div style="color: #6b7280; font-size: 0.7rem;" x-text="formatCurrency(item.price) + ' x ' + item.quantity"></div>
+                                <div style="font-weight: 500; color: #111827; margin-bottom: 0px; font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="item.name"></div>
+                                <div style="color: #6b7280; font-size: 0.65rem;" x-text="formatCurrency(item.price) + ' x ' + item.quantity"></div>
                             </div>
-                            <div style="display: flex; align-items: center; gap: 6px; margin-left: 8px; flex-shrink: 0;">
-                                <button @click="updateQuantity(item.product_id, item.quantity - 1)" style="width: 24px; height: 24px; background: #e5e7eb; border: none; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; color: #374151;">-</button>
-                                <span style="width: 24px; text-align: center; font-weight: 500; font-size: 0.75rem;" x-text="item.quantity"></span>
-                                <button @click="updateQuantity(item.product_id, item.quantity + 1)" style="width: 24px; height: 24px; background: #e5e7eb; border: none; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; color: #374151;">+</button>
+                            <div style="display: flex; align-items: center; gap: 4px; margin-left: 6px; flex-shrink: 0;">
+                                <button @click="updateQuantity(item.product_id, item.quantity - 1)" style="width: 20px; height: 20px; background: #e5e7eb; border: none; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: #374151;">-</button>
+                                <span style="width: 20px; text-align: center; font-weight: 500; font-size: 0.7rem;" x-text="item.quantity"></span>
+                                <button @click="updateQuantity(item.product_id, item.quantity + 1)" style="width: 20px; height: 20px; background: #e5e7eb; border: none; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: #374151;">+</button>
                             </div>
                         </div>
                     </template>
                 </div>
                 
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid #6ee7b7; margin-bottom: 12px;">
-                    <span style="font-weight: 600; color: #065f46; font-size: 0.875rem;">Tổng:</span>
-                    <span style="font-weight: 700; color: #065f46; font-size: 1.125rem;" x-text="formatCurrency(cart.total)"></span>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-top: 1px solid #6ee7b7; margin-bottom: 8px;">
+                    <span style="font-weight: 600; color: #065f46; font-size: 0.8rem;">Tổng:</span>
+                    <span style="font-weight: 700; color: #065f46; font-size: 0.95rem;" x-text="formatCurrency(cart.total)"></span>
                 </div>
                 
-                <button @click="showCheckoutForm()" style="width: 100%; background: #059669; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                <button @click="showCheckoutForm()" style="width: 100%; background: #059669; color: white; padding: 8px 12px; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s;">
                     Đặt hàng ngay
                 </button>
             </div>
@@ -362,7 +368,7 @@
     position: fixed;
     bottom: 30px;
     right: 30px;
-    z-index: 9999;
+    z-index: 1040;
     min-height: 64px;
     min-width: 64px;
     pointer-events: none;
@@ -373,13 +379,65 @@
 }
 
 .chatbot-widget-container.chatbot-active {
-    z-index: 99999;
+    z-index: 1045;
 }
 
-.chatbot-toggle-btn {
+.chatbot-toggle-wrapper {
     position: absolute;
     bottom: 0;
     right: 0;
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+/* Floating Label */
+.chatbot-float-label {
+    position: absolute;
+    right: 74px;
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
+    animation: labelSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both, labelFloat 3s ease-in-out 0.6s infinite;
+    pointer-events: none;
+}
+
+.float-label-arrow {
+    position: absolute;
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-left: 6px solid #059669;
+}
+
+@keyframes labelSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes labelFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+/* Toggle Button */
+.chatbot-toggle-btn {
+    position: relative;
     width: 64px;
     height: 64px;
     border-radius: 50%;
@@ -391,12 +449,50 @@
     box-shadow: 0 8px 32px rgba(16, 185, 129, 0.35);
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     border: 2px solid rgba(255, 255, 255, 0.4);
+    animation: btnBounce 2.5s ease-in-out infinite;
+    cursor: pointer;
+}
+
+@keyframes btnBounce {
+    0%, 100% { transform: translateY(0); }
+    15% { transform: translateY(-10px); }
+    30% { transform: translateY(0); }
+    42% { transform: translateY(-5px); }
+    54% { transform: translateY(0); }
 }
 
 .chatbot-toggle-btn:hover {
-    transform: scale(1.08) translateY(-4px);
-    box-shadow: 0 12px 36px rgba(16, 185, 129, 0.45);
+    animation: none;
+    transform: scale(1.1) translateY(-4px);
+    box-shadow: 0 14px 40px rgba(16, 185, 129, 0.5);
     background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+}
+
+/* Pulse Ring */
+.chatbot-pulse-ring {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    border: 2px solid rgba(16, 185, 129, 0.6);
+    animation: pulseRing 2s ease-out infinite;
+}
+
+@keyframes pulseRing {
+    0% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+    70% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
 }
 
 .chatbot-window {
@@ -903,6 +999,9 @@
     .chatbot-toggle-btn { 
         width: 56px; 
         height: 56px; 
+    }
+    .chatbot-float-label {
+        display: none;
     }
     .product-card { 
         flex-direction: row; 
