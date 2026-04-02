@@ -12,6 +12,49 @@
     --warning: #f39c12;
     --danger: #e74c3c;
     --info: #3498db;
+    --emerald-500: #10b981;
+    --emerald-600: #059669;
+    --emerald-700: #047857;
+}
+
+/* Global Custom Scrollbar */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+    width: 6px !important;
+    height: 6px !important;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+    background: #f8fafc !important;
+    border-radius: 10px !important;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+    background: var(--emerald-500) !important;
+    border-radius: 10px !important;
+    border: 1px solid #f8fafc !important;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--emerald-600) !important;
+}
+
+/* Firefox */
+html, body {
+    scrollbar-width: thin !important;
+    scrollbar-color: var(--emerald-500) #f8fafc !important;
+}
+
+* {
+    scrollbar-width: thin !important;
+    scrollbar-color: var(--emerald-500) #f8fafc !important;
 }
 
 /* Body Background — không dùng fixed: repaint toàn nền mỗi lần cuộn gây giật (đặc biệt + nhiều backdrop-filter) */

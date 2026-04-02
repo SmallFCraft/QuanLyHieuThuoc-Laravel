@@ -102,23 +102,8 @@
                     {{ $product->name }}
                 </h1>
                 
-                <!-- Rating & Reviews -->
+                <!-- Views Count -->
                 <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-                    <div class="d-flex align-items-center">
-                        <div class="text-warning me-2">
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-half"></i>
-                        </div>
-                        <span class="text-gray-600 small">4.5/5</span>
-                    </div>
-                    <span class="text-gray-400">|</span>
-                    <a href="#reviews" class="text-emerald-600 text-decoration-none small hover:text-emerald-700">
-                        <i class="bi bi-chat-dots me-1"></i>128 đánh giá
-                    </a>
-                    <span class="text-gray-400">|</span>
                     <span class="text-gray-600 small">
                         <i class="bi bi-eye me-1"></i>{{ number_format($product->views_count, 0, ',', '.') }} lượt xem
                     </span>
@@ -332,126 +317,13 @@
 
         <!-- Additional Information Section -->
         <div class="row g-4 mt-4">
-            <!-- Customer Reviews -->
-            <div class="col-lg-8">
-                <div class="glass-card rounded-4 p-4 border-0" id="reviews">
-                    <h5 class="fw-bold text-gray-800 mb-4">
-                        <i class="bi bi-chat-dots-fill text-emerald-600 me-2"></i>Đánh giá từ khách hàng
-                    </h5>
-                    
-                    <!-- Rating Summary -->
-                    <div class="row g-4 mb-4">
-                        <div class="col-md-4 text-center">
-                            <div class="display-4 fw-bold text-emerald-600 mb-2">4.5</div>
-                            <div class="text-warning mb-2">
-                                <i class="bi bi-star-fill"></i>
-                                <i class="bi bi-star-fill"></i>
-                                <i class="bi bi-star-fill"></i>
-                                <i class="bi bi-star-fill"></i>
-                                <i class="bi bi-star-half"></i>
-                            </div>
-                            <p class="text-gray-600 small mb-0">128 đánh giá</p>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="d-flex align-items-center mb-2">
-                                <span class="text-gray-600 small me-2" style="width: 60px;">5 sao</span>
-                                <div class="progress flex-grow-1" style="height: 8px;">
-                                    <div class="progress-bar bg-emerald-600" style="width: 75%"></div>
-                                </div>
-                                <span class="text-gray-600 small ms-2">75%</span>
-                            </div>
-                            <div class="d-flex align-items-center mb-2">
-                                <span class="text-gray-600 small me-2" style="width: 60px;">4 sao</span>
-                                <div class="progress flex-grow-1" style="height: 8px;">
-                                    <div class="progress-bar bg-emerald-600" style="width: 15%"></div>
-                                </div>
-                                <span class="text-gray-600 small ms-2">15%</span>
-                            </div>
-                            <div class="d-flex align-items-center mb-2">
-                                <span class="text-gray-600 small me-2" style="width: 60px;">3 sao</span>
-                                <div class="progress flex-grow-1" style="height: 8px;">
-                                    <div class="progress-bar bg-emerald-600" style="width: 7%"></div>
-                                </div>
-                                <span class="text-gray-600 small ms-2">7%</span>
-                            </div>
-                            <div class="d-flex align-items-center mb-2">
-                                <span class="text-gray-600 small me-2" style="width: 60px;">2 sao</span>
-                                <div class="progress flex-grow-1" style="height: 8px;">
-                                    <div class="progress-bar bg-warning" style="width: 2%"></div>
-                                </div>
-                                <span class="text-gray-600 small ms-2">2%</span>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <span class="text-gray-600 small me-2" style="width: 60px;">1 sao</span>
-                                <div class="progress flex-grow-1" style="height: 8px;">
-                                    <div class="progress-bar bg-danger" style="width: 1%"></div>
-                                </div>
-                                <span class="text-gray-600 small ms-2">1%</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Sample Reviews -->
-                    <div class="border-top pt-4">
-                        <div class="mb-4 pb-4 border-bottom">
-                            <div class="d-flex align-items-start gap-3 mb-2">
-                                <div class="rounded-circle bg-emerald-100 d-flex align-items-center justify-content-center" 
-                                     style="width: 40px; height: 40px; flex-shrink: 0;">
-                                    <i class="bi bi-person-fill text-emerald-600"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <div class="d-flex align-items-center justify-content-between mb-1">
-                                        <h6 class="fw-bold mb-0">Nguyễn Văn A</h6>
-                                        <small class="text-gray-500">2 ngày trước</small>
-                                    </div>
-                                    <div class="text-warning small mb-2">
-                                        <i class="bi bi-star-fill"></i>
-                                        <i class="bi bi-star-fill"></i>
-                                        <i class="bi bi-star-fill"></i>
-                                        <i class="bi bi-star-fill"></i>
-                                        <i class="bi bi-star-fill"></i>
-                                    </div>
-                                    <p class="text-gray-700 mb-0">Sản phẩm chất lượng, giao hàng nhanh. Đóng gói cẩn thận. Sẽ ủng hộ shop lâu dài!</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-4 pb-4 border-bottom">
-                            <div class="d-flex align-items-start gap-3 mb-2">
-                                <div class="rounded-circle bg-blue-100 d-flex align-items-center justify-content-center" 
-                                     style="width: 40px; height: 40px; flex-shrink: 0;">
-                                    <i class="bi bi-person-fill text-blue-600"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <div class="d-flex align-items-center justify-content-between mb-1">
-                                        <h6 class="fw-bold mb-0">Trần Thị B</h6>
-                                        <small class="text-gray-500">1 tuần trước</small>
-                                    </div>
-                                    <div class="text-warning small mb-2">
-                                        <i class="bi bi-star-fill"></i>
-                                        <i class="bi bi-star-fill"></i>
-                                        <i class="bi bi-star-fill"></i>
-                                        <i class="bi bi-star-fill"></i>
-                                        <i class="bi bi-star"></i>
-                                    </div>
-                                    <p class="text-gray-700 mb-0">Thuốc hiệu quả, giá cả hợp lý. Nhân viên tư vấn nhiệt tình.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="btn btn-outline-emerald-600 rounded-pill px-4 w-100">
-                            <i class="bi bi-arrow-down-circle me-2"></i>Xem thêm đánh giá
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sidebar Info -->
-            <div class="col-lg-4">
-                <!-- Delivery Info -->
-                <div class="glass-card rounded-4 p-4 border-0 mb-4">
+            <!-- Delivery Info -->
+            <div class="col-md-6">
+                <div class="glass-card rounded-4 p-4 border-0 h-100">
                     <h6 class="fw-bold text-gray-800 mb-3">
                         <i class="bi bi-truck text-emerald-600 me-2"></i>Thông tin vận chuyển
                     </h6>
-                    <div class="mb-3">
+                    <div class="mb-0">
                         <div class="d-flex align-items-start mb-2">
                             <i class="bi bi-check-circle-fill text-emerald-600 me-2 mt-1"></i>
                             <small class="text-gray-700">Miễn phí vận chuyển cho đơn hàng từ 500.000₫</small>
@@ -466,13 +338,15 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Return Policy -->
-                <div class="glass-card rounded-4 p-4 border-0">
+            <!-- Return Policy -->
+            <div class="col-md-6">
+                <div class="glass-card rounded-4 p-4 border-0 h-100">
                     <h6 class="fw-bold text-gray-800 mb-3">
                         <i class="bi bi-arrow-repeat text-warning me-2"></i>Chính sách đổi trả
                     </h6>
-                    <div class="mb-3">
+                    <div class="mb-0">
                         <div class="d-flex align-items-start mb-2">
                             <i class="bi bi-check-circle-fill text-warning me-2 mt-1"></i>
                             <small class="text-gray-700">Đổi trả trong vòng 30 ngày</small>

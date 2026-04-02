@@ -61,9 +61,9 @@
                         </svg>
                     </div>
                     <div class="ml-3">
-                        <h3 class="text-sm font-medium text-yellow-800">Lưu ý quan trọng</h3>
+                        <h3 class="text-sm font-medium text-yellow-800">Dạ, em có lưu ý nhỏ ạ</h3>
                         <div class="mt-2 text-sm text-yellow-700">
-                            <p>Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ trước khi sử dụng thuốc.</p>
+                            <p>Dạ, nội dung do em (AI) tạo ra có thể chưa hoàn toàn chính xác. Anh/chị vui lòng tham khảo thêm ý kiến dược sĩ hoặc bác sĩ trước khi dùng thuốc nhé.</p>
                         </div>
                         <div class="mt-4">
                             <button @click="acceptDisclaimer()" class="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 px-4 py-2 rounded text-sm font-medium">
@@ -84,8 +84,8 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                     </svg>
                 </div>
-                <h4 class="welcome-title">Xin chào! 👋</h4>
-                <p class="welcome-subtitle">Tôi là trợ lý AI của <strong>Medicare Pharmacy</strong>. Tôi có thể giúp bạn:</p>
+                <h4 class="welcome-title">Medicare xin chào ạ! 👋</h4>
+                <p class="welcome-subtitle">Dạ, em là trợ lý AI của <strong>Medicare Pharmacy</strong>. Em có thể giúp anh/chị:</p>
                 <div class="welcome-features">
                     <div class="feature-item">
                         <span class="feature-emoji">💊</span>
@@ -104,7 +104,7 @@
                         <span>Giải đáp thắc mắc sức khỏe</span>
                     </div>
                 </div>
-                <p class="welcome-hint">Hãy thử một trong các gợi ý bên dưới:</p>
+                <p class="welcome-hint">Dạ, anh/chị có thể thử một trong các gợi ý dưới đây nhé:</p>
                 <div class="suggestion-chips">
                     <button @click="useSuggestion('Tôi cần tìm thuốc giảm đau')" class="suggestion-chip">
                         💊 Tìm thuốc giảm đau
@@ -167,7 +167,7 @@
                         <template x-if="message.show_disclaimer">
                             <div class="mt-2 text-xs text-yellow-600 bg-yellow-50 p-2 rounded" style="display: flex; gap: 4px; align-items: flex-start;">
                                 <span>⚠️</span>
-                                <span x-text="message.disclaimer || 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.'"></span>
+                                <span x-text="message.disclaimer || 'Dạ, nội dung do em (AI) tạo ra có thể chưa hoàn toàn chính xác. Anh/chị vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ nhé.'"></span>
                             </div>
                         </template>
                     </div>
@@ -538,11 +538,11 @@
     width: 6px;
 }
 .chatbot-messages::-webkit-scrollbar-thumb {
-    background: rgba(16, 185, 129, 0.2);
+    background: rgba(16, 185, 129, 0.4);
     border-radius: 10px;
 }
 .chatbot-messages::-webkit-scrollbar-thumb:hover {
-    background: rgba(16, 185, 129, 0.4);
+    background: rgba(16, 185, 129, 0.6);
 }
 
 .message-user, .message-assistant {

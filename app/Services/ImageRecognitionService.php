@@ -47,7 +47,7 @@ class ImageRecognitionService
                 
                 return [
                     'success' => false,
-                    'error' => 'Không thể nhận dạng sản phẩm từ hình ảnh. Vui lòng thử lại với hình ảnh rõ hơn hoặc đảm bảo hình ảnh là đơn thuốc hợp lệ.',
+                    'error' => 'Dạ, em chưa đọc được thông tin trên ảnh này. Anh/chị vui lòng chụp lại rõ nét hơn hoặc gửi ảnh chụp trực tiếp nhãn trên hộp thuốc giúp em nhé.',
                     'description' => $analysisResult['description'] ?? ''
                 ];
             }
@@ -84,7 +84,7 @@ class ImageRecognitionService
             ]);
             return [
                 'success' => false,
-                'error' => 'Không thể xử lý hình ảnh đơn thuốc. Vui lòng thử lại với hình ảnh rõ hơn.'
+                'error' => 'Dạ, em gặp chút khó khăn khi đọc ảnh đơn thuốc. Anh/chị vui lòng gửi lại ảnh rõ hơn hoặc nhập tên thuốc để em tìm nhanh cho mình nhé.'
             ];
         }
     }
@@ -114,7 +114,7 @@ class ImageRecognitionService
                 
                 return [
                     'success' => false,
-                    'error' => 'Không thể nhận dạng sản phẩm từ hình ảnh hóa đơn. Vui lòng thử lại với hình ảnh rõ hơn hoặc đảm bảo hình ảnh là hóa đơn hợp lệ.',
+                    'error' => 'Dạ, em chưa nhận diện được các mặt hàng trên hóa đơn này. Anh/chị vui lòng chụp lại ảnh rõ hơn hoặc gửi tên sản phẩm để em kiểm tra nhanh ạ.',
                     'description' => $analysisResult['description'] ?? ''
                 ];
             }
@@ -151,7 +151,7 @@ class ImageRecognitionService
             ]);
             return [
                 'success' => false,
-                'error' => 'Không thể xử lý hình ảnh hóa đơn. Vui lòng thử lại với hình ảnh rõ hơn.'
+                'error' => 'Dạ, em chưa đọc được hóa đơn này. Anh/chị vui lòng gửi lại ảnh rõ nét hơn giúp em với ạ.'
             ];
         }
     }
@@ -242,7 +242,7 @@ class ImageRecognitionService
                     'type' => $type,
                     'error' => $e->getMessage()
                 ]);
-                throw new \Exception('Hệ thống AI tạm thời đã đạt giới hạn sử dụng. Vui lòng thử lại sau 1 phút hoặc nhập tên sản phẩm trực tiếp.');
+                throw new \Exception('Dạ, hiện tại cửa hàng đang tiếp nhận nhiều yêu cầu nên em chưa xử lý ảnh ngay được. Anh/chị vui lòng đợi một chút hoặc nhập tên thuốc trực tiếp để em hỗ trợ ngay nhé.');
             }
             
             // Check for rate limit error
@@ -251,7 +251,7 @@ class ImageRecognitionService
                     'type' => $type,
                     'error' => $e->getMessage()
                 ]);
-                throw new \Exception('Đang xử lý quá nhiều yêu cầu. Vui lòng đợi 30 giây và thử lại.');
+                throw new \Exception('Dạ, em đang xử lý hơi nhiều dữ liệu. Anh/chị vui lòng đợi khoảng 30 giây rồi gửi lại ảnh giúp em nhé.');
             }
             
             // Re-throw other exceptions

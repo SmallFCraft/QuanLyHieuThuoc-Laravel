@@ -63,10 +63,10 @@ function chatbotWidget() {
             if (!file) return;
             
             // Validate file size
-            if (file.size > 5 * 1024 * 1024) {
+            if (file.size > 3 * 1024 * 1024) {
                 this.messages.push({
                     role: 'assistant',
-                    content: '❌ Kích thước ảnh không được vượt quá 5MB',
+                    content: 'Dạ, kích thước ảnh hơi lớn (vượt quá 3MB). Anh/chị vui lòng chọn ảnh nhẹ hơn giúp em nhé.',
                     isSystemMessage: true
                 });
                 this.scrollToBottom();
@@ -116,7 +116,7 @@ function chatbotWidget() {
             if (!hasImage && userMessage.length < 3) {
                 this.messages.push({
                     role: 'assistant',
-                    content: 'Vui lòng nhập câu hỏi cụ thể hơn (ít nhất 3 ký tự).',
+                    content: 'Dạ, anh/chị vui lòng nhập câu hỏi cụ thể hơn một chút giúp em nhé (ít nhất 3 ký tự).',
                     validation_error: true
                 });
                 this.scrollToBottom();
@@ -176,7 +176,7 @@ function chatbotWidget() {
                     } else {
                         this.messages.push({
                             role: 'assistant',
-                            content: data.response || data.error || 'Đã xảy ra lỗi. Vui lòng thử lại.',
+                            content: data.response || data.error || 'Dạ, em gặp chút lỗi khi xử lý. Anh/chị thử lại giúp em nhé.',
                             validation_error: data.validation_error || false
                         });
                     }
@@ -184,7 +184,7 @@ function chatbotWidget() {
                     console.error('Error:', error);
                     this.messages.push({
                         role: 'assistant',
-                        content: 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.'
+                        content: 'Dạ, em đang không kết nối được với cửa hàng. Anh/chị vui lòng kiểm tra mạng và thử lại sau nhé.'
                     });
                 } finally {
                     this.isLoading = false;
@@ -238,7 +238,7 @@ function chatbotWidget() {
                     const retryAfter = response.headers.get('Retry-After') || '60';
                     this.messages.push({
                         role: 'assistant',
-                        content: `⏱️ Vui lòng đợi ${retryAfter} giây trước khi gửi ảnh tiếp.\n\n📊 Giới hạn: 30 ảnh/giờ\n\n💡 Trong lúc chờ:\n• Nhập tên thuốc trực tiếp\n• Sử dụng tìm kiếm sản phẩm\n• Duyệt danh mục`
+                        content: `⏱️ Dạ, hiện tại em đang tiếp nhận hơi nhiều thông tin một lúc. Anh/chị vui lòng đợi khoảng ${retryAfter} giây rồi gửi lại giúp em nhé.\n\n💡 Trong lúc chờ, anh/chị có thể nhập tên thuốc trực tiếp để em hỗ trợ ngay ạ.`
                     });
                     this.isLoading = false;
                     this.scrollToBottom();
@@ -251,7 +251,7 @@ function chatbotWidget() {
                     console.error('400 Bad Request:', errorData);
                     this.messages.push({
                         role: 'assistant',
-                        content: `❌ Lỗi xử lý ảnh: ${errorData.error || errorData.message || 'Yêu cầu không hợp lệ'}\n\nVui lòng thử lại với ảnh khác.`
+                        content: (errorData.error || errorData.message || 'Dạ, em gặp chút lỗi khi đọc ảnh. Anh/chị vui lòng thử lại sau nhé.')
                     });
                     this.isLoading = false;
                     this.scrollToBottom();
@@ -311,7 +311,7 @@ function chatbotWidget() {
                     } else {
                         this.messages.push({
                             role: 'assistant',
-                            content: `❌ ${errorMsg}\n\n💡 Gợi ý:\n• Đảm bảo hình ảnh rõ ràng, không bị mờ\n• Chụp thẳng góc, tránh nghiêng\n• Đảm bảo đủ ánh sáng\n• Hình ảnh phải là đơn thuốc hoặc hóa đơn hợp lệ\n\nBạn có thể thử lại với hình ảnh khác hoặc nhập tên sản phẩm trực tiếp.`
+                            content: errorMsg + '\n\n💡 Gợi ý:\n• Đảm bảo hình ảnh rõ ràng, không bị mờ\n• Chụp thẳng góc, tránh nghiêng\n• Hình ảnh phải là đơn thuốc hoặc hóa đơn\n\nAnh/chị có thể thử lại với ảnh rõ hơn hoặc gửi tên sản phẩm trực tiếp ạ.'
                         });
                     }
                 }
@@ -319,7 +319,7 @@ function chatbotWidget() {
                 console.error('Error:', error);
                 this.messages.push({
                     role: 'assistant',
-                    content: '❌ Không thể tải lên hình ảnh. Vui lòng kiểm tra kết nối mạng và thử lại.'
+                    content: 'Dạ, em gặp sự cố khi tải ảnh lên. Anh/chị kiểm tra lại mạng và thử lại giúp em nhé.'
                 });
             } finally {
                 // Clean up blob URL after a delay to ensure it's displayed

@@ -26,3 +26,42 @@
         display: block !important;
     }
 }
+
+/* 
+ * FORCE CUSTOM SCROLLBAR (EMERALD THEME) 
+ * High specificity targeting to ensure application 
+ */
+html::-webkit-scrollbar, 
+body::-webkit-scrollbar,
+.chatbot-messages::-webkit-scrollbar,
+*::-webkit-scrollbar {
+    width: 6px !important;
+    height: 6px !important;
+}
+
+html::-webkit-scrollbar-track, 
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+    background: #f8fafc !important;
+}
+
+html::-webkit-scrollbar-thumb, 
+body::-webkit-scrollbar-thumb,
+.chatbot-messages::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+    background: #10b981 !important; /* Emerald 500 */
+    border-radius: 10px !important;
+    border: 1px solid #f8fafc !important;
+}
+
+html::-webkit-scrollbar-thumb:hover, 
+body::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+    background: #059669 !important; /* Emerald 600 */
+}
+
+/* Firefox Support */
+html, body, * {
+    scrollbar-width: thin !important;
+    scrollbar-color: #10b981 #f8fafc !important;
+}

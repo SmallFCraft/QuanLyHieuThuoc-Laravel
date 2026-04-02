@@ -109,7 +109,7 @@ class ChatbotController extends Controller
             
             return response()->json([
                 'success' => false,
-                'error' => 'Không thể xử lý tin nhắn. Vui lòng thử lại sau.'
+                'error' => 'Dạ, hiện tại em không thể xử lý tin nhắn này. Anh/chị vui lòng thử lại sau giây lát nhé.'
             ], 500);
         }
     }
@@ -194,7 +194,7 @@ class ChatbotController extends Controller
             
             return response()->json([
                 'success' => false,
-                'error' => 'Không thể xử lý hình ảnh. Vui lòng thử lại với hình ảnh rõ hơn.'
+                'error' => 'Dạ, em gặp chút sự cố khi tải ảnh lên. Anh/chị vui lòng kiểm tra lại kết nối mạng hoặc thử lại với ảnh khác giúp em nhé.'
             ], 500);
         }
     }

@@ -35,7 +35,7 @@ Khi đáp ứng yêu cầu tìm sản phẩm:
 PROMPT;
 
     /**
-     * Function schema for OpenAI function calling.
+     * Function schema for Gemini function calling.
      * Defines the search_products function for structured product queries.
      *
      * @return array
@@ -121,7 +121,7 @@ PROMPT;
         if (preg_match('/^([a-zA-Z0-9À-ỹ])\1{4,}$/u', $trimmed)) {
             return [
                 'valid' => false,
-                'reason' => 'Vui lòng nhập câu hỏi hoặc mô tả triệu chứng cụ thể hơn.'
+                'reason' => 'Dạ, anh/chị vui lòng nhập câu hỏi hoặc mô tả triệu chứng cụ thể hơn để em dễ hỗ trợ nhé.'
             ];
         }
         
@@ -129,8 +129,27 @@ PROMPT;
         if (preg_match('/^[^a-zA-ZÀ-ỹ0-9\s]+$/', $trimmed)) {
             return [
                 'valid' => false,
-                'reason' => 'Tôi chưa hiểu ý bạn. Vui lòng nhập thông tin bằng chữ.'
+                'reason' => 'Dạ, em chưa hiểu ý anh/chị lắm. Anh/chị vui lòng nhập thông tin bằng chữ để em tư vấn kỹ hơn nhé.'
             ];
+        }
+        
+        // Bad words detection from config
+        $badWords = config('blacklists.chatbot', []);
+        if (!empty($badWords)) {
+            // Escape words for regex and join them
+            $escapedWords = array_map(function($word) {
+                return preg_quote($word, '/');
+            }, $badWords);
+            
+            $badWordsPattern = implode('|', $escapedWords);
+            $badWordsRegex = '/\b(' . $badWordsPattern . ')\b/ui';
+            
+            if (preg_match($badWordsRegex, $trimmed)) {
+                return [
+                    'valid' => false,
+                    'reason' => 'Dạ, anh/chị vui lòng sử dụng ngôn từ lịch sự ạ. Em xin phép từ chối phản hồi các nội dung không phù hợp nhé.'
+                ];
+            }
         }
         
         // Intercept common meaningless greetings to save API wrapper tokens
@@ -176,7 +195,9 @@ PROMPT;
             // ---> AI QUOTA SAVER: LOCAL QUICK SEARCH <---
             // Bypass Gemini API for simple queries (e.g. asking for price, product name) to save the 20 limits/day.
             if (mb_strlen($message, 'UTF-8') < 50 && !$this->isSymptomRelatedQuery($message)) {
-                $cleanQuery = trim(preg_replace('/(?i)(cho tôi|tôi muốn|có bán|có|giá|bao nhiêu|tìm|thuốc)/u', '', $message));
+                $stopWords = '/\b(cho tôi hỏi|cho mình hỏi|tôi muốn tìm|tôi muốn mua|tôi cần tìm|tôi cần mua|cần tìm|cần mua|cho tôi|tôi muốn|tôi cần|có bán|cho hỏi|tôi|mình|anh|chị|em|cần|mua|tìm|có|giá|bao nhiêu|thuốc|sản phẩm|cái|hỏi|xem|muốn|về|loại)\b/ui';
+                $cleanQuery = trim(preg_replace($stopWords, ' ', $message));
+                $cleanQuery = trim(preg_replace('/\s+/', ' ', $cleanQuery));
                 
                 if (mb_strlen($cleanQuery, 'UTF-8') >= 3) {
                     $directResults = $this->searchProducts($cleanQuery);
@@ -198,7 +219,7 @@ PROMPT;
                         
                         return [
                             'success' => true,
-                            'response' => "Tôi đã tìm thấy " . count($products) . " sản phẩm liên quan đến '*{$cleanQuery}*' trong hệ thống nhà thuốc:",
+                            'response' => "Dạ, em tìm thấy " . count($products) . " sản phẩm phù hợp với yêu cầu của anh/chị:",
                             'products' => $products,
                             'explanations' => [], // Bypass AI explanation
                             'show_disclaimer' => false,
@@ -345,7 +366,9 @@ PROMPT;
             
             // --- AI QUOTA / EXHAUSTION FALLBACK ---
             // If the 20 API hits limit is reached, it throws an exception. We intercept it here and try local DB.
-            $fallbackQuery = trim(preg_replace('/(?i)(cho tôi|tôi muốn|có bán|có|giá|bao nhiêu|tìm|thuốc)/u', '', $message));
+            $stopWords = '/\b(cho tôi hỏi|cho mình hỏi|tôi muốn tìm|tôi muốn mua|tôi cần tìm|tôi cần mua|cần tìm|cần mua|cho tôi|tôi muốn|tôi cần|có bán|cho hỏi|tôi|mình|anh|chị|em|cần|mua|tìm|có|giá|bao nhiêu|thuốc|sản phẩm|cái|hỏi|xem|muốn|về|loại)\b/ui';
+            $fallbackQuery = trim(preg_replace($stopWords, ' ', $message));
+            $fallbackQuery = trim(preg_replace('/\s+/', ' ', $fallbackQuery));
             if (mb_strlen($fallbackQuery, 'UTF-8') >= 3) {
                 try {
                     $directResults = $this->searchProducts($fallbackQuery);
@@ -362,7 +385,7 @@ PROMPT;
                         
                         return [
                             'success' => true,
-                            'response' => "Hệ thống AI hiện đang bận. Tôi tìm thấy " . count($products) . " sản phẩm liên quan đến yêu cầu của bạn qua hệ thống tìm kiếm tự động:",
+                            'response' => "Dạ, em tìm thấy " . count($products) . " sản phẩm liên quan đến yêu cầu của anh/chị:",
                             'products' => $products,
                             'explanations' => [],
                             'show_disclaimer' => false,
@@ -375,14 +398,40 @@ PROMPT;
             }
             // --- END FALLBACK ---
             
-            // Generic Error Fallback
+            // Generic Error Fallback with Suggested Products
+            $suggestedProducts = [];
+            try {
+                $suggestions = \App\Models\Product::with('category')
+                    ->notExpired()
+                    ->where('stock_quantity', '>', 0)
+                    ->inRandomOrder()
+                    ->limit(5)
+                    ->get();
+                    
+                $suggestedProducts = $suggestions->map(function($product) {
+                    return [
+                        'id' => $product->id,
+                        'name' => $product->name,
+                        'price' => $product->price,
+                        'stock_quantity' => $product->stock_quantity,
+                        'image_url' => $product->image ? asset('storage/' . $product->image) : null,
+                        'ingredients' => $product->ingredients,
+                        'usage' => $product->usage,
+                        'expiration_date' => $product->expiration_date,
+                        'category' => $product->category ? $product->category->name : null
+                    ];
+                })->toArray();
+            } catch (\Exception $e) {
+                Log::error('Fallback suggestion failed', ['error' => $e->getMessage()]);
+            }
+
             return [
-                'success' => false,
-                'response' => 'Hệ thống AI hiện đang bận. Vui lòng thử lại sau hoặc sử dụng thanh tìm kiếm thủ công.',
-                'products' => [],
+                'success' => true,
+                'response' => 'Dạ, hiện tại cửa hàng đang tiếp nhận nhiều yêu cầu. Trong lúc chờ đợi, anh/chị có thể tham khảo một số gợi ý dưới đây, hoặc nhập tên viết tắt của sản phẩm để tìm nhanh nhé:',
+                'products' => $suggestedProducts,
                 'explanations' => [],
                 'show_disclaimer' => false,
-                'error' => 'API Quota Exceeded'
+                'error' => null
             ];
         }
     }
