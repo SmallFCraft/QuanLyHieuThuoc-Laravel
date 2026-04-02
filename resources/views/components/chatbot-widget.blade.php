@@ -1000,9 +1000,6 @@
         width: 56px; 
         height: 56px; 
     }
-    .chatbot-float-label {
-        display: none;
-    }
     .product-card { 
         flex-direction: row; 
         align-items: stretch;

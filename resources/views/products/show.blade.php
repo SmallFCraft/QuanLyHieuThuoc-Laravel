@@ -120,7 +120,7 @@
                     </a>
                     <span class="text-gray-400">|</span>
                     <span class="text-gray-600 small">
-                        <i class="bi bi-eye me-1"></i>1.2k lượt xem
+                        <i class="bi bi-eye me-1"></i>{{ number_format($product->views_count, 0, ',', '.') }} lượt xem
                     </span>
                 </div>
                 

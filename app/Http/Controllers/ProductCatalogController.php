@@ -50,6 +50,9 @@ class ProductCatalogController extends Controller
             ->notExpired()
             ->findOrFail($id);
 
+        // Increment views count
+        $product->increment('views_count');
+
         return view('products.show', compact('product'));
     }
 

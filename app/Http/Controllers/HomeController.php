@@ -16,13 +16,22 @@ class HomeController extends Controller
      */
     public function index(): View
     {
-        // Get 6 featured products (not expired, in stock)
-        $featuredProducts = Product::with('category')
+        // Sản phẩm mới ra mắt (theo ngày tạo mới nhất)
+        $newProducts = Product::with('category')
             ->where('expiration_date', '>', now())
             ->where('stock_quantity', '>', 0)
             ->whereNull('deleted_at')
             ->orderBy('created_at', 'desc')
-            ->limit(6)
+            ->limit(8)
+            ->get();
+
+        // Sản phẩm nổi bật (theo lượt xem cao nhất)
+        $featuredProducts = Product::with('category')
+            ->where('expiration_date', '>', now())
+            ->where('stock_quantity', '>', 0)
+            ->whereNull('deleted_at')
+            ->orderBy('views_count', 'desc')
+            ->limit(8)
             ->get();
 
         $categories = Category::query()
@@ -38,6 +47,6 @@ class HomeController extends Controller
             ->limit(10)
             ->get();
 
-        return view('home', compact('featuredProducts', 'categories'));
+        return view('home', compact('newProducts', 'featuredProducts', 'categories'));
     }
 }

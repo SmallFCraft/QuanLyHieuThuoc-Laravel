@@ -141,15 +141,15 @@
     </section>
     @endif
 
-    <!-- Sản phẩm nổi bật -->
-    <section class="py-4 py-md-5 position-relative overflow-hidden" id="noi-bat">
+    <!-- Sản phẩm mới ra mắt -->
+    <section class="py-4 py-md-5 position-relative overflow-hidden" id="moi-ra-mat">
         <div class="home-section-mesh" aria-hidden="true"></div>
         <div class="container position-relative">
             <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-3">
                 <div class="text-center text-sm-start w-100 w-sm-auto">
-                    <span class="text-success fw-bold text-uppercase small">Gợi ý hôm nay</span>
-                    <h2 class="h3 fw-bold text-dark mt-1 mb-0">Sản phẩm nổi bật</h2>
-                    <p class="text-muted small mb-0 mt-1 d-none d-md-block">Cập nhật mới, còn hạn dùng và đủ tồn kho.</p>
+                    <span class="text-success fw-bold text-uppercase small">Mới cập nhật</span>
+                    <h2 class="h3 fw-bold text-dark mt-1 mb-0">Sản phẩm mới ra mắt</h2>
+                    <p class="text-muted small mb-0 mt-1 d-none d-md-block">Những sản phẩm vừa được thêm vào cửa hàng.</p>
                 </div>
                 <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0">
                     Tất cả <i class="bi bi-arrow-right ms-1"></i>
@@ -157,7 +157,7 @@
             </div>
 
             <div class="row g-3 g-md-4">
-                @forelse($featuredProducts as $product)
+                @forelse($newProducts as $product)
                     <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
                         <div class="product-card h-100 border-0">
                             <div class="position-relative overflow-hidden home-product-media" style="border-radius: 16px 16px 0 0; aspect-ratio: 1/1;">
@@ -172,6 +172,9 @@
                                     </div>
                                 @endif
                                 <div class="position-absolute top-0 start-0 m-2 m-md-3 d-flex flex-column gap-2">
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle px-2 py-1 rounded-pill">
+                                        <i class="bi bi-stars me-1"></i>Mới
+                                    </span>
                                     @if($product->stock_quantity == 0)
                                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
                                             <i class="bi bi-x-circle me-1"></i>Hết hàng
@@ -220,8 +223,101 @@
                             <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px; background: rgba(16,185,129,0.12);">
                                 <i class="bi bi-box2 text-success fs-1"></i>
                             </div>
-                            <h3 class="h5 fw-bold text-dark">Chưa có sản phẩm</h3>
-                            <p class="text-muted mb-0 px-3">Hệ thống đang cập nhật. Vui lòng quay lại sau hoặc xem danh mục.</p>
+                            <h3 class="h5 fw-bold text-dark">Chưa có sản phẩm mới</h3>
+                            <p class="text-muted mb-0 px-3">Hệ thống đang cập nhật. Vui lòng quay lại sau.</p>
+                        </div>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </section>
+
+    <!-- Sản phẩm nổi bật (theo lượt xem) -->
+    <section class="py-4 py-md-5 position-relative overflow-hidden" id="noi-bat">
+        <div class="home-section-mesh" aria-hidden="true"></div>
+        <div class="container position-relative">
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-3">
+                <div class="text-center text-sm-start w-100 w-sm-auto">
+                    <span class="text-success fw-bold text-uppercase small">Được quan tâm nhất</span>
+                    <h2 class="h3 fw-bold text-dark mt-1 mb-0">Sản phẩm nổi bật</h2>
+                    <p class="text-muted small mb-0 mt-1 d-none d-md-block">Những sản phẩm được xem nhiều nhất bởi cộng đồng.</p>
+                </div>
+                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0">
+                    Tất cả <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+
+            <div class="row g-3 g-md-4">
+                @forelse($featuredProducts as $product)
+                    <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+                        <div class="product-card h-100 border-0">
+                            <div class="position-relative overflow-hidden home-product-media" style="border-radius: 16px 16px 0 0; aspect-ratio: 1/1;">
+                                @if($product->image)
+                                    <img src="{{ asset('storage/' . $product->image) }}"
+                                         class="w-100 h-100 object-fit-cover"
+                                         alt="{{ $product->name }}"
+                                         loading="lazy">
+                                @else
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center">
+                                        <i class="bi bi-capsule text-secondary opacity-25" style="font-size: 4rem;"></i>
+                                    </div>
+                                @endif
+                                <div class="position-absolute top-0 start-0 m-2 m-md-3 d-flex flex-column gap-2">
+                                    @if($product->views_count > 0)
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1 rounded-pill">
+                                            <i class="bi bi-eye-fill me-1"></i>{{ number_format($product->views_count) }} lượt xem
+                                        </span>
+                                    @endif
+                                    @if($product->stock_quantity == 0)
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
+                                            <i class="bi bi-x-circle me-1"></i>Hết hàng
+                                        </span>
+                                    @elseif($product->stock_quantity <= $product->reorder_point)
+                                        <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>Sắp hết
+                                        </span>
+                                    @endif
+                                </div>
+                                <div class="position-absolute top-0 end-0 m-2 m-md-3">
+                                    <a href="{{ route('products.show', $product->id) }}" class="btn btn-light btn-sm rounded-circle shadow-sm text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Xem chi tiết">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="p-3 p-md-4 d-flex flex-column flex-grow-1">
+                                <a href="{{ route('products.show', $product->id) }}" class="text-decoration-none">
+                                    <h3 class="h6 fw-bold mb-1 text-dark text-truncate" title="{{ $product->name }}">{{ $product->name }}</h3>
+                                </a>
+                                <p class="text-success small mb-2 fw-medium mb-0">{{ $product->category->name }}</p>
+                                <div class="mt-auto d-flex justify-content-between align-items-end pt-3 gap-2">
+                                    <div class="min-w-0">
+                                        <span class="text-muted small text-decoration-line-through d-block mb-1">
+                                            {{ format_currency_vi($product->price * 1.1) }}
+                                        </span>
+                                        <span class="h5 mb-0 text-success fw-bold">
+                                            {{ format_currency_vi($product->price) }}
+                                        </span>
+                                    </div>
+                                    <form action="{{ route('cart.add') }}" method="POST" class="d-inline flex-shrink-0 js-add-to-cart-form">
+                                        @csrf
+                                        <input type="hidden" name="product_id" value="{{ $product->id }}">
+                                        <input type="hidden" name="quantity" value="1">
+                                        <button type="submit" class="btn text-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background: #10b981;" {{ $product->stock_quantity == 0 ? 'disabled' : '' }} title="Thêm vào giỏ">
+                                            <i class="bi bi-cart-plus fs-5"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-12">
+                        <div class="text-center py-5 glass-card rounded-4">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px; background: rgba(16,185,129,0.12);">
+                                <i class="bi bi-box2 text-success fs-1"></i>
+                            </div>
+                            <h3 class="h5 fw-bold text-dark">Chưa có sản phẩm nổi bật</h3>
+                            <p class="text-muted mb-0 px-3">Hãy khám phá và xem sản phẩm để danh sách này được cập nhật!</p>
                             <a href="{{ route('products.index') }}" class="btn btn-success rounded-pill mt-3 px-4" style="background: #10b981; border-color: #10b981;">Đến cửa hàng</a>
                         </div>
                     </div>

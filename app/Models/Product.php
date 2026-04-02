@@ -28,6 +28,7 @@ class Product extends Model
         'reorder_point',
         'batch_number',
         'image',
+        'views_count',
     ];
 
     /**

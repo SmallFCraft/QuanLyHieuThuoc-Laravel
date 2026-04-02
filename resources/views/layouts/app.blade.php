@@ -466,30 +466,21 @@
                                             Danh mục
                                         </h6>
                                         <ul class="list-unstyled mb-0">
-                                            <li class="mb-2">
-                                                <a href="{{ route('products.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                            @forelse($footerCategories as $fCat)
+                                            <li class="{{ !$loop->last ? 'mb-2' : 'mb-0' }}">
+                                                <a href="{{ route('products.index', ['category' => $fCat->id]) }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
-                                                    Sức khỏe
+                                                    {{ $fCat->name }}
                                                 </a>
                                             </li>
-                                            <li class="mb-2">
-                                                <a href="{{ route('products.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
-                                                    <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
-                                                    Làm đẹp
-                                                </a>
-                                            </li>
-                                            <li class="mb-2">
-                                                <a href="{{ route('products.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
-                                                    <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
-                                                    Mẹ & Bé
-                                                </a>
-                                            </li>
+                                            @empty
                                             <li class="mb-0">
                                                 <a href="{{ route('products.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
-                                                    Thiết bị
+                                                    Tất cả sản phẩm
                                                 </a>
                                             </li>
+                                            @endforelse
                                         </ul>
                                     </div>
                                 </div>
