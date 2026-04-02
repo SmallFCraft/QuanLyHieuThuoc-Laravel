@@ -1,0 +1,57 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # ========================================
+    # Chặn truy cập trực tiếp vào file/thư mục nhạy cảm
+    # ========================================
+
+    # Chặn tất cả file .env (.env, .env.backup, .env.production, ...)
+    RewriteRule ^\.env - [F,L]
+
+    # Chặn file cấu hình project
+    RewriteRule ^composer\.(json|lock)$ - [F,L]
+    RewriteRule ^package(-lock)?\.json$ - [F,L]
+    RewriteRule ^phpunit\.xml$ - [F,L]
+    RewriteRule ^vite\.config\.(js|ts)$ - [F,L]
+    RewriteRule ^artisan$ - [F,L]
+    RewriteRule ^\.editorconfig$ - [F,L]
+    RewriteRule ^docker-compose\.ya?ml$ - [F,L]
+
+    # Chặn thư mục ẩn (.git, .github, .vscode, ...)
+    RewriteRule ^\.(.+)/ - [F,L]
+
+    # Chặn thư mục source code
+    RewriteRule ^app/ - [F,L]
+    RewriteRule ^bootstrap/ - [F,L]
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^database/ - [F,L]
+    RewriteRule ^resources/ - [F,L]
+    RewriteRule ^routes/ - [F,L]
+    # storage/ - KHÔNG chặn ở đây vì ảnh sản phẩm cần truy cập qua public/storage/ (symlink)
+    RewriteRule ^tests/ - [F,L]
+    RewriteRule ^vendor/ - [F,L]
+    RewriteRule ^node_modules/ - [F,L]
+
+    # ========================================
+    # Redirect mọi request vào public/
+    # ========================================
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Tắt directory listing
+Options -Indexes -MultiViews
+
+# Chặn truy cập file nhạy cảm bằng tên
+<FilesMatch "\.(env|log|sql|sqlite|yml|yaml|lock|bak|swp)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Ẩn server signature
+ServerSignature Off

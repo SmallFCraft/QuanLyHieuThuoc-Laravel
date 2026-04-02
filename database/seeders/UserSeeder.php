@@ -20,7 +20,7 @@ class UserSeeder extends Seeder
                 'password' => 'Gunny123456@',
                 'birth_date' => '1985-06-15',
                 'gender' => 'male',
-                'address' => '123 Đường Y Dược, Phường 1, Quận 1, TP. Hồ Chí Minh',
+                'address' => '123 Đường Y Dược, Phường 1, Quận 1, TP. Đà Nẵng',
                 'phone' => '0909123456',
                 'role' => 'Administrator',
                 'status' => 'active',

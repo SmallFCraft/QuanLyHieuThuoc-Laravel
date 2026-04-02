@@ -71,6 +71,50 @@
 
         <!-- Messages Container -->
         <div class="chatbot-messages" x-ref="messagesContainer">
+            <!-- Welcome Message (shown when no messages) -->
+            <div x-show="messages.length === 0 && !isLoading" class="chatbot-welcome">
+                <div class="welcome-icon">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                    </svg>
+                </div>
+                <h4 class="welcome-title">Xin chào! 👋</h4>
+                <p class="welcome-subtitle">Tôi là trợ lý AI của <strong>Medicare Pharmacy</strong>. Tôi có thể giúp bạn:</p>
+                <div class="welcome-features">
+                    <div class="feature-item">
+                        <span class="feature-emoji">💊</span>
+                        <span>Tìm kiếm & tư vấn thuốc</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-emoji">📋</span>
+                        <span>Nhận dạng đơn thuốc từ ảnh</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-emoji">🛒</span>
+                        <span>Đặt hàng nhanh qua chat</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-emoji">❓</span>
+                        <span>Giải đáp thắc mắc sức khỏe</span>
+                    </div>
+                </div>
+                <p class="welcome-hint">Hãy thử một trong các gợi ý bên dưới:</p>
+                <div class="suggestion-chips">
+                    <button @click="useSuggestion('Tôi cần tìm thuốc giảm đau')" class="suggestion-chip">
+                        💊 Tìm thuốc giảm đau
+                    </button>
+                    <button @click="useSuggestion('Có thuốc Paracetamol không?')" class="suggestion-chip">
+                        🔍 Hỏi thuốc Paracetamol
+                    </button>
+                    <button @click="useSuggestion('Thuốc nào tốt cho cảm cúm?')" class="suggestion-chip">
+                        🤒 Thuốc trị cảm cúm
+                    </button>
+                    <button @click="useSuggestion('Tư vấn vitamin tăng sức đề kháng')" class="suggestion-chip">
+                        💪 Tư vấn vitamin
+                    </button>
+                </div>
+            </div>
+
             <template x-for="(message, index) in messages" :key="index">
                 <div :class="message.role === 'user' ? 'message-user' : 'message-assistant' + (message.isSystemMessage ? ' system-message' : '')">
                     <div class="message-content">
@@ -704,6 +748,130 @@
 .markdown-body blockquote { border-left: 3px solid #10b981; padding-left: 10px; margin: 8px 0; color: #4a5568; font-style: italic; }
 .markdown-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 10px 0; }
 .markdown-body a { color: #10b981; text-decoration: underline; }
+
+/* Welcome Message Styles */
+.chatbot-welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px 10px 10px;
+    animation: welcomeFadeIn 0.5s ease-out;
+}
+
+@keyframes welcomeFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.welcome-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(4, 120, 87, 0.1) 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    color: #059669;
+    animation: welcomePulse 2s ease-in-out infinite;
+}
+
+@keyframes welcomePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.welcome-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 6px;
+}
+
+.welcome-subtitle {
+    font-size: 0.82rem;
+    color: #4b5563;
+    margin-bottom: 14px;
+    line-height: 1.5;
+    max-width: 280px;
+}
+
+.welcome-features {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(16, 185, 129, 0.12);
+    border-radius: 10px;
+    font-size: 0.8rem;
+    color: #374151;
+    transition: all 0.2s;
+}
+
+.feature-item:hover {
+    background: rgba(16, 185, 129, 0.06);
+    border-color: rgba(16, 185, 129, 0.25);
+}
+
+.feature-emoji {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.welcome-hint {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-bottom: 10px;
+    font-style: italic;
+}
+
+.suggestion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+}
+
+.suggestion-chip {
+    padding: 8px 14px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 20px;
+    font-size: 0.78rem;
+    color: #047857;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    white-space: nowrap;
+}
+
+.suggestion-chip:hover {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.suggestion-chip:active {
+    transform: translateY(0) scale(0.97);
+}
 
 @media (max-width: 768px) {
     .chatbot-widget-container { 

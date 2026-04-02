@@ -26,3 +26,4 @@ composer.lock
 .kiro/
 .cursor/
 .agents/
+*.zip

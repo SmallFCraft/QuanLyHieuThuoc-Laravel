@@ -631,6 +631,13 @@ function chatbotWidget() {
         saveHistory() {
             // History is now saved automatically to database via API
             // This method kept for compatibility but does nothing
+        },
+        
+        useSuggestion(text) {
+            this.inputText = text;
+            this.$nextTick(() => {
+                this.sendMessage();
+            });
         }
     }
 }
