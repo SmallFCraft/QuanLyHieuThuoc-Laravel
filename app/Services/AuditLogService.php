@@ -95,7 +95,7 @@ class AuditLogService
      */
     public static function log(
         string $action,
-        string $modelType,
+        ?string $modelType = null,
         ?int $modelId = null,
         ?array $oldValues = null,
         ?array $newValues = null
@@ -103,7 +103,7 @@ class AuditLogService
         AuditLog::create([
             'user_id' => Auth::id(),
             'action' => $action,
-            'model_type' => $modelType,
+            'model_type' => $modelType ?? 'System',
             'model_id' => $modelId,
             'old_values' => $oldValues,
             'new_values' => $newValues,

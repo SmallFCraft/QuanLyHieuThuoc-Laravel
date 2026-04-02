@@ -17,7 +17,7 @@
     @endphp
 
     @forelse($orders as $order)
-        <div class="glass-card-sm mb-3">
+        <div class="glass-card-sm mb-3" id="order-{{ $order->id }}">
             <div class="row align-items-center g-3">
                 <div class="col-md-8">
                     <div class="d-flex align-items-start gap-3">

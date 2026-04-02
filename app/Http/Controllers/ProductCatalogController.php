@@ -24,7 +24,12 @@ class ProductCatalogController extends Controller
 
         // Apply search filter if provided
         if ($request->has('search') && $request->search) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $searchTerm = trim($request->search);
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('ingredients', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('usage', 'like', '%' . $searchTerm . '%');
+            });
         }
 
         // Paginate results (12 per page)
@@ -71,12 +76,33 @@ class ProductCatalogController extends Controller
      */
     public function search(Request $request)
     {
-        $searchTerm = $request->input('q', '');
+        $searchTerm = trim($request->input('q', ''));
         
-        $products = Product::with('category')
+        $query = Product::with('category')
             ->notExpired()
-            ->where('name', 'like', '%' . $searchTerm . '%')
-            ->paginate(12);
+            ->where('stock_quantity', '>', 0);
+            
+        if (!empty($searchTerm)) {
+            $query->where(function($q) use ($searchTerm) {
+                // Ưu tiên tìm chuỗi chính xác trên các trường liên quan
+                $q->where('name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('ingredients', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('usage', 'like', '%' . $searchTerm . '%');
+                  
+                // Mở rộng bộ lọc: tách từ khóa và tìm kiếm chéo
+                $words = explode(' ', mb_strtolower($searchTerm, 'UTF-8'));
+                if (count($words) > 1) {
+                    foreach ($words as $word) {
+                        if (mb_strlen($word, 'UTF-8') >= 3) { // Chỉ tìm các từ khóa có nghĩa
+                            $q->orWhere('name', 'like', '%' . $word . '%')
+                              ->orWhere('usage', 'like', '%' . $word . '%');
+                        }
+                    }
+                }
+            });
+        }
+        
+        $products = $query->paginate(12)->withQueryString();
 
         $categories = Category::withCount('products')->get();
 

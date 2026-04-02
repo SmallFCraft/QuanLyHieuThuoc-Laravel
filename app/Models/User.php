@@ -88,4 +88,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(AuditLog::class);
     }
+    
+    /**
+     * Get chat messages for this user
+     */
+    public function chatMessages()
+    {
+        return $this->hasMany(ChatMessage::class);
+    }
+    
+    /**
+     * Get chatbot images for this user
+     */
+    public function chatbotImages()
+    {
+        return $this->hasMany(ChatbotImage::class);
+    }
 }

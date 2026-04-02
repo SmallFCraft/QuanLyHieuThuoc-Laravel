@@ -11,3 +11,5 @@ Artisan::command('inspire', function () {
 // Schedule cleanup tasks
 Schedule::command('audit:cleanup')->daily()->at('02:00');
 Schedule::command('images:cleanup')->weekly()->sundays()->at('03:00');
+Schedule::command('chatbot:cleanup-images')->hourly();
+Schedule::command('chat:cleanup')->daily()->at('03:00');

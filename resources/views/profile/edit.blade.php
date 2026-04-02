@@ -278,11 +278,34 @@ html {
     function activateTabFromHash() {
         const hash = window.location.hash;
         if (hash) {
-            // Find the tab link with matching href
-            const tab = document.querySelector(`a[data-bs-toggle="pill"][href="${hash}"]`);
-            if (tab) {
-                // Trigger click event to activate the tab
-                tab.click();
+            // Check if hash is for a specific order (e.g., #order-23)
+            if (hash.startsWith('#order-')) {
+                // Activate the orders tab
+                const ordersTab = document.querySelector('a[data-bs-toggle="pill"][href="#orders"]');
+                if (ordersTab) {
+                    ordersTab.click();
+                    
+                    // Wait for tab to be shown, then scroll to the order
+                    setTimeout(() => {
+                        const orderElement = document.querySelector(hash);
+                        if (orderElement) {
+                            orderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // Add highlight effect
+                            orderElement.style.transition = 'all 0.3s ease';
+                            orderElement.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.3)';
+                            setTimeout(() => {
+                                orderElement.style.boxShadow = '';
+                            }, 2000);
+                        }
+                    }, 300);
+                }
+            } else {
+                // Find the tab link with matching href
+                const tab = document.querySelector(`a[data-bs-toggle="pill"][href="${hash}"]`);
+                if (tab) {
+                    // Trigger click event to activate the tab
+                    tab.click();
+                }
             }
         }
     }

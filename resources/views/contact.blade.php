@@ -17,7 +17,45 @@
     </div>
 </section>
 
-<section class="py-5">
+<!-- AI Assistant Banner -->
+<section class="mt-n4 position-relative z-2 mb-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-12">
+                <div class="glass-card rounded-4 border-0 p-4 p-md-5 shadow-lg" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                    <div class="row align-items-center text-white">
+                        <div class="col-md-8 mb-4 mb-md-0">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-white text-emerald-600 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 shadow" style="width: 64px; height: 64px;">
+                                    <svg class="w-8 h-8" style="width:32px; height:32px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="fw-bold mb-1">Cần hỗ trợ ngay lập tức? Hãy dùng Trợ Lý AI</h3>
+                                    <p class="mb-0 text-emerald-50" style="font-size: 1.1rem">Hoạt động 24/7 • Đọc đơn thuốc bằng hình ảnh • Tư vấn & Đặt hàng cực nhanh</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <button type="button" 
+                                    x-data 
+                                    @click="$dispatch('open-chatbot')" 
+                                    class="btn bg-white text-emerald-600 btn-lg rounded-pill fw-bold px-4 py-3 shadow-sm"
+                                    style="transition: transform 0.3s;"
+                                    onmouseover="this.style.transform='translateY(-3px)'"
+                                    onmouseout="this.style.transform='translateY(0)'">
+                                Mở Chatbot Trợ Lý AI
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="pb-5">
     <div class="container">
         <div class="row g-5">
             <!-- Contact Form -->

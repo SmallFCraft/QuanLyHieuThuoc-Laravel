@@ -163,7 +163,7 @@
                             <div class="position-relative overflow-hidden home-product-media" style="border-radius: 16px 16px 0 0; aspect-ratio: 1/1;">
                                 @if($product->image)
                                     <img src="{{ asset('storage/' . $product->image) }}"
-                                         class="w-100 h-100 object-fit-contain p-2"
+                                         class="w-100 h-100 object-fit-cover"
                                          alt="{{ $product->name }}"
                                          loading="lazy">
                                 @else

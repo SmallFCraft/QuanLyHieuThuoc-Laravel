@@ -638,6 +638,12 @@
                 });
             });
         </script>
+        
+        <!-- Chatbot Widget -->
+        @auth
+            <x-chatbot-widget />
+        @endauth
+        
         @stack('modals')
         @stack('scripts')
     </body>
