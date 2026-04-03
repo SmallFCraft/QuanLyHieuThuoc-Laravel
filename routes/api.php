@@ -14,33 +14,33 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Chatbot API routes - requires web authentication (session-based)
-Route::middleware(['web', 'auth'])->prefix('chatbot')->group(function () {
-    // Send message - 20 requests per minute
+// Chatbot API routes - Mixed authentication (some require auth, some allow guest)
+Route::middleware(['web'])->prefix('chatbot')->group(function () {
+    // Guest-accessible routes (require login to actually use)
     Route::post('/message', [ChatbotController::class, 'sendMessage'])
         ->middleware('throttle:60,1');
     
-    // Upload image - 30 requests per hour (more lenient for testing)
     Route::post('/upload-image', [ChatbotController::class, 'uploadImage'])
         ->middleware('throttle:60,60');
     
-    // Cart operations - 30 requests per minute
-    Route::get('/cart', [ChatbotController::class, 'getCart'])
-        ->middleware('throttle:60,1');
-    
-    Route::post('/cart/add', [ChatbotController::class, 'addToCart'])
-        ->middleware('throttle:60,1');
-    
-    Route::post('/cart/update', [ChatbotController::class, 'updateCartItem'])
-        ->middleware('throttle:60,1');
-    
-    // Place order from chatbot - 10 requests per minute (allow retries for validation errors)
-    Route::post('/place-order', [ChatbotController::class, 'placeOrder'])
-        ->middleware('throttle:60,1');
-    
-    // Get chat history - no rate limit (read-only)
-    Route::get('/history', [ChatbotController::class, 'getHistory']);
-    
-    // Clear chat history - no rate limit
-    Route::delete('/history', [ChatbotController::class, 'clearHistory']);
+    // Authenticated-only routes
+    Route::middleware('auth')->group(function () {
+        // Cart operations
+        Route::get('/cart', [ChatbotController::class, 'getCart'])
+            ->middleware('throttle:60,1');
+        
+        Route::post('/cart/add', [ChatbotController::class, 'addToCart'])
+            ->middleware('throttle:60,1');
+        
+        Route::post('/cart/update', [ChatbotController::class, 'updateCartItem'])
+            ->middleware('throttle:60,1');
+        
+        // Place order from chatbot
+        Route::post('/place-order', [ChatbotController::class, 'placeOrder'])
+            ->middleware('throttle:60,1');
+        
+        // Chat history
+        Route::get('/history', [ChatbotController::class, 'getHistory']);
+        Route::delete('/history', [ChatbotController::class, 'clearHistory']);
+    });
 });

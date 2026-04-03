@@ -21,17 +21,24 @@ class ChatbotService
 Bạn là trợ lý AI của nhà thuốc Medicare Pharmacy. Nhiệm vụ chính:
 1. Giúp tìm kiếm dược phẩm và tư vấn sản phẩm chăm sóc sức khỏe.
 2. Đề xuất sản phẩm dựa trên triệu chứng (luôn dặn dò tham khảo bác sĩ).
-3. KHÔNG đưa ra chẩn đoán y khoa nghiêm trọng.
-4. Trả lời tiếng Việt, ngắn gọn, súc tích và thân thiện.
+3. Tư vấn sơ bộ về triệu chứng và cách chăm sóc sức khỏe.
+4. KHÔNG đưa ra chẩn đoán y khoa nghiêm trọng.
+5. Trả lời tiếng Việt, ngắn gọn, súc tích và thân thiện.
 
 QUY TẮC TIẾT KIỆM TÀI NGUYÊN (VÔ CÙNG QUAN TRỌNG):
 - Nếu người dùng chỉ chào hỏi hoặc nói những câu từ trống không/ngắn gọn, hãy chào lại và hỏi xem họ cần mua gì. TUYỆT ĐỐI KHÔNG gọi function `search_products`.
 - Nếu người dùng đưa ra các chủ đề ngoài ngành y tế, sức khỏe, làm đẹp, thuốc men (ví dụ: giải trí, máy tính, ăn uống linh tinh, v.v.), hãy từ chối khéo léo. TUYỆT ĐỐI KHÔNG gọi function.
-- CHỈ GỌI function `search_products` khi người dùng THỰC SỰ đang hỏi mua một loại thuốc/sản phẩm cụ thể hoặc đang kể lể về các triệu chứng bệnh lý mà họ đang mắc phải.
+- CHỈ GỌI function `search_products` khi người dùng THỰC SỰ đang hỏi mua một loại thuốc/sản phẩm cụ thể.
+- Nếu người dùng chỉ hỏi về triệu chứng/bệnh mà KHÔNG yêu cầu tìm thuốc, hãy tư vấn trực tiếp KHÔNG cần gọi function.
 
 Khi đáp ứng yêu cầu tìm sản phẩm:
-- Gọi function `search_products` với keyword ngắn gọn, chính xác.
+- Gọi function `search_products` với keyword ngắn gọn, chính xác (ví dụ: "Vitamin C", "Paracetamol").
 - Đưa ra lời khuyên sử dụng rất ngắn gọn và thông báo các sản phẩm tìm được.
+
+Khi tư vấn về triệu chứng (không tìm sản phẩm):
+- Đưa ra lời khuyên chăm sóc sức khỏe cơ bản.
+- Khuyên nên gặp bác sĩ nếu triệu chứng nghiêm trọng.
+- Chỉ đề xuất tìm thuốc nếu người dùng yêu cầu.
 PROMPT;
 
     /**
@@ -195,11 +202,12 @@ PROMPT;
             // ---> AI QUOTA SAVER: LOCAL QUICK SEARCH <---
             // Bypass Gemini API for simple queries (e.g. asking for price, product name) to save the 20 limits/day.
             if (mb_strlen($message, 'UTF-8') < 50 && !$this->isSymptomRelatedQuery($message)) {
-                $stopWords = '/\b(cho tôi hỏi|cho mình hỏi|tôi muốn tìm|tôi muốn mua|tôi cần tìm|tôi cần mua|cần tìm|cần mua|cho tôi|tôi muốn|tôi cần|có bán|cho hỏi|tôi|mình|anh|chị|em|cần|mua|tìm|có|giá|bao nhiêu|thuốc|sản phẩm|cái|hỏi|xem|muốn|về|loại)\b/ui';
+                // Improved stop words - only remove filler words, keep product keywords
+                $stopWords = '/\b(cho tôi hỏi|cho mình hỏi|tôi muốn tìm|tôi muốn mua|tôi cần tìm|tôi cần mua|cần tìm|cần mua|cho tôi|tôi muốn|tôi cần|có bán|cho hỏi|tôi|mình|anh|chị|em|cần|mua|tìm|có|giá|bao nhiêu|cái|hỏi|xem|muốn|về|loại|tao|mày)\b/ui';
                 $cleanQuery = trim(preg_replace($stopWords, ' ', $message));
                 $cleanQuery = trim(preg_replace('/\s+/', ' ', $cleanQuery));
                 
-                if (mb_strlen($cleanQuery, 'UTF-8') >= 3) {
+                if (mb_strlen($cleanQuery, 'UTF-8') >= 2) {
                     $directResults = $this->searchProducts($cleanQuery);
                     
                     if ($directResults->count() > 0) {
@@ -366,10 +374,10 @@ PROMPT;
             
             // --- AI QUOTA / EXHAUSTION FALLBACK ---
             // If the 20 API hits limit is reached, it throws an exception. We intercept it here and try local DB.
-            $stopWords = '/\b(cho tôi hỏi|cho mình hỏi|tôi muốn tìm|tôi muốn mua|tôi cần tìm|tôi cần mua|cần tìm|cần mua|cho tôi|tôi muốn|tôi cần|có bán|cho hỏi|tôi|mình|anh|chị|em|cần|mua|tìm|có|giá|bao nhiêu|thuốc|sản phẩm|cái|hỏi|xem|muốn|về|loại)\b/ui';
+            $stopWords = '/\b(cho tôi hỏi|cho mình hỏi|tôi muốn tìm|tôi muốn mua|tôi cần tìm|tôi cần mua|cần tìm|cần mua|cho tôi|tôi muốn|tôi cần|có bán|cho hỏi|tôi|mình|anh|chị|em|cần|mua|tìm|có|giá|bao nhiêu|cái|hỏi|xem|muốn|về|loại|tao|mày)\b/ui';
             $fallbackQuery = trim(preg_replace($stopWords, ' ', $message));
             $fallbackQuery = trim(preg_replace('/\s+/', ' ', $fallbackQuery));
-            if (mb_strlen($fallbackQuery, 'UTF-8') >= 3) {
+            if (mb_strlen($fallbackQuery, 'UTF-8') >= 2) {
                 try {
                     $directResults = $this->searchProducts($fallbackQuery);
                     if ($directResults->count() > 0) {
@@ -556,65 +564,109 @@ PROMPT;
     public function searchProducts(string $query): Collection
     {
         $query = trim($query);
+        $queryLower = mb_strtolower($query, 'UTF-8');
+        
+        // Phase 1: Exact word match with word boundaries
         $products = Product::with('category')
             ->notExpired()
             ->where('stock_quantity', '>', 0)
-            ->where(function($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%")
-                  ->orWhere('ingredients', 'LIKE', "%{$query}%")
-                  ->orWhere('usage', 'LIKE', "%{$query}%");
+            ->where(function($q) use ($query, $queryLower) {
+                // Exact match (highest priority)
+                $q->where('name', 'LIKE', $query)
+                  ->orWhere('name', 'LIKE', "{$query} %")
+                  ->orWhere('name', 'LIKE', "% {$query}")
+                  ->orWhere('name', 'LIKE', "% {$query} %");
             })
             ->FEFO()
             ->limit(5)
             ->get();
-            
-        // Fallback: Tìm mờ (Fuzzy Search) nếu không có kết quả chính xác
-        if ($products->isEmpty() && mb_strlen($query, 'UTF-8') >= 4) {
-            $qBuilder = Product::with('category')
+        
+        // Phase 2: Partial match if no exact results
+        if ($products->isEmpty()) {
+            $products = Product::with('category')
                 ->notExpired()
-                ->where('stock_quantity', '>', 0);
-                
-            $qBuilder->where(function($q) use ($query) {
-                $words = explode(' ', mb_strtolower($query, 'UTF-8'));
-                foreach ($words as $word) {
-                    if (mb_strlen($word, 'UTF-8') >= 4) {
-                        // Cắt chuỗi thành các cụm 4 ký tự (ngrams) để tìm kiếm
-                        for ($i = 0; $i <= mb_strlen($word, 'UTF-8') - 4; $i += 2) { 
-                            $ngram = mb_substr($word, $i, 4, 'UTF-8');
-                            $q->orWhere('name', 'LIKE', "%{$ngram}%");
-                        }
-                    } else if (mb_strlen($word, 'UTF-8') > 0) {
-                        $q->orWhere('name', 'LIKE', "%{$word}%");
-                    }
-                }
+                ->where('stock_quantity', '>', 0)
+                ->where(function($q) use ($query) {
+                    $q->where('name', 'LIKE', "%{$query}%")
+                      ->orWhere('ingredients', 'LIKE', "%{$query}%")
+                      ->orWhere('usage', 'LIKE', "%{$query}%");
+                })
+                ->FEFO()
+                ->limit(5)
+                ->get();
+        }
+        
+        // Phase 3: Smart word-by-word search
+        if ($products->isEmpty() && mb_strlen($query, 'UTF-8') >= 3) {
+            $words = array_filter(explode(' ', $queryLower), function($w) {
+                return mb_strlen($w, 'UTF-8') >= 2;
             });
             
-            $candidates = $qBuilder->limit(40)->get();
-            
-            if ($candidates->isNotEmpty()) {
-                $queryLower = mb_strtolower($query, 'UTF-8');
+            if (!empty($words)) {
+                $qBuilder = Product::with('category')
+                    ->notExpired()
+                    ->where('stock_quantity', '>', 0);
                 
-                // Đánh giá độ tương đồng (similarity) cho từng kết quả
-                $candidates = $candidates->map(function($p) use ($queryLower) {
-                    $nameLower = mb_strtolower($p->name, 'UTF-8');
-                    
-                    // Tính phần trăm giống nhau
-                    similar_text($queryLower, $nameLower, $percent);
-                    
-                    // Thưởng điểm nếu bắt đầu bằng 3 ký tự giống nhau
-                    if (mb_strlen($queryLower, 'UTF-8') >= 3 && 
-                        mb_substr($queryLower, 0, 3, 'UTF-8') === mb_substr($nameLower, 0, 3, 'UTF-8')) {
-                        $percent += 20;
+                // Search for each word with word boundaries
+                $qBuilder->where(function($q) use ($words) {
+                    foreach ($words as $word) {
+                        $q->where(function($subQ) use ($word) {
+                            $subQ->where('name', 'LIKE', "{$word}%")
+                                 ->orWhere('name', 'LIKE', "% {$word}%");
+                        });
                     }
-                    
-                    $p->similarity = $percent;
-                    return $p;
-                })->sortByDesc('similarity')->values();
+                });
                 
-                // Lọc những sản phẩm có độ giống > 30% và lấy top 5
-                $products = $candidates->filter(function($p) {
-                    return $p->similarity > 30; 
-                })->take(5);
+                $candidates = $qBuilder->limit(20)->get();
+                
+                if ($candidates->isNotEmpty()) {
+                    // Score each candidate
+                    $candidates = $candidates->map(function($p) use ($queryLower, $words) {
+                        $nameLower = mb_strtolower($p->name, 'UTF-8');
+                        $score = 0;
+                        
+                        // Exact match bonus
+                        if ($nameLower === $queryLower) {
+                            $score += 100;
+                        }
+                        
+                        // Starts with query bonus
+                        if (mb_strpos($nameLower, $queryLower) === 0) {
+                            $score += 50;
+                        }
+                        
+                        // Contains exact query bonus
+                        if (mb_strpos($nameLower, $queryLower) !== false) {
+                            $score += 30;
+                        }
+                        
+                        // Word match scoring
+                        foreach ($words as $word) {
+                            // Exact word match (with boundaries)
+                            if (preg_match('/\b' . preg_quote($word, '/') . '\b/ui', $nameLower)) {
+                                $score += 20;
+                            }
+                            // Partial word match
+                            else if (mb_strpos($nameLower, $word) !== false) {
+                                $score += 5;
+                            }
+                        }
+                        
+                        // Penalize if name is much longer (likely not what user wants)
+                        $lengthDiff = abs(mb_strlen($nameLower, 'UTF-8') - mb_strlen($queryLower, 'UTF-8'));
+                        if ($lengthDiff > 20) {
+                            $score -= 10;
+                        }
+                        
+                        $p->similarity = $score;
+                        return $p;
+                    })->sortByDesc('similarity')->values();
+                    
+                    // Only return products with reasonable score
+                    $products = $candidates->filter(function($p) {
+                        return $p->similarity >= 15;
+                    })->take(5);
+                }
             }
         }
         

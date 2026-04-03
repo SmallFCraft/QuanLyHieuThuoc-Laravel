@@ -27,3 +27,4 @@ composer.lock
 .cursor/
 .agents/
 *.zip
+.playwright-mcp/

@@ -115,8 +115,8 @@
                     <button @click="useSuggestion('Thuốc nào tốt cho cảm cúm?')" class="suggestion-chip">
                         🤒 Thuốc trị cảm cúm
                     </button>
-                    <button @click="useSuggestion('Tư vấn vitamin tăng sức đề kháng')" class="suggestion-chip">
-                        💪 Tư vấn vitamin
+                    <button @click="useSuggestion('Xem các loại vitamin')" class="suggestion-chip">
+                        💪 Xem vitamin
                     </button>
                 </div>
             </div>
@@ -138,6 +138,28 @@
                         
                         <!-- Assistant message -->
                         <div x-show="message.role !== 'user'" class="markdown-body" x-html="parseMarkdown(message.content)"></div>
+                        
+                        <!-- Auth Buttons (Login/Register) -->
+                        <template x-if="message.showAuthButtons">
+                            <div class="mt-3 d-flex flex-column flex-sm-row gap-2" style="width: 100%;">
+                                <a :href="message.loginUrl" 
+                                   class="btn btn-emerald text-white fw-semibold d-flex align-items-center justify-content-center gap-2 text-decoration-none"
+                                   style="flex: 1; background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 10px 16px; border-radius: 10px; transition: all 0.2s; font-size: 0.875rem;"
+                                   onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(16, 185, 129, 0.3)'"
+                                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(16, 185, 129, 0.2)'">
+                                    <span>🔑</span>
+                                    <span>Đăng nhập</span>
+                                </a>
+                                <a :href="message.registerUrl" 
+                                   class="btn btn-outline-emerald fw-semibold d-flex align-items-center justify-content-center gap-2 text-decoration-none"
+                                   style="flex: 1; background: white; color: #059669; border: 2px solid #10b981; padding: 10px 16px; border-radius: 10px; transition: all 0.2s; font-size: 0.875rem;"
+                                   onmouseover="this.style.background='#f0fdf4'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(16, 185, 129, 0.15)'"
+                                   onmouseout="this.style.background='white'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                    <span>✨</span>
+                                    <span>Đăng ký</span>
+                                </a>
+                            </div>
+                        </template>
                         
                         <!-- Products Display -->
                         <template x-if="message.products && message.products.length > 0">
@@ -954,7 +976,10 @@
     color: #047857;
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    white-space: nowrap;
+    white-space: normal;
+    text-align: center;
+    word-break: break-word;
+    line-height: 1.3;
 }
 
 .suggestion-chip:hover {

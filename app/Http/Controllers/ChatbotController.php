@@ -32,6 +32,16 @@ class ChatbotController extends Controller
      */
     public function sendMessage(Request $request): JsonResponse
     {
+        // Check authentication first
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Vui lòng đăng nhập để sử dụng chatbot.',
+                'require_login' => true,
+                'login_url' => route('login')
+            ], 401);
+        }
+        
         $validated = $request->validate([
             'message' => 'required|string|min:3|max:1000',
             'context' => 'nullable|array'
@@ -122,6 +132,16 @@ class ChatbotController extends Controller
      */
     public function uploadImage(Request $request): JsonResponse
     {
+        // Check authentication first
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Vui lòng đăng nhập để tải ảnh lên.',
+                'require_login' => true,
+                'login_url' => route('login')
+            ], 401);
+        }
+        
         $validated = $request->validate([
             'image' => 'required|image|mimes:jpeg,png,jpg|max:5120', // 5MB
             'type' => 'nullable|in:prescription,receipt'

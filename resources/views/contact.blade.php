@@ -45,7 +45,7 @@
                                     style="transition: transform 0.3s;"
                                     onmouseover="this.style.transform='translateY(-3px)'"
                                     onmouseout="this.style.transform='translateY(0)'">
-                                Mở Chatbot Trợ Lý AI
+                                Mở Trợ Lý AI
                             </button>
                         </div>
                     </div>

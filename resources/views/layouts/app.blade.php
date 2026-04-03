@@ -630,10 +630,8 @@
             });
         </script>
         
-        <!-- Chatbot Widget -->
-        @auth
-            <x-chatbot-widget />
-        @endauth
+        <!-- Chatbot Widget (Available for all users, login required to use) -->
+        <x-chatbot-widget />
         
         @stack('modals')
         @stack('scripts')

@@ -155,11 +155,27 @@ function chatbotWidget() {
                         })
                     });
                     
+                    const data = await response.json();
+                    
+                    // Handle authentication required
+                    if (response.status === 401 && data.require_login) {
+                        this.messages.push({
+                            role: 'assistant',
+                            content: '🔐 ' + data.error + '\n\nĐể sử dụng chatbot, anh/chị vui lòng đăng nhập hoặc đăng ký tài khoản nhé.',
+                            isSystemMessage: true,
+                            showAuthButtons: true,
+                            loginUrl: data.login_url,
+                            registerUrl: '/register'
+                        });
+                        
+                        this.isLoading = false;
+                        this.scrollToBottom();
+                        return;
+                    }
+                    
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    
-                    const data = await response.json();
                     
                     if (data.success) {
                         this.messages.push({
@@ -232,6 +248,25 @@ function chatbotWidget() {
                 
                 // Log response for debugging
                 console.log('Upload response status:', response.status);
+                
+                // Handle authentication required
+                if (response.status === 401) {
+                    const errorData = await response.json();
+                    if (errorData.require_login) {
+                        this.messages.push({
+                            role: 'assistant',
+                            content: '🔐 ' + errorData.error + '\n\nĐể tải ảnh lên, anh/chị vui lòng đăng nhập hoặc đăng ký tài khoản nhé.',
+                            isSystemMessage: true,
+                            showAuthButtons: true,
+                            loginUrl: errorData.login_url,
+                            registerUrl: '/register'
+                        });
+                        
+                        this.isLoading = false;
+                        this.scrollToBottom();
+                        return;
+                    }
+                }
                 
                 // Handle rate limit error
                 if (response.status === 429) {
@@ -635,8 +670,12 @@ function chatbotWidget() {
         
         useSuggestion(text) {
             this.inputText = text;
+            // Focus vào input để người dùng có thể chỉnh sửa trước khi gửi
             this.$nextTick(() => {
-                this.sendMessage();
+                const input = this.$el.querySelector('.input-message');
+                if (input) {
+                    input.focus();
+                }
             });
         }
     }
