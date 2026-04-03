@@ -21,6 +21,7 @@ return new class extends Migration
             $table->timestamps();
             
             $table->index('status');
+            $table->index('email');
             $table->index('created_at');
         });
     }

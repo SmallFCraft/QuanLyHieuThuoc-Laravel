@@ -18,6 +18,8 @@ return new class extends Migration
             $table->enum('status', ['Pending', 'Delivering', 'Completed', 'Cancelled'])->default('Pending');
             $table->text('shipping_address')->nullable();
             $table->string('shipping_phone', 20)->nullable();
+            $table->string('delivery_time', 50)->nullable();
+            $table->text('order_notes')->nullable();
             $table->timestamps();
             
             $table->index('user_id');

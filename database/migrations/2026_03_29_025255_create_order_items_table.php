@@ -25,6 +25,7 @@ return new class extends Migration
             $table->index('product_id');
             $table->index('batch_id');
             $table->index(['order_id', 'product_id'], 'order_items_order_product_idx');
+            $table->index(['batch_id', 'product_id'], 'order_items_batch_product_idx');
         });
     }
 

@@ -24,12 +24,28 @@ class ProductSeeder extends Seeder
 
         $products = $this->getProducts($categories);
 
-        foreach ($products as $product) {
-            Product::updateOrCreate(
-                ['batch_number' => $product['batch_number']],
-                $product
+        foreach ($products as $productData) {
+            // Create or update product
+            $product = Product::updateOrCreate(
+                ['batch_number' => $productData['batch_number']],
+                $productData
+            );
+
+            // Create corresponding product batch
+            \App\Models\ProductBatch::updateOrCreate(
+                [
+                    'product_id' => $product->id,
+                    'batch_number' => $productData['batch_number']
+                ],
+                [
+                    'expiration_date' => $productData['expiration_date'],
+                    'stock_quantity' => $productData['stock_quantity'],
+                    'reorder_point' => $productData['reorder_point'],
+                ]
             );
         }
+
+        $this->command->info('Created ' . count($products) . ' products with batches');
     }
 
     /**

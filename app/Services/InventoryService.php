@@ -42,8 +42,10 @@ class InventoryService
             if ($hasBatches) {
                 $this->applyBatchStockDelta($product, $quantity);
                 $newQuantity = (int) $product->batches()->sum('stock_quantity');
-                $product->setAttribute('stock_quantity', $newQuantity);
-                $product->saveQuietly();
+                // Sync stock_quantity to products table for consistency
+                DB::table('products')
+                    ->where('id', $product->id)
+                    ->update(['stock_quantity' => $newQuantity, 'updated_at' => now()]);
             } else {
                 $product->setAttribute('stock_quantity', $newQuantity);
                 $product->save();
@@ -251,10 +253,23 @@ class InventoryService
                     );
                 }
                 
-                // Deduct stock
                 $oldQuantity = $product->stock_quantity;
-                $product->stock_quantity -= $item['quantity'];
-                $product->save();
+                
+                // Deduct from batches if they exist (FEFO strategy)
+                $hasBatches = $product->batches()->exists();
+                if ($hasBatches) {
+                    $this->applyBatchStockDelta($product, -$item['quantity']);
+                    $newQuantity = (int) $product->batches()->sum('stock_quantity');
+                    // Sync to products table
+                    DB::table('products')
+                        ->where('id', $product->id)
+                        ->update(['stock_quantity' => $newQuantity, 'updated_at' => now()]);
+                } else {
+                    // Deduct directly from product
+                    $product->stock_quantity -= $item['quantity'];
+                    $product->save();
+                    $newQuantity = $product->stock_quantity;
+                }
                 
                 // Log the deduction
                 app(AuditLogService::class)->log(
@@ -263,7 +278,7 @@ class InventoryService
                     modelId: $product->id,
                     oldValues: ['stock_quantity' => $oldQuantity],
                     newValues: [
-                        'stock_quantity' => $product->stock_quantity,
+                        'stock_quantity' => $newQuantity,
                         'deducted' => $item['quantity']
                     ]
                 );
@@ -288,10 +303,23 @@ class InventoryService
                 // Lock the product row
                 $product = Product::lockForUpdate()->findOrFail($item['product_id']);
                 
-                // Restore stock
                 $oldQuantity = $product->stock_quantity;
-                $product->stock_quantity += $item['quantity'];
-                $product->save();
+                
+                // Restore to batches if they exist
+                $hasBatches = $product->batches()->exists();
+                if ($hasBatches) {
+                    $this->applyBatchStockDelta($product, $item['quantity']);
+                    $newQuantity = (int) $product->batches()->sum('stock_quantity');
+                    // Sync to products table
+                    DB::table('products')
+                        ->where('id', $product->id)
+                        ->update(['stock_quantity' => $newQuantity, 'updated_at' => now()]);
+                } else {
+                    // Restore directly to product
+                    $product->stock_quantity += $item['quantity'];
+                    $product->save();
+                    $newQuantity = $product->stock_quantity;
+                }
                 
                 // Log the restoration
                 app(AuditLogService::class)->log(
@@ -300,7 +328,7 @@ class InventoryService
                     modelId: $product->id,
                     oldValues: ['stock_quantity' => $oldQuantity],
                     newValues: [
-                        'stock_quantity' => $product->stock_quantity,
+                        'stock_quantity' => $newQuantity,
                         'restored' => $item['quantity']
                     ]
                 );

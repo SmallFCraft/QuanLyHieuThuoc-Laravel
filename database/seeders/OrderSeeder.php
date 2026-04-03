@@ -65,9 +65,13 @@ class OrderSeeder extends Seeder
                 $quantity = rand(1, 3);
                 $unitPrice = $product->price;
                 
+                // Get the first available batch for this product
+                $batch = $product->batches()->first();
+                
                 OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $product->id,
+                    'batch_id' => $batch ? $batch->id : null,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'batch_number' => $product->batch_number,

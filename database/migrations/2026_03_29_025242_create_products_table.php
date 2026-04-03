@@ -23,6 +23,7 @@ return new class extends Migration
             $table->integer('reorder_point')->default(10);
             $table->string('batch_number', 100);
             $table->string('image')->nullable();
+            $table->unsignedInteger('views_count')->default(0);
             $table->timestamps();
             $table->softDeletes();
             
@@ -30,6 +31,7 @@ return new class extends Migration
             $table->index('expiration_date');
             $table->index('batch_number');
             $table->index('deleted_at');
+            $table->index('views_count');
             $table->index(['category_id', 'expiration_date'], 'products_category_expiration_idx');
             $table->index(['stock_quantity', 'reorder_point'], 'products_stock_reorder_idx');
             $table->unique(['name', 'batch_number'], 'unique_batch_per_product');
