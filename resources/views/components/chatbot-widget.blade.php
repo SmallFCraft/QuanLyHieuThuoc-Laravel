@@ -412,14 +412,14 @@
                     </svg>
                 </button>
 
-                <input 
-                    type="text" 
-                    x-model="inputText" 
-                    @keydown.enter="sendMessage()"
+                <textarea
+                    x-model="inputText"
+                    @keydown.enter.exact.prevent="sendMessage()"
                     :placeholder="attachedImage ? '{{ __('messages.chatbot.placeholder_with_image') }}' : '{{ __('messages.chatbot.placeholder') }}'"
                     class="input-message"
                     :disabled="isLoading"
-                >
+                    rows="1"
+                ></textarea>
 
                 <button @click="sendMessage()" :disabled="isLoading || (!inputText.trim() && !attachedImage)" class="btn-send">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -869,7 +869,7 @@
 .input-row {
     display: flex;
     gap: 10px;
-    align-items: center;
+    align-items: flex-end;
     width: 100%;
 }
 
@@ -885,6 +885,11 @@
     background: rgba(255, 255, 255, 0.8);
     transition: all 0.2s;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+    min-height: 44px;
+    max-height: 120px;
+    line-height: 1.45;
+    resize: none;
+    overflow-y: auto;
 }
 
 .input-message:focus {
