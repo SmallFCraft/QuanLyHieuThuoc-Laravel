@@ -936,6 +936,24 @@
 .markdown-body blockquote { border-left: 3px solid #10b981; padding-left: 10px; margin: 8px 0; color: #4a5568; font-style: italic; }
 .markdown-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 10px 0; }
 .markdown-body a { color: #10b981; text-decoration: underline; }
+.markdown-body a.chatbot-link-btn {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.28);
+    color: #047857;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+.markdown-body a.chatbot-link-btn:hover {
+    background: #10b981;
+    color: #ffffff;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
 
 /* Welcome Message Styles */
 .chatbot-welcome {

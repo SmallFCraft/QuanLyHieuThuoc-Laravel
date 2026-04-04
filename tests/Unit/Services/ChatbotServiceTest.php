@@ -257,6 +257,19 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('Paracetamol 500mg', $result['response']);
     }
 
+    public function test_process_message_returns_symptom_guidance_without_product_lookup_for_general_symptom_question(): void
+    {
+        $this->geminiService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage("T\u{00F4}i b\u{1ECB} ti\u{00EA}u ch\u{1EA3}y th\u{00EC} sao?", 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertTrue($result['show_disclaimer']);
+        $this->assertStringContainsString('ORESOL', $result['response']);
+    }
+
     public function test_process_message_returns_website_intro_without_product_search(): void
     {
         $category = Category::factory()->create([
@@ -385,6 +398,141 @@ class ChatbotServiceTest extends TestCase
         $this->assertNotEmpty($result['products']);
         $this->assertNotEmpty($result['explanations']);
         $this->assertArrayHasKey('show_disclaimer', $result);
+    }
+
+    public function test_process_message_falls_back_to_symptom_keywords_when_generic_query_has_no_direct_match(): void
+    {
+        $category = Category::factory()->create(['name' => 'Tiêu hóa']);
+        Product::factory()->create([
+            'category_id' => $category->id,
+            'name' => 'Smecta',
+            'usage' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
+            'stock_quantity' => 30,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->geminiService->expects($this->once())
+            ->method('chat')
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'function_call' => [
+                                'name' => 'search_products',
+                                'arguments' => json_encode([
+                                    'query' => 'hỗ trợ tiêu hóa',
+                                    'symptoms' => ['táo bón', 'tiêu chảy'],
+                                ]),
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage('Có sản phẩm nào hỗ trợ táo bón hay tiêu chảy?', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertNotEmpty($result['products']);
+        $this->assertContains('Smecta', array_column($result['products'], 'name'));
+    }
+
+    public function test_process_message_extracts_multiple_health_goals_from_generic_question(): void
+    {
+        $category = Category::factory()->create(['name' => 'Thực phẩm chức năng']);
+        Product::factory()->create([
+            'category_id' => $category->id,
+            'name' => 'Canxi Kid Plus',
+            'usage' => 'Hỗ trợ tăng chiều cao và phát triển xương cho trẻ.',
+            'stock_quantity' => 25,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        Product::factory()->create([
+            'category_id' => $category->id,
+            'name' => 'Vitamin C Immunity',
+            'usage' => 'Hỗ trợ tăng sức đề kháng và giảm mệt mỏi.',
+            'stock_quantity' => 40,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->geminiService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage('Có sản phẩm nào hỗ trợ tăng chiều cao hay tăng sức đề kháng?', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertNotEmpty($result['products']);
+        $this->assertContains('Canxi Kid Plus', array_column($result['products'], 'name'));
+        $this->assertContains('Vitamin C Immunity', array_column($result['products'], 'name'));
+    }
+
+    public function test_process_message_does_not_misclassify_ho_tro_giam_dau_as_capability_question(): void
+    {
+        $category = Category::factory()->create(['name' => 'Thuốc giảm đau - Hạ sốt']);
+        Product::factory()->create([
+            'category_id' => $category->id,
+            'name' => 'Efferalgan 500mg',
+            'usage' => 'Giảm đau, hạ sốt nhanh.',
+            'stock_quantity' => 200,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->geminiService->expects($this->once())
+            ->method('chat')
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'function_call' => [
+                                'name' => 'search_products',
+                                'arguments' => json_encode([
+                                    'query' => 'sản phẩm nào hỗ trợ thuốc giảm đau hạ sốt',
+                                    'symptoms' => ['đau', 'sốt'],
+                                ]),
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage('Có sản phẩm nào hỗ trợ giảm đau, hạ sốt?', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertNotEmpty($result['products']);
+        $this->assertContains('Efferalgan 500mg', array_column($result['products'], 'name'));
+        $this->assertStringNotContainsString('em có thể hỗ trợ anh/chị tìm sản phẩm, gợi ý danh mục phù hợp', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_process_message_ignores_meaningless_catalog_query_and_does_not_return_random_products(): void
+    {
+        $category = Category::factory()->create(['name' => 'Thuốc tim mạch']);
+        Product::factory()->create([
+            'category_id' => $category->id,
+            'name' => 'Isosorbide Dinitrate 5mg',
+            'usage' => 'Điều trị đau thắt ngực.',
+            'stock_quantity' => 200,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->geminiService->expects($this->once())
+            ->method('chat')
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Dạ, em có thể hỗ trợ các nội dung liên quan đến nhà thuốc.',
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage('Tao là tao', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertStringNotContainsString('với từ khóa', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('Isosorbide Dinitrate 5mg', $result['response']);
     }
 
     public function test_recommend_by_symptoms_includes_disclaimer(): void

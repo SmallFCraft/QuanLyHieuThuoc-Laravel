@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Cache;
 class GeminiService
 {
     protected Client $client;
+    protected array $apiKeys = [];
+    protected int $activeKeyIndex = 0;
     protected int $maxRetries;
     protected int $retryDelay;
     protected int $timeout;
@@ -29,13 +31,13 @@ class GeminiService
      */
     public function __construct()
     {
-        $apiKey = config('chatbot.gemini.api_key');
-        
-        if (empty($apiKey)) {
+        $this->apiKeys = $this->resolveApiKeys();
+
+        if (empty($this->apiKeys)) {
             throw new \RuntimeException('Gemini API key not configured');
         }
 
-        $this->client = Gemini::client($apiKey);
+        $this->setClientForKeyIndex(0);
         $this->maxRetries = 3;
         $this->retryDelay = 1000; // milliseconds
         $this->timeout = 30; // seconds
@@ -137,12 +139,21 @@ class GeminiService
             } catch (\Exception $e) {
                 $lastException = $e;
                 $attempt++;
+                $keyPosition = $this->activeKeyIndex + 1;
+                $totalKeys = count($this->apiKeys);
 
                 Log::warning('Gemini API request failed', [
                     'attempt' => $attempt,
                     'max_retries' => $this->maxRetries,
+                    'key_position' => $keyPosition,
+                    'total_keys' => $totalKeys,
                     'error' => $e->getMessage(),
                 ]);
+
+                // If current key fails, try the next configured key immediately.
+                if ($this->switchToNextApiKey()) {
+                    continue;
+                }
 
                 if ($attempt < $this->maxRetries) {
                     // Exponential backoff
@@ -162,6 +173,80 @@ class GeminiService
             'Gemini API request failed after ' . $this->maxRetries . ' attempts: ' . 
             ($lastException ? $lastException->getMessage() : 'Unknown error')
         );
+    }
+
+    /**
+     * Resolve and normalize Gemini API keys from config.
+     *
+     * Supports:
+     * - chatbot.gemini.api_key (single key)
+     * - chatbot.gemini.api_keys (string or array, multi-key fallback)
+     *
+     * @return array<string>
+     */
+    protected function resolveApiKeys(): array
+    {
+        $rawSources = [];
+
+        $primary = config('chatbot.gemini.api_key');
+        if (is_string($primary) && trim($primary) !== '') {
+            $rawSources[] = $primary;
+        }
+
+        $fallback = config('chatbot.gemini.api_keys', []);
+        if (is_string($fallback) && trim($fallback) !== '') {
+            $rawSources[] = $fallback;
+        } elseif (is_array($fallback)) {
+            foreach ($fallback as $item) {
+                if (is_string($item) && trim($item) !== '') {
+                    $rawSources[] = $item;
+                }
+            }
+        }
+
+        $keys = [];
+        foreach ($rawSources as $source) {
+            $parts = preg_split('/[\s,;|]+/', trim($source)) ?: [];
+            foreach ($parts as $part) {
+                $candidate = trim($part);
+                if ($candidate !== '') {
+                    $keys[] = $candidate;
+                }
+            }
+        }
+
+        return array_values(array_unique($keys));
+    }
+
+    /**
+     * Bind SDK client to a specific API key index.
+     */
+    protected function setClientForKeyIndex(int $index): void
+    {
+        $this->activeKeyIndex = $index;
+        $this->client = Gemini::client($this->apiKeys[$index]);
+    }
+
+    /**
+     * Switch to the next API key if available.
+     *
+     * @return bool True when switched, false when no more keys.
+     */
+    protected function switchToNextApiKey(): bool
+    {
+        $nextIndex = $this->activeKeyIndex + 1;
+        if ($nextIndex >= count($this->apiKeys)) {
+            return false;
+        }
+
+        $this->setClientForKeyIndex($nextIndex);
+
+        Log::warning('Switched to fallback Gemini API key', [
+            'active_key_position' => $this->activeKeyIndex + 1,
+            'total_keys' => count($this->apiKeys),
+        ]);
+
+        return true;
     }
 
     /**

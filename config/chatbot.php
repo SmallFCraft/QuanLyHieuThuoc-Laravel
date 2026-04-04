@@ -13,6 +13,9 @@ return [
 
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
+        // Comma/semicolon/pipe/newline separated fallback keys, e.g.:
+        // GEMINI_API_KEYS="key_1,key_2,key_3"
+        'api_keys' => env('GEMINI_API_KEYS', ''),
         'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
         'max_tokens' => env('GEMINI_MAX_TOKENS', 500),
         'temperature' => env('GEMINI_TEMPERATURE', 0.7),

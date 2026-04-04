@@ -60,6 +60,11 @@ PROMPT;
         'so sánh', 'khác nhau', 'mang thai', 'cho con bú', 'trẻ em', 'người già', 'an toàn không'
     ];
 
+    protected const SYMPTOM_PRODUCT_INTENT_KEYWORDS = [
+        'thuốc', 'thuoc', 'sản phẩm', 'san pham', 'mua gì', 'mua thuốc', 'uống gì', 'nên dùng',
+        'dùng gì', 'gợi ý thuốc', 'có thuốc', 'co thuoc', 'loại nào', 'loai nao', 'kê thuốc'
+    ];
+
     protected const CAPABILITY_KEYWORDS = [
         'bạn là ai', 'em là ai', 'giúp được gì', 'làm được gì', 'hỗ trợ gì', 'có thể làm gì'
     ];
@@ -109,6 +114,23 @@ PROMPT;
                         ]
                     ],
                     'required' => ['query']
+                ]
+            ],
+            [
+                'name' => 'search_categories',
+                'description' => 'Tim kiem danh muc san pham trong co so du lieu',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'query' => [
+                            'type' => 'string',
+                            'description' => 'Tu khoa tim danh muc (optional)'
+                        ],
+                        'limit' => [
+                            'type' => 'number',
+                            'description' => 'So luong danh muc toi da tra ve (optional, default 6)'
+                        ]
+                    ]
                 ]
             ]
         ];
@@ -202,8 +224,7 @@ PROMPT;
         if (in_array(trim($cleanMessage), $meaninglessGreetings)) {
             return [
                 'valid' => false,
-                'reason' => 'Xin chào! Tôi là trợ lý AI của Medicare Pharmacy. Bạn cần tìm sản phẩm hay tư vấn sức khỏe gì hôm nay?'
-            ];
+                'reason' => 'Xin chào! Tôi là trợ lý AI của Medicare Pharmacy, luôn sẵn sàng đồng hành cùng bạn trong việc chăm sóc sức khỏe mỗi ngày. Bạn đang cần tìm kiếm sản phẩm, tư vấn về thuốc, hay hỗ trợ giải đáp bất kỳ thắc mắc nào liên quan đến sức khỏe hôm nay? Hãy chia sẻ với tôi nhé!'               ];
         }
         
         return ['valid' => true];
@@ -274,40 +295,122 @@ PROMPT;
             $responseText = '';
             $responseType = 'general';
 
+            $normalizedMessage = $this->normalizeMessage($workingMessage);
+            $defaultQuery = $this->resolveCatalogQuery($workingMessage);
+            $defaultDisclaimer = $this->isSymptomRelatedQuery($workingMessage)
+                || $this->requiresAiConsultation($normalizedMessage);
+
             if (isset($response['choices'][0]['message']['function_call'])) {
                 $functionCall = $response['choices'][0]['message']['function_call'];
+                $functionName = (string) ($functionCall['name'] ?? '');
+                $arguments = json_decode($functionCall['arguments'] ?? '{}', true) ?: [];
 
-                if (($functionCall['name'] ?? null) === 'search_products') {
-                    $arguments = json_decode($functionCall['arguments'] ?? '{}', true) ?: [];
-                    $query = trim((string) ($arguments['query'] ?? ''));
-                    $symptoms = is_array($arguments['symptoms'] ?? null) ? $arguments['symptoms'] : [];
-                    $requiresDisclaimer = !empty($symptoms)
-                        || $this->isSymptomRelatedQuery($workingMessage)
-                        || $this->requiresAiConsultation($this->normalizeMessage($workingMessage));
+                Log::info('Chatbot function call detected', [
+                    'function' => $functionName,
+                    'arguments' => $arguments,
+                ]);
 
-                    Log::info('Chatbot function call: search_products', [
-                        'query' => $query,
-                        'symptoms' => $symptoms,
-                    ]);
+                switch ($functionName) {
+                    case 'search_products':
+                        $query = trim((string) ($arguments['query'] ?? ''));
+                        $symptoms = is_array($arguments['symptoms'] ?? null) ? $arguments['symptoms'] : [];
+                        $resolvedQuery = $query !== ''
+                            ? $this->sanitizeCatalogQuery($query)
+                            : $defaultQuery;
 
-                    $catalogResponse = $this->buildCatalogLookupResponse(
-                        $query !== '' ? $query : $this->resolveCatalogQuery($workingMessage),
-                        $workingMessage,
-                        $requiresDisclaimer
-                    );
+                        $catalogResponse = $this->buildCatalogLookupResponse(
+                            $resolvedQuery,
+                            $workingMessage,
+                            $defaultDisclaimer || !empty($symptoms),
+                            $symptoms
+                        );
 
-                    $products = $catalogResponse['products'];
-                    $categories = $catalogResponse['categories'];
-                    $explanations = $catalogResponse['explanations'];
-                    $showDisclaimer = $catalogResponse['show_disclaimer'];
-                    $responseText = $catalogResponse['response'];
-                    $responseType = $catalogResponse['response_type'] ?? 'general';
+                        $products = $catalogResponse['products'];
+                        $categories = $catalogResponse['categories'];
+                        $explanations = $catalogResponse['explanations'];
+                        $showDisclaimer = $catalogResponse['show_disclaimer'];
+                        $responseType = $catalogResponse['response_type'] ?? 'general';
+                        $responseText = $this->shouldUseGroundedAiStep()
+                            ? $this->buildGroundedAiResponse(
+                                $workingMessage,
+                                $products,
+                                $categories,
+                                $explanations,
+                                $catalogResponse['response'],
+                                $showDisclaimer
+                            )
+                            : $catalogResponse['response'];
+                        break;
+
+                    case 'search_categories':
+                        $query = $this->sanitizeCatalogQuery(trim((string) ($arguments['query'] ?? '')));
+                        $limit = (int) ($arguments['limit'] ?? 6);
+                        $categoryResponse = $this->buildCategoryLookupResponseFromQuery($query, $workingMessage, $limit);
+
+                        $products = $categoryResponse['products'];
+                        $categories = $categoryResponse['categories'];
+                        $explanations = $categoryResponse['explanations'];
+                        $showDisclaimer = $categoryResponse['show_disclaimer'];
+                        $responseType = $categoryResponse['response_type'] ?? 'general';
+                        $responseText = $this->shouldUseGroundedAiStep()
+                            ? $this->buildGroundedAiResponse(
+                                $workingMessage,
+                                $products,
+                                $categories,
+                                $explanations,
+                                $categoryResponse['response'],
+                                false
+                            )
+                            : $categoryResponse['response'];
+                        break;
+
+                    default:
+                        $responseText = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
+                        $showDisclaimer = $defaultDisclaimer || $this->containsMedicalAdvice($responseText);
+                        break;
                 }
             } else {
-                $responseText = $response['choices'][0]['message']['content'] ?? '';
-                $showDisclaimer = $this->isSymptomRelatedQuery($workingMessage)
-                    || $this->containsMedicalAdvice($responseText);
+                $responseText = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
+                $showDisclaimer = $defaultDisclaimer || $this->containsMedicalAdvice($responseText);
+
+                $shouldEnrichCatalog = $this->isCategoryIntent($normalizedMessage)
+                    || $defaultQuery !== ''
+                    || $this->wantsProductSuggestionForSymptom($workingMessage);
+
+                if ($shouldEnrichCatalog) {
+                    $catalogResponse = $this->buildCatalogLookupResponse($defaultQuery, $workingMessage, $showDisclaimer);
+                    if (!empty($catalogResponse['products']) || !empty($catalogResponse['categories'])) {
+                        $products = $catalogResponse['products'];
+                        $categories = $catalogResponse['categories'];
+                        $explanations = $catalogResponse['explanations'];
+                        $showDisclaimer = $catalogResponse['show_disclaimer'];
+                        $responseType = $catalogResponse['response_type'] ?? 'general';
+
+                        $fallbackResponse = $responseText !== ''
+                            ? $responseText . "\n\n" . $catalogResponse['response']
+                            : $catalogResponse['response'];
+
+                        $responseText = $this->shouldUseGroundedAiStep()
+                            ? $this->buildGroundedAiResponse(
+                                $workingMessage,
+                                $products,
+                                $categories,
+                                $explanations,
+                                $fallbackResponse,
+                                $showDisclaimer
+                            )
+                            : $fallbackResponse;
+                    }
+                }
             }
+
+            if (trim($responseText) === '') {
+                $responseText = (!empty($products) || !empty($categories))
+                    ? 'Da tim du lieu lien quan. Anh/chi xem cac goi y ben duoi de tiep tuc.'
+                    : 'Da nhan duoc yeu cau. Anh/chi co the mo ta cu the hon de em ho tro chinh xac.';
+            }
+
+            $responseText = $this->formatFriendlyProductLinks($responseText, $products);
 
             if ($prependWebsiteIntro) {
                 $responseText = $this->prependWebsiteIntroduction($responseText);
@@ -424,7 +527,31 @@ PROMPT;
             ];
         }
     }
-    
+
+    protected function formatFriendlyProductLinks(string $responseText, array $products): string
+    {
+        $responseText = trim($responseText);
+        if ($responseText === '' || empty($products)) {
+            return $responseText;
+        }
+
+        foreach ($products as $product) {
+            $url = trim((string) ($product['url'] ?? ''));
+            if ($url === '' || !Str::startsWith($url, ['http://', 'https://', '/'])) {
+                continue;
+            }
+
+            $name = trim((string) ($product['name'] ?? 'sản phẩm'));
+            $label = 'Xem chi tiết ' . $name;
+
+            // Replace only raw URL occurrences, skip URLs already in markdown links.
+            $pattern = '/(?<!\\]\\()' . preg_quote($url, '/') . '(?!\\))/u';
+            $responseText = preg_replace($pattern, '[' . $label . '](' . $url . ')', $responseText) ?? $responseText;
+        }
+
+        return $responseText;
+    }
+
     protected function tryLocalResponse(string $message): ?array
     {
         $normalizedMessage = $this->normalizeMessage($message);
@@ -472,34 +599,86 @@ PROMPT;
             ];
         }
 
+        if ($this->isSymptomRelatedQuery($message) && !$this->wantsProductSuggestionForSymptom($message)) {
+            return $this->buildSymptomGuidanceResponse($message);
+        }
+
         if ($this->isCategoryIntent($normalizedMessage)) {
-            return $this->buildCategoryLookupResponse($message);
+            $categoryResponse = $this->buildCategoryLookupResponse($message);
+            if (!empty($categoryResponse['categories']) || !empty($categoryResponse['products'])) {
+                return $categoryResponse;
+            }
+
+            return null;
         }
 
         if (!$this->isSymptomRelatedQuery($message) && !$this->requiresAiConsultation($normalizedMessage)) {
             $query = $this->resolveCatalogQuery($message);
 
             if ($query !== '') {
-                return $this->buildCatalogLookupResponse($query, $message, false);
+                $catalogResponse = $this->buildCatalogLookupResponse($query, $message, false);
+                if (!empty($catalogResponse['products']) || !empty($catalogResponse['categories'])) {
+                    return $catalogResponse;
+                }
             }
         }
 
         return null;
     }
 
-    protected function buildCatalogLookupResponse(string $query, string $originalMessage, bool $showDisclaimer): array
+    protected function buildCatalogLookupResponse(
+        string $query,
+        string $originalMessage,
+        bool $showDisclaimer,
+        array $symptoms = []
+    ): array
     {
         $query = trim($query);
-        $searchResults = $query !== '' ? $this->searchProducts($query) : collect();
+        $symptomQueries = $this->normalizeSymptomQueries($symptoms);
+        $goalQueries = $this->extractGoalQueriesFromMessage($originalMessage);
+        $prioritizeGoalQueries = $this->isBroadCatalogQuery($query) || $query === '';
+
+        $orderedQueries = $prioritizeGoalQueries
+            ? array_merge($goalQueries, [$query], $symptomQueries)
+            : array_merge([$query], $symptomQueries, $goalQueries);
+
+        $searchQueries = array_values(array_unique(array_filter(
+            $orderedQueries,
+            fn (string $item): bool => $item !== '' && $this->isMeaningfulCatalogQuery($item)
+        )));
+
+        $searchResults = collect();
+        foreach ($searchQueries as $searchQuery) {
+            $results = $this->searchProducts($searchQuery);
+            if ($results->isEmpty()) {
+                continue;
+            }
+
+            $searchResults = $searchResults->concat($results)->unique('id')->values();
+
+            if ($searchResults->count() >= 5) {
+                $searchResults = $searchResults->take(5)->values();
+                break;
+            }
+        }
+
         $products = $this->formatProductsPayload($searchResults);
         $explanations = $this->buildProductExplanations($products, $originalMessage);
         $categories = [];
+        $displayQuery = $query !== '' ? $query : (string) ($symptomQueries[0] ?? '');
+
+        if (($displayQuery === '' || $this->isBroadCatalogQuery($displayQuery)) && !empty($goalQueries)) {
+            $displayQuery = $goalQueries[0];
+        }
 
         if (!empty($products)) {
-            $response = $this->buildDetailedProductResponseText($query, $products, $explanations, $showDisclaimer);
+            $response = $this->buildDetailedProductResponseText($displayQuery, $products, $explanations, $showDisclaimer);
         } else {
-            $categories = $this->formatCategoriesPayload($this->searchCategories($query, 3));
-            $response = $this->buildNoProductMatchResponse($query, $categories, $originalMessage);
+            $categories = $this->formatCategoriesPayload($this->searchCategories($displayQuery, 3));
+            if (empty($categories) && !empty($searchQueries)) {
+                $categories = $this->formatCategoriesPayload($this->searchCategories($searchQueries[0], 3));
+            }
+            $response = $this->buildNoProductMatchResponse($displayQuery, $categories, $originalMessage);
         }
 
         return [
@@ -519,14 +698,24 @@ PROMPT;
     protected function buildCategoryLookupResponse(string $message): array
     {
         $query = $this->extractSearchQuery($message, self::CATEGORY_KEYWORDS);
-        $categories = $this->searchCategories($query, $query === '' ? 6 : 5);
+        return $this->buildCategoryLookupResponseFromQuery($query, $message, $query === '' ? 6 : 5);
+    }
+
+    protected function buildCategoryLookupResponseFromQuery(
+        string $query,
+        string $originalMessage,
+        int $limit = 6
+    ): array {
+        $query = trim($query);
+        $limit = max(1, min($limit, 10));
+        $categories = $this->searchCategories($query, $query === '' ? min($limit, 6) : $limit);
 
         if ($categories->isEmpty()) {
             $categories = $this->searchCategories('', 6);
         }
 
         if ($categories->isEmpty() && $query !== '') {
-            return $this->buildCatalogLookupResponse($query, $message, false);
+            return $this->buildCatalogLookupResponse($query, $originalMessage, false);
         }
 
         $featuredProducts = collect();
@@ -548,6 +737,68 @@ PROMPT;
             'disclaimer' => null,
             'response_type' => 'category_search'
         ];
+    }
+
+    protected function shouldUseGroundedAiStep(): bool
+    {
+        if (app()->runningUnitTests()) {
+            return false;
+        }
+
+        return (bool) config('chatbot.gemini.grounded_response', true);
+    }
+
+    protected function buildGroundedAiResponse(
+        string $userMessage,
+        array $products,
+        array $categories,
+        array $explanations,
+        string $fallbackResponse,
+        bool $showDisclaimer
+    ): string {
+        try {
+            $payload = [
+                'products' => array_values($products),
+                'categories' => array_values($categories),
+                'explanations' => $explanations,
+                'show_disclaimer' => $showDisclaimer,
+            ];
+
+            $groundedPrompt = implode("\n", [
+                'Tin nhan nguoi dung:',
+                $userMessage,
+                '',
+                'Du lieu da xac thuc (JSON):',
+                json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                '',
+                'Yeu cau:',
+                '- Tra loi bang tieng Viet, ro rang va uu tien giai quyet cau hoi chinh.',
+                '- Chi su dung du lieu trong JSON cho thong tin san pham/danh muc.',
+                '- Neu can dan link san pham, bat buoc dung markdown [Xem chi tiet ten san pham](URL), khong in URL tran.',
+                '- Neu khong co data phu hop, noi ro khong tim thay va goi y cach hoi lai.',
+                '- Neu show_disclaimer=true thi ket thuc bang nhac nho tham khao duoc si/bac si.',
+            ]);
+
+            $messages = [
+                ['role' => 'system', 'content' => $this->getSystemPrompt()],
+                ['role' => 'user', 'content' => $groundedPrompt],
+            ];
+
+            $response = $this->aiService->chat($messages, [
+                'temperature' => 0.3,
+            ]);
+
+            $responseText = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
+            if ($responseText !== '') {
+                return $responseText;
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('Grounded response generation failed', [
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return $fallbackResponse;
     }
 
     protected function buildWebsiteIntroductionResponse(): array
@@ -903,6 +1154,44 @@ PROMPT;
             : 'Sản phẩm đang có sẵn trong kho để anh/chị tham khảo thêm.';
     }
 
+    protected function buildSymptomGuidanceResponse(string $message): array
+    {
+        $normalizedMessage = $this->normalizeIntentText($message);
+
+        if (Str::contains($normalizedMessage, 'tieu chay')) {
+            $response = implode("\n", [
+                'Dạ, với triệu chứng tiêu chảy, anh/chị nên ưu tiên bù nước điện giải (ORESOL pha đúng hướng dẫn), ăn nhẹ dễ tiêu và nghỉ ngơi.',
+                'Anh/chị tránh tự ý dùng nhiều loại thuốc cầm tiêu chảy khi chưa rõ nguyên nhân, đặc biệt nếu có sốt hoặc nghi ngờ nhiễm khuẩn.',
+                '',
+                'Nên đi khám sớm nếu có một trong các dấu hiệu sau:',
+                '- Tiêu chảy kéo dài quá 48 giờ không giảm',
+                '- Sốt cao từ 38.5°C trở lên, đau bụng tăng, nôn nhiều',
+                '- Khát nhiều, tiểu ít, mệt lả (nguy cơ mất nước)',
+                '- Phân có máu hoặc nhầy',
+                '',
+                'Nếu anh/chị muốn em gợi ý thuốc hỗ trợ phù hợp, hãy cho em biết thêm độ tuổi người dùng, triệu chứng đi kèm và thời gian bị bệnh.'
+            ]);
+        } else {
+            $response = implode("\n", [
+                'Dạ, với triệu chứng anh/chị đang mô tả, mình nên nghỉ ngơi, uống đủ nước và theo dõi diễn tiến trong ngắn hạn.',
+                'Nếu triệu chứng nặng hơn, kéo dài hoặc kèm dấu hiệu bất thường (sốt cao, khó thở, đau tăng, mất nước), anh/chị nên đi khám sớm.',
+                '',
+                'Nếu anh/chị muốn em gợi ý sản phẩm hỗ trợ, hãy nhắn thêm triệu chứng chủ đạo, đối tượng sử dụng (người lớn/trẻ em) và bệnh nền nếu có.'
+            ]);
+        }
+
+        return [
+            'success' => true,
+            'response' => $response,
+            'products' => [],
+            'categories' => [],
+            'explanations' => [],
+            'show_disclaimer' => true,
+            'disclaimer' => 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.',
+            'response_type' => 'health_consultation'
+        ];
+    }
+
     protected function normalizeMessage(string $message): string
     {
         $normalized = mb_strtolower(trim($message), 'UTF-8');
@@ -926,7 +1215,13 @@ PROMPT;
         $normalizedHaystack = $this->normalizeIntentText($haystack);
 
         foreach ($keywords as $keyword) {
-            if (mb_strpos($normalizedHaystack, $this->normalizeIntentText($keyword)) !== false) {
+            $normalizedKeyword = $this->normalizeIntentText($keyword);
+            if ($normalizedKeyword === '') {
+                continue;
+            }
+
+            $pattern = '/(?:^|\s)' . preg_quote($normalizedKeyword, '/') . '(?:$|\s)/u';
+            if (preg_match($pattern, $normalizedHaystack) === 1) {
                 return true;
             }
         }
@@ -937,7 +1232,15 @@ PROMPT;
     protected function extractSearchQuery(string $message, array $extraStopWords = []): string
     {
         $query = $this->normalizeMessage($message);
-        $stopWords = array_unique(array_merge(self::SEARCH_STOP_WORDS, $extraStopWords));
+        $additionalStopWords = [
+            'co san pham nao',
+            'san pham nao',
+            'ho tro',
+            'la',
+            'nay',
+            'day',
+        ];
+        $stopWords = array_unique(array_merge(self::SEARCH_STOP_WORDS, $additionalStopWords, $extraStopWords));
 
         usort($stopWords, static fn ($left, $right) => mb_strlen($right, 'UTF-8') <=> mb_strlen($left, 'UTF-8'));
 
@@ -946,18 +1249,84 @@ PROMPT;
         }
 
         $query = preg_replace('/\\s+/u', ' ', $query);
+        $query = trim((string) $query);
 
-        return trim($query);
+        return $this->isMeaningfulCatalogQuery($query) ? $query : '';
     }
 
     protected function resolveCatalogQuery(string $message): string
     {
         $explicitProductQuery = $this->extractExplicitProductQuery($message);
-        if ($explicitProductQuery !== '') {
+        if ($explicitProductQuery !== '' && $this->isMeaningfulCatalogQuery($explicitProductQuery)) {
             return $explicitProductQuery;
         }
 
         return $this->extractSearchQuery($message);
+    }
+
+    protected function sanitizeCatalogQuery(string $query): string
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return '';
+        }
+
+        $explicitProductQuery = $this->extractExplicitProductQuery($query);
+        if ($explicitProductQuery !== '' && $this->isMeaningfulCatalogQuery($explicitProductQuery)) {
+            return $explicitProductQuery;
+        }
+
+        $cleanedQuery = $this->extractSearchQuery($query);
+        if ($cleanedQuery !== '' && $this->isMeaningfulCatalogQuery($cleanedQuery)) {
+            return $cleanedQuery;
+        }
+
+        return $this->isMeaningfulCatalogQuery($query) ? $query : '';
+    }
+
+    protected function isMeaningfulCatalogQuery(string $query): bool
+    {
+        $normalized = $this->normalizeIntentText($query);
+        if ($normalized === '') {
+            return false;
+        }
+
+        $noiseTokens = [
+            'la', 'nay', 'day', 'do', 'roi', 'nhe', 'nha',
+            'tao', 'may', 'toi', 'anh', 'chi', 'em', 'minh', 'ban',
+            'co', 'khong', 'ko', 'ok', 'uh', 'a', 'e'
+        ];
+
+        $tokens = array_values(array_filter(
+            explode(' ', $normalized),
+            static fn (string $token): bool => $token !== ''
+        ));
+
+        $meaningfulCount = 0;
+
+        foreach ($tokens as $token) {
+            if (in_array($token, $noiseTokens, true)) {
+                continue;
+            }
+
+            if (preg_match('/^\d+$/', $token) === 1) {
+                continue;
+            }
+
+            if (preg_match('/[a-z]+\d+|\d+[a-z]+/', $token) === 1) {
+                return true;
+            }
+
+            if (mb_strlen($token, 'UTF-8') >= 3) {
+                return true;
+            }
+
+            if (mb_strlen($token, 'UTF-8') >= 2) {
+                $meaningfulCount++;
+            }
+        }
+
+        return $meaningfulCount >= 2;
     }
 
     protected function extractExplicitProductQuery(string $message): string
@@ -985,6 +1354,92 @@ PROMPT;
         }
 
         return '';
+    }
+
+    protected function wantsProductSuggestionForSymptom(string $message): bool
+    {
+        if ($this->extractExplicitProductQuery($message) !== '') {
+            return true;
+        }
+
+        return $this->containsAnyKeyword($message, self::SYMPTOM_PRODUCT_INTENT_KEYWORDS);
+    }
+
+    protected function normalizeSymptomQueries(array $symptoms): array
+    {
+        $normalized = [];
+
+        foreach ($symptoms as $symptom) {
+            $value = trim((string) $symptom);
+            if ($value === '' || mb_strlen($value, 'UTF-8') < 2) {
+                continue;
+            }
+
+            $normalized[] = $value;
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
+    protected function extractGoalQueriesFromMessage(string $message): array
+    {
+        $cleanMessage = $this->normalizeMessage($message);
+        if ($cleanMessage === '') {
+            return [];
+        }
+
+        $noiseWords = [
+            'có', 'co', 'sản phẩm', 'san pham', 'thuốc', 'thuoc', 'nào', 'nao',
+            'tôi', 'toi', 'mình', 'minh', 'anh', 'chị', 'chi', 'em',
+            'muốn', 'muon', 'cần', 'can', 'tìm', 'tim', 'hỏi', 'hoi',
+            'giúp', 'giup', 'cho', 'để', 'de', 'về', 've', 'loại', 'loai'
+        ];
+
+        foreach ($noiseWords as $noiseWord) {
+            $cleanMessage = preg_replace('/(^|\\s)' . preg_quote($noiseWord, '/') . '(?=\\s|$)/u', ' ', $cleanMessage);
+        }
+
+        $cleanMessage = preg_replace('/\\s+/u', ' ', (string) $cleanMessage);
+        $cleanMessage = trim((string) $cleanMessage);
+        if ($cleanMessage === '') {
+            return [];
+        }
+
+        $segments = preg_split('/\\b(?:hay|hoặc|hoac|và|va)\\b|[,;\\/]+/u', $cleanMessage) ?: [];
+        $queries = [];
+
+        foreach ($segments as $segment) {
+            $candidate = trim((string) $segment);
+            $candidate = preg_replace('/\\s+/u', ' ', (string) $candidate);
+            $candidate = trim((string) $candidate);
+
+            if ($candidate === '' || mb_strlen($candidate, 'UTF-8') < 3) {
+                continue;
+            }
+
+            if (!$this->isMeaningfulCatalogQuery($candidate)) {
+                continue;
+            }
+
+            $queries[] = $candidate;
+        }
+
+        if (empty($queries) && $cleanMessage !== '' && $this->isMeaningfulCatalogQuery($cleanMessage)) {
+            $queries[] = $cleanMessage;
+        }
+
+        return array_values(array_unique($queries));
+    }
+
+    protected function isBroadCatalogQuery(string $query): bool
+    {
+        $normalized = $this->normalizeIntentText($query);
+        if ($normalized === '') {
+            return false;
+        }
+
+        $words = array_values(array_filter(explode(' ', $normalized), static fn (string $word): bool => $word !== ''));
+        return count($words) >= 6;
     }
 
     protected function isCategoryIntent(string $normalizedMessage): bool
@@ -1277,10 +1732,13 @@ PROMPT;
                 if (($functionCall['name'] ?? null) === 'search_products') {
                     $arguments = json_decode($functionCall['arguments'] ?? '{}', true) ?: [];
                     $query = trim((string) ($arguments['query'] ?? ''));
+                    $symptomList = is_array($arguments['symptoms'] ?? null) ? $arguments['symptoms'] : [];
+                    $resolvedQuery = $query !== '' ? $this->sanitizeCatalogQuery($query) : $symptoms;
                     $catalogResponse = $this->buildCatalogLookupResponse(
-                        $query !== '' ? $query : $symptoms,
+                        $resolvedQuery,
                         $symptoms,
-                        true
+                        true,
+                        $symptomList
                     );
 
                     return [
@@ -1476,3 +1934,6 @@ PROMPT;
         return true;
     }
 }
+
+
+

@@ -672,7 +672,25 @@ function chatbotWidget() {
                 .replace(/>/g, '&gt;');
             
             // Parse markdown links [text](url) BEFORE other replacements
-            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-emerald-600 hover:text-emerald-700 fw-medium text-decoration-underline" target="_blank" rel="noopener">$1</a>');
+            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+                const linkText = String(text).trim().toLowerCase();
+                const isDetailLink = /^(xem chi tiết|xem chi tiet|mở sản phẩm|mo san pham|xem danh mục|xem danh muc|mở liên kết|mo lien ket)/i.test(linkText);
+                const linkClass = isDetailLink
+                    ? 'chatbot-link-btn'
+                    : 'text-emerald-600 hover:text-emerald-700 fw-medium text-decoration-underline';
+
+                return `<a href="${url}" class="${linkClass}" target="_blank" rel="noopener">${text}</a>`;
+            });
+
+            // Fallback: convert raw URLs to clickable links when markdown was not used.
+            html = html.replace(/https?:\/\/[^\s<]+/g, (url, offset, source) => {
+                const prevChar = offset > 0 ? source[offset - 1] : '';
+                if (prevChar === '"' || prevChar === "'" || prevChar === '=') {
+                    return url;
+                }
+
+                return `<a href="${url}" class="chatbot-link-btn" target="_blank" rel="noopener">Mở liên kết</a>`;
+            });
             
             html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
             html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
