@@ -13,6 +13,10 @@ function chatbotWidget() {
         isPlacingOrder: false,
         attachedImage: null,
         imagePreviewUrl: null,
+        maxMessages: 50,
+        pasteListener: null,
+        objectUrls: [],
+        revokeTimers: [],
         checkoutForm: {
             customer_name: '',
             shipping_phone: '',
@@ -39,8 +43,10 @@ function chatbotWidget() {
         },
         
         setupPasteListener() {
+            if (this.pasteListener) return;
+
             // Listen for paste events on the entire widget
-            document.addEventListener('paste', (e) => {
+            this.pasteListener = (e) => {
                 // Only handle paste when chatbot is open
                 if (!this.isOpen) return;
                 
@@ -56,7 +62,75 @@ function chatbotWidget() {
                         break;
                     }
                 }
+            };
+
+            document.addEventListener('paste', this.pasteListener);
+        },
+
+        destroy() {
+            if (this.pasteListener) {
+                document.removeEventListener('paste', this.pasteListener);
+                this.pasteListener = null;
+            }
+
+            this.revokeTimers.forEach((timer) => window.clearTimeout(timer));
+            this.revokeTimers = [];
+
+            this.objectUrls.forEach((url) => URL.revokeObjectURL(url));
+            this.objectUrls = [];
+        },
+
+        pushMessage(message) {
+            const nextMessages = [...this.messages, message];
+            const overflow = nextMessages.length - this.maxMessages;
+
+            if (overflow > 0) {
+                nextMessages.slice(0, overflow).forEach((entry) => {
+                    if (entry?.imageUrl) {
+                        this.revokeObjectUrl(entry.imageUrl);
+                    }
+                });
+            }
+
+            this.messages = nextMessages.slice(-this.maxMessages);
+        },
+
+        setMessages(messages) {
+            this.messages.forEach((entry) => {
+                if (entry?.imageUrl) {
+                    this.revokeObjectUrl(entry.imageUrl);
+                }
             });
+
+            this.messages = Array.isArray(messages)
+                ? messages.slice(-this.maxMessages)
+                : [];
+        },
+
+        trackObjectUrl(url) {
+            if (url && !this.objectUrls.includes(url)) {
+                this.objectUrls.push(url);
+            }
+
+            return url;
+        },
+
+        revokeObjectUrl(url) {
+            if (!url) return;
+
+            URL.revokeObjectURL(url);
+            this.objectUrls = this.objectUrls.filter((item) => item !== url);
+        },
+
+        scheduleObjectUrlCleanup(url, delay = 5000) {
+            if (!url) return;
+
+            const timer = window.setTimeout(() => {
+                this.revokeObjectUrl(url);
+                this.revokeTimers = this.revokeTimers.filter((item) => item !== timer);
+            }, delay);
+
+            this.revokeTimers.push(timer);
         },
         
         handlePastedImage(file) {
@@ -64,7 +138,7 @@ function chatbotWidget() {
             
             // Validate file size
             if (file.size > 3 * 1024 * 1024) {
-                this.messages.push({
+                this.pushMessage({
                     role: 'assistant',
                     content: 'Dạ, kích thước ảnh hơi lớn (vượt quá 3MB). Anh/chị vui lòng chọn ảnh nhẹ hơn giúp em nhé.',
                     isSystemMessage: true
@@ -80,7 +154,7 @@ function chatbotWidget() {
             
             // Store image and create preview
             this.attachedImage = file;
-            this.imagePreviewUrl = URL.createObjectURL(file);
+            this.imagePreviewUrl = this.trackObjectUrl(URL.createObjectURL(file));
             
             // Don't show notification message, just show the preview
             // User can see the preview in the input area
@@ -113,10 +187,10 @@ function chatbotWidget() {
             const hasImage = !!this.attachedImage;
             
             // Client-side validation for text-only messages
-            if (!hasImage && userMessage.length < 3) {
-                this.messages.push({
+            if (!hasImage && userMessage.length < 2) {
+                this.pushMessage({
                     role: 'assistant',
-                    content: 'Dạ, anh/chị vui lòng nhập câu hỏi cụ thể hơn một chút giúp em nhé (ít nhất 3 ký tự).',
+                    content: 'Dạ, anh/chị vui lòng nhập câu hỏi cụ thể hơn một chút giúp em nhé (ít nhất 2 ký tự).',
                     validation_error: true
                 });
                 this.scrollToBottom();
@@ -132,7 +206,7 @@ function chatbotWidget() {
                 // Text-only message
                 this.inputText = '';
                 
-                this.messages.push({
+                this.pushMessage({
                     role: 'user',
                     content: userMessage
                 });
@@ -159,7 +233,7 @@ function chatbotWidget() {
                     
                     // Handle authentication required
                     if (response.status === 401 && data.require_login) {
-                        this.messages.push({
+                        this.pushMessage({
                             role: 'assistant',
                             content: '🔐 ' + data.error + '\n\nĐể sử dụng chatbot, anh/chị vui lòng đăng nhập hoặc đăng ký tài khoản nhé.',
                             isSystemMessage: true,
@@ -178,10 +252,11 @@ function chatbotWidget() {
                     }
                     
                     if (data.success) {
-                        this.messages.push({
+                        this.pushMessage({
                             role: 'assistant',
                             content: data.response,
                             products: data.products || [],
+                            categories: data.categories || [],
                             show_disclaimer: data.show_disclaimer || false,
                             disclaimer: data.disclaimer
                         });
@@ -190,7 +265,7 @@ function chatbotWidget() {
                             this.showDisclaimer = true;
                         }
                     } else {
-                        this.messages.push({
+                        this.pushMessage({
                             role: 'assistant',
                             content: data.response || data.error || 'Dạ, em gặp chút lỗi khi xử lý. Anh/chị thử lại giúp em nhé.',
                             validation_error: data.validation_error || false
@@ -198,7 +273,7 @@ function chatbotWidget() {
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    this.messages.push({
+                    this.pushMessage({
                         role: 'assistant',
                         content: 'Dạ, em đang không kết nối được với cửa hàng. Anh/chị vui lòng kiểm tra mạng và thử lại sau nhé.'
                     });
@@ -221,7 +296,7 @@ function chatbotWidget() {
             const stableImageUrl = this.imagePreviewUrl;
             
             // Show user message with image preview
-            this.messages.push({
+            this.pushMessage({
                 role: 'user',
                 content: text || 'Đã gửi hình ảnh',
                 hasImage: true,
@@ -230,7 +305,6 @@ function chatbotWidget() {
             
             // Clear input but keep the blob URL for display
             this.inputText = '';
-            const imageToSend = this.attachedImage;
             this.attachedImage = null;
             this.imagePreviewUrl = null;
             
@@ -253,7 +327,7 @@ function chatbotWidget() {
                 if (response.status === 401) {
                     const errorData = await response.json();
                     if (errorData.require_login) {
-                        this.messages.push({
+                        this.pushMessage({
                             role: 'assistant',
                             content: '🔐 ' + errorData.error + '\n\nĐể tải ảnh lên, anh/chị vui lòng đăng nhập hoặc đăng ký tài khoản nhé.',
                             isSystemMessage: true,
@@ -271,7 +345,7 @@ function chatbotWidget() {
                 // Handle rate limit error
                 if (response.status === 429) {
                     const retryAfter = response.headers.get('Retry-After') || '60';
-                    this.messages.push({
+                    this.pushMessage({
                         role: 'assistant',
                         content: `⏱️ Dạ, hiện tại em đang tiếp nhận hơi nhiều thông tin một lúc. Anh/chị vui lòng đợi khoảng ${retryAfter} giây rồi gửi lại giúp em nhé.\n\n💡 Trong lúc chờ, anh/chị có thể nhập tên thuốc trực tiếp để em hỗ trợ ngay ạ.`
                     });
@@ -284,7 +358,7 @@ function chatbotWidget() {
                 if (response.status === 400) {
                     const errorData = await response.json();
                     console.error('400 Bad Request:', errorData);
-                    this.messages.push({
+                    this.pushMessage({
                         role: 'assistant',
                         content: (errorData.error || errorData.message || 'Dạ, em gặp chút lỗi khi đọc ảnh. Anh/chị vui lòng thử lại sau nhé.')
                     });
@@ -313,7 +387,7 @@ function chatbotWidget() {
                         .filter(p => p.matched)
                         .map(p => p.product);
                     
-                    this.messages.push({
+                    this.pushMessage({
                         role: 'assistant',
                         content: message,
                         products: matchedProducts
@@ -326,7 +400,7 @@ function chatbotWidget() {
                             .map(p => `• ${p.parsed_name}`)
                             .join('\n');
                         
-                        this.messages.push({
+                        this.pushMessage({
                             role: 'assistant',
                             content: `Các sản phẩm không tìm thấy:\n${unmatchedList}\n\nVui lòng kiểm tra lại tên sản phẩm hoặc liên hệ nhà thuốc để được hỗ trợ.`
                         });
@@ -339,12 +413,12 @@ function chatbotWidget() {
                     
                     // Check for quota/rate limit errors
                     if (errorMsg.includes('giới hạn') || errorMsg.includes('quota') || errorMsg.includes('đợi')) {
-                        this.messages.push({
+                        this.pushMessage({
                             role: 'assistant',
                             content: `⏱️ ${errorMsg}\n\n💡 Trong lúc chờ, bạn có thể:\n• Nhập tên sản phẩm trực tiếp vào chat\n• Sử dụng chức năng tìm kiếm sản phẩm\n• Duyệt danh mục sản phẩm trên trang chủ`
                         });
                     } else {
-                        this.messages.push({
+                        this.pushMessage({
                             role: 'assistant',
                             content: errorMsg + '\n\n💡 Gợi ý:\n• Đảm bảo hình ảnh rõ ràng, không bị mờ\n• Chụp thẳng góc, tránh nghiêng\n• Hình ảnh phải là đơn thuốc hoặc hóa đơn\n\nAnh/chị có thể thử lại với ảnh rõ hơn hoặc gửi tên sản phẩm trực tiếp ạ.'
                         });
@@ -352,18 +426,13 @@ function chatbotWidget() {
                 }
             } catch (error) {
                 console.error('Error:', error);
-                this.messages.push({
+                this.pushMessage({
                     role: 'assistant',
                     content: 'Dạ, em gặp sự cố khi tải ảnh lên. Anh/chị kiểm tra lại mạng và thử lại giúp em nhé.'
                 });
             } finally {
-                // Clean up blob URL after a delay to ensure it's displayed
-                setTimeout(() => {
-                    if (stableImageUrl) {
-                        URL.revokeObjectURL(stableImageUrl);
-                    }
-                }, 5000);
-                
+                this.scheduleObjectUrlCleanup(stableImageUrl);
+
                 this.isLoading = false;
                 this.scrollToBottom();
             }
@@ -388,7 +457,7 @@ function chatbotWidget() {
                 
                 if (data.success) {
                     this.cart = data.cart;
-                    this.messages.push({
+                    this.pushMessage({
                         role: 'assistant',
                         content: data.message
                     });
@@ -396,7 +465,7 @@ function chatbotWidget() {
                     // Update navbar cart badge
                     this.updateNavbarCartBadge(data.cart.count);
                 } else {
-                    this.messages.push({
+                    this.pushMessage({
                         role: 'assistant',
                         content: data.message || 'Không thể thêm sản phẩm vào giỏ hàng.'
                     });
@@ -405,7 +474,7 @@ function chatbotWidget() {
                 this.scrollToBottom();
             } catch (error) {
                 console.error('Add to cart error:', error);
-                this.messages.push({
+                this.pushMessage({
                     role: 'assistant',
                     content: 'Lỗi khi thêm sản phẩm. Vui lòng thử lại.'
                 });
@@ -508,7 +577,7 @@ function chatbotWidget() {
                         `📋 Trạng thái: ${this.getStatusText(data.order.status)}\n\n` +
                         `👉 [Xem chi tiết đơn hàng](${orderDetailsUrl})`;
                     
-                    this.messages.push({
+                    this.pushMessage({
                         role: 'assistant',
                         content: successMessage,
                         isHtml: true
@@ -551,10 +620,14 @@ function chatbotWidget() {
                 alert('Kích thước file không được vượt quá 5MB');
                 return;
             }
+
+            if (this.attachedImage) {
+                this.clearAttachedImage();
+            }
             
             // Store image and create preview
             this.attachedImage = file;
-            this.imagePreviewUrl = URL.createObjectURL(file);
+            this.imagePreviewUrl = this.trackObjectUrl(URL.createObjectURL(file));
             
             // Clear file input
             event.target.value = '';
@@ -562,7 +635,7 @@ function chatbotWidget() {
         
         clearAttachedImage() {
             if (this.imagePreviewUrl) {
-                URL.revokeObjectURL(this.imagePreviewUrl);
+                this.revokeObjectUrl(this.imagePreviewUrl);
             }
             this.attachedImage = null;
             this.imagePreviewUrl = null;
@@ -641,7 +714,7 @@ function chatbotWidget() {
         
         async loadHistory() {
             try {
-                const response = await fetch('/api/chatbot/history', {
+                const response = await fetch(`/api/chatbot/history?limit=${this.maxMessages}`, {
                     headers: {
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest'
@@ -652,7 +725,7 @@ function chatbotWidget() {
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.messages) {
-                        this.messages = data.messages;
+                        this.setMessages(data.messages);
                         this.$nextTick(() => {
                             this.scrollToBottom();
                         });
@@ -681,3 +754,4 @@ function chatbotWidget() {
     }
 }
 </script>
+

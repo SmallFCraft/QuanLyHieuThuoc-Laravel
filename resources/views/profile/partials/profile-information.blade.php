@@ -5,12 +5,12 @@
             <i class="bi bi-person-fill fs-3"></i>
         </div>
         <div class="flex-grow-1">
-            <h5 class="fw-bold text-gray-900 mb-1">Thông Tin Cá Nhân</h5>
-            <p class="text-gray-500 small mb-0">Cập nhật thông tin tài khoản của bạn</p>
+            <h5 class="fw-bold text-gray-900 mb-1">{{ __('messages.profile.info_title') }}</h5>
+            <p class="text-gray-500 small mb-0">{{ __('messages.profile.info_desc') }}</p>
         </div>
         <div class="d-none d-md-block">
             <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2">
-                <i class="bi bi-shield-check me-1"></i>Đã xác thực
+                <i class="bi bi-shield-check me-1"></i>{{ __('messages.profile.verified') }}
             </span>
         </div>
     </div>
@@ -22,7 +22,7 @@
         <div class="row g-3">
             <div class="col-md-6">
                 <label for="name" class="form-label fw-medium text-gray-700 mb-2">
-                    <i class="bi bi-person text-emerald-600 me-1"></i>Họ và tên
+                    <i class="bi bi-person text-emerald-600 me-1"></i>{{ __('messages.profile.name') }}
                 </label>
                 <div class="input-group">
                     <span class="input-group-text bg-gray-50 border-end-0">
@@ -33,7 +33,7 @@
                            id="name" 
                            name="name" 
                            value="{{ old('name', $user->name) }}" 
-                           placeholder="Nhập họ và tên"
+                           placeholder="{{ __('messages.profile.name_placeholder') }}"
                            required>
                     @error('name')
                         <div class="invalid-feedback">{{ $message }}</div>
@@ -43,7 +43,7 @@
 
             <div class="col-md-6">
                 <label for="email" class="form-label fw-medium text-gray-700 mb-2">
-                    <i class="bi bi-envelope text-emerald-600 me-1"></i>Địa chỉ Email
+                    <i class="bi bi-envelope text-emerald-600 me-1"></i>{{ __('messages.profile.email') }}
                 </label>
                 <div class="input-group">
                     <span class="input-group-text bg-gray-50 border-end-0">
@@ -63,8 +63,8 @@
                 @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
                     <div class="alert alert-warning border-0 mt-2 py-2 px-3" style="background: rgba(251,191,36,0.1);">
                         <i class="bi bi-exclamation-triangle me-1"></i>
-                        <small>Email chưa được xác thực. 
-                            <a href="{{ route('verification.send') }}" class="text-emerald-600 fw-semibold text-decoration-none">Gửi lại email xác thực</a>
+                        <small>{{ __('messages.profile.email_unverified') }} 
+                            <a href="{{ route('verification.send') }}" class="text-emerald-600 fw-semibold text-decoration-none">{{ __('messages.profile.resend_email') }}</a>
                         </small>
                     </div>
                 @endif
@@ -72,7 +72,7 @@
 
             <div class="col-md-6">
                 <label for="birth_date" class="form-label fw-medium text-gray-700 mb-2">
-                    <i class="bi bi-calendar-event text-emerald-600 me-1"></i>Ngày sinh
+                    <i class="bi bi-calendar-event text-emerald-600 me-1"></i>{{ __('messages.profile.birth_date') }}
                 </label>
                 <div class="input-group">
                     <span class="input-group-text bg-gray-50 border-end-0">
@@ -92,7 +92,7 @@
 
             <div class="col-md-6">
                 <label for="gender" class="form-label fw-medium text-gray-700 mb-2">
-                    <i class="bi bi-gender-ambiguous text-emerald-600 me-1"></i>Giới tính
+                    <i class="bi bi-gender-ambiguous text-emerald-600 me-1"></i>{{ __('messages.profile.gender') }}
                 </label>
                 <div class="input-group">
                     <span class="input-group-text bg-gray-50 border-end-0">
@@ -101,10 +101,10 @@
                     <select class="form-select bg-gray-50 border-start-0 rounded-end-3 shadow-none @error('gender') is-invalid @enderror"
                             id="gender"
                             name="gender">
-                        <option value="">— Chọn —</option>
-                        <option value="male" @selected(old('gender', $user->gender) === 'male')>Nam</option>
-                        <option value="female" @selected(old('gender', $user->gender) === 'female')>Nữ</option>
-                        <option value="other" @selected(old('gender', $user->gender) === 'other')>Khác</option>
+                        <option value="">{{ __('messages.profile.select') }}</option>
+                        <option value="male" @selected(old('gender', $user->gender) === 'male')>{{ __('messages.profile.male') }}</option>
+                        <option value="female" @selected(old('gender', $user->gender) === 'female')>{{ __('messages.profile.female') }}</option>
+                        <option value="other" @selected(old('gender', $user->gender) === 'other')>{{ __('messages.profile.other') }}</option>
                     </select>
                     @error('gender')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -114,7 +114,7 @@
 
             <div class="col-md-6">
                 <label for="phone" class="form-label fw-medium text-gray-700 mb-2">
-                    <i class="bi bi-telephone text-emerald-600 me-1"></i>Số điện thoại
+                    <i class="bi bi-telephone text-emerald-600 me-1"></i>{{ __('messages.profile.phone') }}
                 </label>
                 <div class="input-group">
                     <span class="input-group-text bg-gray-50 border-end-0">
@@ -134,12 +134,12 @@
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
-                <small class="text-muted">10 chữ số, bắt đầu bằng 0</small>
+                <small class="text-muted">{{ __('messages.profile.phone_hint') }}</small>
             </div>
 
             <div class="col-12">
                 <label for="address" class="form-label fw-medium text-gray-700 mb-2">
-                    <i class="bi bi-geo-alt text-emerald-600 me-1"></i>Địa chỉ
+                    <i class="bi bi-geo-alt text-emerald-600 me-1"></i>{{ __('messages.profile.address') }}
                 </label>
                 <div class="input-group align-items-start">
                     <span class="input-group-text bg-gray-50 border-end-0 align-self-stretch">
@@ -165,7 +165,7 @@
                                     <i class="bi bi-calendar-check text-emerald-600"></i>
                                 </div>
                                 <div>
-                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">Ngày tham gia</small>
+                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">{{ __('messages.profile.joined_date') }}</small>
                                     <p class="fw-semibold text-gray-900 mb-0 small">{{ $user->created_at->format('d/m/Y') }}</p>
                                 </div>
                             </div>
@@ -176,7 +176,7 @@
                                     <i class="bi bi-clock-history text-emerald-600"></i>
                                 </div>
                                 <div>
-                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">Cập nhật lần cuối</small>
+                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">{{ __('messages.profile.last_updated') }}</small>
                                     <p class="fw-semibold text-gray-900 mb-0 small">{{ $user->updated_at->diffForHumans() }}</p>
                                 </div>
                             </div>
@@ -187,9 +187,9 @@
                                     <i class="bi bi-shield-check text-emerald-600"></i>
                                 </div>
                                 <div>
-                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">Trạng thái</small>
+                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">{{ __('messages.profile.status') }}</small>
                                     <p class="fw-semibold text-success mb-0 small">
-                                        <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;"></i>{{ ucfirst($user->status) }}
+                                        <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;"></i>{{ $user->status == 'active' ? __('messages.auth.status_active') : __('messages.auth.status_inactive') }}
                                     </p>
                                 </div>
                             </div>
@@ -201,13 +201,13 @@
 
         <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-3 mt-4 pt-3 border-top">
             <button type="submit" class="btn btn-glass-primary rounded-pill px-4 py-2 fw-medium order-sm-1">
-                <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
+                <i class="bi bi-check-lg me-1"></i>{{ __('messages.profile.save_changes') }}
             </button>
             
             @if (session('status') === 'profile-updated')
                 <div class="alert alert-glass-success border-0 mb-0 py-2 px-3 rounded-pill animate-fade-in order-sm-2">
                     <i class="bi bi-check-circle-fill me-1"></i>
-                    <span class="fw-medium small">Đã cập nhật thành công!</span>
+                    <span class="fw-medium small">{{ __('messages.profile.update_success') }}</span>
                 </div>
             @endif
         </div>
@@ -222,7 +222,7 @@
                 <i class="bi bi-bag-check"></i>
             </div>
             <div class="metric-value text-emerald-600">{{ auth()->user()->orders()->count() }}</div>
-            <div class="metric-label">Tổng đơn hàng</div>
+            <div class="metric-label">{{ __('messages.profile.total_orders') }}</div>
         </div>
     </div>
     
@@ -232,7 +232,7 @@
                 <i class="bi bi-clock-history"></i>
             </div>
             <div class="metric-value text-warning">{{ auth()->user()->orders()->where('status', 'Pending')->count() }}</div>
-            <div class="metric-label">Đang xử lý</div>
+            <div class="metric-label">{{ __('messages.profile.processing') }}</div>
         </div>
     </div>
     
@@ -242,7 +242,7 @@
                 <i class="bi bi-truck"></i>
             </div>
             <div class="metric-value text-info">{{ auth()->user()->orders()->where('status', 'Delivering')->count() }}</div>
-            <div class="metric-label">Đang giao</div>
+            <div class="metric-label">{{ __('messages.profile.delivering') }}</div>
         </div>
     </div>
     
@@ -252,7 +252,7 @@
                 <i class="bi bi-check-circle"></i>
             </div>
             <div class="metric-value text-success">{{ auth()->user()->orders()->where('status', 'Completed')->count() }}</div>
-            <div class="metric-label">Hoàn thành</div>
+            <div class="metric-label">{{ __('messages.profile.orders_completed') }}</div>
         </div>
     </div>
 </div>

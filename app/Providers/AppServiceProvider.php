@@ -2,6 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Category;
+use App\Models\Product;
+use App\Observers\ProductObserver;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,19 +24,26 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Register Product Observer
-        \App\Models\Product::observe(\App\Observers\ProductObserver::class);
-        
-        \Illuminate\Support\Facades\View::composer('*', function ($view) {
-            $view->with('navCategories', \App\Models\Category::all());
-            $view->with('footerCategories', \App\Models\Category::query()
-                ->withSum(['products' => function ($query) {
-                    $query->whereNull('deleted_at');
-                }], 'views_count')
-                ->orderByDesc('products_sum_views_count')
-                ->limit(4)
-                ->get()
-            );
+        Product::observe(ProductObserver::class);
+
+        View::composer(['layouts.app', 'layouts.guest'], function ($view) {
+            $view->with('navCategories', Cache::remember(
+                Category::NAV_CACHE_KEY,
+                now()->addMinutes(10),
+                fn () => Category::query()
+                    ->orderBy('name')
+                    ->get()
+            ));
+
+            $view->with('footerCategories', Cache::remember(
+                Category::FOOTER_CACHE_KEY,
+                now()->addMinutes(10),
+                fn () => Category::query()
+                    ->withSum('products', 'views_count')
+                    ->orderByDesc('products_sum_views_count')
+                    ->limit(4)
+                    ->get()
+            ));
         });
     }
 }

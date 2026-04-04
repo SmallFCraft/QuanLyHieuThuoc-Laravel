@@ -6,11 +6,11 @@
 <!-- Page Header -->
 <section class="py-4 bg-emerald-50">
     <div class="container">
-        <h1 class="fw-bold text-gray-900 mb-1">Tài Khoản Của Tôi</h1>
+        <h1 class="fw-bold text-gray-900 mb-1">{{ __('messages.profile.title') }}</h1>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-emerald-600 text-decoration-none">Trang chủ</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Tài khoản</li>
+                <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-emerald-600 text-decoration-none">{{ __('messages.home') }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ __('messages.profile.breadcrumb_account') }}</li>
             </ol>
         </nav>
     </div>
@@ -38,7 +38,7 @@
                     <h6 class="fw-bold text-gray-900 mb-1">{{ $user->name }}</h6>
                     <p class="text-gray-500 small mb-2">{{ $user->email }}</p>
                     <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-3 py-2 mt-1" style="font-size: 0.8rem;">
-                        <i class="bi bi-shield-check me-1"></i>{{ ucfirst($user->role) }}
+                        <i class="bi bi-shield-check me-1"></i>{{ role_text($user->role) }}
                     </span>
                     
                     <!-- Quick Stats -->
@@ -46,13 +46,13 @@
                         <div class="col-6">
                             <div class="text-center">
                                 <h6 class="fw-bold text-emerald-600 mb-0">{{ auth()->user()->orders()->count() }}</h6>
-                                <small class="text-gray-500">Đơn hàng</small>
+                                <small class="text-gray-500">{{ __('messages.profile.orders_count') }}</small>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="text-center">
                                 <h6 class="fw-bold text-emerald-600 mb-0">{{ auth()->user()->orders()->where('status', 'Completed')->count() }}</h6>
-                                <small class="text-gray-500">Hoàn thành</small>
+                                <small class="text-gray-500">{{ __('messages.profile.orders_completed') }}</small>
                             </div>
                         </div>
                     </div>
@@ -62,16 +62,16 @@
                 <div class="glass-card rounded-4 border-0 p-3 d-none d-lg-block">
                     <nav class="nav flex-column gap-1">
                         <a href="#profile-info" class="nav-link profile-nav-link active rounded-3 px-3 py-2" data-bs-toggle="pill">
-                            <i class="bi bi-person me-2"></i>Thông tin cá nhân
+                            <i class="bi bi-person me-2"></i>{{ __('messages.profile.nav_info') }}
                         </a>
                         <a href="#orders" class="nav-link profile-nav-link rounded-3 px-3 py-2" data-bs-toggle="pill">
-                            <i class="bi bi-bag me-2"></i>Đơn hàng của tôi
+                            <i class="bi bi-bag me-2"></i>{{ __('messages.profile.nav_orders') }}
                         </a>
                         <a href="#security" class="nav-link profile-nav-link rounded-3 px-3 py-2" data-bs-toggle="pill">
-                            <i class="bi bi-shield-lock me-2"></i>Bảo mật
+                            <i class="bi bi-shield-lock me-2"></i>{{ __('messages.profile.nav_security') }}
                         </a>
                         <a href="#settings" class="nav-link profile-nav-link rounded-3 px-3 py-2" data-bs-toggle="pill">
-                            <i class="bi bi-gear me-2"></i>Cài đặt
+                            <i class="bi bi-gear me-2"></i>{{ __('messages.profile.nav_settings') }}
                         </a>
                     </nav>
                 </div>
@@ -82,25 +82,25 @@
                         <li class="nav-item">
                             <a class="nav-link active rounded-3 py-2" data-bs-toggle="pill" href="#profile-info">
                                 <i class="bi bi-person d-block fs-5"></i>
-                                <small class="d-none d-sm-inline">Hồ sơ</small>
+                                <small class="d-none d-sm-inline">{{ __('messages.profile.mobile_info') }}</small>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link rounded-3 py-2" data-bs-toggle="pill" href="#orders">
                                 <i class="bi bi-bag d-block fs-5"></i>
-                                <small class="d-none d-sm-inline">Đơn hàng</small>
+                                <small class="d-none d-sm-inline">{{ __('messages.profile.mobile_orders') }}</small>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link rounded-3 py-2" data-bs-toggle="pill" href="#security">
                                 <i class="bi bi-shield-lock d-block fs-5"></i>
-                                <small class="d-none d-sm-inline">Bảo mật</small>
+                                <small class="d-none d-sm-inline">{{ __('messages.profile.mobile_security') }}</small>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link rounded-3 py-2" data-bs-toggle="pill" href="#settings">
                                 <i class="bi bi-gear d-block fs-5"></i>
-                                <small class="d-none d-sm-inline">Cài đặt</small>
+                                <small class="d-none d-sm-inline">{{ __('messages.profile.mobile_settings') }}</small>
                             </a>
                         </li>
                     </ul>

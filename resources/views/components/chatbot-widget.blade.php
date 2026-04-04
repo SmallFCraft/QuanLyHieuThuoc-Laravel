@@ -3,7 +3,7 @@
     <!-- Floating Button with Label -->
     <div x-show="!isOpen" class="chatbot-toggle-wrapper">
         <div class="chatbot-float-label" x-data="{ showLabel: true }" x-init="setTimeout(() => showLabel = false, 8000)" x-show="showLabel" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 transform translate-x-0" x-transition:leave-end="opacity-0 transform translate-x-4">
-            <span>Trợ lý AI 💬</span>
+            <span>{{ __('messages.chatbot.widget_label') }}</span>
             <div class="float-label-arrow"></div>
         </div>
         <button 
@@ -40,8 +40,8 @@
                     </svg>
                 </div>
                 <div class="ml-3">
-                    <h3 class="font-semibold text-white">Trợ Lý AI Medicare Pharmacy</h3>
-                    <p class="text-xs text-emerald-50">Luôn sẵn sàng hỗ trợ kịp thời cho bạn</p>
+                    <h3 class="font-semibold text-white">{{ __('messages.chatbot.header_title') }}</h3>
+                    <p class="text-xs text-emerald-50">{{ __('messages.chatbot.header_subtitle') }}</p>
                 </div>
             </div>
             <button @click="toggleWidget()" class="text-white hover:text-emerald-50">
@@ -61,13 +61,13 @@
                         </svg>
                     </div>
                     <div class="ml-3">
-                        <h3 class="text-sm font-medium text-yellow-800">Dạ, em có lưu ý nhỏ ạ</h3>
+                        <h3 class="text-sm font-medium text-yellow-800">{{ __('messages.chatbot.disclaimer_title') }}</h3>
                         <div class="mt-2 text-sm text-yellow-700">
-                            <p>Dạ, nội dung do em (AI) tạo ra có thể chưa hoàn toàn chính xác. Anh/chị vui lòng tham khảo thêm ý kiến dược sĩ hoặc bác sĩ trước khi dùng thuốc nhé.</p>
+                            <p>{{ __('messages.chatbot.disclaimer_text') }}</p>
                         </div>
                         <div class="mt-4">
                             <button @click="acceptDisclaimer()" class="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 px-4 py-2 rounded text-sm font-medium">
-                                Đã hiểu
+                                {{ __('messages.chatbot.disclaimer_btn') }}
                             </button>
                         </div>
                     </div>
@@ -84,39 +84,39 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                     </svg>
                 </div>
-                <h4 class="welcome-title">Medicare xin chào ạ! 👋</h4>
-                <p class="welcome-subtitle">Dạ, em là trợ lý AI của <strong>Medicare Pharmacy</strong>. Em có thể giúp anh/chị:</p>
+                <h4 class="welcome-title">{{ __('messages.chatbot.welcome_title') }}</h4>
+                <p class="welcome-subtitle">{!! __('messages.chatbot.welcome_subtitle') !!}</p>
                 <div class="welcome-features">
                     <div class="feature-item">
                         <span class="feature-emoji">💊</span>
-                        <span>Tìm kiếm & tư vấn thuốc</span>
+                        <span>{{ __('messages.chatbot.feature_search') }}</span>
                     </div>
                     <div class="feature-item">
                         <span class="feature-emoji">📋</span>
-                        <span>Nhận dạng đơn thuốc từ ảnh</span>
+                        <span>{{ __('messages.chatbot.feature_vision') }}</span>
                     </div>
                     <div class="feature-item">
                         <span class="feature-emoji">🛒</span>
-                        <span>Đặt hàng nhanh qua chat</span>
+                        <span>{{ __('messages.chatbot.feature_order') }}</span>
                     </div>
                     <div class="feature-item">
                         <span class="feature-emoji">❓</span>
-                        <span>Giải đáp thắc mắc sức khỏe</span>
+                        <span>{{ __('messages.chatbot.feature_health') }}</span>
                     </div>
                 </div>
-                <p class="welcome-hint">Dạ, anh/chị có thể thử một trong các gợi ý dưới đây nhé:</p>
+                <p class="welcome-hint">{{ __('messages.chatbot.welcome_hint') }}</p>
                 <div class="suggestion-chips">
-                    <button @click="useSuggestion('Tôi cần tìm thuốc giảm đau')" class="suggestion-chip">
-                        💊 Tìm thuốc giảm đau
+                    <button @click="useSuggestion('{{ __('messages.chatbot.suggestion_1_text') }}')" class="suggestion-chip">
+                        {{ __('messages.chatbot.suggestion_1') }}
                     </button>
-                    <button @click="useSuggestion('Có thuốc Paracetamol không?')" class="suggestion-chip">
-                        🔍 Hỏi thuốc Paracetamol
+                    <button @click="useSuggestion('{{ __('messages.chatbot.suggestion_2_text') }}')" class="suggestion-chip">
+                        {{ __('messages.chatbot.suggestion_2') }}
                     </button>
-                    <button @click="useSuggestion('Thuốc nào tốt cho cảm cúm?')" class="suggestion-chip">
-                        🤒 Thuốc trị cảm cúm
+                    <button @click="useSuggestion('{{ __('messages.chatbot.suggestion_3_text') }}')" class="suggestion-chip">
+                        {{ __('messages.chatbot.suggestion_3') }}
                     </button>
-                    <button @click="useSuggestion('Xem các loại vitamin')" class="suggestion-chip">
-                        💪 Xem vitamin
+                    <button @click="useSuggestion('{{ __('messages.chatbot.suggestion_4_text') }}')" class="suggestion-chip">
+                        {{ __('messages.chatbot.suggestion_4') }}
                     </button>
                 </div>
             </div>
@@ -185,11 +185,32 @@
                             </div>
                         </template>
 
+                        <template x-if="message.categories && message.categories.length > 0">
+                            <div class="mt-3 space-y-2">
+                                <template x-for="category in message.categories" :key="category.id">
+                                    <a :href="category.url" class="category-card text-decoration-none">
+                                        <div class="category-card__content">
+                                            <div>
+                                                <h4 class="category-card__title" x-text="category.name"></h4>
+                                                <p class="category-card__meta">
+                                                    <span x-text="(category.product_count || 0) + ' sản phẩm'"></span>
+                                                </p>
+                                                <template x-if="category.description">
+                                                    <p class="category-card__description" x-text="category.description"></p>
+                                                </template>
+                                            </div>
+                                            <span class="category-card__arrow">Xem</span>
+                                        </div>
+                                    </a>
+                                </template>
+                            </div>
+                        </template>
+
                         <!-- Disclaimer -->
                         <template x-if="message.show_disclaimer">
                             <div class="mt-2 text-xs text-yellow-600 bg-yellow-50 p-2 rounded" style="display: flex; gap: 4px; align-items: flex-start;">
                                 <span>⚠️</span>
-                                <span x-text="message.disclaimer || 'Dạ, nội dung do em (AI) tạo ra có thể chưa hoàn toàn chính xác. Anh/chị vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ nhé.'"></span>
+                                <span x-text="message.disclaimer || '{{ __('messages.chatbot.disclaimer_text') }}'"></span>
                             </div>
                         </template>
                     </div>
@@ -213,10 +234,10 @@
             <div style="padding: 10px 14px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid rgba(255, 255, 255, 0.8);">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
                     <h4 style="font-weight: 600; color: #065f46; font-size: 0.8rem; margin: 0;">
-                        Giỏ hàng (<span x-text="cart.count"></span>)
+                        {{ __('messages.chatbot.cart_title') }} (<span x-text="cart.count"></span>)
                     </h4>
                     <button @click="showCartDetail = !showCartDetail" style="color: #047857; font-size: 0.7rem; text-decoration: none; background: none; border: none; cursor: pointer; padding: 0;">
-                        <span x-text="showCartDetail ? 'Thu gọn' : 'Xem chi tiết'"></span>
+                        <span x-text="showCartDetail ? '{{ __('messages.chatbot.collapse') }}' : '{{ __('messages.chatbot.view_details') }}'"></span>
                     </button>
                 </div>
                 
@@ -238,12 +259,12 @@
                 </div>
                 
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-top: 1px solid #6ee7b7; margin-bottom: 8px;">
-                    <span style="font-weight: 600; color: #065f46; font-size: 0.8rem;">Tổng:</span>
+                    <span style="font-weight: 600; color: #065f46; font-size: 0.8rem;">{{ __('messages.chatbot.total') }}</span>
                     <span style="font-weight: 700; color: #065f46; font-size: 0.95rem;" x-text="formatCurrency(cart.total)"></span>
                 </div>
                 
                 <button @click="showCheckoutForm()" style="width: 100%; background: #059669; color: white; padding: 8px 12px; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s;">
-                    Đặt hàng ngay
+                    {{ __('messages.chatbot.order_now') }}
                 </button>
             </div>
         </div>
@@ -252,7 +273,7 @@
         <div x-show="showCheckout" class="chatbot-checkout-modal" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #ffffff; z-index: 100; overflow-y: auto;">
             <div style="padding: 16px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; position: sticky; top: 0; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; z-index: 10;">
-                    <h4 style="font-weight: 600; color: #111827; font-size: 1rem; margin: 0;">Thông tin giao hàng</h4>
+                    <h4 style="font-weight: 600; color: #111827; font-size: 1rem; margin: 0;">{{ __('messages.chatbot.checkout_title') }}</h4>
                     <button @click="showCheckout = false" style="color: #6b7280; background: none; border: none; cursor: pointer; padding: 4px;">
                         <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -262,39 +283,39 @@
                 
                 <form @submit.prevent="placeOrder()" style="display: flex; flex-direction: column; gap: 14px;">
                     <div>
-                        <label style="display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 6px;">Họ và tên <span style="color: #ef4444;">*</span></label>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 6px;">{{ __('messages.chatbot.fullname') }} <span style="color: #ef4444;">*</span></label>
                         <input type="text" x-model="checkoutForm.customer_name" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; outline: none;" placeholder="Nguyễn Văn A" onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#d1d5db'">
                     </div>
                     
                     <div>
-                        <label style="display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 6px;">Số điện thoại <span style="color: #ef4444;">*</span></label>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 6px;">{{ __('messages.chatbot.phone') }} <span style="color: #ef4444;">*</span></label>
                         <input type="tel" x-model="checkoutForm.shipping_phone" required pattern="^(0|\+84)[0-9]{9}$" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; outline: none;" placeholder="0912345678" onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#d1d5db'">
-                        <small style="color: #6b7280; font-size: 0.7rem;">10 số, bắt đầu bằng 0</small>
+                        <small style="color: #6b7280; font-size: 0.7rem;">{{ __('messages.chatbot.phone_hint') }}</small>
                     </div>
                     
                     <div>
-                        <label style="display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 6px;">Địa chỉ giao hàng <span style="color: #ef4444;">*</span></label>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 6px;">{{ __('messages.chatbot.address') }} <span style="color: #ef4444;">*</span></label>
                         <textarea x-model="checkoutForm.shipping_address" required rows="3" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; outline: none; resize: vertical; min-height: 70px;" placeholder="Số nhà, đường, phường, quận, thành phố" onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#d1d5db'"></textarea>
                     </div>
                     
                     <div>
-                        <label style="display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 6px;">Thời gian giao hàng</label>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 6px;">{{ __('messages.chatbot.delivery_time') }}</label>
                         <select x-model="checkoutForm.delivery_time" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; outline: none; background: white; cursor: pointer;" onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#d1d5db'">
-                            <option value="anytime">Bất kỳ lúc nào</option>
-                            <option value="morning">Buổi sáng (8h-12h)</option>
-                            <option value="afternoon">Buổi chiều (13h-17h)</option>
-                            <option value="evening">Buổi tối (18h-21h)</option>
+                            <option value="anytime">{{ __('messages.chatbot.time_any') }}</option>
+                            <option value="morning">{{ __('messages.chatbot.time_morning') }}</option>
+                            <option value="afternoon">{{ __('messages.chatbot.time_afternoon') }}</option>
+                            <option value="evening">{{ __('messages.chatbot.time_evening') }}</option>
                         </select>
                     </div>
                     
                     <div>
-                        <label style="display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 6px;">Ghi chú (tùy chọn)</label>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 6px;">{{ __('messages.chatbot.notes') }}</label>
                         <textarea x-model="checkoutForm.order_notes" rows="2" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; outline: none; resize: vertical; min-height: 60px;" placeholder="Ghi chú thêm cho đơn hàng..." onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#d1d5db'"></textarea>
                     </div>
                     
                     <div style="padding-top: 14px; border-top: 2px solid #e5e7eb; margin-top: 6px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                            <span style="font-weight: 600; color: #111827; font-size: 0.9rem;">Tổng thanh toán:</span>
+                            <span style="font-weight: 600; color: #111827; font-size: 0.9rem;">{{ __('messages.chatbot.total_payment') }}</span>
                             <span style="font-weight: 700; font-size: 1.25rem; color: #059669;" x-text="formatCurrency(cart.total)"></span>
                         </div>
                         
@@ -303,14 +324,14 @@
                                 :class="{ 'is-loading': isPlacingOrder }"
                                 style="width: 100%; color: white; background: #059669; padding: 12px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: background 0.2s;">
                             <span x-show="!isPlacingOrder">
-                                Xác nhận đặt hàng
+                                {{ __('messages.chatbot.confirm_order') }}
                             </span>
                             <span x-show="isPlacingOrder" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                                 <svg class="spin-animation" style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" stroke-dasharray="32" stroke-dashoffset="0" opacity="0.25"></circle>
                                     <path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="4" stroke-linecap="round"></path>
                                 </svg>
-                                Đang xử lý...
+                                {{ __('messages.chatbot.processing') }}
                             </span>
                         </button>
                         
@@ -322,7 +343,7 @@
                                 <svg style="width: 14px; height: 14px; color: #10b981;" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                                 </svg>
-                                <span>Thanh toán an toàn & bảo mật</span>
+                                <span>{{ __('messages.chatbot.safe_payment') }}</span>
                             </div>
                         </div>
                     </div>
@@ -363,7 +384,7 @@
                     type="text" 
                     x-model="inputText" 
                     @keydown.enter="sendMessage()"
-                    :placeholder="attachedImage ? 'Thêm mô tả cho ảnh (tùy chọn)...' : 'Nhập tin nhắn...'"
+                    :placeholder="attachedImage ? '{{ __('messages.chatbot.placeholder_with_image') }}' : '{{ __('messages.chatbot.placeholder') }}'"
                     class="input-message"
                     :disabled="isLoading"
                 >
@@ -625,6 +646,55 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(16, 185, 129, 0.1);
     background: rgba(255, 255, 255, 0.85);
+}
+
+.chatbot-widget-container .category-card {
+    display: block;
+    padding: 12px 14px;
+    background: rgba(236, 253, 245, 0.75);
+    border-radius: 12px;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.chatbot-widget-container .category-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.12);
+    background: rgba(236, 253, 245, 0.95);
+}
+
+.category-card__content {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}
+
+.category-card__title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #065f46;
+    margin-bottom: 4px;
+}
+
+.category-card__meta {
+    font-size: 12px;
+    color: #047857;
+    margin-bottom: 4px;
+}
+
+.category-card__description {
+    font-size: 12px;
+    color: #4b5563;
+    margin-bottom: 0;
+    line-height: 1.45;
+}
+
+.category-card__arrow {
+    color: #059669;
+    font-weight: 700;
+    font-size: 12px;
+    white-space: nowrap;
 }
 
 .product-image {

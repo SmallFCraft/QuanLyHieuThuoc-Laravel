@@ -1,7 +1,7 @@
 <x-guest-layout>
     <div class="text-center mb-4">
-        <h4 class="fw-bold text-gray-800 mb-1">Đăng Nhập</h4>
-        <p class="text-gray-500 small mb-0">Chào mừng bạn quay trở lại!</p>
+        <h4 class="fw-bold text-gray-800 mb-1">{{ __('messages.auth.login.title') }}</h4>
+        <p class="text-gray-500 small mb-0">{{ __('messages.auth.login.welcome') }}</p>
     </div>
 
     <!-- Session Status -->
@@ -16,7 +16,7 @@
 
         <!-- Email -->
         <div class="mb-3">
-            <label for="email" class="form-label fw-medium text-gray-700 small">Email</label>
+            <label for="email" class="form-label fw-medium text-gray-700 small">{{ __('messages.auth.email_address') }}</label>
             <div class="input-group">
                 <span class="input-group-text bg-gray-50 border-end-0 text-gray-400"><i class="bi bi-envelope"></i></span>
                 <input type="email" class="form-control bg-gray-50 border-start-0 shadow-none @error('email') is-invalid @enderror"
@@ -31,10 +31,10 @@
         <!-- Password -->
         <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center">
-                <label for="password" class="form-label fw-medium text-gray-700 small mb-0">Mật khẩu</label>
+                <label for="password" class="form-label fw-medium text-gray-700 small mb-0">{{ __('messages.auth.password') }}</label>
                 @if (Route::has('password.request'))
                     <a class="text-emerald-600 small text-decoration-none" href="{{ route('password.request') }}">
-                        Quên mật khẩu?
+                        {{ __('messages.auth.login.forgot_password') }}
                     </a>
                 @endif
             </div>
@@ -54,19 +54,19 @@
             <input class="form-check-input" type="checkbox" id="remember_me" name="remember"
                    style="border-color: #d1d5db;">
             <label class="form-check-label small text-gray-600" for="remember_me">
-                Ghi nhớ đăng nhập
+                {{ __('messages.auth.login.remember_me') }}
             </label>
         </div>
 
         <button type="submit" class="btn btn-lg w-100 text-white fw-bold rounded-pill shadow" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-            <i class="bi bi-box-arrow-in-right me-2"></i>Đăng nhập
+            <i class="bi bi-box-arrow-in-right me-2"></i>{{ __('messages.auth.login.submit_btn') }}
         </button>
     </form>
 
     <div class="text-center mt-4">
         <p class="text-gray-500 small mb-0">
-            Chưa có tài khoản?
-            <a href="{{ route('register') }}" class="text-emerald-600 fw-medium text-decoration-none">Đăng ký ngay</a>
+            {{ __('messages.auth.login.no_account') }}
+            <a href="{{ route('register') }}" class="text-emerald-600 fw-medium text-decoration-none">{{ __('messages.auth.login.register_now') }}</a>
         </p>
     </div>
 </x-guest-layout>

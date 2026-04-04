@@ -13,7 +13,7 @@
                     <i class="bi bi-boxes"></i>
                 </div>
                 <div class="value">{{ $summary['total_products'] ?? 0 }}</div>
-                <div class="label">Tổng Sản Phẩm</div>
+                <div class="label">{{ __('messages.admin.inventory.total_products') }}</div>
             </div>
         </div>
         <div class="col-md-3">
@@ -22,7 +22,7 @@
                     <i class="bi bi-exclamation-triangle"></i>
                 </div>
                 <div class="value">{{ $summary['low_stock'] ?? 0 }}</div>
-                <div class="label">Tồn Kho Thấp</div>
+                <div class="label">{{ __('messages.admin.inventory.low_stock_label') }}</div>
             </div>
         </div>
         <div class="col-md-3">
@@ -31,7 +31,7 @@
                     <i class="bi bi-calendar-x"></i>
                 </div>
                 <div class="value">{{ $summary['expiring_soon'] ?? 0 }}</div>
-                <div class="label">Sắp Hết Hạn</div>
+                <div class="label">{{ __('messages.admin.inventory.expiring_soon_label') }}</div>
             </div>
         </div>
         <div class="col-md-3">
@@ -40,28 +40,28 @@
                     <i class="bi bi-x-circle"></i>
                 </div>
                 <div class="value">{{ $summary['out_of_stock'] ?? 0 }}</div>
-                <div class="label">Hết Hàng</div>
+                <div class="label">{{ __('messages.admin.inventory.out_of_stock') }}</div>
             </div>
         </div>
     </div>
 
     <!-- Inventory Table -->
     <div class="glass-card">
-        <h5 class="mb-4">Danh Sách Tồn Kho (FEFO)</h5>
+        <h5 class="mb-4">{{ __('messages.admin.inventory.inventory_list') }}</h5>
         
         <div class="table-responsive">
             <table id="inventoryTable" class="table table-hover">
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Tên Sản Phẩm</th>
-                        <th>Danh Mục</th>
-                        <th>Số Lô</th>
-                        <th>Tồn Kho</th>
-                        <th>Điểm Đặt Lại</th>
-                        <th>Hạn Sử Dụng</th>
-                        <th>Trạng Thái</th>
-                        <th>Thao Tác</th>
+                        <th>{{ __('messages.admin.inventory.product_name') }}</th>
+                        <th>{{ __('messages.admin.inventory.category') }}</th>
+                        <th>{{ __('messages.admin.inventory.batch_number') }}</th>
+                        <th>{{ __('messages.admin.inventory.stock') }}</th>
+                        <th>{{ __('messages.admin.inventory.reorder_point') }}</th>
+                        <th>{{ __('messages.admin.inventory.expiration_date') }}</th>
+                        <th>{{ __('messages.admin.inventory.status') }}</th>
+                        <th>{{ __('messages.admin.inventory.action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -76,13 +76,13 @@
                         <td>{{ $product->expiration_date->format('d/m/Y') }}</td>
                         <td>
                             @if($product->isExpired())
-                                <span class="badge bg-danger">Đã hết hạn</span>
+                                <span class="badge bg-danger">{{ __('messages.admin.inventory.status_expired') }}</span>
                             @elseif($product->isExpiringSoon(30))
-                                <span class="badge bg-warning">Sắp hết hạn</span>
+                                <span class="badge bg-warning">{{ __('messages.admin.inventory.status_expiring_soon') }}</span>
                             @elseif($product->isLowStock())
-                                <span class="badge bg-info">Tồn kho thấp</span>
+                                <span class="badge bg-info">{{ __('messages.admin.inventory.status_low_stock') }}</span>
                             @else
-                                <span class="badge bg-success">Bình thường</span>
+                                <span class="badge bg-success">{{ __('messages.admin.inventory.status_normal') }}</span>
                             @endif
                         </td>
                         <td>
@@ -106,32 +106,32 @@
             <form id="adjustInventoryForm">
                 @csrf
                 <div class="modal-header">
-                    <h5 class="modal-title">Điều Chỉnh Tồn Kho</h5>
+                    <h5 class="modal-title">{{ __('messages.admin.inventory.adjust_stock_title') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="product_id" id="adjust_product_id">
                     <div class="mb-3">
-                        <label class="form-label">Sản Phẩm</label>
+                        <label class="form-label">{{ __('messages.admin.inventory.product') }}</label>
                         <input type="text" id="adjust_product_name" class="form-control" readonly>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Tồn Kho Hiện Tại</label>
+                        <label class="form-label">{{ __('messages.admin.inventory.current_stock') }}</label>
                         <input type="text" id="adjust_current_stock" class="form-control" readonly>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Số Lượng Điều Chỉnh <span class="text-danger">*</span></label>
+                        <label class="form-label">{{ __('messages.admin.inventory.adjust_quantity') }} <span class="text-danger">*</span></label>
                         <input type="number" name="adjustment" class="form-control" placeholder="Nhập số dương để tăng, số âm để giảm" required>
-                        <small class="text-muted">Ví dụ: +10 để thêm 10, -5 để giảm 5</small>
+                        <small class="text-muted">{{ __('messages.admin.inventory.adjust_hint') }}</small>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Lý Do <span class="text-danger">*</span></label>
+                        <label class="form-label">{{ __('messages.admin.inventory.reason') }} <span class="text-danger">*</span></label>
                         <textarea name="reason" class="form-control" rows="3" required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Điều Chỉnh</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('messages.admin.inventory.cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ __('messages.admin.inventory.submit_adjust') }}</button>
                 </div>
             </form>
         </div>
@@ -145,17 +145,17 @@
     $(document).ready(function() {
         $('#inventoryTable').DataTable({
             language: {
-                processing: "Đang xử lý...",
-                search: "Tìm kiếm:",
-                lengthMenu: "Hiển thị _MENU_ mục",
-                info: "Hiển thị _START_ đến _END_ của _TOTAL_ mục",
-                infoEmpty: "Hiển thị 0 đến 0 của 0 mục",
-                infoFiltered: "(được lọc từ _MAX_ mục)",
-                loadingRecords: "Đang tải...",
-                zeroRecords: "Không tìm thấy kết quả",
-                emptyTable: "Không có dữ liệu trong bảng",
-                paginate: { first: "Đầu", previous: "Trước", next: "Tiếp", last: "Cuối" },
-                aria: { sortAscending: ": sắp xếp tăng dần", sortDescending: ": sắp xếp giảm dần" }
+                processing: "{{ __('messages.admin.inventory.processing') }}",
+                search: "{{ __('messages.admin.inventory.search') }}",
+                lengthMenu: "{{ __('messages.admin.inventory.lengthMenu') }}",
+                info: "{{ __('messages.admin.inventory.info') }}",
+                infoEmpty: "{{ __('messages.admin.inventory.infoEmpty') }}",
+                infoFiltered: "{{ __('messages.admin.inventory.infoFiltered') }}",
+                loadingRecords: "{{ __('messages.admin.inventory.loadingRecords') }}",
+                zeroRecords: "{{ __('messages.admin.inventory.zeroRecords') }}",
+                emptyTable: "{{ __('messages.admin.inventory.emptyTable') }}",
+                paginate: { first: "{{ __('messages.admin.inventory.first') }}", previous: "{{ __('messages.admin.inventory.previous') }}", next: "{{ __('messages.admin.inventory.next') }}", last: "{{ __('messages.admin.inventory.last') }}" },
+                aria: { sortAscending: "{{ __('messages.admin.inventory.sortAscending') }}", sortDescending: "{{ __('messages.admin.inventory.sortDescending') }}" }
             },
             order: [[6, 'asc']], // Sort by expiration date (FEFO)
             pageLength: 25,
@@ -185,7 +185,7 @@
                 success: function(response) {
                     $('#adjustInventoryModal').modal('hide');
                     Swal.fire({
-                        title: 'Thành công!',
+                        title: '{{ __('messages.admin.inventory.success') }}',
                         text: response.message,
                         icon: 'success',
                         background: 'rgba(255, 255, 255, 0.9)'
@@ -197,7 +197,7 @@
                         message = Object.values(xhr.responseJSON.errors).flat().join('<br>');
                     }
                     Swal.fire({
-                        title: 'Lỗi!',
+                        title: '{{ __('messages.admin.inventory.error') }}',
                         html: message,
                         icon: 'error',
                         background: 'rgba(255, 255, 255, 0.9)'

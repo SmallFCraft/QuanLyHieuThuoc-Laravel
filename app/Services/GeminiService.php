@@ -47,7 +47,7 @@ class GeminiService
      *
      * @param array $messages Array of message objects with 'role' and 'content'
      * @param array $options Additional options (functions, temperature, etc.)
-     * @return array Response in OpenAI-compatible format
+     * @return array Response in the shared chatbot response format
      * @throws \Exception
      */
     public function chat(array $messages, array $options = []): array
@@ -224,7 +224,7 @@ class GeminiService
     }
 
     /**
-     * Map OpenAI type to Gemini DataType.
+     * Map schema type strings to Gemini DataType.
      *
      * @param string $type
      * @return DataType
@@ -242,7 +242,7 @@ class GeminiService
     }
 
     /**
-     * Convert Gemini response to standard format compatible with OpenAI structure.
+     * Convert Gemini response to the shared chatbot response structure.
      *
      * @param mixed $response
      * @return array

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ProductCatalogController extends Controller
 {
@@ -35,8 +36,7 @@ class ProductCatalogController extends Controller
         // Paginate results (12 per page)
         $products = $query->paginate(12);
 
-        // Get all categories for filter sidebar
-        $categories = Category::withCount('products')->get();
+        $categories = $this->getFilterCategories();
 
         return view('products.index', compact('products', 'categories'));
     }
@@ -69,7 +69,7 @@ class ProductCatalogController extends Controller
             ->where('stock_quantity', '>', 0)
             ->paginate(12);
 
-        $categories = Category::withCount('products')->get();
+        $categories = $this->getFilterCategories();
 
         return view('products.index', compact('products', 'categories', 'category'));
     }
@@ -107,7 +107,7 @@ class ProductCatalogController extends Controller
         
         $products = $query->paginate(12)->withQueryString();
 
-        $categories = Category::withCount('products')->get();
+        $categories = $this->getFilterCategories();
 
         return view('products.index', compact('products', 'categories', 'searchTerm'));
     }
@@ -160,5 +160,28 @@ class ProductCatalogController extends Controller
                 ];
             }),
         ]);
+    }
+
+    /**
+     * Get cached categories for the public catalog filter.
+     */
+    protected function getFilterCategories()
+    {
+        return Cache::remember(
+            Category::FILTER_CACHE_KEY,
+            now()->addMinutes(10),
+            fn () => Category::query()
+                ->select('id', 'name')
+                ->whereHas('products', function ($query) {
+                    $query->notExpired()->where('stock_quantity', '>', 0);
+                })
+                ->withCount([
+                    'products' => function ($query) {
+                        $query->notExpired()->where('stock_quantity', '>', 0);
+                    },
+                ])
+                ->orderBy('name')
+                ->get()
+        );
     }
 }

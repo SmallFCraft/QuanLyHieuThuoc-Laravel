@@ -13,31 +13,30 @@ class SearchAutocomplete {
             suggestionsUrl: '/api/search/suggestions',
             ...options
         };
-        
+
         this.debounceTimer = null;
+        this.abortController = null;
         this.suggestionsContainer = null;
         this.currentFocus = -1;
-        
+
+        this.handleInputBound = (event) => this.handleInput(event);
+        this.handleKeydownBound = (event) => this.handleKeydown(event);
+        this.handleFocusBound = (event) => this.handleFocus(event);
+        this.handleDocumentClickBound = (event) => this.handleDocumentClick(event);
+        this.positionSuggestionsBound = () => this.positionSuggestions();
+
         this.init();
     }
-    
+
     init() {
-        // Create suggestions container
         this.createSuggestionsContainer();
-        
-        // Bind events
-        this.input.addEventListener('input', (e) => this.handleInput(e));
-        this.input.addEventListener('keydown', (e) => this.handleKeydown(e));
-        this.input.addEventListener('focus', (e) => this.handleFocus(e));
-        
-        // Close suggestions when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!this.input.contains(e.target) && !this.suggestionsContainer.contains(e.target)) {
-                this.hideSuggestions();
-            }
-        });
+
+        this.input.addEventListener('input', this.handleInputBound);
+        this.input.addEventListener('keydown', this.handleKeydownBound);
+        this.input.addEventListener('focus', this.handleFocusBound);
+        document.addEventListener('click', this.handleDocumentClickBound);
     }
-    
+
     createSuggestionsContainer() {
         this.suggestionsContainer = document.createElement('div');
         this.suggestionsContainer.className = 'search-suggestions';
@@ -51,116 +50,149 @@ class SearchAutocomplete {
             z-index: 9999;
             display: none;
         `;
-        
-        // Append to body for highest stacking context
+
         document.body.appendChild(this.suggestionsContainer);
-        
-        // Position suggestions below the form
         this.positionSuggestions();
-        
-        // Reposition on scroll and resize
-        window.addEventListener('scroll', () => this.positionSuggestions(), { passive: true });
-        window.addEventListener('resize', () => this.positionSuggestions(), { passive: true });
+
+        window.addEventListener('scroll', this.positionSuggestionsBound, { passive: true });
+        window.addEventListener('resize', this.positionSuggestionsBound, { passive: true });
     }
-    
+
     positionSuggestions() {
-        const form = this.input.closest('form') || this.input.parentElement;
-        const formRect = form.getBoundingClientRect();
-        
-        // Calculate position relative to viewport (fixed positioning)
-        const top = formRect.bottom + 8;
-        const left = formRect.left;
-        const width = formRect.width;
-        
-        this.suggestionsContainer.style.top = `${top}px`;
-        this.suggestionsContainer.style.left = `${left}px`;
-        this.suggestionsContainer.style.width = `${width}px`;
-    }
-    
-    handleInput(e) {
-        const query = e.target.value.trim();
-        
-        clearTimeout(this.debounceTimer);
-        
-        if (query.length < this.options.minChars) {
-            this.hideSuggestions();
+        if (!this.suggestionsContainer || !this.input?.isConnected) {
             return;
         }
-        
+
+        const form = this.input.closest('form') || this.input.parentElement;
+
+        if (!form) {
+            return;
+        }
+
+        const formRect = form.getBoundingClientRect();
+
+        this.suggestionsContainer.style.top = `${formRect.bottom + 8}px`;
+        this.suggestionsContainer.style.left = `${formRect.left}px`;
+        this.suggestionsContainer.style.width = `${formRect.width}px`;
+    }
+
+    handleInput(event) {
+        const query = event.target.value.trim();
+
+        clearTimeout(this.debounceTimer);
+
+        if (query.length < this.options.minChars) {
+            this.hideSuggestions();
+            this.abortController?.abort();
+            return;
+        }
+
         this.debounceTimer = setTimeout(() => {
             this.fetchSuggestions(query);
         }, this.options.debounceDelay);
     }
-    
-    handleKeydown(e) {
-        const items = this.suggestionsContainer.querySelectorAll('.suggestion-item');
-        
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
+
+    handleKeydown(event) {
+        const items = this.suggestionsContainer?.querySelectorAll('.suggestion-item') ?? [];
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
             this.currentFocus++;
             this.setActive(items);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
             this.currentFocus--;
             this.setActive(items);
-        } else if (e.key === 'Enter') {
+        } else if (event.key === 'Enter') {
             if (this.currentFocus > -1 && items[this.currentFocus]) {
-                e.preventDefault();
+                event.preventDefault();
                 items[this.currentFocus].click();
             }
-        } else if (e.key === 'Escape') {
+        } else if (event.key === 'Escape') {
             this.hideSuggestions();
         }
     }
-    
-    handleFocus(e) {
-        const query = e.target.value.trim();
+
+    handleFocus(event) {
+        const query = event.target.value.trim();
+
         if (query.length >= this.options.minChars) {
             this.fetchSuggestions(query);
         }
     }
-    
+
+    handleDocumentClick(event) {
+        if (!this.suggestionsContainer) {
+            return;
+        }
+
+        if (!this.input.contains(event.target) && !this.suggestionsContainer.contains(event.target)) {
+            this.hideSuggestions();
+        }
+    }
+
     setActive(items) {
-        if (!items.length) return;
-        
-        // Remove active class from all
-        items.forEach(item => item.classList.remove('active'));
-        
-        // Wrap around
-        if (this.currentFocus >= items.length) this.currentFocus = 0;
-        if (this.currentFocus < 0) this.currentFocus = items.length - 1;
-        
-        // Add active class
+        if (!items.length) {
+            return;
+        }
+
+        items.forEach((item) => item.classList.remove('active'));
+
+        if (this.currentFocus >= items.length) {
+            this.currentFocus = 0;
+        }
+
+        if (this.currentFocus < 0) {
+            this.currentFocus = items.length - 1;
+        }
+
         items[this.currentFocus].classList.add('active');
         items[this.currentFocus].scrollIntoView({ block: 'nearest' });
     }
-    
+
     async fetchSuggestions(query) {
+        this.abortController?.abort();
+        this.abortController = new AbortController();
+
         try {
-            const response = await fetch(`${this.options.suggestionsUrl}?q=${encodeURIComponent(query)}`);
+            const response = await fetch(
+                `${this.options.suggestionsUrl}?q=${encodeURIComponent(query)}`,
+                {
+                    headers: {
+                        Accept: 'application/json'
+                    },
+                    signal: this.abortController.signal
+                }
+            );
+
             const data = await response.json();
-            
+
+            if (this.input.value.trim() !== query) {
+                return;
+            }
+
             this.renderSuggestions(data, query);
         } catch (error) {
-            console.error('Error fetching suggestions:', error);
+            if (error.name !== 'AbortError') {
+                console.error('Error fetching suggestions:', error);
+            }
         }
     }
-    
+
     renderSuggestions(data, query) {
         const { products, categories } = data;
-        
+
         if (!products.length && !categories.length) {
             this.renderEmpty(query);
             return;
         }
-        
+
         let html = '';
-        
-        // Render categories
+
         if (categories.length > 0) {
             html += '<div class="suggestion-section">';
-            html += '<div class="suggestion-header">Danh mục</div>';
-            categories.forEach(category => {
+            html += '<div class="suggestion-header">Danh má»¥c</div>';
+            categories.forEach((category) => {
                 html += `
                     <a href="${category.url}" class="suggestion-item category-item">
                         <i class="bi bi-folder text-emerald-600"></i>
@@ -170,16 +202,15 @@ class SearchAutocomplete {
             });
             html += '</div>';
         }
-        
-        // Render products
+
         if (products.length > 0) {
             html += '<div class="suggestion-section">';
-            html += '<div class="suggestion-header">Sản phẩm</div>';
-            products.forEach(product => {
+            html += '<div class="suggestion-header">Sáº£n pháº©m</div>';
+            products.forEach((product) => {
                 html += `
                     <a href="${product.url}" class="suggestion-item product-item">
                         <div class="product-image">
-                            ${product.image_url 
+                            ${product.image_url
                                 ? `<img src="${product.image_url}" alt="${product.name}">`
                                 : '<i class="bi bi-capsule text-gray-300"></i>'
                             }
@@ -196,55 +227,94 @@ class SearchAutocomplete {
             });
             html += '</div>';
         }
-        
-        // Add "View all results" link
+
         html += `
             <div class="suggestion-footer">
                 <a href="/search?q=${encodeURIComponent(query)}" class="view-all-link">
-                    Xem tất cả kết quả cho "${query}" <i class="bi bi-arrow-right"></i>
+                    Xem táº¥t cáº£ káº¿t quáº£ cho "${query}" <i class="bi bi-arrow-right"></i>
                 </a>
             </div>
         `;
-        
+
         this.suggestionsContainer.innerHTML = html;
         this.showSuggestions();
         this.currentFocus = -1;
     }
-    
+
     renderEmpty(query) {
         this.suggestionsContainer.innerHTML = `
             <div class="suggestion-empty">
                 <i class="bi bi-search text-gray-300"></i>
-                <p>Không tìm thấy kết quả cho "${query}"</p>
+                <p>KhÃ´ng tÃ¬m tháº¥y káº¿t quáº£ cho "${query}"</p>
             </div>
         `;
         this.showSuggestions();
     }
-    
+
     highlightMatch(text, query) {
-        const regex = new RegExp(`(${query})`, 'gi');
+        if (!query) {
+            return text;
+        }
+
+        const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escapedQuery})`, 'gi');
+
         return text.replace(regex, '<mark>$1</mark>');
     }
-    
+
     showSuggestions() {
-        this.positionSuggestions(); // Recalculate position before showing
+        this.positionSuggestions();
         this.suggestionsContainer.style.display = 'block';
     }
-    
+
     hideSuggestions() {
-        this.suggestionsContainer.style.display = 'none';
+        if (this.suggestionsContainer) {
+            this.suggestionsContainer.style.display = 'none';
+        }
+
         this.currentFocus = -1;
+    }
+
+    destroy() {
+        clearTimeout(this.debounceTimer);
+        this.abortController?.abort();
+
+        this.input.removeEventListener('input', this.handleInputBound);
+        this.input.removeEventListener('keydown', this.handleKeydownBound);
+        this.input.removeEventListener('focus', this.handleFocusBound);
+        document.removeEventListener('click', this.handleDocumentClickBound);
+        window.removeEventListener('scroll', this.positionSuggestionsBound);
+        window.removeEventListener('resize', this.positionSuggestionsBound);
+
+        if (this.suggestionsContainer?.parentNode) {
+            this.suggestionsContainer.parentNode.removeChild(this.suggestionsContainer);
+        }
+
+        if (this.input.__searchAutocomplete === this) {
+            delete this.input.__searchAutocomplete;
+        }
+
+        this.suggestionsContainer = null;
     }
 }
 
-// Auto-initialize on all search inputs
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
+    const instances = [];
     const searchInputs = document.querySelectorAll('input[name="q"][type="text"]');
-    
-    searchInputs.forEach(input => {
-        new SearchAutocomplete(input);
+
+    searchInputs.forEach((input) => {
+        if (input.__searchAutocomplete instanceof SearchAutocomplete) {
+            return;
+        }
+
+        const instance = new SearchAutocomplete(input);
+        input.__searchAutocomplete = instance;
+        instances.push(instance);
     });
+
+    window.addEventListener('pagehide', () => {
+        instances.forEach((instance) => instance.destroy());
+    }, { once: true });
 });
 
-// Export for use in other modules
 export default SearchAutocomplete;

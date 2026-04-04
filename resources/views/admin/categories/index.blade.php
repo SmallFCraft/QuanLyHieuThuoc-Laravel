@@ -7,8 +7,8 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-1 text-gray-800">Quản lý danh mục</h1>
-            <p class="text-muted small mb-0">Quản lý các danh mục sản phẩm</p>
+            <h1 class="h3 mb-1 text-gray-800">{{ __('messages.admin.categories.title') }}</h1>
+            <p class="text-muted small mb-0">{{ __('messages.admin.categories.description') }}</p>
         </div>
         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#categoryModal" onclick="openCreateModal()">
             <i class="bi bi-plus-circle me-2"></i>Thêm danh mục
@@ -38,16 +38,16 @@
                         <div class="d-flex justify-content-center gap-3 mb-3">
                             <div class="text-center">
                                 <div class="fw-bold text-success fs-5">{{ $category->products_count }}</div>
-                                <div class="text-muted small">Sản phẩm</div>
+                                <div class="text-muted small">{{ __('messages.admin.categories.products') }}</div>
                             </div>
                         </div>
                         
                         <!-- Actions -->
                         <div class="d-flex gap-2 justify-content-center">
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditModal({{ $category->id }}, '{{ $category->name }}', '{{ $category->icon }}', '{{ addslashes($category->description) }}')" title="Sửa">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditModal({{ $category->id }}, '{{ $category->name }}', '{{ $category->icon }}', '{{ addslashes($category->description) }}')" title="{{ __('messages.admin.categories.edit') }}">
                                 <i class="bi bi-pencil"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCategory({{ $category->id }})" title="Xóa">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCategory({{ $category->id }})" title="{{ __('messages.admin.categories.delete') }}">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -58,8 +58,8 @@
             <div class="col-12">
                 <div class="text-center py-5">
                     <i class="bi bi-folder2-open text-muted" style="font-size: 4rem;"></i>
-                    <h5 class="text-muted mt-3">Chưa có danh mục nào</h5>
-                    <p class="text-muted">Nhấn nút "Thêm danh mục" để tạo danh mục mới</p>
+                    <h5 class="text-muted mt-3">{{ __('messages.admin.categories.no_category') }}</h5>
+                    <p class="text-muted">{{ __('messages.admin.categories.no_category_desc') }}</p>
                 </div>
             </div>
         @endforelse
@@ -71,7 +71,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">Thêm danh mục</h5>
+                <h5 class="modal-title" id="modalTitle">{{ __('messages.admin.categories.add_category') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="categoryForm">
@@ -79,7 +79,7 @@
                     <input type="hidden" id="categoryId">
                     
                     <div class="mb-3">
-                        <label for="categoryName" class="form-label">Tên danh mục <span class="text-danger">*</span></label>
+                        <label for="categoryName" class="form-label">{{ __('messages.admin.categories.name') }} <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="categoryName" required>
                         <div class="invalid-feedback"></div>
                     </div>
@@ -92,17 +92,17 @@
                             </span>
                             <input type="text" class="form-control" id="categoryIcon" placeholder="Ví dụ: heart-pulse-fill">
                         </div>
-                        <small class="text-muted">Xem danh sách icon tại <a href="https://icons.getbootstrap.com/" target="_blank">Bootstrap Icons</a></small>
+                        <small class="text-muted">{{ __('messages.admin.categories.icon_hint1') }}<a href="https://icons.getbootstrap.com/" target="_blank">{{ __('messages.admin.categories.icon_hint2') }}</a></small>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="categoryDescription" class="form-label">Mô tả</label>
+                        <label for="categoryDescription" class="form-label">{{ __('messages.admin.categories.desc_label') }}</label>
                         <textarea class="form-control" id="categoryDescription" rows="3"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-success">Lưu</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('messages.admin.categories.cancel') }}</button>
+                    <button type="submit" class="btn btn-success">{{ __('messages.admin.categories.save') }}</button>
                 </div>
             </form>
         </div>
@@ -120,7 +120,7 @@ document.getElementById('categoryIcon').addEventListener('input', function(e) {
 
 // Open create modal
 function openCreateModal() {
-    document.getElementById('modalTitle').textContent = 'Thêm danh mục';
+    document.getElementById('modalTitle').textContent = '{{ __('messages.admin.categories.add_title') }}';
     document.getElementById('categoryForm').reset();
     document.getElementById('categoryId').value = '';
     document.getElementById('iconPreview').className = 'bi bi-grid-fill';
@@ -129,7 +129,7 @@ function openCreateModal() {
 
 // Open edit modal
 function openEditModal(id, name, icon, description) {
-    document.getElementById('modalTitle').textContent = 'Sửa danh mục';
+    document.getElementById('modalTitle').textContent = '{{ __('messages.admin.categories.edit_title') }}';
     document.getElementById('categoryId').value = id;
     document.getElementById('categoryName').value = name;
     document.getElementById('categoryIcon').value = icon || '';
@@ -174,7 +174,7 @@ document.getElementById('categoryForm').addEventListener('submit', async functio
         if (result.success) {
             Swal.fire({
                 icon: 'success',
-                title: 'Thành công',
+                title: '{{ __('messages.admin.categories.success_title') }}',
                 text: result.message,
                 timer: 1500,
                 showConfirmButton: false
@@ -196,8 +196,8 @@ document.getElementById('categoryForm').addEventListener('submit', async functio
     } catch (error) {
         Swal.fire({
             icon: 'error',
-            title: 'Lỗi',
-            text: 'Có lỗi xảy ra. Vui lòng thử lại.'
+            title: '{{ __('messages.admin.categories.error_title') }}',
+            text: '{{ __('messages.admin.categories.error_desc') }}'
         });
     }
 });
@@ -205,14 +205,14 @@ document.getElementById('categoryForm').addEventListener('submit', async functio
 // Delete category
 async function deleteCategory(id) {
     const result = await Swal.fire({
-        title: 'Xác nhận xóa',
-        text: 'Bạn có chắc chắn muốn xóa danh mục này?',
+        title: '{{ __('messages.admin.categories.delete_confirm_title') }}',
+        text: '{{ __('messages.admin.categories.delete_confirm_desc') }}',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Xóa',
-        cancelButtonText: 'Hủy'
+        confirmButtonText: '{{ __('messages.admin.categories.delete_confirm_btn') }}',
+        cancelButtonText: '{{ __('messages.admin.categories.delete_cancel_btn') }}'
     });
     
     if (result.isConfirmed) {
@@ -229,7 +229,7 @@ async function deleteCategory(id) {
             if (data.success) {
                 Swal.fire({
                     icon: 'success',
-                    title: 'Đã xóa',
+                    title: '{{ __('messages.admin.categories.deleted_title') }}',
                     text: data.message,
                     timer: 1500,
                     showConfirmButton: false
@@ -239,15 +239,15 @@ async function deleteCategory(id) {
             } else {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Lỗi',
+                    title: '{{ __('messages.admin.categories.error_title') }}',
                     text: data.message
                 });
             }
         } catch (error) {
             Swal.fire({
                 icon: 'error',
-                title: 'Lỗi',
-                text: 'Có lỗi xảy ra. Vui lòng thử lại.'
+                title: '{{ __('messages.admin.categories.error_title') }}',
+                text: '{{ __('messages.admin.categories.error_desc') }}'
             });
         }
     }

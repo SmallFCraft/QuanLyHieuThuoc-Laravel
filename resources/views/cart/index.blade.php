@@ -35,11 +35,11 @@
 <!-- Page Header -->
 <section class="py-4" style="background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 50%, #f8fafc 100%);">
     <div class="container">
-        <h1 class="fw-bold text-gray-900 mb-1">Giỏ Hàng</h1>
+        <h1 class="fw-bold text-gray-900 mb-1">{{ __('messages.cart.title') }}</h1>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-emerald-600 text-decoration-none">Trang chủ</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Giỏ hàng</li>
+                <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-emerald-600 text-decoration-none">{{ __('messages.home') }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ __('messages.cart.title') }}</li>
             </ol>
         </nav>
     </div>
@@ -53,10 +53,10 @@
                 <div class="bg-emerald-50 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width:100px; height:100px;">
                     <i class="bi bi-cart-x text-emerald-500" style="font-size: 2.5rem;"></i>
                 </div>
-                <h3 class="fw-bold text-gray-800 mb-2">Giỏ hàng trống</h3>
-                <p class="text-gray-500 mb-4">Bạn chưa thêm sản phẩm nào vào giỏ hàng.</p>
+                <h3 class="fw-bold text-gray-800 mb-2">{{ __('messages.cart.empty_title') }}</h3>
+                <p class="text-gray-500 mb-4">{{ __('messages.cart.empty_message') }}</p>
                 <a href="{{ route('products.index') }}" class="btn btn-glass-success rounded-pill px-5 py-3 fw-medium shadow-sm border-0">
-                    <i class="bi bi-cart-plus me-2"></i>Bắt đầu mua sắm
+                    <i class="bi bi-cart-plus me-2"></i>{{ __('messages.cart.start_shopping') }}
                 </a>
             </div>
         @else
@@ -67,7 +67,7 @@
                         <div class="p-4 border-bottom" style="border-color: rgba(0,0,0,0.06) !important;">
                             <h5 class="fw-bold mb-0">
                                 <i class="bi bi-cart3 text-emerald-600 me-2"></i>
-                                Sản phẩm trong giỏ (<span id="cart-count">{{ count($cartItems) }}</span>)
+                                {{ __('messages.cart.items_count') }} (<span id="cart-count">{{ count($cartItems) }}</span>)
                             </h5>
                         </div>
                         
@@ -96,7 +96,7 @@
                                     <div class="flex-grow-1 min-w-0">
                                         <h6 class="fw-bold text-gray-800 mb-1 text-truncate">{{ $item['product']->name }}</h6>
                                         <p class="text-emerald-600 small mb-1 fw-medium">{{ $item['product']->category->name }}</p>
-                                        <p class="text-gray-500 small mb-0">{{ $item['product']->formatted_price }} / sản phẩm</p>
+                                        <p class="text-gray-500 small mb-0">{{ $item['product']->formatted_price }} / {{ __('messages.cart.per_item') }}</p>
                                     </div>
                                     
                                     <!-- Quantity Controls -->
@@ -126,7 +126,7 @@
 
                                     <!-- Remove -->
                                     <button type="button" class="btn btn-sm btn-outline-danger rounded-circle remove-item flex-shrink-0" 
-                                            style="width:36px; height:36px;" title="Xóa">
+                                            style="width:36px; height:36px;" title="{{ __('messages.cart.remove') }}">
                                         <i class="bi bi-trash3"></i>
                                     </button>
                                 </div>
@@ -135,7 +135,7 @@
                         
                         <div class="p-4">
                             <a href="{{ route('products.index') }}" class="text-emerald-600 text-decoration-none fw-medium">
-                                <i class="bi bi-arrow-left me-2"></i>Tiếp tục mua sắm
+                                <i class="bi bi-arrow-left me-2"></i>{{ __('messages.cart.continue_shopping') }}
                             </a>
                         </div>
                     </div>
@@ -145,41 +145,41 @@
                 <div class="col-lg-4">
                     <div class="glass-card rounded-4 border-0 position-sticky" style="top: 100px;">
                         <h5 class="fw-bold mb-4">
-                            <i class="bi bi-receipt text-emerald-600 me-2"></i>Tóm tắt đơn hàng
+                            <i class="bi bi-receipt text-emerald-600 me-2"></i>{{ __('messages.cart.order_summary') }}
                         </h5>
                         
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-gray-500">Tạm tính</span>
+                            <span class="text-gray-500">{{ __('messages.cart.subtotal') }}</span>
                             <span class="fw-medium" id="subtotal-amount">{{ number_format($total, 0, ',', '.') }} ₫</span>
                         </div>
                         
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-gray-500">Phí vận chuyển</span>
-                            <span class="text-emerald-600 fw-medium">Miễn phí</span>
+                            <span class="text-gray-500">{{ __('messages.cart.shipping_fee') }}</span>
+                            <span class="text-emerald-600 fw-medium">{{ __('messages.cart.free_shipping') }}</span>
                         </div>
                         
                         <hr class="my-3" style="border-color: rgba(0,0,0,0.06);">
                         
                         <div class="d-flex justify-content-between mb-4">
-                            <span class="fw-bold fs-5">Tổng cộng</span>
+                            <span class="fw-bold fs-5">{{ __('messages.cart.total') }}</span>
                             <span class="fw-bold fs-4 text-emerald-700" id="total-amount">{{ number_format($total, 0, ',', '.') }} ₫</span>
                         </div>
                         
                         @auth
                             <a href="{{ route('checkout.index') }}" class="btn btn-lg w-100 text-white fw-bold rounded-pill shadow" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                                <i class="bi bi-credit-card me-2"></i>Thanh toán
+                                <i class="bi bi-credit-card me-2"></i>{{ __('messages.cart.checkout_btn') }}
                             </a>
                         @else
                             <a href="{{ route('login') }}" class="btn btn-lg w-100 text-white fw-bold rounded-pill shadow" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                                <i class="bi bi-box-arrow-in-right me-2"></i>Đăng nhập để thanh toán
+                                <i class="bi bi-box-arrow-in-right me-2"></i>{{ __('messages.cart.login_to_checkout') }}
                             </a>
                         @endauth
                         
                         <div class="text-center mt-4">
                             <div class="d-flex justify-content-center gap-3 text-gray-400 small">
-                                <span><i class="bi bi-shield-check me-1"></i>An toàn</span>
-                                <span><i class="bi bi-lock me-1"></i>Bảo mật</span>
-                                <span><i class="bi bi-truck me-1"></i>Nhanh chóng</span>
+                                <span><i class="bi bi-shield-check me-1"></i>{{ __('messages.cart.safe') }}</span>
+                                <span><i class="bi bi-lock me-1"></i>{{ __('messages.cart.secure') }}</span>
+                                <span><i class="bi bi-truck me-1"></i>{{ __('messages.cart.fast') }}</span>
                             </div>
                         </div>
                     </div>
@@ -236,8 +236,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (quantity > maxStock) {
             Swal.fire({
                 icon: 'warning',
-                title: 'Vượt quá tồn kho',
-                text: `Chỉ còn ${maxStock} sản phẩm trong kho`,
+                title: '{{ __("messages.cart.js.exceed_stock_title") }}',
+                text: '{{ __("messages.cart.js.exceed_stock_msg", ["max" => ""]) }}'.replace(' ', '') + maxStock + ' {{ __("messages.cart.per_item") }}',
                 toast: true,
                 position: 'top-end',
                 showConfirmButton: false,
@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 Swal.fire({
                     icon: 'success',
-                    title: 'Đã cập nhật',
+                    title: '{{ __("messages.cart.js.updated") }}',
                     toast: true,
                     position: 'top-end',
                     showConfirmButton: false,
@@ -283,8 +283,8 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Lỗi',
-                    text: data.message || 'Không thể cập nhật số lượng',
+                    title: '{{ __("messages.cart.js.error_title") }}',
+                    text: data.message || '{{ __("messages.cart.js.update_error") }}',
                     toast: true,
                     position: 'top-end',
                     showConfirmButton: false,
@@ -297,8 +297,8 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
             Swal.fire({
                 icon: 'error',
-                title: 'Lỗi',
-                text: 'Có lỗi xảy ra, vui lòng thử lại',
+                title: '{{ __("messages.cart.js.error_title") }}',
+                text: '{{ __("messages.cart.js.generic_error") }}',
                 toast: true,
                 position: 'top-end',
                 showConfirmButton: false,
@@ -310,14 +310,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Remove item via AJAX
     function removeItem(productId, itemElement) {
         Swal.fire({
-            title: 'Xác nhận xóa?',
-            text: 'Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?',
+            title: '{{ __("messages.cart.js.confirm_remove_title") }}',
+            text: '{{ __("messages.cart.js.confirm_remove_msg") }}',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Xóa',
-            cancelButtonText: 'Hủy'
+            confirmButtonText: '{{ __("messages.cart.js.btn_remove") }}',
+            cancelButtonText: '{{ __("messages.cart.js.btn_cancel") }}'
         }).then((result) => {
             if (result.isConfirmed) {
                 itemElement.classList.add('removing');
@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             Swal.fire({
                                 icon: 'success',
-                                title: 'Đã xóa',
+                                title: '{{ __("messages.cart.js.removed") }}',
                                 toast: true,
                                 position: 'top-end',
                                 showConfirmButton: false,
@@ -356,8 +356,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         itemElement.classList.remove('removing');
                         Swal.fire({
                             icon: 'error',
-                            title: 'Lỗi',
-                            text: data.message || 'Không thể xóa sản phẩm',
+                            title: '{{ __("messages.cart.js.error_title") }}',
+                            text: data.message || '{{ __("messages.cart.js.remove_error") }}',
                             toast: true,
                             position: 'top-end',
                             showConfirmButton: false,
@@ -370,8 +370,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Error:', error);
                     Swal.fire({
                         icon: 'error',
-                        title: 'Lỗi',
-                        text: 'Có lỗi xảy ra, vui lòng thử lại',
+                        title: '{{ __("messages.cart.js.error_title") }}',
+                        text: '{{ __("messages.cart.js.generic_error") }}',
                         toast: true,
                         position: 'top-end',
                         showConfirmButton: false,

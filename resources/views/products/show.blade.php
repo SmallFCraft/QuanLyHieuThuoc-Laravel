@@ -8,8 +8,8 @@
     <div class="container">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-emerald-600 text-decoration-none hover:text-emerald-700">Trang chủ</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('products.index') }}" class="text-emerald-600 text-decoration-none hover:text-emerald-700">Sản phẩm</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-emerald-600 text-decoration-none hover:text-emerald-700">{{ __('messages.home') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('products.index') }}" class="text-emerald-600 text-decoration-none hover:text-emerald-700">{{ __('messages.products') }}</a></li>
                 <li class="breadcrumb-item active" aria-current="page">{{ $product->name }}</li>
             </ol>
         </nav>
@@ -32,7 +32,7 @@
                                      id="mainProductImage">
                                 <button class="btn btn-light btn-sm rounded-circle position-absolute top-0 end-0 m-3 shadow-sm" 
                                         onclick="toggleImageZoom()" 
-                                        title="Phóng to ảnh">
+                                        title="{{ __('messages.zoom_image') }}">
                                     <i class="bi bi-zoom-in"></i>
                                 </button>
                             @else
@@ -48,12 +48,12 @@
                         @if($product->stock_quantity > 0)
                             <span class="badge-glass-success rounded-pill px-3 py-2 d-inline-flex align-items-center">
                                 <i class="bi bi-check-circle me-1" style="font-size: 0.9rem;"></i>
-                                <span class="fw-medium">Còn hàng</span>
+                                <span class="fw-medium">{{ __('messages.in_stock') }}</span>
                             </span>
                         @else
                             <span class="badge-glass-danger rounded-pill px-3 py-2 d-inline-flex align-items-center">
                                 <i class="bi bi-x-circle me-1" style="font-size: 0.9rem;"></i>
-                                <span class="fw-medium">Hết hàng</span>
+                                <span class="fw-medium">{{ __('messages.out_of_stock') }}</span>
                             </span>
                         @endif
                         <span class="badge-glass-info rounded-pill px-3 py-2 d-inline-flex align-items-center">
@@ -67,29 +67,29 @@
                         <div class="col-6">
                             <div class="glass-card-sm rounded-3 text-center p-3 h-100">
                                 <i class="bi bi-shield-check text-emerald-600 d-block mb-2" style="font-size: 1.5rem;"></i>
-                                <small class="text-gray-700 fw-medium d-block">Chính hãng</small>
+                                <small class="text-gray-700 fw-medium d-block">{{ __('messages.authentic') }}</small>
                                 <small class="text-gray-500" style="font-size: 0.75rem;">100% authentic</small>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="glass-card-sm rounded-3 text-center p-3 h-100">
                                 <i class="bi bi-truck text-blue-600 d-block mb-2" style="font-size: 1.5rem;"></i>
-                                <small class="text-gray-700 fw-medium d-block">Giao nhanh</small>
-                                <small class="text-gray-500" style="font-size: 0.75rem;">2-3 ngày</small>
+                                <small class="text-gray-700 fw-medium d-block">{{ __('messages.fast_delivery') }}</small>
+                                <small class="text-gray-500" style="font-size: 0.75rem;">{{ __('messages.fast_delivery_time') }}</small>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="glass-card-sm rounded-3 text-center p-3 h-100">
                                 <i class="bi bi-arrow-repeat text-warning d-block mb-2" style="font-size: 1.5rem;"></i>
-                                <small class="text-gray-700 fw-medium d-block">Đổi trả</small>
-                                <small class="text-gray-500" style="font-size: 0.75rem;">Trong 30 ngày</small>
+                                <small class="text-gray-700 fw-medium d-block">{{ __('messages.return_exchange') }}</small>
+                                <small class="text-gray-500" style="font-size: 0.75rem;">{{ __('messages.return_time') }}</small>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="glass-card-sm rounded-3 text-center p-3 h-100">
                                 <i class="bi bi-headset text-purple-600 d-block mb-2" style="font-size: 1.5rem;"></i>
-                                <small class="text-gray-700 fw-medium d-block">Hỗ trợ</small>
-                                <small class="text-gray-500" style="font-size: 0.75rem;">24/7</small>
+                                <small class="text-gray-700 fw-medium d-block">{{ __('messages.support') }}</small>
+                                <small class="text-gray-500" style="font-size: 0.75rem;">{{ __('messages.support_time') }}</small>
                             </div>
                         </div>
                     </div>
@@ -123,8 +123,8 @@
                         </span>
                     </div>
                     <p class="text-gray-600 small mb-0 mt-2">
-                        <i class="bi bi-info-circle me-1"></i>Giá đã bao gồm VAT
-                    </p>
+                        <i class="bi bi-info-circle me-1"></i>{{ __('messages.vat_included') }}
+                    </p
                 </div>
 
                 <!-- Quick Info - Mobile Only -->
@@ -132,25 +132,25 @@
                     <div class="col-6">
                         <div class="glass-card-sm rounded-3 text-center p-2">
                             <i class="bi bi-shield-check text-emerald-600 d-block mb-1" style="font-size: 1.25rem;"></i>
-                            <small class="text-gray-700 fw-medium d-block" style="font-size: 0.8rem;">Chính hãng</small>
+                            <small class="text-gray-700 fw-medium d-block" style="font-size: 0.8rem;">{{ __('messages.authentic') }}</small>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="glass-card-sm rounded-3 text-center p-2">
                             <i class="bi bi-truck text-blue-600 d-block mb-1" style="font-size: 1.25rem;"></i>
-                            <small class="text-gray-700 fw-medium d-block" style="font-size: 0.8rem;">Giao nhanh</small>
+                            <small class="text-gray-700 fw-medium d-block" style="font-size: 0.8rem;">{{ __('messages.fast_delivery') }}</small>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="glass-card-sm rounded-3 text-center p-2">
                             <i class="bi bi-arrow-repeat text-warning d-block mb-1" style="font-size: 1.25rem;"></i>
-                            <small class="text-gray-700 fw-medium d-block" style="font-size: 0.8rem;">Đổi trả 30 ngày</small>
+                            <small class="text-gray-700 fw-medium d-block" style="font-size: 0.8rem;">{{ __('messages.return_exchange') }} 30 ngày</small>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="glass-card-sm rounded-3 text-center p-2">
                             <i class="bi bi-headset text-purple-600 d-block mb-1" style="font-size: 1.25rem;"></i>
-                            <small class="text-gray-700 fw-medium d-block" style="font-size: 0.8rem;">Hỗ trợ 24/7</small>
+                            <small class="text-gray-700 fw-medium d-block" style="font-size: 0.8rem;">{{ __('messages.support') }} 24/7</small>
                         </div>
                     </div>
                 </div>
@@ -158,7 +158,7 @@
                 <!-- Product Specifications -->
                 <div class="glass-card rounded-4 p-3 p-md-4 border-0 mb-4">
                     <h6 class="fw-bold text-gray-800 mb-3">
-                        <i class="bi bi-info-circle-fill text-emerald-600 me-2"></i>Thông tin sản phẩm
+                        <i class="bi bi-info-circle-fill text-emerald-600 me-2"></i>{{ __('messages.product_info_details') }}
                     </h6>
                     <div class="row g-3">
                         <div class="col-6 col-md-4">
@@ -174,8 +174,8 @@
                             <div class="d-flex align-items-start">
                                 <i class="bi bi-box text-blue-600 me-2 mt-1"></i>
                                 <div>
-                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">Tồn kho</small>
-                                    <span class="fw-medium text-gray-800 small">{{ $product->stock_quantity }} sản phẩm</span>
+                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">{{ __('messages.product_stock') }}</small>
+                                    <span class="fw-medium text-gray-800 small">{{ __('messages.products_left', ['count' => $product->stock_quantity]) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -183,7 +183,7 @@
                             <div class="d-flex align-items-start">
                                 <i class="bi bi-bookmark text-purple-600 me-2 mt-1"></i>
                                 <div>
-                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">Danh mục</small>
+                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">{{ __('messages.product_category') }}</small>
                                     <span class="fw-medium text-gray-800 small">{{ $product->category->name }}</span>
                                 </div>
                             </div>
@@ -198,7 +198,7 @@
                         <input type="hidden" name="product_id" value="{{ $product->id }}">
                         
                         <div class="mb-3">
-                            <label class="fw-medium text-gray-700 mb-2 d-block">Số lượng:</label>
+                            <label class="fw-medium text-gray-700 mb-2 d-block">{{ __('messages.cart_quantity') }}:</label>
                             <div class="d-flex align-items-center gap-3 flex-wrap">
                                 <div class="input-group" style="max-width: 150px;">
                                     <button type="button" class="btn btn-outline-emerald-600 rounded-start-pill px-3" onclick="changeQty(-1)">
@@ -211,7 +211,7 @@
                                     </button>
                                 </div>
                                 <small class="text-gray-600">
-                                    <i class="bi bi-box-seam me-1"></i>Còn <span class="fw-medium text-emerald-600">{{ $product->stock_quantity }}</span> sản phẩm
+                                    <i class="bi bi-box-seam me-1"></i>{!! __('messages.products_left', ['count' => '<span class="fw-medium text-emerald-600">' . $product->stock_quantity . '</span>']) !!}
                                 </small>
                             </div>
                         </div>
@@ -220,8 +220,8 @@
                             <button type="submit" class="btn btn-lg flex-grow-1 text-white fw-bold rounded-pill shadow-sm hover-lift" 
                                     style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
                                 <i class="bi bi-cart-plus me-2"></i>
-                                <span class="d-none d-sm-inline">Thêm vào giỏ hàng</span>
-                                <span class="d-inline d-sm-none">Thêm vào giỏ</span>
+                                <span class="d-none d-sm-inline">{{ __('messages.add_to_cart') }}</span>
+                                <span class="d-inline d-sm-none">{{ mb_substr(__('messages.add_to_cart'), 0, 13) }}...</span>
                             </button>
                             <button type="button" class="btn btn-lg btn-outline-emerald-600 rounded-pill px-3 px-md-4" title="Yêu thích">
                                 <i class="bi bi-heart"></i>
@@ -231,10 +231,10 @@
                 @else
                     <div class="glass-card rounded-4 p-4 border-0 mb-4 text-center">
                         <i class="bi bi-box-seam text-danger d-block mb-3" style="font-size: 3rem;"></i>
-                        <h6 class="fw-bold text-danger mb-2">Sản phẩm tạm hết hàng</h6>
-                        <p class="text-gray-600 small mb-3">Vui lòng liên hệ để đặt trước hoặc quay lại sau.</p>
+                        <h6 class="fw-bold text-danger mb-2">{{ __('messages.temporary_out_of_stock') }}</h6>
+                        <p class="text-gray-600 small mb-3">{{ __('messages.contact_to_preorder') }}</p>
                         <button class="btn btn-outline-emerald-600 rounded-pill px-4">
-                            <i class="bi bi-bell me-2"></i>Nhận thông báo khi có hàng
+                            <i class="bi bi-bell me-2"></i>{{ __('messages.notify_when_available') }}
                         </button>
                     </div>
                 @endif
@@ -247,7 +247,7 @@
                             <button class="nav-link active border-0 fw-medium text-gray-600 px-3 pb-3 rounded-top" 
                                     id="ingredients-tab" data-bs-toggle="tab" data-bs-target="#ingredients" type="button" role="tab">
                                 <i class="bi bi-list-check me-1"></i>
-                                <span class="d-none d-sm-inline">Thành phần</span>
+                                <span class="d-none d-sm-inline">{{ __('messages.product_ingredients') }}</span>
                             </button>
                         </li>
                         @endif
@@ -256,7 +256,7 @@
                             <button class="nav-link {{ !$product->ingredients ? 'active' : '' }} border-0 fw-medium text-gray-600 px-3 pb-3 rounded-top" 
                                     id="usage-tab" data-bs-toggle="tab" data-bs-target="#usage" type="button" role="tab">
                                 <i class="bi bi-capsule me-1"></i>
-                                <span class="d-none d-sm-inline">Công dụng</span>
+                                <span class="d-none d-sm-inline">{{ __('messages.product_usage') }}</span>
                             </button>
                         </li>
                         @endif
@@ -264,7 +264,7 @@
                             <button class="nav-link {{ !$product->ingredients && !$product->usage ? 'active' : '' }} border-0 fw-medium text-gray-600 px-3 pb-3 rounded-top" 
                                     id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab">
                                 <i class="bi bi-info-circle me-1"></i>
-                                <span class="d-none d-sm-inline">Chi tiết</span>
+                                <span class="d-none d-sm-inline">{{ __('messages.tab_details') }}</span>
                             </button>
                         </li>
                     </ul>
@@ -285,7 +285,7 @@
                                     <div class="d-flex align-items-start p-3 rounded-3" style="background: rgba(16,185,129,0.05);">
                                         <i class="bi bi-calendar-event text-emerald-600 me-3 mt-1"></i>
                                         <div class="flex-grow-1">
-                                            <small class="text-gray-500 d-block mb-1">Hạn sử dụng</small>
+                                            <small class="text-gray-500 d-block mb-1">{{ __('messages.product_expiration') }}</small>
                                             <span class="fw-medium text-gray-800">{{ $product->formatted_expiration_date }}</span>
                                         </div>
                                     </div>
@@ -294,8 +294,8 @@
                                     <div class="d-flex align-items-start p-3 rounded-3" style="background: rgba(59,130,246,0.05);">
                                         <i class="bi bi-box text-blue-600 me-3 mt-1"></i>
                                         <div class="flex-grow-1">
-                                            <small class="text-gray-500 d-block mb-1">Số lượng tồn kho</small>
-                                            <span class="fw-medium text-gray-800">{{ $product->stock_quantity }} sản phẩm</span>
+                                            <small class="text-gray-500 d-block mb-1">{{ __('messages.product_stock') }}</small>
+                                            <span class="fw-medium text-gray-800">{{ __('messages.products_left', ['count' => $product->stock_quantity]) }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -303,7 +303,7 @@
                                     <div class="d-flex align-items-start p-3 rounded-3" style="background: rgba(139,92,246,0.05);">
                                         <i class="bi bi-bookmark text-purple-600 me-3 mt-1"></i>
                                         <div class="flex-grow-1">
-                                            <small class="text-gray-500 d-block mb-1">Danh mục sản phẩm</small>
+                                            <small class="text-gray-500 d-block mb-1">{{ __('messages.product_category') }}</small>
                                             <span class="fw-medium text-gray-800">{{ $product->category->name }}</span>
                                         </div>
                                     </div>
@@ -321,20 +321,20 @@
             <div class="col-md-6">
                 <div class="glass-card rounded-4 p-4 border-0 h-100">
                     <h6 class="fw-bold text-gray-800 mb-3">
-                        <i class="bi bi-truck text-emerald-600 me-2"></i>Thông tin vận chuyển
+                        <i class="bi bi-truck text-emerald-600 me-2"></i>{{ __('messages.shipping_info') }}
                     </h6>
                     <div class="mb-0">
                         <div class="d-flex align-items-start mb-2">
                             <i class="bi bi-check-circle-fill text-emerald-600 me-2 mt-1"></i>
-                            <small class="text-gray-700">Miễn phí vận chuyển cho đơn hàng từ 500.000₫</small>
+                            <small class="text-gray-700">{{ __('messages.free_shipping_over') }}</small>
                         </div>
                         <div class="d-flex align-items-start mb-2">
                             <i class="bi bi-check-circle-fill text-emerald-600 me-2 mt-1"></i>
-                            <small class="text-gray-700">Giao hàng trong 2-3 ngày làm việc</small>
+                            <small class="text-gray-700">{{ __('messages.delivery_time_estimate') }}</small>
                         </div>
                         <div class="d-flex align-items-start">
                             <i class="bi bi-check-circle-fill text-emerald-600 me-2 mt-1"></i>
-                            <small class="text-gray-700">Kiểm tra hàng trước khi thanh toán</small>
+                            <small class="text-gray-700">{{ __('messages.check_before_payment') }}</small>
                         </div>
                     </div>
                 </div>
@@ -344,20 +344,20 @@
             <div class="col-md-6">
                 <div class="glass-card rounded-4 p-4 border-0 h-100">
                     <h6 class="fw-bold text-gray-800 mb-3">
-                        <i class="bi bi-arrow-repeat text-warning me-2"></i>Chính sách đổi trả
+                        <i class="bi bi-arrow-repeat text-warning me-2"></i>{{ __('messages.return_policy_title') }}
                     </h6>
                     <div class="mb-0">
                         <div class="d-flex align-items-start mb-2">
                             <i class="bi bi-check-circle-fill text-warning me-2 mt-1"></i>
-                            <small class="text-gray-700">Đổi trả trong vòng 30 ngày</small>
+                            <small class="text-gray-700">{{ __('messages.return_within_30_days') }}</small>
                         </div>
                         <div class="d-flex align-items-start mb-2">
                             <i class="bi bi-check-circle-fill text-warning me-2 mt-1"></i>
-                            <small class="text-gray-700">Sản phẩm còn nguyên tem, chưa sử dụng</small>
+                            <small class="text-gray-700">{{ __('messages.product_intact') }}</small>
                         </div>
                         <div class="d-flex align-items-start">
                             <i class="bi bi-check-circle-fill text-warning me-2 mt-1"></i>
-                            <small class="text-gray-700">Hoàn tiền 100% nếu lỗi từ nhà sản xuất</small>
+                            <small class="text-gray-700">{{ __('messages.refund_if_defective') }}</small>
                         </div>
                     </div>
                 </div>
@@ -367,7 +367,7 @@
         <!-- Back Link -->
         <div class="mt-4 pt-3">
             <a href="{{ route('products.index') }}" class="btn btn-outline-emerald-600 rounded-pill px-4">
-                <i class="bi bi-arrow-left me-2"></i>Quay lại danh sách sản phẩm
+                <i class="bi bi-arrow-left me-2"></i>{{ __('messages.back_to_products') }}
             </a>
         </div>
     </div>
@@ -379,11 +379,11 @@
     <div class="d-flex align-items-center gap-3">
         <div class="flex-grow-1">
             <div class="fw-bold text-emerald-700" style="font-size: 1.25rem;">{{ $product->formatted_price }}</div>
-            <small class="text-gray-600">Còn {{ $product->stock_quantity }} sản phẩm</small>
+            <small class="text-gray-600">{{ __('messages.products_left', ['count' => $product->stock_quantity]) }}</small>
         </div>
         <button onclick="document.querySelector('.js-add-to-cart-form').scrollIntoView({behavior: 'smooth', block: 'center'})" 
                 class="btn btn-emerald-600 text-white fw-bold rounded-pill px-4 shadow-sm">
-            <i class="bi bi-cart-plus me-1"></i>Mua ngay
+            <i class="bi bi-cart-plus me-1"></i>{{ __('messages.buy_now') }}
         </button>
     </div>
 </div>

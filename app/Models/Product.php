@@ -68,25 +68,19 @@ class Product extends Model
     }
 
     /**
-     * Get total stock across all batches.
-     * Override stock_quantity attribute to return total from batches
+     * Return stock from the synced column by default.
+     * If batches were already eager-loaded, prefer the in-memory aggregate.
      *
+     * @param mixed $value
      * @return int
      */
-    public function getStockQuantityAttribute(): int
+    public function getStockQuantityAttribute($value): int
     {
-        // If accessing from database attribute directly
-        if (array_key_exists('stock_quantity', $this->attributes)) {
-            // Check if we have batches
-            $batchStock = $this->batches()->sum('stock_quantity');
-            if ($batchStock > 0) {
-                return $batchStock;
-            }
-            // Fallback to product stock for legacy data
-            return $this->attributes['stock_quantity'] ?? 0;
+        if ($this->relationLoaded('batches') && $this->batches->isNotEmpty()) {
+            return (int) $this->batches->sum('stock_quantity');
         }
-        
-        return $this->batches()->sum('stock_quantity');
+
+        return (int) ($value ?? 0);
     }
 
     /**

@@ -230,14 +230,14 @@
                 <!-- Branding -->
                 <a class="navbar-brand d-flex align-items-center overflow-hidden" href="{{ route('home') }}" style="max-width: 70vw; white-space: nowrap;">
                     <img src="{{ asset('images/logo.png') }}" alt="Logo" class="me-2 shadow-sm flex-shrink-0" style="height: 40px; width: auto; object-fit: contain; transition: transform 0.3s ease;">
-                    <span class="text-emerald-700 text-truncate d-none d-sm-inline fw-bold" style="font-size: 1.15rem;">Nhà Thuốc Sinh Thái</span>
-                    <span class="text-emerald-700 text-truncate d-inline d-sm-none fw-bold" style="font-size: 1.1rem;">Nhà Thuốc ST</span>
+                    <span class="text-emerald-700 text-truncate d-none d-sm-inline fw-bold" style="font-size: 1.15rem;">{{ __('messages.app_name') }}</span>
+                    <span class="text-emerald-700 text-truncate d-inline d-sm-none fw-bold" style="font-size: 1.1rem;">{{ __('messages.app_name_short') }}</span>
                 </a>
                 
                 <!-- Desktop Search -->
                 <div class="d-none d-lg-flex flex-grow-1 mx-4 desktop-search">
                     <form action="{{ route('products.search') }}" method="GET" class="w-100 position-relative">
-                        <input type="text" name="q" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="Tìm sản phẩm, thương hiệu..." autocomplete="off" style="background: rgba(16, 185, 129, 0.08); transition: all 0.3s ease;" onfocus="this.style.background='rgba(16, 185, 129, 0.12)'">
+                        <input type="text" name="q" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="{{ __('messages.search_placeholder') }}" autocomplete="off" style="background: rgba(16, 185, 129, 0.08); transition: all 0.3s ease;" onfocus="this.style.background='rgba(16, 185, 129, 0.12)'">
                         <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-emerald-600"></i>
                     </form>
                 </div>
@@ -252,7 +252,7 @@
                     <!-- Mobile Search -->
                     <div class="d-lg-none mobile-search">
                         <form action="{{ route('products.search') }}" method="GET" class="position-relative">
-                            <input type="text" name="q" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="Tìm sản phẩm..." autocomplete="off" style="background: rgba(16, 185, 129, 0.08);">
+                            <input type="text" name="q" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="{{ __('messages.search_mobile_placeholder') }}" autocomplete="off" style="background: rgba(16, 185, 129, 0.08);">
                             <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-emerald-600"></i>
                         </form>
                     </div>
@@ -261,14 +261,14 @@
                         <!-- Home Link -->
                         <li class="nav-item">
                             <a class="nav-link text-gray-700 {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">
-                                <i class="bi bi-house-door me-1"></i>Trang chủ
+                                <i class="bi bi-house-door me-1"></i>{{ __('messages.home') }}
                             </a>
                         </li>
                         
                         <!-- Categories Dropdown -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle text-gray-700" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-grid me-1"></i>Danh mục
+                                <i class="bi bi-grid me-1"></i>{{ __('messages.categories') }}
                             </a>
                             <ul class="dropdown-menu border-0 shadow-lg rounded-4 p-3 mt-2" style="min-width: 280px; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px);">
                                 <div class="row g-2">
@@ -282,13 +282,13 @@
                                             </li>
                                         </div>
                                     @empty
-                                        <li class="px-3 py-2 text-muted small text-center">Đang tải danh mục...</li>
+                                        <li class="px-3 py-2 text-muted small text-center">{{ __('messages.loading_categories') }}</li>
                                     @endforelse
                                 </div>
                                 <li><hr class="dropdown-divider my-2"></li>
                                 <li>
                                     <a class="dropdown-item rounded-3 text-center fw-bold text-emerald-600" href="{{ route('products.index') }}">
-                                        Tất cả sản phẩm
+                                        {{ __('messages.all_products') }}
                                     </a>
                                 </li>
                             </ul>
@@ -297,7 +297,7 @@
                         <!-- Support Link -->
                         <li class="nav-item">
                             <a class="nav-link text-gray-700 {{ request()->routeIs('contact') ? 'active' : '' }}" href="{{ route('contact') }}">
-                                <i class="bi bi-headset me-1"></i>Hỗ trợ
+                                <i class="bi bi-headset me-1"></i>{{ __('messages.contact') }}
                             </a>
                         </li>
 
@@ -308,7 +308,7 @@
                         <li class="nav-item">
                             <a class="nav-link text-gray-700 position-relative {{ request()->routeIs('cart.*') ? 'active' : '' }}" href="{{ route('cart.index') }}">
                                 <i class="bi bi-cart3 fs-5 me-1"></i>
-                                <span class="d-lg-none">Giỏ hàng</span>
+                                <span class="d-lg-none">{{ __('messages.cart.title') }}</span>
                                 @php $cartCount = session('cart') ? count(session('cart')) : 0; @endphp
                                 <span id="cart-nav-badge" class="cart-badge badge rounded-pill bg-danger border border-white @if($cartCount === 0) d-none @endif" aria-hidden="{{ $cartCount === 0 ? 'true' : 'false' }}">{{ $cartCount > 0 ? $cartCount : '' }}</span>
                             </a>
@@ -316,7 +316,7 @@
 
                         @auth
                             <li class="nav-item dropdown">
-                                <a class="nav-link d-flex align-items-center justify-content-center p-2 rounded-circle hover-scale-105" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menu tài khoản" style="background: rgba(16, 185, 129, 0.08); transition: all 0.3s ease;">
+                                <a class="nav-link d-flex align-items-center justify-content-center p-2 rounded-circle hover-scale-105" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ __('messages.account_menu') }}" style="background: rgba(16, 185, 129, 0.08); transition: all 0.3s ease;">
                                     <div class="position-relative">
                                         <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name) }}&background=10b981&color=fff&rounded=true&size=32" alt="" class="rounded-circle border border-2 border-white shadow-sm" style="width: 36px; height: 36px;" width="36" height="36">
                                         <span class="position-absolute bottom-0 end-0 bg-success rounded-circle border border-2 border-white" style="width: 10px; height: 10px;" aria-hidden="true"></span>
@@ -333,7 +333,7 @@
                                             </div>
                                         </div>
                                         <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-2 py-1 small">
-                                            <i class="bi bi-shield-check me-1"></i>{{ auth()->user()->role === 'Administrator' ? 'Quản trị viên' : 'Người dùng' }}
+                                            <i class="bi bi-shield-check me-1"></i>{{ auth()->user()->role === 'Administrator' ? __('messages.role_administrator') : __('messages.role_user') }}
                                         </span>
                                     </div>
                                     
@@ -341,7 +341,7 @@
                                         <li>
                                             <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('admin.dashboard') }}" style="transition: all 0.2s;">
                                                 <i class="bi bi-speedometer2 text-emerald-600"></i>
-                                                <span class="fw-medium">Quản lý hệ thống</span>
+                                                <span class="fw-medium">{{ __('messages.dashboard') }}</span>
                                             </a>
                                         </li>
                                         <li><hr class="dropdown-divider my-2"></li>
@@ -350,21 +350,21 @@
                                     <li>
                                         <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('profile.edit') }}" style="transition: all 0.2s;">
                                             <i class="bi bi-person text-gray-500"></i>
-                                            <span>Hồ sơ cá nhân</span>
+                                            <span>{{ __('messages.my_profile') }}</span>
                                         </a>
                                     </li>
                                     
                                     <li>
                                         <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('profile.edit') }}#orders" style="transition: all 0.2s;">
                                             <i class="bi bi-bag text-gray-500"></i>
-                                            <span>Đơn hàng của tôi</span>
+                                            <span>{{ __('messages.my_orders') }}</span>
                                         </a>
                                     </li>
                                     
                                     <li>
                                         <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('profile.edit') }}#settings" style="transition: all 0.2s;">
                                             <i class="bi bi-gear text-gray-500"></i>
-                                            <span>Cài đặt</span>
+                                            <span>{{ __('messages.settings') }}</span>
                                         </a>
                                     </li>
                                     
@@ -375,7 +375,7 @@
                                             @csrf
                                             <button type="submit" class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2 text-danger" style="transition: all 0.2s;">
                                                 <i class="bi bi-box-arrow-right"></i>
-                                                <span class="fw-medium">Đăng xuất</span>
+                                                <span class="fw-medium">{{ __('messages.logout') }}</span>
                                             </button>
                                         </form>
                                     </li>
@@ -384,12 +384,12 @@
                         @else
                             <li class="nav-item">
                                 <a class="nav-link text-gray-700" href="{{ route('login') }}">
-                                    <i class="bi bi-box-arrow-in-right me-1 d-lg-none"></i>Đăng nhập
+                                    <i class="bi bi-box-arrow-in-right me-1 d-lg-none"></i>{{ __('messages.login') }}
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="btn btn-sm btn-emerald text-white rounded-pill px-4 py-2 fw-medium shadow-sm" href="{{ route('register') }}" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                                    Tham gia ngay
+                                    {{ __('messages.register_now') }}
                                 </a>
                             </li>
                         @endauth
@@ -436,10 +436,10 @@
                             <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);">
                                 <a class="d-flex align-items-center mb-3 text-decoration-none" href="{{ route('home') }}">
                                     <img src="{{ asset('images/logo.png') }}" alt="Logo" class="me-2" style="height: 40px; width: auto;">
-                                    <span class="fs-5 fw-bold text-emerald-800">Nhà Thuốc Sinh Thái</span>
+                                    <span class="fs-5 fw-bold text-emerald-800">{{ __('messages.app_name') }}</span>
                                 </a>
                                 <p class="text-gray-600 mb-4 small lh-lg">
-                                    Đồng hành cùng sức khỏe cộng đồng. Sản phẩm dược phẩm chuẩn chất lượng với sự tư vấn tận tâm.
+                                    {{ __('messages.slogan') }}
                                 </p>
                                 <div class="d-flex gap-2">
                                     <a href="#" class="btn btn-sm rounded-circle shadow-sm" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid rgba(16, 185, 129, 0.2);" title="Facebook">
@@ -463,7 +463,7 @@
                                     <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
                                         <h6 class="fw-bold mb-3 text-gray-800 d-flex align-items-center">
                                             <i class="bi bi-grid-fill text-emerald-600 me-2"></i>
-                                            Danh mục
+                                            {{ __('messages.categories') }}
                                         </h6>
                                         <ul class="list-unstyled mb-0">
                                             @forelse($footerCategories as $fCat)
@@ -477,7 +477,7 @@
                                             <li class="mb-0">
                                                 <a href="{{ route('products.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
-                                                    Tất cả sản phẩm
+                                                    {{ __('messages.all_products') }}
                                                 </a>
                                             </li>
                                             @endforelse
@@ -490,31 +490,31 @@
                                     <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
                                         <h6 class="fw-bold mb-3 text-gray-800 d-flex align-items-center">
                                             <i class="bi bi-headset text-emerald-600 me-2"></i>
-                                            Hỗ trợ
+                                            {{ __('messages.contact') }}
                                         </h6>
                                         <ul class="list-unstyled mb-0">
                                             <li class="mb-2">
                                                 <a href="#" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
-                                                    Mua hàng
+                                                    {{ __('messages.buying_policy') }}
                                                 </a>
                                             </li>
                                             <li class="mb-2">
                                                 <a href="#" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
-                                                    Chính sách trả
+                                                    {{ __('messages.return_policy') }}
                                                 </a>
                                             </li>
                                             <li class="mb-2">
                                                 <a href="#" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
-                                                    Bảo mật
+                                                    {{ __('messages.privacy_policy') }}
                                                 </a>
                                             </li>
                                             <li class="mb-0">
                                                 <a href="{{ route('contact') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
-                                                    Liên hệ ngay
+                                                    {{ __('messages.contact_now') }}
                                                 </a>
                                             </li>
                                         </ul>
@@ -526,20 +526,20 @@
                                     <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
                                         <h6 class="fw-bold mb-3 text-gray-800 d-flex align-items-center">
                                             <i class="bi bi-geo-alt-fill text-emerald-600 me-2"></i>
-                                            Liên hệ
+                                            {{ __('messages.contact') }}
                                         </h6>
                                         <ul class="list-unstyled mb-0">
                                             <li class="mb-3 d-flex align-items-start">
                                                 <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-2" style="width: 28px; height: 28px; background: rgba(16, 185, 129, 0.15);">
                                                     <i class="bi bi-geo-alt-fill text-emerald-600" style="font-size: 0.8rem;"></i>
                                                 </div>
-                                                <span class="text-gray-600 small">Lê Văn Hiến, Ngũ Hành Sơn, Đà Nẵng</span>
+                                                <span class="text-gray-600 small">{{ __('messages.footer.address', ['default' => 'Lê Văn Hiến, Ngũ Hành Sơn, Đà Nẵng']) }}</span>
                                             </li>
                                             <li class="mb-3 d-flex align-items-center">
                                                 <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-2" style="width: 28px; height: 28px; background: rgba(16, 185, 129, 0.15);">
                                                     <i class="bi bi-telephone-fill text-emerald-600" style="font-size: 0.8rem;"></i>
                                                 </div>
-                                                <span class="text-gray-600 small">1900 8888 (Miễn phí)</span>
+                                                <span class="text-gray-600 small">1900 8888 ({{ __('messages.free_call') }})</span>
                                             </li>
                                             <li class="mb-0 d-flex align-items-center">
                                                 <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-2" style="width: 28px; height: 28px; background: rgba(16, 185, 129, 0.15);">
@@ -561,7 +561,7 @@
                         <div class="row align-items-center g-3">
                             <div class="col-md-6 text-center text-md-start">
                                 <p class="mb-0 text-gray-600 small">
-                                    &copy; {{ date('Y') }} <span class="fw-semibold text-emerald-700">Nhà Thuốc Sinh Thái</span>. All rights reserved.
+                                    &copy; {{ date('Y') }} <span class="fw-semibold text-emerald-700">{{ __('messages.app_name') }}</span>. All rights reserved.
                                 </p>
                             </div>
                             <div class="col-md-6 text-center text-md-end">
@@ -591,7 +591,7 @@
                         toast: true,
                         position: 'top-end',
                         icon: 'success',
-                        title: 'Thành công!',
+                        title: '{{ __('messages.success') }}',
                         text: '{{ session('success') }}',
                         showConfirmButton: false,
                         timer: 3000,
@@ -605,7 +605,7 @@
                         toast: true,
                         position: 'top-end',
                         icon: 'error',
-                        title: 'Lỗi phát sinh',
+                        title: '{{ __('messages.error_occurred') }}',
                         text: '{{ session('error') }}',
                         showConfirmButton: false,
                         timer: 4000,

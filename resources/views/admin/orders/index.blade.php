@@ -8,7 +8,7 @@
     <div class="glass-card">
         <!-- Status Filter -->
         <div class="mb-4">
-            <h6 class="mb-3">Lọc theo trạng thái:</h6>
+            <h6 class="mb-3">{{ __('messages.admin.orders.filter_by_status') }}</h6>
             <div class="btn-group" role="group">
                 <a href="{{ route('admin.orders.index') }}" 
                    class="btn btn-sm {{ !request('status') ? 'btn-primary' : 'btn-outline-primary' }}">
@@ -38,12 +38,12 @@
             <table id="ordersTable" class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Mã ĐH</th>
-                        <th>Khách hàng</th>
-                        <th>Tổng tiền</th>
-                        <th>Trạng thái</th>
-                        <th>Ngày đặt</th>
-                        <th>Thao tác</th>
+                        <th>{{ __('messages.admin.orders.order_id') }}</th>
+                        <th>{{ __('messages.admin.orders.customer') }}</th>
+                        <th>{{ __('messages.admin.orders.total_amount') }}</th>
+                        <th>{{ __('messages.admin.orders.status') }}</th>
+                        <th>{{ __('messages.admin.orders.order_date') }}</th>
+                        <th>{{ __('messages.admin.orders.action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -82,17 +82,17 @@
     $(document).ready(function() {
         $('#ordersTable').DataTable({
             language: {
-                processing: "Đang xử lý...",
-                search: "Tìm kiếm:",
-                lengthMenu: "Hiển thị _MENU_ mục",
-                info: "Hiển thị _START_ đến _END_ của _TOTAL_ mục",
-                infoEmpty: "Hiển thị 0 đến 0 của 0 mục",
-                infoFiltered: "(được lọc từ _MAX_ mục)",
-                loadingRecords: "Đang tải...",
-                zeroRecords: "Không tìm thấy kết quả",
-                emptyTable: "Không có dữ liệu trong bảng",
-                paginate: { first: "Đầu", previous: "Trước", next: "Tiếp", last: "Cuối" },
-                aria: { sortAscending: ": sắp xếp tăng dần", sortDescending: ": sắp xếp giảm dần" }
+                processing: "{{ __('messages.admin.inventory.processing') }}",
+                search: "{{ __('messages.admin.inventory.search') }}",
+                lengthMenu: "{{ __('messages.admin.inventory.lengthMenu') }}",
+                info: "{{ __('messages.admin.inventory.info') }}",
+                infoEmpty: "{{ __('messages.admin.inventory.infoEmpty') }}",
+                infoFiltered: "{{ __('messages.admin.inventory.infoFiltered') }}",
+                loadingRecords: "{{ __('messages.admin.inventory.loadingRecords') }}",
+                zeroRecords: "{{ __('messages.admin.inventory.zeroRecords') }}",
+                emptyTable: "{{ __('messages.admin.inventory.emptyTable') }}",
+                paginate: { first: "{{ __('messages.admin.inventory.first') }}", previous: "{{ __('messages.admin.inventory.previous') }}", next: "{{ __('messages.admin.inventory.next') }}", last: "{{ __('messages.admin.inventory.last') }}" },
+                aria: { sortAscending: "{{ __('messages.admin.inventory.sortAscending') }}", sortDescending: "{{ __('messages.admin.inventory.sortDescending') }}" }
             },
             order: [[0, 'desc']],
             pageLength: 25,

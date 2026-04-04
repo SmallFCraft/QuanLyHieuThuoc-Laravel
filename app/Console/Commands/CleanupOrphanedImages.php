@@ -26,32 +26,33 @@ class CleanupOrphanedImages extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
-        $days = $this->option('days');
+        $days = (int) $this->option('days');
         $cutoffDate = Carbon::now()->subDays($days);
+        $disk = Storage::disk('public');
         
         $this->info("Cleaning up images from products soft-deleted before {$cutoffDate->toDateString()}...");
-        
-        $deletedProducts = Product::onlyTrashed()
+
+        $deletedCount = 0;
+
+        Product::onlyTrashed()
             ->where('deleted_at', '<', $cutoffDate)
             ->whereNotNull('image')
-            ->get();
-        
-        $deletedCount = 0;
-        
-        foreach ($deletedProducts as $product) {
-            $imagePath = 'products/' . $product->image;
-            
-            if (Storage::disk('public')->exists($imagePath)) {
-                Storage::disk('public')->delete($imagePath);
-                $this->info("Deleted image: {$product->image}");
-                $deletedCount++;
-            }
-        }
-        
+            ->chunkById(100, function ($deletedProducts) use ($disk, &$deletedCount) {
+                foreach ($deletedProducts as $product) {
+                    $imagePath = 'products/' . $product->image;
+
+                    if ($disk->exists($imagePath)) {
+                        $disk->delete($imagePath);
+                        $this->info("Deleted image: {$product->image}");
+                        $deletedCount++;
+                    }
+                }
+            });
+
         $this->info("Successfully deleted {$deletedCount} orphaned images.");
-        
-        return 0;
+
+        return Command::SUCCESS;
     }
 }

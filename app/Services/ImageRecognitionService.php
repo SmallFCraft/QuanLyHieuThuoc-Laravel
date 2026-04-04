@@ -7,18 +7,20 @@ use Gemini\Data\Blob;
 use Gemini\Enums\MimeType;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class ImageRecognitionService
 {
-    protected $aiService;
     protected AuditLogService $auditLogService;
+    protected const GEMINI_MAX_IMAGE_WIDTH = 1600;
+    protected const GEMINI_MAX_IMAGE_HEIGHT = 1600;
+    protected const GEMINI_JPEG_QUALITY = 75;
 
     public function __construct(
         AuditLogService $auditLogService
     ) {
-        $this->aiService = app(GeminiService::class);
         $this->auditLogService = $auditLogService;
     }
 
@@ -166,14 +168,7 @@ class ImageRecognitionService
      */
     protected function analyzeImageWithGemini(string $imagePath, string $type): array
     {
-        // Read image and encode as base64
-        $imageData = file_get_contents($imagePath);
-        if ($imageData === false) {
-            throw new \Exception('Không thể đọc file hình ảnh.');
-        }
-
-        $base64Image = base64_encode($imageData);
-        $mimeType = $this->detectMimeType($imagePath);
+        [$base64Image, $mimeType] = $this->prepareImageForGemini($imagePath);
 
         // Build the prompt based on type
         $prompt = $this->buildVisionPrompt($type);
@@ -385,21 +380,42 @@ PROMPT;
     }
 
     /**
-     * Detect MIME type for Gemini Blob.
+     * Resize and normalize the image before sending it to Gemini.
      *
-     * @param string $path
-     * @return MimeType
+     * @param string $imagePath
+     * @return array{0: string, 1: MimeType}
      */
-    protected function detectMimeType(string $path): MimeType
+    protected function prepareImageForGemini(string $imagePath): array
     {
-        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        
-        return match($extension) {
-            'png' => MimeType::IMAGE_PNG,
-            'jpg', 'jpeg' => MimeType::IMAGE_JPEG,
-            'webp' => MimeType::IMAGE_WEBP,
-            default => MimeType::IMAGE_JPEG,
-        };
+        if (!is_file($imagePath)) {
+            throw new \Exception('Unable to read image file.');
+        }
+
+        try {
+            $manager = new ImageManager(Driver::class);
+            $encodedImage = $manager
+                ->decodePath($imagePath)
+                ->scaleDown(
+                    width: self::GEMINI_MAX_IMAGE_WIDTH,
+                    height: self::GEMINI_MAX_IMAGE_HEIGHT
+                )
+                ->encodeUsingMediaType(
+                    MimeType::IMAGE_JPEG->value,
+                    quality: self::GEMINI_JPEG_QUALITY
+                );
+        } catch (\Throwable $e) {
+            Log::warning('Failed to normalize image before Gemini analysis', [
+                'image_path' => $imagePath,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw new \Exception('Unable to normalize image for Gemini analysis.', previous: $e);
+        }
+
+        return [
+            base64_encode((string) $encodedImage),
+            MimeType::IMAGE_JPEG,
+        ];
     }
 
     /**
@@ -418,13 +434,21 @@ PROMPT;
             mkdir($uploadDir, 0755, true);
         }
 
+        $sessionId = session('chat_session_id');
+        if (!$sessionId) {
+            $sessionId = Str::uuid()->toString();
+            session(['chat_session_id' => $sessionId]);
+        }
+
         $filename = Str::uuid() . '.' . $image->extension();
         $path = $image->storeAs('chatbot-uploads', $filename, 'local');
         
         ChatbotImage::create([
             'user_id' => $userId,
+            'session_id' => $sessionId,
             'filename' => $filename,
             'original_name' => $image->getClientOriginalName(),
+            'image_path' => $path,
             'file_path' => $path,
             'file_size' => $image->getSize(),
             'mime_type' => $image->getMimeType(),
@@ -655,3 +679,4 @@ PROMPT;
         }
     }
 }
+

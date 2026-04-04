@@ -25,7 +25,7 @@
             <!-- Logo -->
             <a href="{{ route('home') }}" class="text-decoration-none d-flex align-items-center gap-2 mb-4">
                 <img src="{{ asset('images/logo.png') }}" alt="Logo" style="height: 48px; width: auto; object-fit: contain;">
-                <span class="fw-bold fs-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-900 to-emerald-600">Nhà Thuốc Sinh Thái</span>
+                <span class="fw-bold fs-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-900 to-emerald-600">{{ __('messages.app_name') }}</span>
             </a>
 
             <!-- Card -->
@@ -36,7 +36,7 @@
             </div>
 
             <!-- Footer -->
-            <p class="text-gray-400 small mt-4">&copy; {{ date('Y') }} Nhà Thuốc Sinh Thái</p>
+            <p class="text-gray-400 small mt-4">&copy; {{ date('Y') }} {{ __('messages.app_name') }}</p>
         </div>
     </body>
 </html>

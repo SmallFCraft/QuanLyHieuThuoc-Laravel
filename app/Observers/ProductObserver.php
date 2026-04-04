@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductBatch;
 
@@ -22,6 +23,8 @@ class ProductObserver
                 'reorder_point' => $product->reorder_point ?? 10,
             ]);
         }
+
+        Category::flushCategoryCaches();
     }
 
     /**
@@ -29,7 +32,7 @@ class ProductObserver
      */
     public function updated(Product $product): void
     {
-        //
+        Category::flushCategoryCaches();
     }
 
     /**
@@ -37,7 +40,7 @@ class ProductObserver
      */
     public function deleted(Product $product): void
     {
-        //
+        Category::flushCategoryCaches();
     }
 
     /**
@@ -45,7 +48,7 @@ class ProductObserver
      */
     public function restored(Product $product): void
     {
-        //
+        Category::flushCategoryCaches();
     }
 
     /**
@@ -53,6 +56,6 @@ class ProductObserver
      */
     public function forceDeleted(Product $product): void
     {
-        //
+        Category::flushCategoryCaches();
     }
 }

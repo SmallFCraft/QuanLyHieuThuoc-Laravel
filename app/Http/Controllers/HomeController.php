@@ -35,6 +35,11 @@ class HomeController extends Controller
             ->get();
 
         $categories = Category::query()
+            ->whereHas('products', function ($query) {
+                $query->where('expiration_date', '>', now())
+                    ->where('stock_quantity', '>', 0)
+                    ->whereNull('deleted_at');
+            })
             ->withCount([
                 'products as available_products_count' => function ($query) {
                     $query->where('expiration_date', '>', now())
@@ -42,7 +47,6 @@ class HomeController extends Controller
                         ->whereNull('deleted_at');
                 },
             ])
-            ->having('available_products_count', '>', 0)
             ->orderBy('name')
             ->limit(10)
             ->get();

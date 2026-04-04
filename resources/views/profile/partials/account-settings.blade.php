@@ -6,15 +6,15 @@
             <i class="bi bi-bell-fill fs-3"></i>
         </div>
         <div>
-            <h5 class="fw-bold text-gray-900 mb-0">Thông Báo</h5>
-            <p class="text-gray-500 small mb-0">Quản lý cách bạn nhận thông báo</p>
+            <h5 class="fw-bold text-gray-900 mb-0">{{ __('messages.profile.notifications') }}</h5>
+            <p class="text-gray-500 small mb-0">{{ __('messages.profile.notifications_desc') }}</p>
         </div>
     </div>
 
     <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
         <div>
-            <p class="fw-medium text-gray-900 mb-1">Thông báo đơn hàng</p>
-            <small class="text-gray-500">Nhận thông báo về trạng thái đơn hàng</small>
+            <p class="fw-medium text-gray-900 mb-1">{{ __('messages.profile.order_notif') }}</p>
+            <small class="text-gray-500">{{ __('messages.profile.order_notif_desc') }}</small>
         </div>
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" id="orderNotif" checked>
@@ -23,8 +23,8 @@
 
     <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
         <div>
-            <p class="fw-medium text-gray-900 mb-1">Khuyến mãi & Ưu đãi</p>
-            <small class="text-gray-500">Nhận thông tin về chương trình khuyến mãi</small>
+            <p class="fw-medium text-gray-900 mb-1">{{ __('messages.profile.promo_notif') }}</p>
+            <small class="text-gray-500">{{ __('messages.profile.promo_notif_desc') }}</small>
         </div>
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" id="promoNotif" checked>
@@ -33,8 +33,8 @@
 
     <div class="d-flex justify-content-between align-items-center py-3">
         <div>
-            <p class="fw-medium text-gray-900 mb-1">Tin tức sức khỏe</p>
-            <small class="text-gray-500">Nhận bài viết về sức khỏe và chăm sóc</small>
+            <p class="fw-medium text-gray-900 mb-1">{{ __('messages.profile.health_notif') }}</p>
+            <small class="text-gray-500">{{ __('messages.profile.health_notif_desc') }}</small>
         </div>
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" id="healthNotif">
@@ -49,41 +49,41 @@
             <i class="bi bi-info-circle-fill fs-3"></i>
         </div>
         <div>
-            <h5 class="fw-bold text-gray-900 mb-0">Thông Tin Tài Khoản</h5>
-            <p class="text-gray-500 small mb-0">Chi tiết về tài khoản của bạn</p>
+            <h5 class="fw-bold text-gray-900 mb-0">{{ __('messages.profile.account_info') }}</h5>
+            <p class="text-gray-500 small mb-0">{{ __('messages.profile.account_info_desc') }}</p>
         </div>
     </div>
 
     <div class="row g-3">
         <div class="col-md-6">
             <div class="p-3 rounded-3 bg-emerald-50">
-                <small class="text-gray-500 d-block mb-1">Vai trò</small>
+                <small class="text-gray-500 d-block mb-1">{{ __('messages.profile.role') }}</small>
                 <p class="fw-medium text-gray-900 mb-0">
                     <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-3 py-1">
-                        {{ ucfirst($user->role) }}
+                        {{ role_text($user->role) }}
                     </span>
                 </p>
             </div>
         </div>
         <div class="col-md-6">
             <div class="p-3 rounded-3 bg-emerald-50">
-                <small class="text-gray-500 d-block mb-1">Trạng thái</small>
+                <small class="text-gray-500 d-block mb-1">{{ __('messages.profile.status_label') }}</small>
                 <p class="fw-medium text-gray-900 mb-0">
                     <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1">
-                        <i class="bi bi-check-circle me-1"></i>{{ ucfirst($user->status) }}
+                        <i class="bi bi-check-circle me-1"></i>{{ $user->status == 'active' ? __('messages.auth.status_active') : __('messages.auth.status_inactive') }}
                     </span>
                 </p>
             </div>
         </div>
         <div class="col-md-6">
             <div class="p-3 rounded-3 bg-emerald-50">
-                <small class="text-gray-500 d-block mb-1">Ngày tham gia</small>
+                <small class="text-gray-500 d-block mb-1">{{ __('messages.profile.joined_date_label') }}</small>
                 <p class="fw-medium text-gray-900 mb-0">{{ $user->created_at->format('d/m/Y') }}</p>
             </div>
         </div>
         <div class="col-md-6">
             <div class="p-3 rounded-3 bg-emerald-50">
-                <small class="text-gray-500 d-block mb-1">Cập nhật lần cuối</small>
+                <small class="text-gray-500 d-block mb-1">{{ __('messages.profile.last_updated_label') }}</small>
                 <p class="fw-medium text-gray-900 mb-0">{{ $user->updated_at->format('d/m/Y') }}</p>
             </div>
         </div>
@@ -97,14 +97,14 @@
             <i class="bi bi-exclamation-triangle-fill fs-3"></i>
         </div>
         <div>
-            <h5 class="fw-bold text-gray-900 mb-0">Vùng Nguy Hiểm</h5>
-            <p class="text-gray-500 small mb-0">Hành động không thể hoàn tác</p>
+            <h5 class="fw-bold text-gray-900 mb-0">{{ __('messages.profile.danger_zone') }}</h5>
+            <p class="text-gray-500 small mb-0">{{ __('messages.profile.danger_zone_desc') }}</p>
         </div>
     </div>
 
     <div class="alert-glass-danger mb-4 p-3 rounded-3">
         <i class="bi bi-shield-exclamation me-2"></i>
-        <strong>Cảnh báo:</strong> Xóa tài khoản sẽ xóa vĩnh viễn tất cả dữ liệu của bạn bao gồm đơn hàng, lịch sử mua hàng và không thể khôi phục.
+        <strong>{{ __('messages.profile.delete_warning_title') }}</strong> {{ __('messages.profile.delete_warning_desc') }}
     </div>
 
     <form method="POST" action="{{ route('profile.destroy') }}" id="deleteAccountForm">
@@ -113,20 +113,20 @@
 
         <div class="mb-4">
             <label for="delete_password" class="form-label fw-medium text-gray-700">
-                Nhập mật khẩu để xác nhận xóa tài khoản
+                {{ __('messages.profile.delete_password_label') }}
             </label>
             <input type="password" 
                    class="form-control rounded-3 shadow-none @error('password', 'userDeletion') is-invalid @enderror"
                    id="delete_password" 
                    name="password" 
-                   placeholder="Mật khẩu hiện tại">
+                   placeholder="{{ __('messages.profile.delete_password_placeholder') }}">
             @error('password', 'userDeletion')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
         </div>
 
         <button type="button" class="btn btn-danger rounded-pill px-4 py-2 fw-medium" onclick="confirmDelete()">
-            <i class="bi bi-trash3 me-1"></i>Xóa tài khoản vĩnh viễn
+            <i class="bi bi-trash3 me-1"></i>{{ __('messages.profile.delete_account_btn') }}
         </button>
     </form>
 </div>
@@ -135,21 +135,21 @@
 <script>
 function confirmDelete() {
     Swal.fire({
-        title: 'Xác nhận xóa tài khoản?',
-        html: '<p class="mb-2">Tất cả dữ liệu sẽ bị xóa vĩnh viễn bao gồm:</p>' +
+        title: '{{ __("messages.profile.js.delete_confirm_title") }}',
+        html: '<p class="mb-2">{{ __("messages.profile.js.delete_confirm_text1") }}</p>' +
               '<ul class="text-start">' +
-              '<li>Thông tin cá nhân</li>' +
-              '<li>Lịch sử đơn hàng</li>' +
-              '<li>Địa chỉ giao hàng</li>' +
-              '<li>Tất cả dữ liệu liên quan</li>' +
+              '<li>{{ __("messages.profile.js.delete_confirm_li1") }}</li>' +
+              '<li>{{ __("messages.profile.js.delete_confirm_li2") }}</li>' +
+              '<li>{{ __("messages.profile.js.delete_confirm_li3") }}</li>' +
+              '<li>{{ __("messages.profile.js.delete_confirm_li4") }}</li>' +
               '</ul>' +
-              '<p class="text-danger fw-bold">Hành động này không thể hoàn tác!</p>',
+              '<p class="text-danger fw-bold">{{ __("messages.profile.js.delete_confirm_warning") }}</p>',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
         cancelButtonColor: '#6b7280',
-        confirmButtonText: '<i class="bi bi-trash3 me-1"></i>Xóa tài khoản',
-        cancelButtonText: 'Hủy bỏ',
+        confirmButtonText: '<i class="bi bi-trash3 me-1"></i>{{ __("messages.profile.js.delete_btn") }}',
+        cancelButtonText: '{{ __("messages.profile.js.cancel_btn") }}',
         reverseButtons: true
     }).then((result) => {
         if (result.isConfirmed) {

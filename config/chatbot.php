@@ -4,17 +4,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | AI Engine Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Choose which AI engine to use: 'gemini' or 'openai'
-    |
-    */
-
-    'engine' => env('AI_ENGINE', 'gemini'),
-
-    /*
-    |--------------------------------------------------------------------------
     | Google Gemini Configuration
     |--------------------------------------------------------------------------
     |
@@ -27,22 +16,6 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
         'max_tokens' => env('GEMINI_MAX_TOKENS', 500),
         'temperature' => env('GEMINI_TEMPERATURE', 0.7),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | OpenAI Configuration (Legacy)
-    |--------------------------------------------------------------------------
-    |
-    | Configuration for OpenAI API integration used by the chatbot AI engine.
-    |
-    */
-
-    'openai' => [
-        'api_key' => env('OPENAI_API_KEY'),
-        'model' => env('OPENAI_MODEL', 'gpt-4'),
-        'max_tokens' => env('OPENAI_MAX_TOKENS', 500),
-        'temperature' => env('OPENAI_TEMPERATURE', 0.7),
     ],
 
     /*

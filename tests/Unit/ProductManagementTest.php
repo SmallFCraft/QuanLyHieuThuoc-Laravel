@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\Product;
+use App\Models\ProductBatch;
 use App\Models\Category;
 use App\Models\User;
 use App\Models\AuditLog;
@@ -47,7 +48,6 @@ class ProductManagementTest extends TestCase
 
     public function test_product_rejects_negative_price(): void
     {
-        $this->markTestSkipped('Database layer does not enforce unsigned checks automatically.');
         $this->expectException(\Illuminate\Database\QueryException::class);
 
         Product::create([
@@ -63,7 +63,6 @@ class ProductManagementTest extends TestCase
 
     public function test_product_rejects_negative_stock_quantity(): void
     {
-        $this->markTestSkipped('Database layer does not enforce unsigned checks automatically.');
         $this->expectException(\Illuminate\Database\QueryException::class);
 
         Product::create([
@@ -74,6 +73,44 @@ class ProductManagementTest extends TestCase
             'stock_quantity' => -10,
             'reorder_point' => 10,
             'batch_number' => 'BATCH-003'
+        ]);
+    }
+
+    public function test_product_rejects_negative_reorder_point(): void
+    {
+        $this->expectException(\Illuminate\Database\QueryException::class);
+
+        Product::create([
+            'category_id' => $this->category->id,
+            'name' => 'Test Medicine',
+            'price' => 50000,
+            'expiration_date' => now()->addYear(),
+            'stock_quantity' => 10,
+            'reorder_point' => -1,
+            'batch_number' => 'BATCH-003A'
+        ]);
+    }
+
+    public function test_product_batch_rejects_negative_stock_quantity(): void
+    {
+        $product = Product::create([
+            'category_id' => $this->category->id,
+            'name' => 'Test Medicine',
+            'price' => 50000,
+            'expiration_date' => now()->addYear(),
+            'stock_quantity' => 100,
+            'reorder_point' => 10,
+            'batch_number' => 'BATCH-003B'
+        ]);
+
+        $this->expectException(\Illuminate\Database\QueryException::class);
+
+        ProductBatch::create([
+            'product_id' => $product->id,
+            'batch_number' => 'BATCH-003C',
+            'expiration_date' => now()->addYear(),
+            'stock_quantity' => -5,
+            'reorder_point' => 10,
         ]);
     }
 

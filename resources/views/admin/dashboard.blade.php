@@ -13,7 +13,7 @@
             <div class="stat-card revenue">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <p class="stat-label mb-1">DOANH THU THÁNG</p>
+                        <p class="stat-label mb-1">{{ __('messages.admin.dashboard.monthly_revenue') }}</p>
                         <h3 class="stat-value mb-0">{{ number_format($monthlyRevenue, 0, ',', '.') }}₫</h3>
                     </div>
                     <div class="stat-icon" style="background: #ecfdf5; color: #059669;">
@@ -28,7 +28,7 @@
             <div class="stat-card orders">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <p class="stat-label mb-1">ĐƠN CHỜ XỬ LÝ</p>
+                        <p class="stat-label mb-1">{{ __('messages.admin.dashboard.pending_orders') }}</p>
                         <h3 class="stat-value mb-0">{{ $orderCounts['Pending'] }}</h3>
                     </div>
                     <div class="stat-icon" style="background: #fffbeb; color: #d97706;">
@@ -43,7 +43,7 @@
             <div class="stat-card expiring">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <p class="stat-label mb-1">SẮP HẾT HẠN</p>
+                        <p class="stat-label mb-1">{{ __('messages.admin.dashboard.expiring_soon') }}</p>
                         <h3 class="stat-value mb-0">{{ $expiringProductsCount }}</h3>
                     </div>
                     <div class="stat-icon" style="background: #fef2f2; color: #dc2626;">
@@ -58,7 +58,7 @@
             <div class="stat-card lowstock">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <p class="stat-label mb-1">TỒN KHO THẤP</p>
+                        <p class="stat-label mb-1">{{ __('messages.admin.dashboard.low_stock') }}</p>
                         <h3 class="stat-value mb-0">{{ $lowStockCount }}</h3>
                     </div>
                     <div class="stat-icon" style="background: #eff6ff; color: #2563eb;">
@@ -75,7 +75,7 @@
         <div class="col-xl-8">
             <div class="chart-card">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="mb-0"><i class="bi bi-bar-chart-line text-emerald-600 me-2"></i>Doanh Thu 30 Ngày Qua</h5>
+                    <h5 class="mb-0"><i class="bi bi-bar-chart-line text-emerald-600 me-2"></i>{{ __('messages.admin.dashboard.revenue_30_days') }}</h5>
                 </div>
                 <canvas id="revenueChart" height="85"></canvas>
             </div>
@@ -85,7 +85,7 @@
         <div class="col-xl-4">
             <div class="chart-card h-100">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="mb-0"><i class="bi bi-pie-chart text-emerald-600 me-2"></i>Phân Bố Đơn Hàng</h5>
+                    <h5 class="mb-0"><i class="bi bi-pie-chart text-emerald-600 me-2"></i>{{ __('messages.admin.dashboard.order_distribution') }}</h5>
                 </div>
                 <canvas id="orderStatusChart"></canvas>
             </div>
@@ -97,7 +97,7 @@
         <div class="col-12">
             <div class="chart-card">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="mb-0"><i class="bi bi-trophy text-emerald-600 me-2"></i>Top 10 Sản Phẩm Bán Chạy</h5>
+                    <h5 class="mb-0"><i class="bi bi-trophy text-emerald-600 me-2"></i>{{ __('messages.admin.dashboard.top_10_products') }}</h5>
                 </div>
                 <canvas id="topProductsChart" height="65"></canvas>
             </div>
@@ -237,7 +237,7 @@
                 data: {
                     labels: data.labels,
                     datasets: [{
-                        label: 'Số Lượng Bán',
+                        label: '{{ __('messages.admin.dashboard.sales_quantity') }}',
                         data: data.data,
                         backgroundColor: 'rgba(16, 185, 129, 0.7)',
                         borderColor: '#10b981',

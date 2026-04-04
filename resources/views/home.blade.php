@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Nhà Thuốc Sinh Thái - Chăm sóc sức khỏe gia đình bạn')
+@section('title', __('messages.app_name') . ' - ' . __('messages.home_subtitle'))
 
 @section('content')
 <div class="home-page">
@@ -15,57 +15,57 @@
             <div class="row align-items-center g-4 g-lg-5">
                 <div class="col-lg-6 text-center text-lg-start fade-in">
                     <span class="badge rounded-pill px-3 py-2 fw-medium border mb-3" style="background: rgba(255,255,255,0.65); backdrop-filter: blur(8px); color: #047857; border-color: rgba(16,185,129,0.25) !important;">
-                        <i class="bi bi-patch-check-fill text-success me-1"></i> Đối tác sức khỏe tin cậy
+                        <i class="bi bi-patch-check-fill text-success me-1"></i> {{ __('messages.home_hero_badge') }}
                     </span>
                     <h1 class="home-title fw-bold mb-3 text-dark">
-                        Chăm sóc sức khỏe<br>
-                        <span class="text-transparent bg-clip-text d-inline-block" style="background-image: linear-gradient(90deg, #10b981, #34d399); -webkit-background-clip: text; background-clip: text;">gia đình bạn</span>
+                        {{ __('messages.home_hero_title1') }}<br>
+                        <span class="text-transparent bg-clip-text d-inline-block" style="background-image: linear-gradient(90deg, #10b981, #34d399); -webkit-background-clip: text; background-clip: text;">{{ __('messages.home_hero_title2') }}</span>
                     </h1>
                     <p class="home-lead mb-4 text-secondary mx-auto mx-lg-0" style="max-width: 32rem;">
-                        Thuốc và sản phẩm chăm sóc sức khỏe chất lượng, minh bạch nguồn gốc. Đội ngũ dược sĩ sẵn sàng tư vấn khi bạn cần.
+                        {{ __('messages.home_hero_desc') }}
                     </p>
 
                     <div class="d-flex flex-column flex-sm-row gap-2 gap-sm-3 justify-content-center justify-content-lg-start mb-4">
                         <a href="{{ route('products.index') }}" class="btn btn-glass-success btn-lg px-4 px-sm-5 py-2 py-sm-3 rounded-pill fw-semibold shadow-sm d-inline-flex align-items-center justify-content-center">
-                            <i class="bi bi-bag-heart me-2"></i>Mua sắm ngay
+                            <i class="bi bi-bag-heart me-2"></i>{{ __('messages.home_shop_now') }}
                         </a>
                         <a href="{{ route('contact') }}" class="btn btn-lg px-4 px-sm-5 py-2 py-sm-3 rounded-pill fw-semibold d-inline-flex align-items-center justify-content-center home-glass-panel text-success border-0">
-                            <i class="bi bi-chat-dots me-2"></i>Nhận tư vấn
+                            <i class="bi bi-chat-dots me-2"></i>{{ __('messages.home_get_advice') }}
                         </a>
                     </div>
 
                     <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-3 gap-md-4 pt-3 home-trust-strip border-top" style="border-color: rgba(16,185,129,0.15) !important;">
                         <div class="d-flex align-items-center gap-2 text-secondary">
                             <i class="bi bi-truck text-success fs-5"></i>
-                            <span>Giao nhanh nội thành</span>
+                            <span>{{ __('messages.home_fast_delivery') }}</span>
                         </div>
                         <div class="d-flex align-items-center gap-2 text-secondary">
                             <i class="bi bi-shield-check text-success fs-5"></i>
-                            <span>Chính hãng, hóa đơn đầy đủ</span>
+                            <span>{{ __('messages.home_genuine_products') }}</span>
                         </div>
                         <div class="d-flex align-items-center gap-2 text-secondary">
                             <i class="bi bi-headset text-success fs-5"></i>
-                            <span>Hỗ trợ 24/7</span>
+                            <span>{{ __('messages.home_support_247') }}</span>
                         </div>
                     </div>
 
                     <div class="row g-3 mt-2 mt-md-3 text-center text-lg-start">
                         <div class="col-6 col-sm-4 col-lg-auto">
                             <div class="home-glass-panel px-3 py-2 rounded-4">
-                                <span class="d-block fw-bold text-success fs-4 mb-0">10k+</span>
-                                <span class="small text-muted">Sản phẩm</span>
+                                <span class="d-block fw-bold text-success fs-4 mb-0">{{ __('messages.home_stat_products_value') }}</span>
+                                <span class="small text-muted">{{ __('messages.home_stat_products_label') }}</span>
                             </div>
                         </div>
                         <div class="col-6 col-sm-4 col-lg-auto">
                             <div class="home-glass-panel px-3 py-2 rounded-4">
-                                <span class="d-block fw-bold text-success fs-4 mb-0">24/7</span>
-                                <span class="small text-muted">Tư vấn</span>
+                                <span class="d-block fw-bold text-success fs-4 mb-0">{{ __('messages.home_stat_support_value') }}</span>
+                                <span class="small text-muted">{{ __('messages.home_stat_support_label') }}</span>
                             </div>
                         </div>
                         <div class="col-12 col-sm-4 col-lg-auto">
                             <div class="home-glass-panel px-3 py-2 rounded-4">
-                                <span class="d-block fw-bold text-success fs-4 mb-0">FEFO</span>
-                                <span class="small text-muted">Ưu tiên hạn dùng</span>
+                                <span class="d-block fw-bold text-success fs-4 mb-0">{{ __('messages.home_stat_fefo_value') }}</span>
+                                <span class="small text-muted">{{ __('messages.home_stat_fefo_label') }}</span>
                             </div>
                         </div>
                     </div>
@@ -80,8 +80,8 @@
                                     <i class="bi bi-shield-check fs-4"></i>
                                 </div>
                                 <div class="text-start">
-                                    <p class="mb-0 fw-semibold text-dark">100% kiểm soát chất lượng</p>
-                                    <p class="mb-0 small text-muted">Lưu kho theo chuẩn, hạn dùng rõ ràng</p>
+                                    <p class="mb-0 fw-semibold text-dark">{{ __('messages.home_quality_badge') }}</p>
+                                    <p class="mb-0 small text-muted">{{ __('messages.home_quality_desc') }}</p>
                                 </div>
                             </div>
                         </div>
@@ -100,9 +100,9 @@
                     <span class="input-group-text border-0 bg-transparent ps-3 ps-md-4">
                         <i class="bi bi-search text-success"></i>
                     </span>
-                    <input type="text" id="home-search-q" name="q" value="{{ request('q') }}" class="form-control border-0 bg-transparent py-2 py-md-3 fs-6 fs-md-5 shadow-none" placeholder="Tìm thuốc, sản phẩm sức khỏe..." autocomplete="off" style="box-shadow: none !important; outline: none !important;">
+                    <input type="text" id="home-search-q" name="q" value="{{ request('q') }}" class="form-control border-0 bg-transparent py-2 py-md-3 fs-6 fs-md-5 shadow-none" placeholder="{{ __('messages.home_search_placeholder') }}" autocomplete="off" style="box-shadow: none !important; outline: none !important;">
                     <button type="submit" class="btn btn-success rounded-pill px-4 px-md-5 fw-semibold shadow-sm ms-2 me-1" style="background: #10b981; border-color: #10b981; height: 100%; min-height: 48px;">
-                        <span class="d-none d-sm-inline">Tìm kiếm</span>
+                        <span class="d-none d-sm-inline">{{ __('messages.search') }}</span>
                         <i class="bi bi-search d-sm-none"></i>
                     </button>
                 </div>
@@ -117,11 +117,11 @@
         <div class="container position-relative">
             <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3 mb-md-4">
                 <div>
-                    <span class="text-success fw-bold text-uppercase small" style="letter-spacing: 0.06em;">Khám phá</span>
-                    <h2 class="h4 fw-bold text-dark mb-0 mt-1">Danh mục sản phẩm</h2>
+                    <span class="text-success fw-bold text-uppercase small" style="letter-spacing: 0.06em;">{{ __('messages.home_explore') }}</span>
+                    <h2 class="h4 fw-bold text-dark mb-0 mt-1">{{ __('messages.home_categories') }}</h2>
                 </div>
                 <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0">
-                    Tất cả <i class="bi bi-arrow-right ms-1"></i>
+                    {{ __('messages.home_view_all') }} <i class="bi bi-arrow-right ms-1"></i>
                 </a>
             </div>
             <div class="row g-3">
@@ -132,7 +132,7 @@
                                 <i class="bi bi-{{ $category->icon ?? 'grid-fill' }}" style="font-size: 1.5rem;"></i>
                             </div>
                             <span class="fw-semibold text-truncate d-block text-dark mb-1 small" title="{{ $category->name }}">{{ $category->name }}</span>
-                            <span class="small text-success" style="font-size: 0.75rem;">{{ $category->available_products_count }} sản phẩm</span>
+                            <span class="small text-success" style="font-size: 0.75rem;">{{ $category->available_products_count }} {{ mb_strtolower(__('messages.products')) }}</span>
                         </a>
                     </div>
                 @endforeach
@@ -147,12 +147,12 @@
         <div class="container position-relative">
             <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-3">
                 <div class="text-center text-sm-start w-100 w-sm-auto">
-                    <span class="text-success fw-bold text-uppercase small">Mới cập nhật</span>
-                    <h2 class="h3 fw-bold text-dark mt-1 mb-0">Sản phẩm mới ra mắt</h2>
-                    <p class="text-muted small mb-0 mt-1 d-none d-md-block">Những sản phẩm vừa được thêm vào cửa hàng.</p>
+                    <span class="text-success fw-bold text-uppercase small">{{ __('messages.home_recently_updated') }}</span>
+                    <h2 class="h3 fw-bold text-dark mt-1 mb-0">{{ __('messages.home_new_products') }}</h2>
+                    <p class="text-muted small mb-0 mt-1 d-none d-md-block">{{ __('messages.home_new_products_desc') }}</p>
                 </div>
                 <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0">
-                    Tất cả <i class="bi bi-arrow-right ms-1"></i>
+                    {{ __('messages.home_view_all') }} <i class="bi bi-arrow-right ms-1"></i>
                 </a>
             </div>
 
@@ -173,20 +173,20 @@
                                 @endif
                                 <div class="position-absolute top-0 start-0 m-2 m-md-3 d-flex flex-column gap-2">
                                     <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle px-2 py-1 rounded-pill">
-                                        <i class="bi bi-stars me-1"></i>Mới
+                                        <i class="bi bi-stars me-1"></i>{{ __('messages.home_new_badge') }}
                                     </span>
                                     @if($product->stock_quantity == 0)
                                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-x-circle me-1"></i>Hết hàng
+                                            <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
                                         </span>
                                     @elseif($product->stock_quantity <= $product->reorder_point)
                                         <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-exclamation-triangle me-1"></i>Sắp hết
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ __('messages.low_stock') }}
                                         </span>
                                     @endif
                                 </div>
                                 <div class="position-absolute top-0 end-0 m-2 m-md-3">
-                                    <a href="{{ route('products.show', $product->id) }}" class="btn btn-light btn-sm rounded-circle shadow-sm text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Xem chi tiết">
+                                    <a href="{{ route('products.show', $product->id) }}" class="btn btn-light btn-sm rounded-circle shadow-sm text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="{{ __('messages.home_view_details') }}">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 </div>
@@ -209,7 +209,7 @@
                                         @csrf
                                         <input type="hidden" name="product_id" value="{{ $product->id }}">
                                         <input type="hidden" name="quantity" value="1">
-                                        <button type="submit" class="btn text-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background: #10b981;" {{ $product->stock_quantity == 0 ? 'disabled' : '' }} title="Thêm vào giỏ">
+                                        <button type="submit" class="btn text-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background: #10b981;" {{ $product->stock_quantity == 0 ? 'disabled' : '' }} title="{{ __('messages.add_to_cart') }}">
                                             <i class="bi bi-cart-plus fs-5"></i>
                                         </button>
                                     </form>
@@ -223,8 +223,8 @@
                             <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px; background: rgba(16,185,129,0.12);">
                                 <i class="bi bi-box2 text-success fs-1"></i>
                             </div>
-                            <h3 class="h5 fw-bold text-dark">Chưa có sản phẩm mới</h3>
-                            <p class="text-muted mb-0 px-3">Hệ thống đang cập nhật. Vui lòng quay lại sau.</p>
+                            <h3 class="h5 fw-bold text-dark">{{ __('messages.home_no_new_products') }}</h3>
+                            <p class="text-muted mb-0 px-3">{{ __('messages.home_system_updating') }}</p>
                         </div>
                     </div>
                 @endforelse
@@ -238,12 +238,12 @@
         <div class="container position-relative">
             <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-3">
                 <div class="text-center text-sm-start w-100 w-sm-auto">
-                    <span class="text-success fw-bold text-uppercase small">Được quan tâm nhất</span>
-                    <h2 class="h3 fw-bold text-dark mt-1 mb-0">Sản phẩm nổi bật</h2>
-                    <p class="text-muted small mb-0 mt-1 d-none d-md-block">Những sản phẩm được xem nhiều nhất bởi cộng đồng.</p>
+                    <span class="text-success fw-bold text-uppercase small">{{ __('messages.home_most_viewed') }}</span>
+                    <h2 class="h3 fw-bold text-dark mt-1 mb-0">{{ __('messages.home_featured_products') }}</h2>
+                    <p class="text-muted small mb-0 mt-1 d-none d-md-block">{{ __('messages.home_featured_desc') }}</p>
                 </div>
                 <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0">
-                    Tất cả <i class="bi bi-arrow-right ms-1"></i>
+                    {{ __('messages.home_view_all') }} <i class="bi bi-arrow-right ms-1"></i>
                 </a>
             </div>
 
@@ -265,21 +265,21 @@
                                 <div class="position-absolute top-0 start-0 m-2 m-md-3 d-flex flex-column gap-2">
                                     @if($product->views_count > 0)
                                         <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-eye-fill me-1"></i>{{ number_format($product->views_count) }} lượt xem
+                                            <i class="bi bi-eye-fill me-1"></i>{{ __('messages.home_views_count', ['count' => number_format($product->views_count)]) }}
                                         </span>
                                     @endif
                                     @if($product->stock_quantity == 0)
                                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-x-circle me-1"></i>Hết hàng
+                                            <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
                                         </span>
                                     @elseif($product->stock_quantity <= $product->reorder_point)
                                         <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-exclamation-triangle me-1"></i>Sắp hết
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ __('messages.low_stock') }}
                                         </span>
                                     @endif
                                 </div>
                                 <div class="position-absolute top-0 end-0 m-2 m-md-3">
-                                    <a href="{{ route('products.show', $product->id) }}" class="btn btn-light btn-sm rounded-circle shadow-sm text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Xem chi tiết">
+                                    <a href="{{ route('products.show', $product->id) }}" class="btn btn-light btn-sm rounded-circle shadow-sm text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="{{ __('messages.home_view_details') }}">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 </div>
@@ -302,7 +302,7 @@
                                         @csrf
                                         <input type="hidden" name="product_id" value="{{ $product->id }}">
                                         <input type="hidden" name="quantity" value="1">
-                                        <button type="submit" class="btn text-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background: #10b981;" {{ $product->stock_quantity == 0 ? 'disabled' : '' }} title="Thêm vào giỏ">
+                                        <button type="submit" class="btn text-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background: #10b981;" {{ $product->stock_quantity == 0 ? 'disabled' : '' }} title="{{ __('messages.add_to_cart') }}">
                                             <i class="bi bi-cart-plus fs-5"></i>
                                         </button>
                                     </form>
@@ -316,9 +316,9 @@
                             <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px; background: rgba(16,185,129,0.12);">
                                 <i class="bi bi-box2 text-success fs-1"></i>
                             </div>
-                            <h3 class="h5 fw-bold text-dark">Chưa có sản phẩm nổi bật</h3>
-                            <p class="text-muted mb-0 px-3">Hãy khám phá và xem sản phẩm để danh sách này được cập nhật!</p>
-                            <a href="{{ route('products.index') }}" class="btn btn-success rounded-pill mt-3 px-4" style="background: #10b981; border-color: #10b981;">Đến cửa hàng</a>
+                            <h3 class="h5 fw-bold text-dark">{{ __('messages.home_no_featured') }}</h3>
+                            <p class="text-muted mb-0 px-3">{{ __('messages.home_explore_more_desc') }}</p>
+                            <a href="{{ route('products.index') }}" class="btn btn-success rounded-pill mt-3 px-4" style="background: #10b981; border-color: #10b981;">{{ __('messages.home_go_to_store') }}</a>
                         </div>
                     </div>
                 @endforelse
@@ -331,8 +331,8 @@
         <div class="home-section-mesh" aria-hidden="true"></div>
         <div class="container position-relative py-2">
             <div class="text-center mb-4 mb-md-5">
-                <span class="text-success fw-bold text-uppercase small">Vì sao chọn chúng tôi</span>
-                <h2 class="h3 fw-bold text-dark mt-1">Dịch vụ rõ ràng, an tâm mua dùng</h2>
+                <span class="text-success fw-bold text-uppercase small">{{ __('messages.home_why_choose_us') }}</span>
+                <h2 class="h3 fw-bold text-dark mt-1">{{ __('messages.home_why_choose_us_subtitle') }}</h2>
             </div>
             <div class="row g-3 g-md-4">
                 <div class="col-md-4">
@@ -340,8 +340,8 @@
                         <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 72px; height: 72px; background: rgba(16,185,129,0.15); color: #059669;">
                             <i class="bi bi-shield-check fs-2"></i>
                         </div>
-                        <h3 class="h5 fw-bold mb-2 text-dark">Chính hãng, minh bạch</h3>
-                        <p class="text-secondary mb-0 small">Nguồn nhập rõ ràng, hóa đơn VAT khi cần, lưu vết theo lô và hạn dùng.</p>
+                        <h3 class="h5 fw-bold mb-2 text-dark">{{ __('messages.home_reason1_title') }}</h3>
+                        <p class="text-secondary mb-0 small">{{ __('messages.home_reason1_desc') }}</p>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -349,8 +349,8 @@
                         <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 72px; height: 72px; background: rgba(16,185,129,0.12); color: #059669;">
                             <i class="bi bi-truck fs-2"></i>
                         </div>
-                        <h3 class="h5 fw-bold mb-2 text-dark">Giao hàng linh hoạt</h3>
-                        <p class="text-secondary mb-0 small">Ưu tiên đơn gấp nội thành, đóng gói kín đáo, bảo quản phù hợp.</p>
+                        <h3 class="h5 fw-bold mb-2 text-dark">{{ __('messages.home_reason2_title') }}</h3>
+                        <p class="text-secondary mb-0 small">{{ __('messages.home_reason2_desc') }}</p>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -358,8 +358,8 @@
                         <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 72px; height: 72px; background: rgba(16,185,129,0.1); color: #059669;">
                             <i class="bi bi-heart-pulse fs-2"></i>
                         </div>
-                        <h3 class="h5 fw-bold mb-2 text-dark">Tư vấn tận tâm</h3>
-                        <p class="text-secondary mb-0 small">Dược sĩ hỗ trợ chọn sản phẩm phù hợp và nhắc lịch dùng thuận tiện.</p>
+                        <h3 class="h5 fw-bold mb-2 text-dark">{{ __('messages.home_reason3_title') }}</h3>
+                        <p class="text-secondary mb-0 small">{{ __('messages.home_reason3_desc') }}</p>
                     </div>
                 </div>
             </div>
@@ -371,29 +371,29 @@
         <div class="home-section-mesh home-section-mesh--subtle" aria-hidden="true"></div>
         <div class="container position-relative">
             <div class="text-center mb-4 mb-md-5">
-                <span class="text-success fw-bold text-uppercase small">Chỉ vài bước</span>
-                <h2 class="h3 fw-bold text-dark mt-1">Mua hàng đơn giản</h2>
+                <span class="text-success fw-bold text-uppercase small">{{ __('messages.home_few_steps') }}</span>
+                <h2 class="h3 fw-bold text-dark mt-1">{{ __('messages.home_simple_shopping') }}</h2>
             </div>
             <div class="row g-3 g-md-4">
                 <div class="col-md-4">
                     <div class="home-glass-panel home-step-card h-100 rounded-4">
                         <span class="home-step-num">1</span>
-                        <h3 class="h6 fw-bold text-dark">Tìm &amp; chọn sản phẩm</h3>
-                        <p class="small text-secondary mb-0">Dùng ô tìm kiếm hoặc lọc theo danh mục; xem chi tiết và hạn dùng trước khi thêm giỏ.</p>
+                        <h3 class="h6 fw-bold text-dark">{{ __('messages.home_step1_title') }}</h3>
+                        <p class="small text-secondary mb-0">{{ __('messages.home_step1_desc') }}</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="home-glass-panel home-step-card h-100 rounded-4">
                         <span class="home-step-num">2</span>
-                        <h3 class="h6 fw-bold text-dark">Giỏ hàng &amp; thanh toán</h3>
-                        <p class="small text-secondary mb-0">Kiểm tra số lượng, đăng nhập và hoàn tất đơn — hệ thống trừ tồn theo chuẩn an toàn.</p>
+                        <h3 class="h6 fw-bold text-dark">{{ __('messages.home_step2_title') }}</h3>
+                        <p class="small text-secondary mb-0">{{ __('messages.home_step2_desc') }}</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="home-glass-panel home-step-card h-100 rounded-4">
                         <span class="home-step-num">3</span>
-                        <h3 class="h6 fw-bold text-dark">Nhận hàng &amp; hỗ trợ</h3>
-                        <p class="small text-secondary mb-0">Theo dõi trạng thái đơn trong tài khoản; cần tư vấn thêm cứ liên hệ nhà thuốc.</p>
+                        <h3 class="h6 fw-bold text-dark">{{ __('messages.home_step3_title') }}</h3>
+                        <p class="small text-secondary mb-0">{{ __('messages.home_step3_desc') }}</p>
                     </div>
                 </div>
             </div>
@@ -407,26 +407,26 @@
             <div class="row justify-content-center">
                 <div class="col-lg-9 col-xl-8">
                     <div class="text-center mb-4">
-                        <span class="text-success fw-bold text-uppercase small" style="letter-spacing: 0.06em;">Câu hỏi thường gặp</span>
-                        <h2 class="h3 fw-bold text-dark mt-1">Thông tin hữu ích</h2>
+                        <span class="text-success fw-bold text-uppercase small" style="letter-spacing: 0.06em;">{{ __('messages.home_faq') }}</span>
+                        <h2 class="h3 fw-bold text-dark mt-1">{{ __('messages.home_useful_info') }}</h2>
                     </div>
                     <div class="home-faq-stack d-flex flex-column gap-3">
                         <details class="home-faq-item">
-                            <summary class="home-faq-summary">Làm sao biết sản phẩm còn hạn và đủ tồn?</summary>
+                            <summary class="home-faq-summary">{{ __('messages.home_faq1_q') }}</summary>
                             <div class="home-faq-body">
-                                Trên trang chi tiết sản phẩm hiển thị tồn kho; chúng tôi ưu tiên xuất theo FEFO (hết hạn trước — xuất trước). Sản phẩm hết hạn không được bán.
+                                {{ __('messages.home_faq1_a') }}
                             </div>
                         </details>
                         <details class="home-faq-item">
-                            <summary class="home-faq-summary">Tôi có thể đổi ý sau khi đặt hàng?</summary>
+                            <summary class="home-faq-summary">{{ __('messages.home_faq2_q') }}</summary>
                             <div class="home-faq-body">
-                                Đơn ở trạng thái chờ xử lý có thể được hủy theo quy định; sau khi giao hàng, vui lòng liên hệ hotline hoặc form liên hệ để được hỗ trợ từng trường hợp.
+                                {{ __('messages.home_faq2_a') }}
                             </div>
                         </details>
                         <details class="home-faq-item">
-                            <summary class="home-faq-summary">Ai tư vấn khi tôi không chắc nên dùng thuốc nào?</summary>
+                            <summary class="home-faq-summary">{{ __('messages.home_faq3_q') }}</summary>
                             <div class="home-faq-body">
-                                Bạn có thể gửi câu hỏi qua trang <a href="{{ route('contact') }}" class="text-success fw-semibold text-decoration-none">liên hệ</a> hoặc kênh hỗ trợ trực tuyến. Dược sĩ chỉ tư vấn thông tin chung; với bệnh lý cần khám, hãy đến cơ sở y tế.
+                                {{ __('messages.home_faq3_a_part1') }} <a href="{{ route('contact') }}" class="text-success fw-semibold text-decoration-none">{{ __('messages.home_faq3_a_contact') }}</a> {{ __('messages.home_faq3_a_part2') }}
                             </div>
                         </details>
                     </div>
@@ -444,19 +444,19 @@
                 <div class="position-absolute bottom-0 start-0 rounded-circle bg-white opacity-20" style="width: 140px; height: 140px; transform: translate(-30%, 30%);" aria-hidden="true"></div>
                 <div class="row align-items-center position-relative gy-4">
                     <div class="col-lg-8 text-center text-lg-start">
-                        <h2 class="home-cta-heading fw-bold text-white mb-2" style="text-shadow: 0 1px 2px rgba(0,0,0,0.08);">Sức khỏe của bạn là ưu tiên</h2>
+                        <h2 class="home-cta-heading fw-bold text-white mb-2" style="text-shadow: 0 1px 2px rgba(0,0,0,0.08);">{{ __('messages.home_cta_heading') }}</h2>
                         <p class="text-white mb-0 opacity-90 pe-lg-4">
-                            Đăng ký tài khoản để theo dõi đơn hàng, lưu địa chỉ và nhận thông tin khuyến mãi hợp lệ.
+                            {{ __('messages.home_cta_desc') }}
                         </p>
                     </div>
                     <div class="col-lg-4 text-center text-lg-end">
                         @guest
                             <a href="{{ route('register') }}" class="btn btn-light btn-lg text-success fw-bold px-4 px-lg-5 py-3 rounded-pill shadow">
-                                Tạo tài khoản
+                                {{ __('messages.home_create_account') }}
                             </a>
                         @else
                             <a href="{{ route('products.index') }}" class="btn btn-light btn-lg text-success fw-bold px-4 px-lg-5 py-3 rounded-pill shadow">
-                                Tiếp tục mua sắm
+                                {{ __('messages.home_continue_shopping') }}
                             </a>
                         @endguest
                     </div>

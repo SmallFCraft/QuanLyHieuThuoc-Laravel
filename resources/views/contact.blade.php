@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Liên hệ - Nhà Thuốc Sinh Thái')
+@section('title', __('messages.contact_page_title') . ' - ' . __('messages.app_name'))
 
 @section('content')
 <!-- Page Header -->
@@ -9,10 +9,10 @@
     <div class="container position-relative z-1">
         <div class="text-center">
             <span class="badge bg-emerald-100 text-emerald-800 px-3 py-2 rounded-pill mb-3 fw-medium">
-                <i class="bi bi-headset me-1"></i> Hỗ trợ 24/7
+                <i class="bi bi-headset me-1"></i> {{ __('messages.contact_support_247') }}
             </span>
-            <h1 class="display-5 fw-bold text-gray-900 mb-2">Liên Hệ Với Chúng Tôi</h1>
-            <p class="lead text-gray-600 mb-0">Đội ngũ dược sĩ sẵn sàng giải đáp mọi thắc mắc của bạn</p>
+            <h1 class="display-5 fw-bold text-gray-900 mb-2">{{ __('messages.contact_heading') }}</h1>
+            <p class="lead text-gray-600 mb-0">{{ __('messages.contact_subheading') }}</p>
         </div>
     </div>
 </section>
@@ -32,8 +32,8 @@
                                     </svg>
                                 </div>
                                 <div>
-                                    <h3 class="fw-bold mb-1">Cần hỗ trợ ngay lập tức? Hãy dùng Trợ Lý AI</h3>
-                                    <p class="mb-0 text-emerald-50" style="font-size: 1.1rem">Hoạt động 24/7 • Đọc đơn thuốc bằng hình ảnh • Tư vấn & Đặt hàng cực nhanh</p>
+                                    <h3 class="fw-bold mb-1">{{ __('messages.ai_assistant_title') }}</h3>
+                                    <p class="mb-0 text-emerald-50" style="font-size: 1.1rem">{{ __('messages.ai_assistant_desc') }}</p>
                                 </div>
                             </div>
                         </div>
@@ -45,7 +45,7 @@
                                     style="transition: transform 0.3s;"
                                     onmouseover="this.style.transform='translateY(-3px)'"
                                     onmouseout="this.style.transform='translateY(0)'">
-                                Mở Trợ Lý AI
+                                {{ __('messages.open_ai_assistant') }}
                             </button>
                         </div>
                     </div>
@@ -61,8 +61,8 @@
             <!-- Contact Form -->
             <div class="col-lg-7">
                 <div class="glass-card rounded-4 border-0 p-4 p-md-5">
-                    <h3 class="fw-bold mb-1 text-gray-900">Gửi tin nhắn</h3>
-                    <p class="text-gray-500 mb-4">Chúng tôi sẽ phản hồi trong vòng 24 giờ</p>
+                    <h3 class="fw-bold mb-1 text-gray-900">{{ __('messages.send_message_heading') }}</h3>
+                    <p class="text-gray-500 mb-4">{{ __('messages.send_message_subheading') }}</p>
                     
                     <form action="{{ route('contact.submit') }}" method="POST">
                         @csrf
@@ -70,7 +70,7 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="name" class="form-label fw-medium text-gray-700">
-                                    Họ tên <span class="text-danger">*</span>
+                                    {{ __('messages.contact_name') }} <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-gray-50 border-end-0 text-gray-400"><i class="bi bi-person"></i></span>
@@ -78,7 +78,7 @@
                                            class="form-control bg-gray-50 border-start-0 shadow-none @error('name') is-invalid @enderror" 
                                            id="name" name="name" 
                                            value="{{ old('name') }}" required
-                                           placeholder="Nguyễn Văn A">
+                                           placeholder="{{ __('messages.contact_name_placeholder') }}">
                                     @error('name')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -87,7 +87,7 @@
                             
                             <div class="col-md-6">
                                 <label for="email" class="form-label fw-medium text-gray-700">
-                                    Email <span class="text-danger">*</span>
+                                    {{ __('messages.contact_email') }} <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-gray-50 border-end-0 text-gray-400"><i class="bi bi-envelope"></i></span>
@@ -95,7 +95,7 @@
                                            class="form-control bg-gray-50 border-start-0 shadow-none @error('email') is-invalid @enderror" 
                                            id="email" name="email" 
                                            value="{{ old('email') }}" required
-                                           placeholder="email@example.com">
+                                           placeholder="{{ __('messages.contact_email_placeholder') }}">
                                     @error('email')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -104,7 +104,7 @@
                             
                             <div class="col-12">
                                 <label for="phone" class="form-label fw-medium text-gray-700">
-                                    Số điện thoại <span class="text-danger">*</span>
+                                    {{ __('messages.contact_phone') }} <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-gray-50 border-end-0 text-gray-400"><i class="bi bi-telephone"></i></span>
@@ -112,22 +112,22 @@
                                            class="form-control bg-gray-50 border-start-0 shadow-none @error('phone') is-invalid @enderror" 
                                            id="phone" name="phone" 
                                            value="{{ old('phone') }}" required
-                                           placeholder="0901234567">
+                                           placeholder="{{ __('messages.contact_phone_placeholder') }}">
                                     @error('phone')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-                                <small class="text-gray-400 mt-1 d-block">Định dạng: 0xxxxxxxxx hoặc +84xxxxxxxxx</small>
+                                <small class="text-gray-400 mt-1 d-block">{{ __('messages.contact_phone_format') }}</small>
                             </div>
                             
                             <div class="col-12">
                                 <label for="message" class="form-label fw-medium text-gray-700">
-                                    Nội dung <span class="text-danger">*</span>
+                                    {{ __('messages.contact_message') }} <span class="text-danger">*</span>
                                 </label>
                                 <textarea class="form-control bg-gray-50 shadow-none @error('message') is-invalid @enderror" 
                                           id="message" name="message" 
                                           rows="5" required
-                                          placeholder="Mô tả câu hỏi hoặc yêu cầu của bạn...">{{ old('message') }}</textarea>
+                                          placeholder="{{ __('messages.contact_message_placeholder') }}">{{ old('message') }}</textarea>
                                 @error('message')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -135,7 +135,7 @@
                             
                             <div class="col-12">
                                 <button type="submit" class="btn btn-lg w-100 text-white fw-bold rounded-pill shadow" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                                    <i class="bi bi-send me-2"></i>Gửi tin nhắn
+                                    <i class="bi bi-send me-2"></i>{{ __('messages.contact_submit') }}
                                 </button>
                             </div>
                         </div>
@@ -152,8 +152,8 @@
                             <i class="bi bi-geo-alt-fill fs-4"></i>
                         </div>
                         <div>
-                            <h6 class="fw-bold text-gray-800 mb-1">Địa chỉ</h6>
-                            <p class="text-gray-500 mb-0 small">Lê Văn Hiến, Ngũ Hành Sơn, Đà Nẵng</p>
+                            <h6 class="fw-bold text-gray-800 mb-1">{{ __('messages.address_title') }}</h6>
+                            <p class="text-gray-500 mb-0 small">{{ __('messages.footer.address', ['default' => 'Lê Văn Hiến, Ngũ Hành Sơn, Đà Nẵng']) }}</p>
                         </div>
                     </div>
                     
@@ -162,9 +162,9 @@
                             <i class="bi bi-telephone-fill fs-4"></i>
                         </div>
                         <div>
-                            <h6 class="fw-bold text-gray-800 mb-1">Hotline</h6>
+                            <h6 class="fw-bold text-gray-800 mb-1">{{ __('messages.hotline_title') }}</h6>
                             <p class="text-gray-500 mb-0 small">
-                                <a href="tel:19008888" class="text-decoration-none text-gray-500">1900 8888</a> (Miễn phí)
+                                <a href="tel:19008888" class="text-decoration-none text-gray-500">1900 8888</a> ({{ __('messages.free_call') }})
                             </p>
                         </div>
                     </div>
@@ -174,7 +174,7 @@
                             <i class="bi bi-envelope-fill fs-4"></i>
                         </div>
                         <div>
-                            <h6 class="fw-bold text-gray-800 mb-1">Email</h6>
+                            <h6 class="fw-bold text-gray-800 mb-1">{{ __('messages.email_title') }}</h6>
                             <p class="text-gray-500 mb-0 small">
                                 <a href="mailto:cskh@nhathuocsinhthai.vn" class="text-decoration-none text-gray-500">cskh@nhathuocsinhthai.vn</a>
                             </p>
@@ -186,9 +186,9 @@
                             <i class="bi bi-clock-fill fs-4"></i>
                         </div>
                         <div>
-                            <h6 class="fw-bold text-gray-800 mb-1">Giờ làm việc</h6>
+                            <h6 class="fw-bold text-gray-800 mb-1">{{ __('messages.working_hours_title') }}</h6>
                             <p class="text-gray-500 mb-0 small">
-                                T2 - T7: 8:00 - 20:00 · CN: 8:00 - 18:00
+                                {{ __('messages.working_hours_desc') }}
                             </p>
                         </div>
                     </div>

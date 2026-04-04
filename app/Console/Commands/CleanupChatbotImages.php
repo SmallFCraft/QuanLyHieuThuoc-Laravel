@@ -30,13 +30,11 @@ class CleanupChatbotImages extends Command
     {
         $hours = (int) $this->option('hours');
         $cutoffTime = now()->subHours($hours);
+        $disk = Storage::disk('local');
         
         $this->info("Cleaning up chatbot images older than {$hours} hours...");
-        
-        // Find old images
-        $oldImages = ChatbotImage::where('created_at', '<', $cutoffTime)->get();
-        
-        if ($oldImages->isEmpty()) {
+
+        if (! ChatbotImage::where('created_at', '<', $cutoffTime)->exists()) {
             $this->info('No images to clean up.');
             return Command::SUCCESS;
         }
@@ -44,27 +42,29 @@ class CleanupChatbotImages extends Command
         $deletedCount = 0;
         $errorCount = 0;
         
-        foreach ($oldImages as $image) {
-            try {
-                // Delete physical file
-                if (Storage::disk('local')->exists($image->file_path)) {
-                    Storage::disk('local')->delete($image->file_path);
+        ChatbotImage::where('created_at', '<', $cutoffTime)
+            ->chunkById(100, function ($oldImages) use ($disk, &$deletedCount, &$errorCount) {
+                foreach ($oldImages as $image) {
+                    try {
+                        $path = $image->file_path ?? $image->image_path;
+
+                        if ($path && $disk->exists($path)) {
+                            $disk->delete($path);
+                        }
+
+                        $image->forceDelete();
+                        $deletedCount++;
+                    } catch (\Exception $e) {
+                        $errorCount++;
+
+                        Log::error('Failed to delete chatbot image', [
+                            'image_id' => $image->id,
+                            'file_path' => $image->file_path ?? $image->image_path,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
                 }
-                
-                // Delete database record
-                $image->forceDelete();
-                
-                $deletedCount++;
-                
-            } catch (\Exception $e) {
-                $errorCount++;
-                Log::error('Failed to delete chatbot image', [
-                    'image_id' => $image->id,
-                    'file_path' => $image->file_path,
-                    'error' => $e->getMessage()
-                ]);
-            }
-        }
+            });
         
         $this->info("Cleanup complete:");
         $this->info("- Deleted: {$deletedCount} images");

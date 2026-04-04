@@ -17,12 +17,15 @@ class ChatbotImage extends Model
      */
     protected $fillable = [
         'user_id',
+        'session_id',
         'filename',
         'original_name',
+        'image_path',
         'file_path',
         'file_size',
         'mime_type',
         'image_type',
+        'analysis_result',
         'ocr_text',
         'recognized_products',
         'processed_at'

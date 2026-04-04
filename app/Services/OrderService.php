@@ -61,8 +61,12 @@ class OrderService
         DB::beginTransaction();
 
         try {
+            $affectedProductIds = [];
+
             // Restore inventory for all order items (by batch)
             foreach ($order->items as $item) {
+                $affectedProductIds[] = $item->product_id;
+
                 if ($item->batch_id) {
                     // Restore to specific batch
                     $batch = ProductBatch::lockForUpdate()->find($item->batch_id);
@@ -88,6 +92,21 @@ class OrderService
                         }
                     }
                 }
+            }
+
+            foreach (array_unique($affectedProductIds) as $productId) {
+                $product = Product::with('batches')->lockForUpdate()->find($productId);
+
+                if (!$product) {
+                    continue;
+                }
+
+                $updatedStock = $product->batches->isNotEmpty()
+                    ? (int) $product->batches->sum('stock_quantity')
+                    : (int) $product->stock_quantity;
+
+                $product->stock_quantity = $updatedStock;
+                $product->save();
             }
 
             // Update order status

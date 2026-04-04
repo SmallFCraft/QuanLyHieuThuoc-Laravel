@@ -115,6 +115,18 @@ class CheckoutService
                 if ($remainingQty > 0) {
                     throw new \Exception("Không thể phân bổ đủ hàng cho sản phẩm.");
                 }
+
+                $updatedStock = (int) $batches->sum('stock_quantity');
+                DB::table('products')
+                    ->where('id', $productId)
+                    ->update([
+                        'stock_quantity' => $updatedStock,
+                        'updated_at' => now(),
+                    ]);
+
+                if (isset($products[$productId])) {
+                    $products[$productId]->setAttribute('stock_quantity', $updatedStock);
+                }
             }
 
             DB::commit();
@@ -173,3 +185,4 @@ class CheckoutService
         return $total;
     }
 }
+

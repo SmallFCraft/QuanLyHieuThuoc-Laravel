@@ -5,14 +5,18 @@ namespace App\Http\Controllers;
 use App\Services\ChatbotService;
 use App\Services\ImageRecognitionService;
 use App\Services\AuditLogService;
+use App\Models\ChatbotImage;
 use App\Models\ChatMessage;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ChatbotController extends Controller
 {
+    private const MAX_HISTORY_MESSAGES = 50;
+
     protected ChatbotService $chatbotService;
     protected ImageRecognitionService $imageRecognitionService;
 
@@ -43,11 +47,11 @@ class ChatbotController extends Controller
         }
         
         $validated = $request->validate([
-            'message' => 'required|string|min:3|max:1000',
+            'message' => 'required|string|min:2|max:1000',
             'context' => 'nullable|array'
         ], [
             'message.required' => 'Vui lòng nhập tin nhắn',
-            'message.min' => 'Tin nhắn phải có ít nhất 3 ký tự',
+            'message.min' => 'Tin nhắn phải có ít nhất 2 ký tự',
             'message.max' => 'Tin nhắn không được vượt quá 1000 ký tự'
         ]);
 
@@ -101,7 +105,9 @@ class ChatbotController extends Controller
                         'content' => $response['response'],
                         'products' => $response['products'] ?? null,
                         'metadata' => [
-                            'explanations' => $response['explanations'] ?? []
+                            'explanations' => $response['explanations'] ?? [],
+                            'categories' => $response['categories'] ?? [],
+                            'disclaimer' => $response['disclaimer'] ?? null,
                         ],
                         'show_disclaimer' => $response['show_disclaimer'] ?? false
                     ]);
@@ -230,17 +236,30 @@ class ChatbotController extends Controller
         try {
             $userId = auth()->id();
             $sessionId = $this->getSessionId();
+            $limit = max(1, min($request->integer('limit', self::MAX_HISTORY_MESSAGES), self::MAX_HISTORY_MESSAGES));
             
             $messages = ChatMessage::where('user_id', $userId)
                 ->where('session_id', $sessionId)
-                ->orderBy('created_at', 'asc')
-                ->get()
+                ->latest('created_at')
+                ->limit($limit)
+                ->get([
+                    'role',
+                    'content',
+                    'products',
+                    'metadata',
+                    'show_disclaimer',
+                    'created_at',
+                ])
+                ->reverse()
+                ->values()
                 ->map(function($msg) {
                     return [
                         'role' => $msg->role,
                         'content' => $msg->content,
                         'products' => $msg->products,
+                        'categories' => $msg->metadata['categories'] ?? [],
                         'show_disclaimer' => $msg->show_disclaimer,
+                        'disclaimer' => $msg->metadata['disclaimer'] ?? null,
                         'created_at' => $msg->created_at->format('Y-m-d H:i:s')
                     ];
                 })
@@ -281,12 +300,30 @@ class ChatbotController extends Controller
     public function clearHistory(Request $request): JsonResponse
     {
         try {
+            $userId = auth()->id();
             $sessionId = session('chat_session_id');
             
             if ($sessionId) {
-                // Don't delete messages, just create new session
-                session()->forget('chat_session_id');
+                ChatMessage::where('user_id', $userId)
+                    ->where('session_id', $sessionId)
+                    ->delete();
+
+                ChatbotImage::where('user_id', $userId)
+                    ->where('session_id', $sessionId)
+                    ->chunkById(100, function ($images) {
+                        foreach ($images as $image) {
+                            $path = $image->file_path ?? $image->image_path;
+
+                            if ($path && Storage::disk('local')->exists($path)) {
+                                Storage::disk('local')->delete($path);
+                            }
+
+                            $image->forceDelete();
+                        }
+                    });
             }
+
+            session()->forget(['chat_session_id', 'chatbot.messages']);
             
             return response()->json([
                 'success' => true,
@@ -616,9 +653,8 @@ class ChatbotController extends Controller
         $messages = session('chatbot.messages', []);
         $messages[] = $message;
         
-        // Keep only last 50 messages
-        if (count($messages) > 50) {
-            $messages = array_slice($messages, -50);
+        if (count($messages) > self::MAX_HISTORY_MESSAGES) {
+            $messages = array_slice($messages, -self::MAX_HISTORY_MESSAGES);
         }
         
         session(['chatbot.messages' => $messages]);

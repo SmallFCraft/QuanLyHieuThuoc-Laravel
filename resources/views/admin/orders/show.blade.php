@@ -10,23 +10,23 @@
         <!-- Order Information -->
         <div class="col-md-6">
             <div class="glass-card h-100">
-                <h5 class="fw-bold mb-4"><i class="bi bi-receipt text-emerald-600 me-2"></i>Thông tin đơn hàng</h5>
+                <h5 class="fw-bold mb-4"><i class="bi bi-receipt text-emerald-600 me-2"></i>{{ __('messages.admin.orders.info_title') }}</h5>
                 <table class="table table-borderless mb-0">
                     <tr>
-                        <td class="text-gray-500 ps-0" style="width: 140px;">Mã đơn hàng</td>
+                        <td class="text-gray-500 ps-0" style="width: 140px;">{{ __('messages.admin.orders.info_id') }}</td>
                         <td class="fw-bold">#{{ $order->id }}</td>
                     </tr>
                     <tr>
-                        <td class="text-gray-500 ps-0">Ngày đặt</td>
+                        <td class="text-gray-500 ps-0">{{ __('messages.admin.orders.info_date') }}</td>
                         <td class="fw-medium">{{ $order->formatted_created_at }}</td>
                     </tr>
                     <tr>
-                        <td class="text-gray-500 ps-0">Trạng thái</td>
+                        <td class="text-gray-500 ps-0">{{ __('messages.admin.orders.info_status') }}</td>
                         <td>
                             @if($order->status == 'Pending')
-                                <span class="badge bg-warning bg-opacity-10 text-warning-emphasis rounded-pill px-3 py-2"><i class="bi bi-clock me-1"></i>Đang chờ</span>
+                                <span class="badge bg-warning bg-opacity-10 text-warning-emphasis rounded-pill px-3 py-2"><i class="bi bi-clock me-1"></i>{{ __('messages.admin.orders.status_pending') }}</span>
                             @elseif($order->status == 'Delivering')
-                                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2"><i class="bi bi-truck me-1"></i>Đang giao</span>
+                                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2"><i class="bi bi-truck me-1"></i>{{ __('messages.admin.orders.status_delivering') }}</span>
                             @elseif($order->status == 'Completed')
                                 <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2"><i class="bi bi-check-circle me-1"></i>Hoàn thành</span>
                             @else
