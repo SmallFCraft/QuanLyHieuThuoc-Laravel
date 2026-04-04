@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class ChatbotController extends Controller
@@ -46,7 +47,7 @@ class ChatbotController extends Controller
             ], 401);
         }
         
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'message' => 'required|string|min:2|max:1000',
             'context' => 'nullable|array'
         ], [
@@ -54,6 +55,17 @@ class ChatbotController extends Controller
             'message.min' => 'Tin nhắn phải có ít nhất 2 ký tự',
             'message.max' => 'Tin nhắn không được vượt quá 1000 ký tự'
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'validation_error' => true,
+                'error' => (string) $validator->errors()->first('message'),
+                'errors' => $validator->errors(),
+            ]);
+        }
+
+        $validated = $validator->validated();
 
         try {
             $userId = auth()->id();

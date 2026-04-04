@@ -17,6 +17,8 @@ function chatbotWidget() {
         pasteListener: null,
         objectUrls: [],
         revokeTimers: [],
+        copiedMessageIndex: null,
+        copyFeedbackTimer: null,
         checkoutForm: {
             customer_name: '',
             shipping_phone: '',
@@ -71,6 +73,11 @@ function chatbotWidget() {
             if (this.pasteListener) {
                 document.removeEventListener('paste', this.pasteListener);
                 this.pasteListener = null;
+            }
+
+            if (this.copyFeedbackTimer) {
+                window.clearTimeout(this.copyFeedbackTimer);
+                this.copyFeedbackTimer = null;
             }
 
             this.revokeTimers.forEach((timer) => window.clearTimeout(timer));
@@ -228,8 +235,8 @@ function chatbotWidget() {
                             context: this.getContext()
                         })
                     });
-                    
-                    const data = await response.json();
+
+                    const data = await response.json().catch(() => ({}));
                     
                     // Handle authentication required
                     if (response.status === 401 && data.require_login) {
@@ -246,9 +253,25 @@ function chatbotWidget() {
                         this.scrollToBottom();
                         return;
                     }
-                    
+
+                    if (response.status === 422 || data.validation_error) {
+                        const validationMessage = data.error
+                            || data?.errors?.message?.[0]
+                            || data?.message
+                            || 'Dạ, tin nhắn chưa hợp lệ. Anh/chị vui lòng nhập lại giúp em nhé.';
+
+                        this.pushMessage({
+                            role: 'assistant',
+                            content: validationMessage,
+                            validation_error: true
+                        });
+
+                        return;
+                    }
+
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        const serverError = data.error || data.message || `HTTP error! status: ${response.status}`;
+                        throw new Error(serverError);
                     }
                     
                     if (data.success) {
@@ -662,36 +685,140 @@ function chatbotWidget() {
             const date = new Date(dateString);
             return date.toLocaleDateString('vi-VN');
         },
-        
+
+        async copyMessage(content, index) {
+            const text = String(content ?? '').trim();
+            if (!text) return;
+
+            let copied = false;
+
+            if (navigator.clipboard && window.isSecureContext) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    copied = true;
+                } catch (error) {
+                    copied = false;
+                }
+            }
+
+            if (!copied) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.setAttribute('readonly', '');
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                textarea.style.pointerEvents = 'none';
+                textarea.style.top = '-1000px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                textarea.setSelectionRange(0, textarea.value.length);
+
+                try {
+                    copied = document.execCommand('copy');
+                } catch (error) {
+                    copied = false;
+                }
+
+                document.body.removeChild(textarea);
+            }
+
+            if (!copied) return;
+
+            this.copiedMessageIndex = index;
+            if (this.copyFeedbackTimer) {
+                window.clearTimeout(this.copyFeedbackTimer);
+            }
+            this.copyFeedbackTimer = window.setTimeout(() => {
+                this.copiedMessageIndex = null;
+                this.copyFeedbackTimer = null;
+            }, 1800);
+        },
+
         parseMarkdown(text) {
             if (!text) return '';
-            
+
+            const rawText = String(text);
+            const normalizedText = rawText.replace(
+                /(?:https?:\/\/|www\.)[^\s<)]+/g,
+                (url, offset, source) => {
+                    const prefix = offset >= 2 ? source.slice(offset - 2, offset) : '';
+                    if (prefix === '](') {
+                        return url;
+                    }
+
+                    const href = url.startsWith('www.') ? `https://${url}` : url;
+                    return `[${url}](${href})`;
+                }
+            );
+
+            if (window.marked && typeof window.marked.parse === 'function') {
+                try {
+                    const html = window.marked.parse(normalizedText, {
+                        gfm: true,
+                        breaks: true
+                    });
+
+                    return this.decorateMarkdownHtml(html);
+                } catch (error) {
+                    console.warn('Marked parse failed, fallback to legacy parser', error);
+                }
+            }
+
+            return this.parseMarkdownLegacy(normalizedText);
+        },
+
+        decorateMarkdownHtml(html) {
+            let safeHtml = String(html || '');
+
+            if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+                safeHtml = window.DOMPurify.sanitize(safeHtml, {
+                    USE_PROFILES: { html: true },
+                    ADD_ATTR: ['target', 'rel', 'class']
+                });
+            }
+
+            const container = document.createElement('div');
+            container.innerHTML = safeHtml;
+
+            container.querySelectorAll('a').forEach((link) => {
+                const textValue = (link.textContent || '').trim();
+                const normalized = textValue.toLowerCase();
+                const isDetailLink = /^(xem chi tiết|xem chi tiet|mở sản phẩm|mo san pham|xem danh mục|xem danh muc|mở liên kết|mo lien ket)$/i.test(normalized);
+
+                let href = (link.getAttribute('href') || '').trim();
+                if (href.startsWith('www.')) {
+                    href = `https://${href}`;
+                    link.setAttribute('href', href);
+                }
+
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+
+                if (isDetailLink) {
+                    link.className = 'chatbot-link-btn';
+                } else {
+                    link.classList.add('chatbot-inline-link');
+                }
+            });
+
+            return container.innerHTML;
+        },
+
+        parseMarkdownLegacy(text) {
             let html = text
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
-            
-            // Parse markdown links [text](url) BEFORE other replacements
-            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
-                const linkText = String(text).trim().toLowerCase();
-                const isDetailLink = /^(xem chi tiết|xem chi tiet|mở sản phẩm|mo san pham|xem danh mục|xem danh muc|mở liên kết|mo lien ket)/i.test(linkText);
-                const linkClass = isDetailLink
-                    ? 'chatbot-link-btn'
-                    : 'text-emerald-600 hover:text-emerald-700 fw-medium text-decoration-underline';
 
-                return `<a href="${url}" class="${linkClass}" target="_blank" rel="noopener">${text}</a>`;
+            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
+                const normalizedLinkText = String(linkText).trim().toLowerCase();
+                const isDetailLink = /^(xem chi tiết|xem chi tiet|mở sản phẩm|mo san pham|xem danh mục|xem danh muc|mở liên kết|mo lien ket)$/i.test(normalizedLinkText);
+                const linkClass = isDetailLink ? 'chatbot-link-btn' : 'chatbot-inline-link';
+                const href = String(url).startsWith('www.') ? `https://${url}` : url;
+
+                return `<a href="${href}" class="${linkClass}" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
             });
 
-            // Fallback: convert raw URLs to clickable links when markdown was not used.
-            html = html.replace(/https?:\/\/[^\s<]+/g, (url, offset, source) => {
-                const prevChar = offset > 0 ? source[offset - 1] : '';
-                if (prevChar === '"' || prevChar === "'" || prevChar === '=') {
-                    return url;
-                }
-
-                return `<a href="${url}" class="chatbot-link-btn" target="_blank" rel="noopener">Mở liên kết</a>`;
-            });
-            
             html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
             html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
             html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
@@ -711,7 +838,7 @@ function chatbotWidget() {
             html = html.replace(/<\/li><br><li>/g, '</li><li>');
             html = html.replace(/<ul><br>/g, '<ul>');
             html = html.replace(/<br><\/ul>/g, '</ul>');
-            
+
             return html;
         },
         

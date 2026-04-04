@@ -137,7 +137,32 @@
                         </template>
                         
                         <!-- Assistant message -->
-                        <div x-show="message.role !== 'user'" class="markdown-body" x-html="parseMarkdown(message.content)"></div>
+                        <template x-if="message.role !== 'user'">
+                            <div class="assistant-message-wrapper">
+                                <div class="assistant-message-tools">
+                                    <button
+                                        type="button"
+                                        class="copy-message-btn"
+                                        @click="copyMessage(message.content, index)"
+                                        :aria-label="copiedMessageIndex === index ? 'Đã sao chép' : 'Sao chép nội dung trả lời'"
+                                        :title="copiedMessageIndex === index ? 'Đã sao chép' : 'Sao chép'"
+                                    >
+                                        <span x-show="copiedMessageIndex !== index" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                                <rect x="9" y="9" width="11" height="11" rx="2" ry="2"></rect>
+                                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                            </svg>
+                                        </span>
+                                        <span x-show="copiedMessageIndex === index" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M20 6L9 17l-5-5"></path>
+                                            </svg>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="markdown-body" x-html="parseMarkdown(message.content)"></div>
+                            </div>
+                        </template>
                         
                         <!-- Auth Buttons (Login/Register) -->
                         <template x-if="message.showAuthButtons">
@@ -165,8 +190,15 @@
                         <template x-if="message.products && message.products.length > 0">
                             <div class="mt-3 space-y-2">
                                 <template x-for="product in message.products" :key="product.id">
-                                    <div class="product-card">
-                                        <img :src="product.image_url || '/images/no-image.png'" :alt="product.name" class="product-image">
+                                    <div class="product-card" x-data="{ imageError: false }">
+                                        <template x-if="product.image_url && !imageError">
+                                            <img :src="product.image_url" :alt="product.name" class="product-image" x-on:error="imageError = true">
+                                        </template>
+                                        <template x-if="!product.image_url || imageError">
+                                            <div class="product-image product-image-placeholder">
+                                                <i class="bi bi-capsule text-secondary opacity-25" style="font-size: 1.5rem;"></i>
+                                            </div>
+                                        </template>
                                         <div class="product-info">
                                             <h4 class="product-name" x-text="product.name"></h4>
                                             <p class="product-price" x-text="formatCurrency(product.price)"></p>
@@ -411,9 +443,11 @@
     position: fixed;
     bottom: 30px;
     right: 30px;
-    z-index: 1040;
+    z-index: 2147483000;
     min-height: 64px;
     min-width: 64px;
+    max-width: 100vw;
+    overflow: visible;
     pointer-events: none;
 }
 
@@ -550,6 +584,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    overflow-x: hidden;
     max-height: calc(100vh - 120px);
     max-width: calc(100vw - 60px);
 }
@@ -573,6 +608,7 @@
 .chatbot-messages {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 20px 24px;
     background: transparent;
 }
@@ -606,6 +642,8 @@
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .message-assistant .message-content {
@@ -618,6 +656,8 @@
     border-radius: 20px 20px 20px 4px;
     max-width: 85%;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .message-assistant.system-message .message-content {
@@ -704,6 +744,14 @@
     border-radius: 8px;
     flex-shrink: 0;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.product-image-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .product-info {
@@ -936,6 +984,10 @@
 .markdown-body blockquote { border-left: 3px solid #10b981; padding-left: 10px; margin: 8px 0; color: #4a5568; font-style: italic; }
 .markdown-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 10px 0; }
 .markdown-body a { color: #10b981; text-decoration: underline; }
+.markdown-body a.chatbot-inline-link {
+    color: #0f766e;
+    font-weight: 600;
+}
 .markdown-body a.chatbot-link-btn {
     display: inline-block;
     margin-top: 4px;
@@ -953,6 +1005,38 @@
     color: #ffffff;
     text-decoration: none;
     transform: translateY(-1px);
+}
+
+.assistant-message-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.assistant-message-tools {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.copy-message-btn {
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.08);
+    color: #047857;
+    border-radius: 999px;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    transition: all 0.2s ease;
+}
+
+.copy-message-btn:hover {
+    background: #10b981;
+    color: #ffffff;
+    border-color: #10b981;
 }
 
 /* Welcome Message Styles */
@@ -1089,8 +1173,9 @@
     }
     .chatbot-widget-container.chatbot-active {
         bottom: 0;
+        left: 0;
         right: 0;
-        width: 100%;
+        width: auto;
         display: flex;
         justify-content: flex-end;
     }
@@ -1125,5 +1210,8 @@
 </style>
 
 
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
 
 @include('components.chatbot-widget-script')

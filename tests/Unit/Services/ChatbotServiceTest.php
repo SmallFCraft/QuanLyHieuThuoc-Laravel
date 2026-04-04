@@ -535,6 +535,48 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('Isosorbide Dinitrate 5mg', $result['response']);
     }
 
+    public function test_process_message_with_url_only_returns_link_guidance_instead_of_symptom_advice(): void
+    {
+        $this->geminiService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage(
+            'https://svh-22298.azdigihost.com:2222/evo/user/filemanager/files?path=/domains/pharmacy.phmyhu1710.dev/public_html',
+            1,
+            []
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertStringContainsString('link', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('nên nghỉ ngơi', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_process_message_with_nearby_pharmacy_location_request_does_not_return_categories(): void
+    {
+        $category = Category::factory()->create(['name' => 'Thuốc tiêu hóa']);
+        Product::factory()->create([
+            'category_id' => $category->id,
+            'name' => 'Smecta',
+            'usage' => 'Điều trị tiêu chảy.',
+            'stock_quantity' => 15,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->geminiService->expects($this->never())->method('chat');
+
+        $message = 'Dạ, là một AI, em không có khả năng truy cập thông tin vị trí địa lý hoặc danh sách các tiệm thuốc cụ thể gần khu vực Đà Nẵng, quận Ngũ Hành Sơn. Anh/chị có thể thử tìm kiếm trên Google Maps hoặc các ứng dụng bản đồ khác để tìm tiệm thuốc gần nhất nhé.';
+        $result = $this->chatbotService->processMessage($message, 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertStringContainsString('google maps', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('danh mục sau', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
     public function test_recommend_by_symptoms_includes_disclaimer(): void
     {
         $this->geminiService->method('chat')->willReturn([

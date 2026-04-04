@@ -296,7 +296,9 @@ PROMPT;
             $responseType = 'general';
 
             $normalizedMessage = $this->normalizeMessage($workingMessage);
-            $defaultQuery = $this->resolveCatalogQuery($workingMessage);
+            $isUrlOnlyMessage = $this->isLikelyUrlOnlyMessage($workingMessage);
+            $isNearbyPharmacyIntent = $this->isNearbyPharmacyLocationIntent($workingMessage);
+            $defaultQuery = ($isUrlOnlyMessage || $isNearbyPharmacyIntent) ? '' : $this->resolveCatalogQuery($workingMessage);
             $defaultDisclaimer = $this->isSymptomRelatedQuery($workingMessage)
                 || $this->requiresAiConsultation($normalizedMessage);
 
@@ -373,9 +375,11 @@ PROMPT;
                 $responseText = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
                 $showDisclaimer = $defaultDisclaimer || $this->containsMedicalAdvice($responseText);
 
-                $shouldEnrichCatalog = $this->isCategoryIntent($normalizedMessage)
+                $shouldEnrichCatalog = !$isUrlOnlyMessage && !$isNearbyPharmacyIntent && (
+                    $this->isCategoryIntent($normalizedMessage)
                     || $defaultQuery !== ''
-                    || $this->wantsProductSuggestionForSymptom($workingMessage);
+                    || $this->wantsProductSuggestionForSymptom($workingMessage)
+                );
 
                 if ($shouldEnrichCatalog) {
                     $catalogResponse = $this->buildCatalogLookupResponse($defaultQuery, $workingMessage, $showDisclaimer);
@@ -556,6 +560,19 @@ PROMPT;
     {
         $normalizedMessage = $this->normalizeMessage($message);
 
+        if ($this->isLikelyUrlOnlyMessage($message)) {
+            return [
+                'success' => true,
+                'response' => 'Dạ, em chưa thể truy cập trực tiếp link bên ngoài. Anh/chị vui lòng mô tả nội dung cần hỗ trợ (ví dụ tên thuốc, triệu chứng, hoặc danh mục) để em tư vấn chính xác hơn nhé.',
+                'products' => [],
+                'categories' => [],
+                'explanations' => [],
+                'show_disclaimer' => false,
+                'disclaimer' => null,
+                'response_type' => 'general'
+            ];
+        }
+
         if ($this->isWebsiteInfoIntent($normalizedMessage)) {
             return $this->buildWebsiteIntroductionResponse();
         }
@@ -590,6 +607,19 @@ PROMPT;
             return [
                 'success' => true,
                 'response' => 'Dạ, em đang tập trung hỗ trợ các nội dung liên quan đến nhà thuốc như sản phẩm, danh mục, sức khỏe và đặt hàng. Nếu anh/chị cần tìm thuốc hoặc muốn em gợi ý danh mục phù hợp, cứ nhắn trực tiếp để em hỗ trợ ngay.',
+                'products' => [],
+                'categories' => [],
+                'explanations' => [],
+                'show_disclaimer' => false,
+                'disclaimer' => null,
+                'response_type' => 'general'
+            ];
+        }
+
+        if ($this->isNearbyPharmacyLocationIntent($message)) {
+            return [
+                'success' => true,
+                'response' => 'Dạ, em chưa thể tra cứu vị trí nhà thuốc gần khu vực của anh/chị theo bản đồ thời gian thực. Anh/chị vui lòng dùng Google Maps/Apple Maps để tìm "nhà thuốc gần đây", còn em có thể hỗ trợ tra cứu sản phẩm và tư vấn ngay trên hệ thống Medicare Pharmacy.',
                 'products' => [],
                 'categories' => [],
                 'explanations' => [],
@@ -1489,6 +1519,27 @@ PROMPT;
         return $this->containsAnyKeyword($normalizedMessage, self::OUT_OF_DOMAIN_KEYWORDS);
     }
 
+    protected function isNearbyPharmacyLocationIntent(string $message): bool
+    {
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return false;
+        }
+
+        $pharmacySignals = [
+            'nha thuoc', 'tiem thuoc', 'pharmacy', 'drugstore'
+        ];
+
+        $locationSignals = [
+            'gan day', 'gan nhat', 'o dau', 'dia chi', 'vi tri', 'khu vuc',
+            'quan', 'huyen', 'tinh', 'thanh pho', 'google maps', 'apple maps',
+            'ban do', 'map', 'maps'
+        ];
+
+        return $this->containsAnyKeyword($normalized, $pharmacySignals)
+            && $this->containsAnyKeyword($normalized, $locationSignals);
+    }
+
     protected function summarizeText(?string $text, int $limit = 150): string
     {
         $text = trim((string) $text);
@@ -1547,22 +1598,42 @@ PROMPT;
      */
     protected function isSymptomRelatedQuery(string $query): bool
     {
-        $symptomKeywords = [
-            'đau', 'sốt', 'ho', 'cảm', 'viêm', 'nhiễm', 'dị ứng', 'ngứa',
-            'chóng mặt', 'buồn nôn', 'tiêu chảy', 'táo bón', 'mệt mỏi',
-            'khó thở', 'đau đầu', 'đau bụng', 'đau họng', 'sổ mũi',
-            'triệu chứng', 'bệnh', 'ốm', 'khó chịu', 'không khỏe'
-        ];
-
-        $queryLower = mb_strtolower($query, 'UTF-8');
-
-        foreach ($symptomKeywords as $keyword) {
-            if (mb_strpos($queryLower, $keyword) !== false) {
-                return true;
-            }
+        if ($this->isLikelyUrlOnlyMessage($query)) {
+            return false;
         }
 
-        return false;
+        $symptomKeywords = [
+            'dau', 'sot', 'ho', 'cam', 'viem', 'nhiem', 'di ung', 'ngua',
+            'chong mat', 'buon non', 'tieu chay', 'tao bon', 'met moi',
+            'kho tho', 'dau dau', 'dau bung', 'dau hong', 'so mui',
+            'trieu chung', 'benh', 'om', 'kho chiu', 'khong khoe'
+        ];
+
+        return $this->containsAnyKeyword($query, $symptomKeywords);
+    }
+
+    protected function isLikelyUrlOnlyMessage(string $message): bool
+    {
+        $trimmed = trim($message);
+        if ($trimmed === '') {
+            return false;
+        }
+
+        // Markdown link: [text](https://...)
+        if (preg_match('/^\[[^\]]+\]\((https?:\/\/[^\s)]+)\)$/iu', $trimmed) === 1) {
+            return true;
+        }
+
+        if (filter_var($trimmed, FILTER_VALIDATE_URL) !== false) {
+            return true;
+        }
+
+        // Raw URL-like payload without additional sentence context.
+        if (preg_match('/^(https?:\/\/|www\.)\S+$/iu', $trimmed) === 1) {
+            return true;
+        }
+
+        return str_contains($trimmed, '://') && preg_match('/\s/u', $trimmed) !== 1;
     }
 
     /**
@@ -1934,6 +2005,3 @@ PROMPT;
         return true;
     }
 }
-
-
-
