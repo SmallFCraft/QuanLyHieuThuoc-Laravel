@@ -161,16 +161,17 @@
                     <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
                         <div class="product-card h-100 border-0">
                             <div class="position-relative overflow-hidden home-product-media" style="border-radius: 16px 16px 0 0; aspect-ratio: 1/1;">
-                                @if($product->image)
+                                @php($hasImage = filled($product->image))
+                                @if($hasImage)
                                     <img src="{{ asset('storage/' . $product->image) }}"
                                          class="w-100 h-100 object-fit-cover"
                                          alt="{{ $product->name }}"
-                                         loading="lazy">
-                                @else
-                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center">
-                                        <i class="bi bi-capsule text-secondary opacity-25" style="font-size: 4rem;"></i>
-                                    </div>
+                                         loading="lazy"
+                                         onerror="this.classList.add('d-none'); this.nextElementSibling.classList.remove('d-none');">
                                 @endif
+                                <div class="w-100 h-100 d-flex align-items-center justify-content-center {{ $hasImage ? 'd-none' : '' }}">
+                                    <i class="bi bi-capsule text-secondary opacity-25" style="font-size: 4rem;"></i>
+                                </div>
                                 <div class="position-absolute top-0 start-0 m-2 m-md-3 d-flex flex-column gap-2">
                                     <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle px-2 py-1 rounded-pill">
                                         <i class="bi bi-stars me-1"></i>{{ __('messages.home_new_badge') }}
@@ -252,16 +253,17 @@
                     <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
                         <div class="product-card h-100 border-0">
                             <div class="position-relative overflow-hidden home-product-media" style="border-radius: 16px 16px 0 0; aspect-ratio: 1/1;">
-                                @if($product->image)
+                                @php($hasImage = filled($product->image))
+                                @if($hasImage)
                                     <img src="{{ asset('storage/' . $product->image) }}"
                                          class="w-100 h-100 object-fit-cover"
                                          alt="{{ $product->name }}"
-                                         loading="lazy">
-                                @else
-                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center">
-                                        <i class="bi bi-capsule text-secondary opacity-25" style="font-size: 4rem;"></i>
-                                    </div>
+                                         loading="lazy"
+                                         onerror="this.classList.add('d-none'); this.nextElementSibling.classList.remove('d-none');">
                                 @endif
+                                <div class="w-100 h-100 d-flex align-items-center justify-content-center {{ $hasImage ? 'd-none' : '' }}">
+                                    <i class="bi bi-capsule text-secondary opacity-25" style="font-size: 4rem;"></i>
+                                </div>
                                 <div class="position-absolute top-0 start-0 m-2 m-md-3 d-flex flex-column gap-2">
                                     @if($product->views_count > 0)
                                         <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1 rounded-pill">
