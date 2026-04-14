@@ -23,8 +23,8 @@ composer.lock
 /.nova
 /.vscode
 /.zed
-.kiro/
-.cursor/
-.agent/
+/.kiro
+/.cursor
+/.agent
 *.zip
 .playwright-mcp/

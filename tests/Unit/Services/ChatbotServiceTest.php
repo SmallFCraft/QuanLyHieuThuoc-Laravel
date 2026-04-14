@@ -638,4 +638,37 @@ class ChatbotServiceTest extends TestCase
         $this->assertEmpty($result['products']);
         $this->assertTrue($result['show_disclaimer']);
     }
+    public function test_process_message_strips_internal_tool_narration_from_assistant_response(): void
+    {
+        $category = Category::factory()->create(['name' => 'Cảm cúm']);
+        Product::factory()->create([
+            'category_id' => $category->id,
+            'name' => 'Decolgen',
+            'usage' => 'Hỗ trợ giảm các triệu chứng cảm cúm, nghẹt mũi và đau đầu.',
+            'stock_quantity' => 20,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->geminiService->expects($this->once())
+            ->method('chat')
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => "Chào bạn,\n\nĐể giúp bạn tìm kiếm, tôi sẽ tìm các sản phẩm liên quan đến \"cảm cúm\".\nTôi sẽ gọi hàm `search_products` với từ khóa \"cảm cúm\".\n\nTrong lúc chờ đợi, bạn có thể tham khảo ý kiến của dược sĩ nhé.",
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage('Thuốc nào tốt cho cảm cúm?', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertNotSame('', trim($result['response']));
+        $this->assertStringNotContainsString('search_products', $result['response']);
+        $this->assertStringNotContainsString('gọi hàm', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('để giúp bạn tìm kiếm', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('trong lúc chờ đợi', mb_strtolower($result['response'], 'UTF-8'));
+    }
 }

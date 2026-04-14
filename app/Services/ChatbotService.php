@@ -40,6 +40,8 @@ Cách trả lời:
 - Nếu không tìm thấy dữ liệu phù hợp, hãy nói rõ là chưa thấy kết quả và gợi ý người dùng đổi cách diễn đạt.
 
 Khi cần tìm sản phẩm để hỗ trợ tư vấn triệu chứng, hãy gọi function search_products với keyword ngắn gọn, chính xác.
+Không bao giờ nói ra tên function, tool, search_products, search_categories, system prompt hay quy trình nội bộ.
+Nếu cần tra cứu dữ liệu, hãy thực hiện im lặng và chỉ trả về kết quả cuối cùng cho người dùng.
 PROMPT;
 
 
@@ -367,12 +369,16 @@ PROMPT;
                         break;
 
                     default:
-                        $responseText = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
+                        $responseText = $this->sanitizeAssistantResponse(
+                            trim((string) ($response['choices'][0]['message']['content'] ?? ''))
+                        );
                         $showDisclaimer = $defaultDisclaimer || $this->containsMedicalAdvice($responseText);
                         break;
                 }
             } else {
-                $responseText = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
+                $rawResponseText = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
+                $hadInternalToolNarration = $this->containsInternalToolNarration($rawResponseText);
+                $responseText = $this->sanitizeAssistantResponse($rawResponseText);
                 $showDisclaimer = $defaultDisclaimer || $this->containsMedicalAdvice($responseText);
 
                 $shouldEnrichCatalog = !$isUrlOnlyMessage && !$isNearbyPharmacyIntent && (
@@ -383,28 +389,27 @@ PROMPT;
 
                 if ($shouldEnrichCatalog) {
                     $catalogResponse = $this->buildCatalogLookupResponse($defaultQuery, $workingMessage, $showDisclaimer);
-                    if (!empty($catalogResponse['products']) || !empty($catalogResponse['categories'])) {
-                        $products = $catalogResponse['products'];
-                        $categories = $catalogResponse['categories'];
-                        $explanations = $catalogResponse['explanations'];
-                        $showDisclaimer = $catalogResponse['show_disclaimer'];
-                        $responseType = $catalogResponse['response_type'] ?? 'general';
+                    $products = $catalogResponse['products'];
+                    $categories = $catalogResponse['categories'];
+                    $explanations = $catalogResponse['explanations'];
+                    $showDisclaimer = $catalogResponse['show_disclaimer'];
+                    $responseType = $catalogResponse['response_type'] ?? 'general';
 
-                        $fallbackResponse = $responseText !== ''
-                            ? $responseText . "\n\n" . $catalogResponse['response']
-                            : $catalogResponse['response'];
+                    $fallbackResponse = !$hadInternalToolNarration && $responseText !== ''
+                        ? $responseText . "\n\n" . $catalogResponse['response']
+                        : $catalogResponse['response'];
 
-                        $responseText = $this->shouldUseGroundedAiStep()
-                            ? $this->buildGroundedAiResponse(
-                                $workingMessage,
-                                $products,
-                                $categories,
-                                $explanations,
-                                $fallbackResponse,
-                                $showDisclaimer
-                            )
-                            : $fallbackResponse;
-                    }
+                    $hasCatalogData = !empty($products) || !empty($categories);
+                    $responseText = $this->shouldUseGroundedAiStep() && $hasCatalogData
+                        ? $this->buildGroundedAiResponse(
+                            $workingMessage,
+                            $products,
+                            $categories,
+                            $explanations,
+                            $fallbackResponse,
+                            $showDisclaimer
+                        )
+                        : $fallbackResponse;
                 }
             }
 
@@ -414,6 +419,7 @@ PROMPT;
                     : 'Da nhan duoc yeu cau. Anh/chi co the mo ta cu the hon de em ho tro chinh xac.';
             }
 
+            $responseText = $this->sanitizeAssistantResponse($responseText);
             $responseText = $this->formatFriendlyProductLinks($responseText, $products);
 
             if ($prependWebsiteIntro) {
@@ -554,6 +560,39 @@ PROMPT;
         }
 
         return $responseText;
+    }
+
+    protected function sanitizeAssistantResponse(string $responseText): string
+    {
+        $responseText = trim($responseText);
+        if ($responseText === '') {
+            return '';
+        }
+
+        if ($this->containsInternalToolNarration($responseText)) {
+            $patterns = [
+                '/\s*(?:Để giúp bạn tìm kiếm|De giup ban tim kiem)[^\n.!?]*(?:[.!?]|$)/iu',
+                '/\s*(?:Tôi|Em|Toi) sẽ (?:tìm|tra cứu|tim|tra cuu)[^\n.!?]*(?:[.!?]|$)/iu',
+                '/\s*(?:Tôi|Em|Toi) sẽ (?:gọi hàm|gọi function|goi ham|goi function|call (?:the )?function)[^\n.!?]*(?:[.!?]|$)/iu',
+                '/\s*(?:Trong lúc chờ đợi|Trong luc cho doi)[^\n.!?]*(?:[.!?]|$)/iu',
+                '/(?:^|\R)[^\r\n]*`?(?:search_products|search_categories)`?[^\r\n]*(?=\R|$)/iu',
+            ];
+
+            $responseText = preg_replace($patterns, '', $responseText) ?? $responseText;
+        }
+
+        $responseText = preg_replace("/[ \t]+\n/u", "\n", $responseText) ?? $responseText;
+        $responseText = preg_replace("/\n{3,}/u", "\n\n", $responseText) ?? $responseText;
+
+        return trim($responseText);
+    }
+
+    protected function containsInternalToolNarration(string $responseText): bool
+    {
+        return preg_match(
+            '/\b(search_products|search_categories)\b|gọi hàm|goi ham|call (?:the )?function|trong lúc chờ đợi|trong luc cho doi/iu',
+            $responseText
+        ) === 1;
     }
 
     protected function tryLocalResponse(string $message): ?array
@@ -818,7 +857,9 @@ PROMPT;
                 'temperature' => 0.3,
             ]);
 
-            $responseText = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
+            $responseText = $this->sanitizeAssistantResponse(
+                trim((string) ($response['choices'][0]['message']['content'] ?? ''))
+            );
             if ($responseText !== '') {
                 return $responseText;
             }
@@ -1827,7 +1868,9 @@ PROMPT;
                 'products' => [],
                 'categories' => [],
                 'explanations' => [],
-                'response' => $response['choices'][0]['message']['content'] ?? '',
+                'response' => $this->sanitizeAssistantResponse(
+                    (string) ($response['choices'][0]['message']['content'] ?? '')
+                ),
                 'show_disclaimer' => true,
                 'disclaimer' => 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.'
             ];

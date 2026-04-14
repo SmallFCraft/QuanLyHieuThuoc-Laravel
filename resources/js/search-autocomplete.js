@@ -191,7 +191,7 @@ class SearchAutocomplete {
 
         if (categories.length > 0) {
             html += '<div class="suggestion-section">';
-            html += '<div class="suggestion-header">Danh má»¥c</div>';
+            html += '<div class="suggestion-header">Danh mục</div>';
             categories.forEach((category) => {
                 html += `
                     <a href="${category.url}" class="suggestion-item category-item">
@@ -205,7 +205,7 @@ class SearchAutocomplete {
 
         if (products.length > 0) {
             html += '<div class="suggestion-section">';
-            html += '<div class="suggestion-header">Sáº£n pháº©m</div>';
+            html += '<div class="suggestion-header">Sản phẩm</div>';
             products.forEach((product) => {
                 html += `
                     <a href="${product.url}" class="suggestion-item product-item">
@@ -231,7 +231,7 @@ class SearchAutocomplete {
         html += `
             <div class="suggestion-footer">
                 <a href="/search?q=${encodeURIComponent(query)}" class="view-all-link">
-                    Xem táº¥t cáº£ káº¿t quáº£ cho "${query}" <i class="bi bi-arrow-right"></i>
+                    Xem tất cả kết quả cho "${query}" <i class="bi bi-arrow-right"></i>
                 </a>
             </div>
         `;
@@ -245,7 +245,7 @@ class SearchAutocomplete {
         this.suggestionsContainer.innerHTML = `
             <div class="suggestion-empty">
                 <i class="bi bi-search text-gray-300"></i>
-                <p>KhÃ´ng tÃ¬m tháº¥y káº¿t quáº£ cho "${query}"</p>
+                <p>Không tìm thấy kết quả cho "${query}"</p>
             </div>
         `;
         this.showSuggestions();
