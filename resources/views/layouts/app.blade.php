@@ -5,7 +5,180 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>@yield('title', config('app.name', 'Nhà Thuốc'))</title>
+        @php
+            $appName = config('app.name', 'Nhà Thuốc Sinh Thái');
+            $defaultDescription = __('messages.slogan');
+
+            if (request()->routeIs('products.show') && isset($product)) {
+                $defaultDescription = $product->name;
+
+                if (!empty($product->ingredients)) {
+                    $defaultDescription .= '. Thành phần: ' . $product->ingredients;
+                } elseif (!empty($product->usage)) {
+                    $defaultDescription .= '. Công dụng: ' . $product->usage;
+                }
+
+                $defaultDescription .= '. Mua tại ' . $appName . '.';
+            } elseif (request()->routeIs('products.search') && !empty($searchTerm)) {
+                $defaultDescription = 'Kết quả tìm kiếm cho "' . $searchTerm . '" tại ' . $appName . '. Khám phá dược phẩm và sản phẩm chăm sóc sức khỏe chính hãng.';
+            } elseif (request()->routeIs('products.category') && isset($category)) {
+                $defaultDescription = 'Khám phá danh mục ' . $category->name . ' tại ' . $appName . ' với các sản phẩm chính hãng, thông tin rõ ràng và hỗ trợ tư vấn tận tâm.';
+            } elseif (request()->routeIs('products.index')) {
+                $defaultDescription = 'Khám phá danh mục thuốc, dược phẩm và sản phẩm chăm sóc sức khỏe tại ' . $appName . '. Nguồn gốc minh bạch, hỗ trợ tư vấn nhanh chóng.';
+            } elseif (request()->routeIs('contact')) {
+                $defaultDescription = 'Liên hệ ' . $appName . ' để được hỗ trợ về sản phẩm, đơn hàng và tư vấn chăm sóc sức khỏe.';
+            }
+
+            $metaTitle = trim(strip_tags($__env->yieldContent('title', $appName)));
+            $metaDescription = trim(strip_tags($__env->yieldContent('meta_description', $defaultDescription)));
+            $metaDescription = \Illuminate\Support\Str::limit(\Illuminate\Support\Str::squish($metaDescription), 160, '...');
+            $metaKeywords = trim(strip_tags($__env->yieldContent(
+                'meta_keywords',
+                'nhà thuốc, dược phẩm, thuốc chính hãng, chăm sóc sức khỏe, thực phẩm chức năng, Medicare Pharmacy'
+            )));
+
+            $metaImage = trim($__env->yieldContent(
+                'meta_image',
+                request()->routeIs('products.show') && isset($product) && !empty($product->image_url)
+                    ? $product->image_url
+                    : asset('images/logo.png')
+            ));
+
+            $metaType = trim($__env->yieldContent(
+                'meta_type',
+                request()->routeIs('products.show') ? 'product' : 'website'
+            ));
+
+            $defaultRobots = request()->routeIs([
+                'admin.*',
+                'cart.*',
+                'checkout.*',
+                'profile.*',
+                'login',
+                'register',
+                'password.*',
+                'verification.*',
+                'products.search',
+            ]) ? 'noindex, nofollow' : 'index, follow';
+
+            $metaRobots = trim($__env->yieldContent('meta_robots', $defaultRobots));
+            $metaCanonical = trim($__env->yieldContent(
+                'meta_canonical',
+                request()->fullUrlWithoutQuery(['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid'])
+            ));
+            $metaLocale = app()->getLocale() === 'vi' ? 'vi_VN' : app()->getLocale();
+            $metaImageAlt = trim($__env->yieldContent(
+                'meta_image_alt',
+                request()->routeIs('products.show') && isset($product)
+                    ? $product->name . ' - ' . $appName
+                    : $appName . ' logo'
+            ));
+
+            $organizationSchema = [
+                '@context' => 'https://schema.org',
+                '@type' => 'Organization',
+                'name' => $appName,
+                'url' => config('app.url'),
+                'logo' => asset('images/logo.png'),
+                'image' => asset('images/logo.png'),
+                'email' => 'cskh@nhathuocsinhthai.vn',
+                'telephone' => '19008888',
+                'address' => [
+                    '@type' => 'PostalAddress',
+                    'streetAddress' => 'Lê Văn Hiến, Ngũ Hành Sơn',
+                    'addressLocality' => 'Đà Nẵng',
+                    'addressCountry' => 'VN',
+                ],
+                'contactPoint' => [
+                    '@type' => 'ContactPoint',
+                    'contactType' => 'customer support',
+                    'telephone' => '19008888',
+                    'email' => 'cskh@nhathuocsinhthai.vn',
+                    'availableLanguage' => ['vi', 'en'],
+                ],
+            ];
+
+            $websiteSchema = [
+                '@context' => 'https://schema.org',
+                '@type' => 'WebSite',
+                'name' => $appName,
+                'url' => route('home'),
+                'inLanguage' => app()->getLocale(),
+                'potentialAction' => [
+                    '@type' => 'SearchAction',
+                    'target' => route('products.search') . '?q={search_term_string}',
+                    'query-input' => 'required name=search_term_string',
+                ],
+            ];
+
+            $productSchema = null;
+            if (request()->routeIs('products.show') && isset($product)) {
+                $productSchema = [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'Product',
+                    'name' => $product->name,
+                    'description' => $metaDescription,
+                    'image' => [$metaImage],
+                    'sku' => $product->batch_number ?: (string) $product->id,
+                    'category' => $product->category->name ?? null,
+                    'brand' => [
+                        '@type' => 'Brand',
+                        'name' => $appName,
+                    ],
+                    'offers' => [
+                        '@type' => 'Offer',
+                        'priceCurrency' => 'VND',
+                        'price' => (float) $product->price,
+                        'availability' => $product->stock_quantity > 0
+                            ? 'https://schema.org/InStock'
+                            : 'https://schema.org/OutOfStock',
+                        'url' => request()->url(),
+                    ],
+                ];
+            }
+        @endphp
+
+        <title>{{ $metaTitle }}</title>
+        <meta name="description" content="{{ $metaDescription }}">
+        <meta name="keywords" content="{{ $metaKeywords }}">
+        <meta name="author" content="{{ $appName }}">
+        <meta name="robots" content="{{ $metaRobots }}">
+        <meta name="theme-color" content="#10b981">
+        <meta name="format-detection" content="telephone=no">
+        <meta name="application-name" content="{{ $appName }}">
+
+        <link rel="canonical" href="{{ $metaCanonical }}">
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}">
+        <link rel="image_src" href="{{ $metaImage }}">
+
+        <meta property="og:locale" content="{{ $metaLocale }}">
+        <meta property="og:site_name" content="{{ $appName }}">
+        <meta property="og:type" content="{{ $metaType }}">
+        <meta property="og:title" content="{{ $metaTitle }}">
+        <meta property="og:description" content="{{ $metaDescription }}">
+        <meta property="og:url" content="{{ $metaCanonical }}">
+        <meta property="og:image" content="{{ $metaImage }}">
+        <meta property="og:image:alt" content="{{ $metaImageAlt }}">
+        <meta property="og:image:width" content="2816">
+        <meta property="og:image:height" content="1536">
+
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="{{ $metaTitle }}">
+        <meta name="twitter:description" content="{{ $metaDescription }}">
+        <meta name="twitter:image" content="{{ $metaImage }}">
+        <meta name="twitter:image:alt" content="{{ $metaImageAlt }}">
+
+        <meta itemprop="name" content="{{ $metaTitle }}">
+        <meta itemprop="description" content="{{ $metaDescription }}">
+        <meta itemprop="image" content="{{ $metaImage }}">
+
+        <script type="application/ld+json">{!! json_encode($organizationSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+        <script type="application/ld+json">{!! json_encode($websiteSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+        @if($productSchema)
+            <script type="application/ld+json">{!! json_encode($productSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+        @endif
+        @stack('meta')
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
