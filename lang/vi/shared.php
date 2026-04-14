@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'showing' => 'Hiển thị',
+    'to' => 'đến',
+    'of' => 'trong tổng số',
+    'entries' => 'mục',
+    'date_format' => 'd/m/Y',
+    'datetime_format' => 'd/m/Y H:i',
+    'today' => 'Hôm nay',
+    'yesterday' => 'Hôm qua',
+    'this_week' => 'Tuần này',
+    'this_month' => 'Tháng này',
+    'this_year' => 'Năm nay',
+    'currency_symbol' => '₫',
+    'currency_format' => ':amount ₫',
+    'loading' => 'Đang tải...',
+    'no_data' => 'Không có dữ liệu',
+    'select_option' => 'Chọn...',
+    'all' => 'Tất cả',
+    'none' => 'Không có',
+    'yes' => 'Có',
+    'no' => 'Không',
+    'optional' => 'Tùy chọn',
+    'required' => 'Bắt buộc',
+];
