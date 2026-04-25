@@ -59,7 +59,7 @@ class Order extends Model
     public function calculateTotal(): float
     {
         return (float) $this->items()
-            ->selectRaw('COALESCE(SUM(quantity * unit_price), 0) as total')
+            ->selectRaw('COALESCE(SUM(quantity * ROUND(unit_price, 0)), 0) as total')
             ->value('total');
     }
 
@@ -88,7 +88,7 @@ class Order extends Model
      */
     public function getFormattedTotalAttribute(): string
     {
-        return number_format($this->total_amount, 0, ',', '.') . ' ₫';
+        return number_format((int) round((float) $this->total_amount), 0, ',', '.') . ' ₫';
     }
 
     /**

@@ -35,9 +35,9 @@ class CartController extends Controller
                 $cartItems[] = [
                     'product' => $product,
                     'quantity' => $quantity,
-                    'subtotal' => $product->price * $quantity
+                    'subtotal' => $product->price_vnd * $quantity
                 ];
-                $total += $product->price * $quantity;
+                $total += $product->price_vnd * $quantity;
             }
         }
 

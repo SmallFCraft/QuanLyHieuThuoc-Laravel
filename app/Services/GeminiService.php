@@ -15,8 +15,10 @@ use Gemini\Data\ThinkingConfig;
 use Gemini\Data\Tool;
 use Gemini\Enums\DataType;
 use Gemini\Enums\Role;
-use Illuminate\Support\Facades\Log;
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\RequestOptions;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class GeminiService
 {
@@ -38,10 +40,10 @@ class GeminiService
             throw new \RuntimeException('Gemini API key not configured');
         }
 
-        $this->setClientForKeyIndex(0);
         $this->maxRetries = 3;
         $this->retryDelay = 1000; // milliseconds
-        $this->timeout = 30; // seconds
+        $this->timeout = min(max((int) config('chatbot.gemini.timeout', 30), 1), 120);
+        $this->setClientForKeyIndex(0);
     }
 
     /**
@@ -248,7 +250,25 @@ class GeminiService
     protected function setClientForKeyIndex(int $index): void
     {
         $this->activeKeyIndex = $index;
-        $this->client = Gemini::client($this->apiKeys[$index]);
+        $this->client = $this->makeClient($this->apiKeys[$index]);
+    }
+
+    /**
+     * Build a Gemini SDK client with bounded HTTP timeouts.
+     */
+    protected function makeClient(string $apiKey): Client
+    {
+        $connectTimeout = min(10, $this->timeout);
+        $httpClient = new GuzzleClient([
+            RequestOptions::CONNECT_TIMEOUT => $connectTimeout,
+            RequestOptions::READ_TIMEOUT => $this->timeout,
+            RequestOptions::TIMEOUT => $this->timeout,
+        ]);
+
+        return Gemini::factory()
+            ->withApiKey($apiKey)
+            ->withHttpClient($httpClient)
+            ->make();
     }
 
     /**
@@ -516,7 +536,8 @@ class GeminiService
      */
     public function setTimeout(int $timeout): self
     {
-        $this->timeout = $timeout;
+        $this->timeout = min(max($timeout, 1), 120);
+        $this->setClientForKeyIndex($this->activeKeyIndex);
         
         return $this;
     }

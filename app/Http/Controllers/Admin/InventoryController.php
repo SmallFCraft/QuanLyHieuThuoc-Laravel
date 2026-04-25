@@ -46,7 +46,7 @@ class InventoryController extends Controller
      */
     public function expiring(Request $request)
     {
-        $days = $request->input('days', 30);
+        $days = min(max($request->integer('days', 30), 1), 365);
         $products = $this->inventoryService->checkExpiration($days);
         
         return view('admin.inventory.expiring', compact('products', 'days'));
@@ -148,8 +148,8 @@ class InventoryController extends Controller
         $query->FEFO();
         
         // Pagination
-        $start = $request->start ?? 0;
-        $length = $request->length ?? 20;
+        $start = max(0, $request->integer('start', 0));
+        $length = min(max($request->integer('length', 20), 1), 100);
         $products = $query->skip($start)->take($length)->get();
         
         // Format data

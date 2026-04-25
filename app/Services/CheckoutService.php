@@ -50,7 +50,7 @@ class CheckoutService
                 $errors[] = "Sản phẩm {$product->name} không đủ số lượng. Còn lại: {$totalStock}.";
             }
             
-            $totalAmount += $product->price * $item['quantity'];
+            $totalAmount += $product->price_vnd * $item['quantity'];
         }
         
         if (!empty($errors)) {
@@ -101,7 +101,7 @@ class CheckoutService
                         'product_id' => $productId,
                         'batch_id' => $batch->id,
                         'quantity' => $deductQty,
-                        'unit_price' => $products[$productId]->price,
+                        'unit_price' => $products[$productId]->price_vnd,
                         'batch_number' => $batch->batch_number,
                     ]);
                     
@@ -178,7 +178,7 @@ class CheckoutService
         $total = 0;
         foreach ($cartItems as $item) {
             if (isset($products[$item['product_id']])) {
-                $total += $products[$item['product_id']]->price * $item['quantity'];
+                $total += $products[$item['product_id']]->price_vnd * $item['quantity'];
             }
         }
         

@@ -63,7 +63,7 @@ class OrderSeeder extends Seeder
             for ($j = 0; $j < $itemCount; $j++) {
                 $product = $products->random();
                 $quantity = rand(1, 3);
-                $unitPrice = $product->price;
+                $unitPrice = $product->price_vnd;
                 
                 // Get the first available batch for this product
                 $batch = $product->batches()->first();

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Carbon\Carbon;
+use Illuminate\Validation\Rule;
 
 class ProductRequest extends FormRequest
 {
@@ -22,13 +23,17 @@ class ProductRequest extends FormRequest
      */
     public function rules(): array
     {
-        $productId = $this->route('product') ? $this->route('product')->id : null;
+        $product = $this->route('product');
+        $productId = $product ? $product->id : null;
+        $batchId = $product
+            ? $product->batches()->orderBy('expiration_date')->orderBy('id')->value('id')
+            : null;
         
         return [
             'name' => 'required|string|max:255',
             'ingredients' => 'nullable|string',
             'usage' => 'nullable|string',
-            'price' => 'required|numeric|min:0|max:99999999.99',
+            'price' => 'required|integer|min:0|max:99999999',
             'expiration_date' => 'required|date|after:today',
             'stock_quantity' => 'required|integer|min:0',
             'reorder_point' => 'required|integer|min:0',
@@ -36,7 +41,10 @@ class ProductRequest extends FormRequest
                 'required',
                 'string',
                 'max:100',
-                'unique:products,batch_number,' . $productId . ',id,name,' . $this->input('name')
+                Rule::unique('products', 'batch_number')
+                    ->where(fn ($query) => $query->where('name', $this->input('name')))
+                    ->ignore($productId),
+                Rule::unique('product_batches', 'batch_number')->ignore($batchId),
             ],
             'category_id' => 'required|exists:categories,id',
             'image' => $productId ? 'nullable|image|mimes:jpeg,png|max:5120' : 'nullable|image|mimes:jpeg,png|max:5120',
@@ -54,9 +62,9 @@ class ProductRequest extends FormRequest
             'name.required' => 'Tên sản phẩm là bắt buộc',
             'name.max' => 'Tên sản phẩm không được vượt quá 255 ký tự',
             'price.required' => 'Giá sản phẩm là bắt buộc',
-            'price.numeric' => 'Giá sản phẩm phải là số',
+            'price.integer' => 'Giá sản phẩm phải là số nguyên VNĐ',
             'price.min' => 'Giá sản phẩm phải lớn hơn hoặc bằng 0',
-            'price.max' => 'Giá sản phẩm không được vượt quá 99.999.999,99',
+            'price.max' => 'Giá sản phẩm không được vượt quá 99.999.999',
             'expiration_date.required' => 'Ngày hết hạn là bắt buộc',
             'expiration_date.date' => 'Ngày hết hạn không hợp lệ',
             'expiration_date.after' => 'Ngày hết hạn phải là ngày trong tương lai',

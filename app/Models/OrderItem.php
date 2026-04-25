@@ -64,7 +64,7 @@ class OrderItem extends Model
      */
     public function getSubtotalAttribute(): float
     {
-        return $this->quantity * $this->unit_price;
+        return $this->quantity * (int) round((float) $this->unit_price);
     }
 
     /**
@@ -74,6 +74,6 @@ class OrderItem extends Model
      */
     public function getFormattedSubtotalAttribute(): string
     {
-        return number_format($this->subtotal, 0, ',', '.') . ' ₫';
+        return number_format((int) $this->subtotal, 0, ',', '.') . ' ₫';
     }
 }

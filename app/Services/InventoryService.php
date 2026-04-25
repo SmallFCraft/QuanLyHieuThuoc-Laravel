@@ -209,7 +209,7 @@ class InventoryService
     {
         return [
             'total_products' => Product::count(),
-            'total_value' => Product::sum(DB::raw('price * stock_quantity')),
+            'total_value' => Product::sum(DB::raw('ROUND(price, 0) * stock_quantity')),
             'low_stock_count' => Product::lowStock()->count(),
             'expiring_soon_count' => Product::expiringSoon(30)->count(),
             'expired_count' => Product::where('expiration_date', '<', Carbon::now())->count(),

@@ -667,8 +667,10 @@ function chatbotWidget() {
         formatCurrency(amount) {
             return new Intl.NumberFormat('vi-VN', {
                 style: 'currency',
-                currency: 'VND'
-            }).format(amount);
+                currency: 'VND',
+                maximumFractionDigits: 0,
+                minimumFractionDigits: 0
+            }).format(Math.round(Number(amount) || 0));
         },
         
         getStatusText(status) {
@@ -751,7 +753,12 @@ function chatbotWidget() {
                 }
             );
 
-            if (window.marked && typeof window.marked.parse === 'function') {
+            if (
+                window.marked
+                && typeof window.marked.parse === 'function'
+                && window.DOMPurify
+                && typeof window.DOMPurify.sanitize === 'function'
+            ) {
                 try {
                     const html = window.marked.parse(normalizedText, {
                         gfm: true,
@@ -770,12 +777,10 @@ function chatbotWidget() {
         decorateMarkdownHtml(html) {
             let safeHtml = String(html || '');
 
-            if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
-                safeHtml = window.DOMPurify.sanitize(safeHtml, {
-                    USE_PROFILES: { html: true },
-                    ADD_ATTR: ['target', 'rel', 'class']
-                });
-            }
+            safeHtml = window.DOMPurify.sanitize(safeHtml, {
+                USE_PROFILES: { html: true },
+                ADD_ATTR: ['target', 'rel', 'class']
+            });
 
             const container = document.createElement('div');
             container.innerHTML = safeHtml;
@@ -785,12 +790,14 @@ function chatbotWidget() {
                 const normalized = textValue.toLowerCase();
                 const isDetailLink = /^(xem chi tiết|xem chi tiet|mở sản phẩm|mo san pham|xem danh mục|xem danh muc|mở liên kết|mo lien ket)$/i.test(normalized);
 
-                let href = (link.getAttribute('href') || '').trim();
-                if (href.startsWith('www.')) {
-                    href = `https://${href}`;
-                    link.setAttribute('href', href);
+                const href = this.normalizeMarkdownUrl(link.getAttribute('href') || '');
+
+                if (!href) {
+                    link.replaceWith(document.createTextNode(link.textContent || ''));
+                    return;
                 }
 
+                link.setAttribute('href', href);
                 link.setAttribute('target', '_blank');
                 link.setAttribute('rel', 'noopener noreferrer');
 
@@ -804,19 +811,65 @@ function chatbotWidget() {
             return container.innerHTML;
         },
 
+        escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[character]));
+        },
+
+        escapeAttribute(value) {
+            return this.escapeHtml(value);
+        },
+
+        normalizeMarkdownUrl(value) {
+            const rawUrl = String(value ?? '')
+                .trim()
+                .replace(/&amp;/g, '&')
+                .replace(/&quot;/g, '"')
+                .replace(/&#039;/g, "'");
+
+            if (!rawUrl) {
+                return '';
+            }
+
+            if (/[\s"'<>]/.test(rawUrl)) {
+                return '';
+            }
+
+            if (rawUrl.startsWith('www.')) {
+                return `https://${rawUrl}`;
+            }
+
+            if (/^(https?:\/\/|\/|#)/i.test(rawUrl)) {
+                return rawUrl;
+            }
+
+            return '';
+        },
+
         parseMarkdownLegacy(text) {
             let html = text
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
 
             html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
                 const normalizedLinkText = String(linkText).trim().toLowerCase();
                 const isDetailLink = /^(xem chi tiết|xem chi tiet|mở sản phẩm|mo san pham|xem danh mục|xem danh muc|mở liên kết|mo lien ket)$/i.test(normalizedLinkText);
                 const linkClass = isDetailLink ? 'chatbot-link-btn' : 'chatbot-inline-link';
-                const href = String(url).startsWith('www.') ? `https://${url}` : url;
+                const href = this.normalizeMarkdownUrl(url);
 
-                return `<a href="${href}" class="${linkClass}" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
+                if (!href) {
+                    return linkText;
+                }
+
+                return `<a href="${this.escapeAttribute(href)}" class="${linkClass}" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
             });
 
             html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
@@ -899,4 +952,3 @@ function chatbotWidget() {
     }
 }
 </script>
-

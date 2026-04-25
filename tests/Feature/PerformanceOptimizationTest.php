@@ -273,20 +273,22 @@ class PerformanceOptimizationTest extends TestCase
             'batch_number' => 'BATCH-SELECT'
         ]);
 
-        // Query with specific columns
-        $startTime = microtime(true);
         $products = Product::select('id', 'name', 'price')->get();
-        $endTime = microtime(true);
-        $selectTime = ($endTime - $startTime) * 1000;
-
-        // Query with all columns
-        $startTime = microtime(true);
         $allProducts = Product::all();
-        $endTime = microtime(true);
-        $allTime = ($endTime - $startTime) * 1000;
 
-        // Selecting specific columns should be faster or equal
-        $this->assertLessThanOrEqual($allTime * 1.5, $selectTime);
+        $selectedAttributes = $products->first()->getAttributes();
+        $allAttributes = $allProducts->first()->getAttributes();
+
+        $this->assertArrayHasKey('id', $selectedAttributes);
+        $this->assertArrayHasKey('name', $selectedAttributes);
+        $this->assertArrayHasKey('price', $selectedAttributes);
+        $this->assertArrayNotHasKey('ingredients', $selectedAttributes);
+        $this->assertArrayNotHasKey('usage', $selectedAttributes);
+        $this->assertArrayHasKey('ingredients', $allAttributes);
+        $this->assertLessThan(
+            strlen(json_encode($allAttributes)),
+            strlen(json_encode($selectedAttributes))
+        );
     }
 
     public function test_chunk_processing_for_large_datasets(): void

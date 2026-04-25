@@ -62,7 +62,7 @@
                                         <span class="input-group-text"><i class="bi bi-currency-exchange"></i></span>
                                         <input type="number" class="form-control @error('price') is-invalid @enderror"
                                             id="price" name="price" value="{{ old('price') }}"
-                                            placeholder="0" min="0" step="any" required>
+                                            placeholder="0" min="0" step="1" required>
                                         @error('price')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror

@@ -119,13 +119,29 @@ class Product extends Model
     }
 
     /**
+     * Get the product price as whole Vietnamese dong.
+     */
+    public function getPriceVndAttribute(): int
+    {
+        return (int) round((float) ($this->price ?? 0));
+    }
+
+    /**
+     * Store prices as whole Vietnamese dong to avoid fractional VND totals.
+     */
+    public function setPriceAttribute($value): void
+    {
+        $this->attributes['price'] = (int) round((float) ($value ?? 0));
+    }
+
+    /**
      * Get formatted price in Vietnamese currency format.
      *
      * @return string
      */
     public function getFormattedPriceAttribute(): string
     {
-        return number_format($this->price, 0, ',', '.') . ' ₫';
+        return number_format($this->price_vnd, 0, ',', '.') . ' ₫';
     }
 
     /**

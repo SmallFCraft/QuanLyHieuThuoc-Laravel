@@ -38,7 +38,7 @@ class DashboardController extends Controller
      */
     public function revenueChart(Request $request)
     {
-        $days = $request->input('days', 30);
+        $days = min(max($request->integer('days', 30), 1), 365);
         $chartData = $this->dashboardService->getDailyRevenueChart($days);
 
         return response()->json($chartData);
@@ -59,7 +59,7 @@ class DashboardController extends Controller
      */
     public function topProductsChart(Request $request)
     {
-        $limit = $request->input('limit', 10);
+        $limit = min(max($request->integer('limit', 10), 1), 50);
         $chartData = $this->dashboardService->getTopSellingProducts($limit);
 
         return response()->json($chartData);

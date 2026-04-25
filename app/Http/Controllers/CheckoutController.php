@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Services\CheckoutService;
 use App\Models\Product;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class CheckoutController extends Controller
 {
@@ -43,9 +45,9 @@ class CheckoutController extends Controller
                     $cartItems[] = [
                         'product' => $product,
                         'quantity' => $quantity,
-                        'subtotal' => $product->price * $quantity
+                        'subtotal' => $product->price_vnd * $quantity
                     ];
-                    $total += $product->price * $quantity;
+                    $total += $product->price_vnd * $quantity;
                 }
             }
         }
@@ -58,7 +60,7 @@ class CheckoutController extends Controller
      */
     public function process(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'customer_name' => 'required|string|max:255',
             'shipping_address' => 'required|string|max:500',
             'shipping_phone' => ['required', 'regex:/^(\+84|0)[0-9]{9}$/'],
@@ -73,41 +75,51 @@ class CheckoutController extends Controller
             'customer_email.email' => 'Email không hợp lệ.'
         ]);
 
-        $cart = session()->get('cart', []);
-        
-        if (empty($cart)) {
-            return redirect()->route('cart.index')->with('error', 'Giỏ hàng trống.');
-        }
-
-        // Prepare cart items for checkout service
-        $cartItems = [];
-        foreach ($cart as $productId => $quantity) {
-            $cartItems[] = [
-                'product_id' => $productId,
-                'quantity' => $quantity
-            ];
-        }
+        $userId = (int) auth()->id();
+        $lock = Cache::lock($this->checkoutLockKey($userId), 10);
 
         try {
-            $order = $this->checkoutService->processCheckout(
-                $cartItems,
-                auth()->id(),
-                [
-                    'address' => $request->shipping_address,
-                    'phone' => $request->shipping_phone,
-                    'customer_name' => $request->customer_name,
-                    'customer_email' => $request->customer_email,
-                    'delivery_time' => $request->delivery_time,
-                    'notes' => $request->order_notes
-                ]
-            );
+            return $lock->block(3, function () use ($validated, $userId) {
+                $cart = session()->get('cart', []);
 
-            // Clear cart after successful checkout
-            session()->forget('cart');
+                if (empty($cart)) {
+                    return redirect()->route('cart.index')->with('error', 'Giỏ hàng trống.');
+                }
 
-            return redirect()->route('checkout.success', $order->id)
-                ->with('success', 'Đặt hàng thành công!');
-                
+                $completedKey = $this->completedCheckoutKey($userId, $cart);
+                $completedOrderId = Cache::get($completedKey);
+
+                if ($completedOrderId) {
+                    session()->forget('cart');
+
+                    return redirect()->route('checkout.success', $completedOrderId)
+                        ->with('success', 'Đơn hàng đã được xử lý.');
+                }
+
+                $cartItems = $this->normalizeCartItems($cart);
+
+                $order = $this->checkoutService->processCheckout(
+                    $cartItems,
+                    $userId,
+                    [
+                        'address' => $validated['shipping_address'],
+                        'phone' => $validated['shipping_phone'],
+                        'customer_name' => $validated['customer_name'],
+                        'customer_email' => $validated['customer_email'] ?? null,
+                        'delivery_time' => $validated['delivery_time'] ?? null,
+                        'notes' => $validated['order_notes'] ?? null
+                    ]
+                );
+
+                Cache::put($completedKey, $order->id, now()->addMinutes(10));
+                session()->forget('cart');
+
+                return redirect()->route('checkout.success', $order->id)
+                    ->with('success', 'Đặt hàng thành công!');
+            });
+        } catch (LockTimeoutException) {
+            return back()->with('error', 'Đơn hàng đang được xử lý. Vui lòng chờ trong giây lát.');
+
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -121,5 +133,36 @@ class CheckoutController extends Controller
         $order = auth()->user()->orders()->with('items.product')->findOrFail($orderId);
         
         return view('checkout.success', compact('order'));
+    }
+
+    private function checkoutLockKey(int $userId): string
+    {
+        return "checkout:user:{$userId}";
+    }
+
+    private function completedCheckoutKey(int $userId, array $cart): string
+    {
+        return "checkout:completed:{$userId}:" . $this->cartHash($cart);
+    }
+
+    private function cartHash(array $cart): string
+    {
+        ksort($cart);
+
+        return hash('sha256', json_encode($cart));
+    }
+
+    private function normalizeCartItems(array $cart): array
+    {
+        $cartItems = [];
+
+        foreach ($cart as $productId => $quantity) {
+            $cartItems[] = [
+                'product_id' => (int) $productId,
+                'quantity' => (int) $quantity
+            ];
+        }
+
+        return $cartItems;
     }
 }

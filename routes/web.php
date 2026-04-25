@@ -19,7 +19,9 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Contact routes
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
-Route::post('/contact/submit', [ContactController::class, 'submit'])->name('contact.submit');
+Route::post('/contact/submit', [ContactController::class, 'submit'])
+    ->middleware('throttle:5,1')
+    ->name('contact.submit');
 
 // Product catalog routes
 Route::get('/products', [ProductCatalogController::class, 'index'])->name('products.index');

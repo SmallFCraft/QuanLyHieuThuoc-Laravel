@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductRequest;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\ProductBatch;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -37,13 +39,27 @@ class ProductController extends Controller
     public function store(ProductRequest $request)
     {
         $data = $request->validated();
+        $uploadedImage = null;
         
         // Handle image upload
         if ($request->hasFile('image')) {
-            $data['image'] = $this->handleImageUpload($request->file('image'));
+            $uploadedImage = $this->handleImageUpload($request->file('image'));
+            $data['image'] = $uploadedImage;
         }
-        
-        $product = Product::create($data);
+
+        try {
+            DB::transaction(fn () => Product::create($data));
+        } catch (\Throwable $e) {
+            if ($uploadedImage) {
+                Storage::disk('public')->delete($uploadedImage);
+            }
+
+            report($e);
+
+            return back()
+                ->withInput()
+                ->with('error', 'Không thể tạo sản phẩm. Vui lòng thử lại.');
+        }
         
         return redirect()
             ->route('admin.products.index')
@@ -76,18 +92,35 @@ class ProductController extends Controller
     public function update(ProductRequest $request, Product $product)
     {
         $data = $request->validated();
+        $oldImage = $product->image;
+        $newImage = null;
         
         // Handle image upload
         if ($request->hasFile('image')) {
-            // Delete old image if exists
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
-            
-            $data['image'] = $this->handleImageUpload($request->file('image'));
+            $newImage = $this->handleImageUpload($request->file('image'));
+            $data['image'] = $newImage;
         }
-        
-        $product->update($data);
+
+        try {
+            DB::transaction(function () use ($product, $data) {
+                $product->update($data);
+                $this->syncPrimaryBatch($product, $data);
+            });
+        } catch (\Throwable $e) {
+            if ($newImage) {
+                Storage::disk('public')->delete($newImage);
+            }
+
+            report($e);
+
+            return back()
+                ->withInput()
+                ->with('error', 'Không thể cập nhật sản phẩm. Vui lòng thử lại.');
+        }
+
+        if ($newImage && $oldImage && $oldImage !== $newImage) {
+            Storage::disk('public')->delete($oldImage);
+        }
         
         return redirect()
             ->route('admin.products.index')
@@ -137,11 +170,25 @@ class ProductController extends Controller
         // Filtered records count
         $filteredRecords = $query->count();
         
+        $allowedOrderColumns = [
+            'id',
+            'name',
+            'price',
+            'stock_quantity',
+            'expiration_date',
+            'batch_number',
+            'category.name',
+        ];
+
         // Sorting
         if ($request->has('order')) {
-            $orderColumn = $request->columns[$request->order[0]['column']]['name'];
-            $orderDir = $request->order[0]['dir'];
-            
+            $columnIndex = (int) $request->input('order.0.column', 0);
+            $requestedColumn = (string) $request->input("columns.$columnIndex.name", 'id');
+            $orderColumn = in_array($requestedColumn, $allowedOrderColumns, true)
+                ? $requestedColumn
+                : 'id';
+            $orderDir = $request->input('order.0.dir') === 'desc' ? 'desc' : 'asc';
+
             if ($orderColumn === 'category.name') {
                 $query->join('categories', 'products.category_id', '=', 'categories.id')
                       ->orderBy('categories.name', $orderDir)
@@ -152,8 +199,8 @@ class ProductController extends Controller
         }
         
         // Pagination - ONLY load records needed for current page
-        $start = $request->start ?? 0;
-        $length = $request->length ?? 10;
+        $start = max(0, $request->integer('start', 0));
+        $length = min(max($request->integer('length', 10), 1), 100);
         $products = $query->with('category')->skip($start)->take($length)->get();
         
         // Format data - return raw data instead of HTML
@@ -162,7 +209,7 @@ class ProductController extends Controller
                 'id' => $product->id,
                 'name' => $product->name,
                 'category' => $product->category->name,
-                'price' => $product->price,
+                'price' => $product->price_vnd,
                 'formatted_price' => $product->formatted_price,
                 'stock_quantity' => $product->stock_quantity,
                 'is_low_stock' => $product->isLowStock(),
@@ -199,5 +246,31 @@ class ProductController extends Controller
         
         // Return path relative to storage disk (includes products/ prefix)
         return 'products/' . $filename;
+    }
+
+    /**
+     * Keep the editable primary product batch aligned with product fields.
+     */
+    private function syncPrimaryBatch(Product $product, array $data): void
+    {
+        $batchPayload = [
+            'batch_number' => $data['batch_number'],
+            'expiration_date' => $data['expiration_date'],
+            'stock_quantity' => (int) $data['stock_quantity'],
+            'reorder_point' => (int) $data['reorder_point'],
+        ];
+
+        $batch = $product->batches()
+            ->lockForUpdate()
+            ->orderBy('expiration_date')
+            ->orderBy('id')
+            ->first();
+
+        if ($batch instanceof ProductBatch) {
+            $batch->update($batchPayload);
+            return;
+        }
+
+        $product->batches()->create($batchPayload);
     }
 }

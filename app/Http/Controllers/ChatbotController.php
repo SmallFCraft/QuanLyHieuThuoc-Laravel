@@ -7,8 +7,11 @@ use App\Services\ImageRecognitionService;
 use App\Services\AuditLogService;
 use App\Models\ChatbotImage;
 use App\Models\ChatMessage;
+use App\Models\Order;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -535,70 +538,85 @@ class ChatbotController extends Controller
             'customer_name.required' => 'Họ và tên là bắt buộc.'
         ]);
 
+        $userId = (int) auth()->id();
+        $lock = Cache::lock($this->checkoutLockKey($userId), 10);
+
         try {
-            $cart = session()->get('cart', []);
+            return $lock->block(3, function () use ($validated, $userId) {
+                $cart = session()->get('cart', []);
 
-            if (empty($cart)) {
+                if (empty($cart)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Giỏ hàng trống. Vui lòng thêm sản phẩm trước khi đặt hàng.'
+                    ], 422);
+                }
+
+                $completedKey = $this->completedCheckoutKey($userId, $cart);
+                $completedOrderId = Cache::get($completedKey);
+
+                if ($completedOrderId) {
+                    $completedOrder = Order::where('user_id', $userId)->find($completedOrderId);
+
+                    if ($completedOrder) {
+                        session()->forget('cart');
+
+                        return response()->json([
+                            'success' => true,
+                            'message' => 'Đơn hàng đã được xử lý.',
+                            'order' => $this->formatOrderPayload($completedOrder)
+                        ]);
+                    }
+
+                    Cache::forget($completedKey);
+                }
+
+                // Use existing CheckoutService for transaction-safe order creation
+                $checkoutService = app(\App\Services\CheckoutService::class);
+                $order = $checkoutService->processCheckout(
+                    $this->normalizeCartItems($cart),
+                    $userId,
+                    [
+                        'address' => $validated['shipping_address'],
+                        'phone' => $validated['shipping_phone'],
+                        'customer_name' => $validated['customer_name'],
+                        'delivery_time' => $validated['delivery_time'] ?? null,
+                        'notes' => $validated['order_notes'] ?? null
+                    ]
+                );
+
+                Cache::put($completedKey, $order->id, now()->addMinutes(10));
+                session()->forget('cart');
+
+                // Log audit
+                AuditLogService::log(
+                    action: 'chatbot_order_placed',
+                    modelType: Order::class,
+                    modelId: $order->id,
+                    oldValues: null,
+                    newValues: [
+                        'user_id' => $userId,
+                        'source' => 'chatbot',
+                        'order_id' => $order->id,
+                        'total_amount' => $order->total_amount
+                    ]
+                );
+
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Giỏ hàng trống. Vui lòng thêm sản phẩm trước khi đặt hàng.'
-                ], 422);
-            }
+                    'success' => true,
+                    'message' => 'Đặt hàng thành công!',
+                    'order' => $this->formatOrderPayload($order)
+                ]);
+            });
 
-            // Prepare cart items for CheckoutService
-            $cartItems = [];
-            foreach ($cart as $productId => $quantity) {
-                $cartItems[] = [
-                    'product_id' => $productId,
-                    'quantity' => $quantity
-                ];
-            }
-
-            // Use existing CheckoutService for transaction-safe order creation
-            $checkoutService = app(\App\Services\CheckoutService::class);
-            $order = $checkoutService->processCheckout(
-                $cartItems,
-                auth()->id(),
-                [
-                    'address' => $validated['shipping_address'],
-                    'phone' => $validated['shipping_phone'],
-                    'customer_name' => $validated['customer_name'],
-                    'delivery_time' => $validated['delivery_time'] ?? null,
-                    'notes' => $validated['order_notes'] ?? null
-                ]
-            );
-
-            // Clear cart after successful order
-            session()->forget('cart');
-
-            // Log audit
-            AuditLogService::log(
-                action: 'chatbot_order_placed',
-                modelType: \App\Models\Order::class,
-                modelId: $order->id,
-                oldValues: null,
-                newValues: [
-                    'user_id' => auth()->id(),
-                    'source' => 'chatbot',
-                    'order_id' => $order->id,
-                    'total_amount' => $order->total_amount
-                ]
-            );
-
+        } catch (LockTimeoutException) {
             return response()->json([
-                'success' => true,
-                'message' => 'Đặt hàng thành công!',
-                'order' => [
-                    'id' => $order->id,
-                    'total_amount' => $order->total_amount,
-                    'status' => $order->status,
-                    'created_at' => $order->created_at->format('d/m/Y H:i')
-                ]
-            ]);
-
+                'success' => false,
+                'message' => 'Đơn hàng đang được xử lý. Vui lòng chờ trong giây lát.'
+            ], 429);
         } catch (\Exception $e) {
             Log::error('Chatbot place order failed', [
-                'user_id' => auth()->id(),
+                'user_id' => $userId,
                 'error' => $e->getMessage()
             ]);
 
@@ -633,12 +651,12 @@ class ChatbotController extends Controller
         foreach ($cart as $productId => $quantity) {
             if (isset($products[$productId])) {
                 $product = $products[$productId];
-                $subtotal = $product->price * $quantity;
+                $subtotal = $product->price_vnd * $quantity;
                 $total += $subtotal;
                 $items[] = [
                     'product_id' => $product->id,
                     'name' => $product->name,
-                    'price' => $product->price,
+                    'price' => $product->price_vnd,
                     'quantity' => $quantity,
                     'subtotal' => $subtotal,
                     'stock_quantity' => $product->stock_quantity,
@@ -651,6 +669,47 @@ class ChatbotController extends Controller
             'items' => $items,
             'total' => $total,
             'count' => count($items)
+        ];
+    }
+
+    private function checkoutLockKey(int $userId): string
+    {
+        return "checkout:user:{$userId}";
+    }
+
+    private function completedCheckoutKey(int $userId, array $cart): string
+    {
+        return "checkout:completed:{$userId}:" . $this->cartHash($cart);
+    }
+
+    private function cartHash(array $cart): string
+    {
+        ksort($cart);
+
+        return hash('sha256', json_encode($cart));
+    }
+
+    private function normalizeCartItems(array $cart): array
+    {
+        $cartItems = [];
+
+        foreach ($cart as $productId => $quantity) {
+            $cartItems[] = [
+                'product_id' => (int) $productId,
+                'quantity' => (int) $quantity
+            ];
+        }
+
+        return $cartItems;
+    }
+
+    private function formatOrderPayload(Order $order): array
+    {
+        return [
+            'id' => $order->id,
+            'total_amount' => $order->total_amount,
+            'status' => $order->status,
+            'created_at' => $order->created_at->format('d/m/Y H:i')
         ];
     }
     

@@ -41,7 +41,9 @@ class CleanupOrphanedImages extends Command
             ->whereNotNull('image')
             ->chunkById(100, function ($deletedProducts) use ($disk, &$deletedCount) {
                 foreach ($deletedProducts as $product) {
-                    $imagePath = 'products/' . $product->image;
+                    $imagePath = str_contains($product->image, '/')
+                        ? $product->image
+                        : 'products/' . $product->image;
 
                     if ($disk->exists($imagePath)) {
                         $disk->delete($imagePath);

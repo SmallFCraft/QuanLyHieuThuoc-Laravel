@@ -270,6 +270,24 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('ORESOL', $result['response']);
     }
 
+    public function test_process_message_blocks_catalog_lookup_for_urgent_medical_context(): void
+    {
+        $this->geminiService->expects($this->never())->method('chat');
+
+        $message = "Hello, are you oke? t\u{00F4}i b\u{1ECB} \u{1EC9}a ch\u{1EA3}y c\u{1EA5}p \u{0111}\u{1ED9} 9, v\u{00E0} b\u{1ECB} ung th\u{01B0} giai \u{0111}o\u{1EA1}n cu\u{1ED1}i. n\u{00EA}n s\u{1EED} d\u{1EE5}ng sao \u{0111}\u{00E2}y??";
+
+        $result = $this->chatbotService->processMessage($message, 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertTrue($result['show_disclaimer']);
+        $this->assertStringContainsString('cơ sở y tế', $result['response']);
+        $this->assertStringContainsString('ung thư', $result['response']);
+        $this->assertStringNotContainsString('chưa thấy sản phẩm', $result['response']);
+        $this->assertStringNotContainsString('từ khóa', $result['response']);
+    }
+
     public function test_process_message_returns_website_intro_without_product_search(): void
     {
         $category = Category::factory()->create([

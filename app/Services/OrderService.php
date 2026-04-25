@@ -21,24 +21,26 @@ class OrderService
      */
     public function updateStatus(int $orderId, string $newStatus, int $userId): Order
     {
-        $order = Order::findOrFail($orderId);
+        return DB::transaction(function () use ($orderId, $newStatus, $userId) {
+            $order = Order::lockForUpdate()->findOrFail($orderId);
 
-        if (!$this->validateStatusTransition($order->status, $newStatus)) {
-            throw new \Exception("Không thể chuyển trạng thái từ {$order->status} sang {$newStatus}.");
-        }
+            if (!$this->validateStatusTransition($order->status, $newStatus)) {
+                throw new \Exception("Không thể chuyển trạng thái từ {$order->status} sang {$newStatus}.");
+            }
 
-        $oldStatus = $order->status;
-        $order->status = $newStatus;
-        $order->save();
+            $oldStatus = $order->status;
+            $order->status = $newStatus;
+            $order->save();
 
-        Log::info('Order status updated', [
-            'order_id' => $orderId,
-            'old_status' => $oldStatus,
-            'new_status' => $newStatus,
-            'user_id' => $userId
-        ]);
+            Log::info('Order status updated', [
+                'order_id' => $orderId,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'user_id' => $userId
+            ]);
 
-        return $order;
+            return $order;
+        });
     }
 
     /**
@@ -51,16 +53,16 @@ class OrderService
      */
     public function cancelOrder(int $orderId, int $userId): bool
     {
-        $order = Order::with('items')->findOrFail($orderId);
-
-        // Only pending orders can be cancelled
-        if ($order->status !== 'Pending') {
-            throw new \Exception('Chỉ có thể hủy đơn hàng ở trạng thái Pending.');
-        }
-
         DB::beginTransaction();
 
         try {
+            $order = Order::with('items')->lockForUpdate()->findOrFail($orderId);
+
+            // Only pending orders can be cancelled
+            if ($order->status !== 'Pending') {
+                throw new \Exception('Chỉ có thể hủy đơn hàng ở trạng thái Pending.');
+            }
+
             $affectedProductIds = [];
 
             // Restore inventory for all order items (by batch)

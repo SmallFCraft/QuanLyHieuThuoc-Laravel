@@ -76,7 +76,7 @@
                                 <div class="cart-item d-flex align-items-center gap-3 p-4 border-bottom flex-wrap position-relative" 
                                      style="border-color: rgba(0,0,0,0.04) !important;" 
                                      data-product-id="{{ $item['product']->id }}"
-                                     data-price="{{ $item['product']->price }}"
+                                     data-price="{{ $item['product']->price_vnd }}"
                                      data-max-stock="{{ $item['product']->stock_quantity }}">
                                     
                                     <!-- Image -->
@@ -194,7 +194,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Format number to VND
     function formatVND(number) {
-        return new Intl.NumberFormat('vi-VN').format(number) + ' ₫';
+        return new Intl.NumberFormat('vi-VN', {
+            maximumFractionDigits: 0,
+            minimumFractionDigits: 0
+        }).format(Math.round(Number(number) || 0)) + ' ₫';
     }
     
     // Calculate totals
@@ -202,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let subtotal = 0;
         
         document.querySelectorAll('.cart-item').forEach(item => {
-            const price = parseFloat(item.dataset.price);
+            const price = Math.round(Number(item.dataset.price) || 0);
             const quantity = parseInt(item.querySelector('.quantity-input').value);
             const itemSubtotal = price * quantity;
             

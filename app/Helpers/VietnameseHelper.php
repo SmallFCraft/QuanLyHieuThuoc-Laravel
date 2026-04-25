@@ -56,7 +56,7 @@ class VietnameseHelper
             return '0 ₫';
         }
 
-        return number_format($amount, 0, ',', '.') . ' ₫';
+        return number_format((int) round((float) $amount), 0, ',', '.') . ' ₫';
     }
 
     /**

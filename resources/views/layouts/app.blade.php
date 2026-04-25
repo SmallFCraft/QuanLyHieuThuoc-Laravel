@@ -128,7 +128,7 @@
                     'offers' => [
                         '@type' => 'Offer',
                         'priceCurrency' => 'VND',
-                        'price' => (float) $product->price,
+                        'price' => $product->price_vnd,
                         'availability' => $product->stock_quantity > 0
                             ? 'https://schema.org/InStock'
                             : 'https://schema.org/OutOfStock',
@@ -136,6 +136,13 @@
                     ],
                 ];
             }
+
+            $jsonLdOptions = JSON_UNESCAPED_UNICODE
+                | JSON_UNESCAPED_SLASHES
+                | JSON_HEX_TAG
+                | JSON_HEX_APOS
+                | JSON_HEX_AMP
+                | JSON_HEX_QUOT;
         @endphp
 
         <title>{{ $metaTitle }}</title>
@@ -173,10 +180,10 @@
         <meta itemprop="description" content="{{ $metaDescription }}">
         <meta itemprop="image" content="{{ $metaImage }}">
 
-        <script type="application/ld+json">{!! json_encode($organizationSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
-        <script type="application/ld+json">{!! json_encode($websiteSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+        <script type="application/ld+json">{!! json_encode($organizationSchema, $jsonLdOptions) !!}</script>
+        <script type="application/ld+json">{!! json_encode($websiteSchema, $jsonLdOptions) !!}</script>
         @if($productSchema)
-            <script type="application/ld+json">{!! json_encode($productSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+            <script type="application/ld+json">{!! json_encode($productSchema, $jsonLdOptions) !!}</script>
         @endif
         @stack('meta')
 

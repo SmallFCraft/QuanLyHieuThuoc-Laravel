@@ -116,7 +116,7 @@
                             {{ $product->formatted_price }}
                         </span>
                         <span class="text-muted text-decoration-line-through fs-5">
-                            {{ number_format($product->price * 1.1, 0, ',', '.') }} ₫
+                            {{ number_format($product->price_vnd * 1.1, 0, ',', '.') }} ₫
                         </span>
                         <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2 fw-medium">
                             <i class="bi bi-tag-fill me-1"></i>-10%

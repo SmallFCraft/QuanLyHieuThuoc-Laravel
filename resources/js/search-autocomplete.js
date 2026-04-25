@@ -180,7 +180,7 @@ class SearchAutocomplete {
     }
 
     renderSuggestions(data, query) {
-        const { products, categories } = data;
+        const { products = [], categories = [] } = data ?? {};
 
         if (!products.length && !categories.length) {
             this.renderEmpty(query);
@@ -194,7 +194,7 @@ class SearchAutocomplete {
             html += '<div class="suggestion-header">Danh mục</div>';
             categories.forEach((category) => {
                 html += `
-                    <a href="${category.url}" class="suggestion-item category-item">
+                    <a href="${this.escapeAttribute(category.url)}" class="suggestion-item category-item">
                         <i class="bi bi-folder text-emerald-600"></i>
                         <span>${this.highlightMatch(category.name, query)}</span>
                     </a>
@@ -208,18 +208,18 @@ class SearchAutocomplete {
             html += '<div class="suggestion-header">Sản phẩm</div>';
             products.forEach((product) => {
                 html += `
-                    <a href="${product.url}" class="suggestion-item product-item">
+                    <a href="${this.escapeAttribute(product.url)}" class="suggestion-item product-item">
                         <div class="product-image">
                             ${product.image_url
-                                ? `<img src="${product.image_url}" alt="${product.name}">`
+                                ? `<img src="${this.escapeAttribute(product.image_url)}" alt="${this.escapeAttribute(product.name)}">`
                                 : '<i class="bi bi-capsule text-gray-300"></i>'
                             }
                         </div>
                         <div class="product-info">
                             <div class="product-name">${this.highlightMatch(product.name, query)}</div>
                             <div class="product-meta">
-                                <span class="product-category">${product.category}</span>
-                                <span class="product-price">${product.price}</span>
+                                <span class="product-category">${this.escapeHtml(product.category)}</span>
+                                <span class="product-price">${this.escapeHtml(product.price)}</span>
                             </div>
                         </div>
                     </a>
@@ -231,7 +231,7 @@ class SearchAutocomplete {
         html += `
             <div class="suggestion-footer">
                 <a href="/search?q=${encodeURIComponent(query)}" class="view-all-link">
-                    Xem tất cả kết quả cho "${query}" <i class="bi bi-arrow-right"></i>
+                    Xem tất cả kết quả cho "${this.escapeHtml(query)}" <i class="bi bi-arrow-right"></i>
                 </a>
             </div>
         `;
@@ -245,21 +245,48 @@ class SearchAutocomplete {
         this.suggestionsContainer.innerHTML = `
             <div class="suggestion-empty">
                 <i class="bi bi-search text-gray-300"></i>
-                <p>Không tìm thấy kết quả cho "${query}"</p>
+                <p>Không tìm thấy kết quả cho "${this.escapeHtml(query)}"</p>
             </div>
         `;
         this.showSuggestions();
     }
 
     highlightMatch(text, query) {
+        const value = String(text ?? '');
+
         if (!query) {
-            return text;
+            return this.escapeHtml(value);
         }
 
-        const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escapedQuery = String(query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`(${escapedQuery})`, 'gi');
+        let lastIndex = 0;
+        let html = '';
+        let match;
 
-        return text.replace(regex, '<mark>$1</mark>');
+        while ((match = regex.exec(value)) !== null) {
+            html += this.escapeHtml(value.slice(lastIndex, match.index));
+            html += `<mark>${this.escapeHtml(match[0])}</mark>`;
+            lastIndex = match.index + match[0].length;
+        }
+
+        html += this.escapeHtml(value.slice(lastIndex));
+
+        return html;
+    }
+
+    escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[character]));
+    }
+
+    escapeAttribute(value) {
+        return this.escapeHtml(value);
     }
 
     showSuggestions() {

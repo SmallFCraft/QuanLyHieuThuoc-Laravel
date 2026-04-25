@@ -262,6 +262,28 @@ PROMPT;
         $prependWebsiteIntro = $messageRouting['prepend_intro'];
 
         try {
+            if ($this->isUrgentMedicalMessage($workingMessage)) {
+                $urgentResponse = $this->buildUrgentMedicalGuidanceResponse($workingMessage);
+
+                if ($prependWebsiteIntro) {
+                    $urgentResponse['response'] = $this->prependWebsiteIntroduction($urgentResponse['response']);
+                }
+
+                $this->logChatbotInteraction(
+                    $userId,
+                    $message,
+                    (microtime(true) - $startTime) * 1000,
+                    $urgentResponse['response_type'] ?? 'urgent_health_consultation',
+                    [],
+                    [],
+                    true
+                );
+
+                unset($urgentResponse['response_type']);
+
+                return $urgentResponse;
+            }
+
             $localResponse = $this->tryLocalResponse($workingMessage);
             if ($localResponse !== null) {
                 $responseType = $localResponse['response_type'] ?? 'general';
@@ -525,7 +547,7 @@ PROMPT;
                     return [
                         'id' => $product->id,
                         'name' => $product->name,
-                        'price' => (float) $product->price,
+                        'price' => $product->price_vnd,
                         'stock_quantity' => (int) $product->stock_quantity,
                         'image_url' => $product->image_url,
                         'ingredients' => $product->ingredients,
@@ -1072,7 +1094,7 @@ PROMPT;
             return [
                 'id' => $product->id,
                 'name' => $product->name,
-                'price' => (float) $product->price,
+                'price' => $product->price_vnd,
                 'stock_quantity' => (int) $product->stock_quantity,
                 'image_url' => $product->image_url,
                 'ingredients' => $product->ingredients,
@@ -1276,6 +1298,63 @@ PROMPT;
             'show_disclaimer' => true,
             'disclaimer' => 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.',
             'response_type' => 'health_consultation'
+        ];
+    }
+
+    protected function isUrgentMedicalMessage(string $message): bool
+    {
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return false;
+        }
+
+        $urgentKeywords = [
+            'ung thu', 'giai doan cuoi', 'cap cuu', 'nguy kich', 'nguy hiem',
+            'kho tho', 'ngat', 'co giat', 'dau du doi', 'dau nguc',
+            'non ra mau', 'phan co mau', 'di ngoai ra mau', 'mat nuoc',
+            'sot cao', 'tieu chay nang', 'tieu chay cap do', 'ia chay cap do'
+        ];
+
+        if ($this->containsAnyKeyword($normalized, $urgentKeywords)) {
+            return true;
+        }
+
+        if (preg_match('/\b(?:cap do|muc do)\s*(?:[7-9]|10)\b/u', $normalized) === 1) {
+            return $this->isSymptomRelatedQuery($message);
+        }
+
+        return false;
+    }
+
+    protected function buildUrgentMedicalGuidanceResponse(string $message): array
+    {
+        $normalized = $this->normalizeIntentText($message);
+        $lines = [
+            'Dạ, các dấu hiệu anh/chị mô tả thuộc nhóm nguy cơ cao và cần được bác sĩ đánh giá trực tiếp, không nên tự chọn thuốc qua chatbot.',
+            '',
+        ];
+
+        if (str_contains($normalized, 'ung thu') || str_contains($normalized, 'giai doan cuoi')) {
+            $lines[] = 'Với bệnh ung thư giai đoạn cuối hoặc đang điều trị ung thư, mọi thuốc dùng thêm cần được bác sĩ điều trị/ung bướu hoặc chăm sóc giảm nhẹ xác nhận vì có thể tương tác thuốc, ảnh hưởng gan thận hoặc làm nặng tình trạng hiện tại.';
+        }
+
+        if (str_contains($normalized, 'tieu chay') || str_contains($normalized, 'ia chay')) {
+            $lines[] = 'Tiêu chảy nặng có thể gây mất nước và rối loạn điện giải nhanh. Nếu đi ngoài liên tục, khát nhiều, mệt lả, tiểu ít, sốt cao, đau bụng tăng hoặc phân có máu, anh/chị nên đến cơ sở y tế/cấp cứu ngay.';
+            $lines[] = 'Trong lúc chờ đi khám, có thể ưu tiên bù nước theo hướng dẫn trên gói ORESOL nếu không bị bác sĩ hạn chế dịch, nhưng không tự ý dùng thuốc cầm tiêu chảy mạnh khi chưa rõ nguyên nhân.';
+        }
+
+        $lines[] = '';
+        $lines[] = 'Anh/chị nên liên hệ bác sĩ điều trị hiện tại hoặc đến bệnh viện gần nhất ngay để được đánh giá và xử trí phù hợp.';
+
+        return [
+            'success' => true,
+            'response' => trim(implode("\n", $lines)),
+            'products' => [],
+            'categories' => [],
+            'explanations' => [],
+            'show_disclaimer' => true,
+            'disclaimer' => 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.',
+            'response_type' => 'urgent_health_consultation'
         ];
     }
 
@@ -2090,13 +2169,14 @@ PROMPT;
                     continue;
                 }
 
-                $itemTotal = $product['price'] * $quantity;
+                $unitPrice = (int) round((float) $product['price']);
+                $itemTotal = $unitPrice * $quantity;
                 $totalAmount += $itemTotal;
 
                 $validProducts[] = [
                     'product_id' => $product['id'],
                     'name' => $product['name'],
-                    'price' => $product['price'],
+                    'price' => $unitPrice,
                     'quantity' => $quantity,
                     'subtotal' => $itemTotal,
                     'image_url' => $product['image_url'],

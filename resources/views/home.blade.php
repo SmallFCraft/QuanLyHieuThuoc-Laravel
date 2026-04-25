@@ -200,10 +200,10 @@
                                 <div class="mt-auto d-flex justify-content-between align-items-end pt-3 gap-2">
                                     <div class="min-w-0">
                                         <span class="text-muted small text-decoration-line-through d-block mb-1">
-                                            {{ format_currency_vi($product->price * 1.1) }}
+                                            {{ format_currency_vi($product->price_vnd * 1.1) }}
                                         </span>
                                         <span class="h5 mb-0 text-success fw-bold">
-                                            {{ format_currency_vi($product->price) }}
+                                            {{ format_currency_vi($product->price_vnd) }}
                                         </span>
                                     </div>
                                     <form action="{{ route('cart.add') }}" method="POST" class="d-inline flex-shrink-0 js-add-to-cart-form">
@@ -294,10 +294,10 @@
                                 <div class="mt-auto d-flex justify-content-between align-items-end pt-3 gap-2">
                                     <div class="min-w-0">
                                         <span class="text-muted small text-decoration-line-through d-block mb-1">
-                                            {{ format_currency_vi($product->price * 1.1) }}
+                                            {{ format_currency_vi($product->price_vnd * 1.1) }}
                                         </span>
                                         <span class="h5 mb-0 text-success fw-bold">
-                                            {{ format_currency_vi($product->price) }}
+                                            {{ format_currency_vi($product->price_vnd) }}
                                         </span>
                                     </div>
                                     <form action="{{ route('cart.add') }}" method="POST" class="d-inline flex-shrink-0 js-add-to-cart-form">

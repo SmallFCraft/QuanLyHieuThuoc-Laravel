@@ -3,8 +3,11 @@
 namespace App\Services;
 
 use App\Models\ChatbotImage;
+use Gemini\Client;
 use Gemini\Data\Blob;
 use Gemini\Enums\MimeType;
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\RequestOptions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -181,8 +184,7 @@ class ImageRecognitionService
 
         try {
             // Call Gemini Vision API
-            $apiKey = config('chatbot.gemini.api_key');
-            $client = \Gemini::client($apiKey);
+            $client = $this->makeGeminiClient($this->resolveGeminiApiKey());
             
             $model = $client->generativeModel(
                 model: config('chatbot.gemini.model', 'gemini-2.5-flash')
@@ -252,6 +254,54 @@ class ImageRecognitionService
             // Re-throw other exceptions
             throw $e;
         }
+    }
+
+    protected function resolveGeminiApiKey(): string
+    {
+        $rawSources = [];
+        $primary = config('chatbot.gemini.api_key');
+
+        if (is_string($primary) && trim($primary) !== '') {
+            $rawSources[] = $primary;
+        }
+
+        $fallback = config('chatbot.gemini.api_keys', []);
+        if (is_string($fallback) && trim($fallback) !== '') {
+            $rawSources[] = $fallback;
+        } elseif (is_array($fallback)) {
+            foreach ($fallback as $item) {
+                if (is_string($item) && trim($item) !== '') {
+                    $rawSources[] = $item;
+                }
+            }
+        }
+
+        foreach ($rawSources as $source) {
+            $parts = preg_split('/[\s,;|]+/', trim($source)) ?: [];
+            foreach ($parts as $part) {
+                $candidate = trim($part);
+                if ($candidate !== '') {
+                    return $candidate;
+                }
+            }
+        }
+
+        throw new \RuntimeException('Gemini API key not configured');
+    }
+
+    protected function makeGeminiClient(string $apiKey): Client
+    {
+        $timeout = min(max((int) config('chatbot.gemini.timeout', 30), 1), 120);
+        $httpClient = new GuzzleClient([
+            RequestOptions::CONNECT_TIMEOUT => min(10, $timeout),
+            RequestOptions::READ_TIMEOUT => $timeout,
+            RequestOptions::TIMEOUT => $timeout,
+        ]);
+
+        return \Gemini::factory()
+            ->withApiKey($apiKey)
+            ->withHttpClient($httpClient)
+            ->make();
     }
 
     /**
@@ -485,7 +535,7 @@ PROMPT;
                     'product' => [
                         'id' => $product->id,
                         'name' => $product->name,
-                        'price' => $product->price,
+                        'price' => $product->price_vnd,
                         'stock_quantity' => $product->stock_quantity,
                         'image_url' => $product->image ? asset('storage/' . $product->image) : null,
                         'expiration_date' => $product->expiration_date,
@@ -660,7 +710,7 @@ PROMPT;
             return [
                 'id' => $product->id,
                 'name' => $product->name,
-                'price' => $product->price,
+                'price' => $product->price_vnd,
                 'stock_quantity' => $product->stock_quantity
             ];
         })->toArray();

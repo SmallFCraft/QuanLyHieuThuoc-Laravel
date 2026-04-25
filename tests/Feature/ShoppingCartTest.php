@@ -166,6 +166,28 @@ class ShoppingCartTest extends TestCase
         $this->assertEquals(5, $cart[$product->id]);
     }
 
+    public function test_cart_uses_whole_vnd_price_when_rendering_totals(): void
+    {
+        $product = Product::create([
+            'category_id' => $this->category->id,
+            'name' => 'Decimal Price Product',
+            'price' => 343487.26,
+            'expiration_date' => now()->addMonths(6),
+            'stock_quantity' => 10,
+            'reorder_point' => 5,
+            'batch_number' => 'BATCH-DECIMAL-001'
+        ]);
+
+        session(['cart' => [$product->id => 1]]);
+
+        $response = $this->get(route('cart.index'));
+
+        $response->assertOk();
+        $response->assertSee('data-price="343487"', false);
+        $response->assertSee('343.487', false);
+        $response->assertDontSee('343.487,26', false);
+    }
+
     public function test_can_remove_product_from_cart(): void
     {
         $product = Product::create([
