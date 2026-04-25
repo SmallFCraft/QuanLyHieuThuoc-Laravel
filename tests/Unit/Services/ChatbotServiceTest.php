@@ -436,6 +436,58 @@ class ChatbotServiceTest extends TestCase
         $this->assertContains('Smecta', array_column($result['products'], 'name'));
     }
 
+    public function test_process_message_uses_previous_symptoms_for_generic_product_follow_up(): void
+    {
+        $category = Category::factory()->create(['name' => 'Tiêu hóa']);
+        Product::factory()->create([
+            'category_id' => $category->id,
+            'name' => 'Smecta',
+            'usage' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
+            'stock_quantity' => 30,
+            'expiration_date' => now()->addYear(),
+        ]);
+        Product::factory()->create([
+            'category_id' => $category->id,
+            'name' => 'Lactulose Syrup',
+            'usage' => 'Hỗ trợ táo bón và làm mềm phân.',
+            'stock_quantity' => 20,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->geminiService->expects($this->once())
+            ->method('chat')
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'content' => 'Em sẽ dựa trên triệu chứng trước đó để gợi ý sản phẩm phù hợp.',
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage('có thuốc gì ko?', 1, [
+            'previous_messages' => [
+                [
+                    'role' => 'user',
+                    'content' => 'tôi bị đau bụng ỉa chảy cấp mãng tính, lâu ngày táo bón, ỉa ko ra hơi',
+                ],
+                [
+                    'role' => 'assistant',
+                    'content' => 'Nếu anh/chị muốn em gợi ý sản phẩm hỗ trợ, hãy nhắn thêm triệu chứng chủ đạo.',
+                ],
+            ],
+        ]);
+
+        $productNames = array_column($result['products'], 'name');
+
+        $this->assertTrue($result['success']);
+        $this->assertNotEmpty($result['products']);
+        $this->assertContains('Smecta', $productNames);
+        $this->assertContains('Lactulose Syrup', $productNames);
+        $this->assertTrue($result['show_disclaimer']);
+    }
+
     public function test_process_message_extracts_multiple_health_goals_from_generic_question(): void
     {
         $category = Category::factory()->create(['name' => 'Thực phẩm chức năng']);

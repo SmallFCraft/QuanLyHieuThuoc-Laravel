@@ -284,6 +284,11 @@ PROMPT;
                 return $localResponse;
             }
 
+            $catalogLookupMessage = $this->resolveCatalogLookupMessage($workingMessage, $context);
+            $contextSymptoms = $catalogLookupMessage !== $workingMessage
+                ? $this->extractSymptomQueriesFromMessage($catalogLookupMessage)
+                : [];
+
             $messages = $this->buildConversationMessages($workingMessage, $context);
             $response = $this->aiService->chat($messages, [
                 'functions' => $this->getFunctionSchema(),
@@ -298,11 +303,12 @@ PROMPT;
             $responseType = 'general';
 
             $normalizedMessage = $this->normalizeMessage($workingMessage);
+            $normalizedCatalogMessage = $this->normalizeMessage($catalogLookupMessage);
             $isUrlOnlyMessage = $this->isLikelyUrlOnlyMessage($workingMessage);
             $isNearbyPharmacyIntent = $this->isNearbyPharmacyLocationIntent($workingMessage);
-            $defaultQuery = ($isUrlOnlyMessage || $isNearbyPharmacyIntent) ? '' : $this->resolveCatalogQuery($workingMessage);
-            $defaultDisclaimer = $this->isSymptomRelatedQuery($workingMessage)
-                || $this->requiresAiConsultation($normalizedMessage);
+            $defaultQuery = ($isUrlOnlyMessage || $isNearbyPharmacyIntent) ? '' : $this->resolveCatalogQuery($catalogLookupMessage);
+            $defaultDisclaimer = $this->isSymptomRelatedQuery($catalogLookupMessage)
+                || $this->requiresAiConsultation($normalizedCatalogMessage);
 
             if (isset($response['choices'][0]['message']['function_call'])) {
                 $functionCall = $response['choices'][0]['message']['function_call'];
@@ -321,12 +327,16 @@ PROMPT;
                         $resolvedQuery = $query !== ''
                             ? $this->sanitizeCatalogQuery($query)
                             : $defaultQuery;
+                        if ($this->isGenericCatalogQuery($resolvedQuery) && $defaultQuery !== '') {
+                            $resolvedQuery = $defaultQuery;
+                        }
+                        $lookupSymptoms = array_values(array_unique(array_merge($symptoms, $contextSymptoms)));
 
                         $catalogResponse = $this->buildCatalogLookupResponse(
                             $resolvedQuery,
-                            $workingMessage,
-                            $defaultDisclaimer || !empty($symptoms),
-                            $symptoms
+                            $catalogLookupMessage,
+                            $defaultDisclaimer || !empty($lookupSymptoms),
+                            $lookupSymptoms
                         );
 
                         $products = $catalogResponse['products'];
@@ -336,7 +346,7 @@ PROMPT;
                         $responseType = $catalogResponse['response_type'] ?? 'general';
                         $responseText = $this->shouldUseGroundedAiStep()
                             ? $this->buildGroundedAiResponse(
-                                $workingMessage,
+                                $catalogLookupMessage,
                                 $products,
                                 $categories,
                                 $explanations,
@@ -385,10 +395,16 @@ PROMPT;
                     $this->isCategoryIntent($normalizedMessage)
                     || $defaultQuery !== ''
                     || $this->wantsProductSuggestionForSymptom($workingMessage)
+                    || !empty($contextSymptoms)
                 );
 
                 if ($shouldEnrichCatalog) {
-                    $catalogResponse = $this->buildCatalogLookupResponse($defaultQuery, $workingMessage, $showDisclaimer);
+                    $catalogResponse = $this->buildCatalogLookupResponse(
+                        $defaultQuery,
+                        $catalogLookupMessage,
+                        $showDisclaimer,
+                        $contextSymptoms
+                    );
                     $products = $catalogResponse['products'];
                     $categories = $catalogResponse['categories'];
                     $explanations = $catalogResponse['explanations'];
@@ -402,7 +418,7 @@ PROMPT;
                     $hasCatalogData = !empty($products) || !empty($categories);
                     $responseText = $this->shouldUseGroundedAiStep() && $hasCatalogData
                         ? $this->buildGroundedAiResponse(
-                            $workingMessage,
+                            $catalogLookupMessage,
                             $products,
                             $categories,
                             $explanations,
@@ -681,7 +697,7 @@ PROMPT;
             return null;
         }
 
-        if (!$this->isSymptomRelatedQuery($message) && !$this->requiresAiConsultation($normalizedMessage)) {
+        if (!$this->isSymptomRelatedQuery($message)) {
             $query = $this->resolveCatalogQuery($message);
 
             if ($query !== '') {
@@ -1600,6 +1616,110 @@ PROMPT;
         return number_format((float) $amount, 0, ',', '.') . ' ₫';
     }
 
+    protected function resolveCatalogLookupMessage(string $message, array $context): string
+    {
+        if (!$this->isGenericProductSuggestionRequest($message)) {
+            return $message;
+        }
+
+        $previousSymptomMessage = $this->findRecentSymptomMessage($context);
+
+        return $previousSymptomMessage !== '' ? $previousSymptomMessage : $message;
+    }
+
+    protected function isGenericProductSuggestionRequest(string $message): bool
+    {
+        if (!$this->wantsProductSuggestionForSymptom($message)) {
+            return false;
+        }
+
+        $query = $this->resolveCatalogQuery($message);
+
+        return $query === '' || $this->isGenericCatalogQuery($query);
+    }
+
+    protected function isGenericCatalogQuery(string $query): bool
+    {
+        $normalized = $this->normalizeIntentText($query);
+        if ($normalized === '') {
+            return true;
+        }
+
+        $genericTokens = [
+            'co', 'khong', 'ko', 'gi', 'nao', 'loai', 'thuoc', 'san', 'pham',
+            'mua', 'dung', 'uong', 'nen', 'goi', 'y', 'ho', 'tro'
+        ];
+
+        $tokens = array_values(array_filter(
+            explode(' ', $normalized),
+            static fn (string $token): bool => $token !== ''
+        ));
+
+        if (empty($tokens)) {
+            return true;
+        }
+
+        foreach ($tokens as $token) {
+            if (!in_array($token, $genericTokens, true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    protected function findRecentSymptomMessage(array $context): string
+    {
+        $messages = $context['previous_messages'] ?? [];
+        if (!is_array($messages)) {
+            return '';
+        }
+
+        for ($index = count($messages) - 1; $index >= 0; $index--) {
+            $message = $messages[$index];
+            if (!is_array($message) || ($message['role'] ?? null) !== 'user') {
+                continue;
+            }
+
+            $content = trim((string) ($message['content'] ?? ''));
+            if ($content !== '' && $this->isSymptomRelatedQuery($content)) {
+                return $content;
+            }
+        }
+
+        return '';
+    }
+
+    protected function extractSymptomQueriesFromMessage(string $message): array
+    {
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return [];
+        }
+
+        $symptomMap = [
+            'dau bung' => 'đau bụng',
+            'tieu chay' => 'tiêu chảy',
+            'ia chay' => 'tiêu chảy',
+            'tao bon' => 'táo bón',
+            'kho di ngoai' => 'táo bón',
+            'ia ko ra' => 'táo bón',
+            'ia khong ra' => 'táo bón',
+            'day hoi' => 'đầy hơi',
+            'kho tieu' => 'khó tiêu',
+            'roi loan tieu hoa' => 'rối loạn tiêu hóa',
+        ];
+
+        $queries = [];
+        foreach ($symptomMap as $needle => $query) {
+            if (str_contains($normalized, $needle)) {
+                $queries[] = $query;
+            }
+        }
+
+        return array_values(array_unique($queries));
+    }
+
     /**
      * Build conversation messages array for Gemini.
      *
@@ -1644,13 +1764,28 @@ PROMPT;
         }
 
         $symptomKeywords = [
-            'dau', 'sot', 'ho', 'cam', 'viem', 'nhiem', 'di ung', 'ngua',
+            'dau', 'sot', 'cam', 'viem', 'nhiem', 'di ung', 'ngua',
             'chong mat', 'buon non', 'tieu chay', 'tao bon', 'met moi',
             'kho tho', 'dau dau', 'dau bung', 'dau hong', 'so mui',
             'trieu chung', 'benh', 'om', 'kho chiu', 'khong khoe'
         ];
 
-        return $this->containsAnyKeyword($query, $symptomKeywords);
+        if ($this->containsAnyKeyword($query, $symptomKeywords)) {
+            return true;
+        }
+
+        $tokens = array_values(array_filter(
+            explode(' ', $this->normalizeIntentText($query)),
+            static fn (string $token): bool => $token !== ''
+        ));
+
+        foreach ($tokens as $index => $token) {
+            if ($token === 'ho' && ($tokens[$index + 1] ?? '') !== 'tro') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function isLikelyUrlOnlyMessage(string $message): bool

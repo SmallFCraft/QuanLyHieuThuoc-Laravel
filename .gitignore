@@ -28,3 +28,4 @@ composer.lock
 /.agent
 *.zip
 .playwright-mcp/
+/MonHoc/

@@ -19,6 +19,8 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
         'max_tokens' => env('GEMINI_MAX_TOKENS', 500),
         'temperature' => env('GEMINI_TEMPERATURE', 0.7),
+        'include_thoughts' => env('GEMINI_INCLUDE_THOUGHTS', false),
+        'thinking_budget' => env('GEMINI_THINKING_BUDGET', 0),
     ],
 
     /*

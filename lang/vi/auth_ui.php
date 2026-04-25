@@ -3,6 +3,8 @@
 return [
     'email_address' => 'Email',
     'password' => 'Mật khẩu',
+    'status_active' => 'Hoạt động',
+    'status_inactive' => 'Không hoạt động',
     'confirm_password' => [
         'title' => 'Xác nhận mật khẩu',
         'description' => 'Vui lòng xác thực mật khẩu để tiếp tục.',

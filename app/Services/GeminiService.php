@@ -11,6 +11,7 @@ use Gemini\Data\FunctionDeclaration;
 use Gemini\Data\FunctionResponse;
 use Gemini\Data\Part;
 use Gemini\Data\Schema;
+use Gemini\Data\ThinkingConfig;
 use Gemini\Data\Tool;
 use Gemini\Enums\DataType;
 use Gemini\Enums\Role;
@@ -74,17 +75,20 @@ class GeminiService
                     }
                 }
 
+                $modelName = config('chatbot.gemini.model', 'gemini-2.5-flash');
+
                 // Build generation config
                 $generationConfig = new GenerationConfig(
                     maxOutputTokens: $options['max_tokens'] ?? config('chatbot.gemini.max_tokens', 500),
                     temperature: $options['temperature'] ?? config('chatbot.gemini.temperature', 0.7),
+                    thinkingConfig: $this->buildThinkingConfig($modelName, $options),
                 );
 
                 $startTime = microtime(true);
 
                 // Prepare model with system instruction
                 $model = $this->client->generativeModel(
-                    model: config('chatbot.gemini.model', 'gemini-2.5-flash')
+                    model: $modelName
                 );
 
                 // Set system instruction (critical for function calling behavior)
@@ -172,6 +176,26 @@ class GeminiService
         throw new \Exception(
             'Gemini API request failed after ' . $this->maxRetries . ' attempts: ' . 
             ($lastException ? $lastException->getMessage() : 'Unknown error')
+        );
+    }
+
+    /**
+     * Gemini 2.5 Flash can spend maxOutputTokens on internal thinking and return
+     * an empty candidate. Disable thinking by default for the chatbot so short
+     * user-facing replies still contain text.
+     */
+    protected function buildThinkingConfig(string $modelName, array $options = []): ?ThinkingConfig
+    {
+        if (!str_contains($modelName, '2.5')) {
+            return null;
+        }
+
+        $includeThoughts = (bool) ($options['include_thoughts'] ?? config('chatbot.gemini.include_thoughts', false));
+        $thinkingBudget = $options['thinking_budget'] ?? config('chatbot.gemini.thinking_budget', 0);
+
+        return new ThinkingConfig(
+            includeThoughts: $includeThoughts,
+            thinkingBudget: is_numeric($thinkingBudget) ? (int) $thinkingBudget : 0,
         );
     }
 
