@@ -600,20 +600,31 @@ PROMPT;
             return $product;
         }
         
-        // Try word-by-word matching with cleaned name
+        // Try word-by-word matching with cleaned name.
+        // Require at least 2 meaningful words (>2 chars) so we don't return
+        // a generic match when the differentiating tokens are too short
+        // (e.g. "Vitamin A-D" -> ["vitamin", "a", "d"] should NOT match any
+        // "Vitamin *" product just because of the shared "vitamin" word).
         $words = explode(' ', $cleanName);
+        $meaningfulWords = array_values(array_filter(
+            $words,
+            fn ($w) => mb_strlen($w, 'UTF-8') > 2
+        ));
+
+        if (count($meaningfulWords) < 2) {
+            return null;
+        }
+
         $query = \App\Models\Product::notExpired()
             ->where('stock_quantity', '>', 0);
-            
-        foreach ($words as $word) {
-            if (strlen($word) > 2) {
-                $query->where(function($q) use ($word) {
-                    $q->where('name', 'LIKE', "%{$word}%")
-                      ->orWhere('ingredients', 'LIKE', "%{$word}%");
-                });
-            }
+
+        foreach ($meaningfulWords as $word) {
+            $query->where(function($q) use ($word) {
+                $q->where('name', 'LIKE', "%{$word}%")
+                  ->orWhere('ingredients', 'LIKE', "%{$word}%");
+            });
         }
-        
+
         return $query->FEFO()->first();
     }
     
@@ -627,7 +638,12 @@ PROMPT;
     {
         // Convert to lowercase for processing
         $cleaned = mb_strtolower($name, 'UTF-8');
-        
+
+        // Normalize separators (hyphen, en-dash, em-dash, ampersand, plus, slash)
+        // to spaces so "Vitamin A-D", "Vitamin A&D", "Vitamin A+D" tokenize
+        // consistently.
+        $cleaned = preg_replace('/[-–—&+\/]/u', ' ', $cleaned);
+
         // Remove common brand names
         $brands = ['mylan', 'teva', 'pfizer', 'novartis', 'roche', 'sanofi', 'glaxo', 'bayer'];
         foreach ($brands as $brand) {
@@ -692,14 +708,23 @@ PROMPT;
      */
     protected function findSimilarProducts(string $name): array
     {
-        $words = explode(' ', $name);
+        // Use cleaned name so brand/dosage/separators don't dilute the search.
+        $cleanName = $this->cleanProductName($name);
+        $words = array_values(array_filter(
+            explode(' ', $cleanName),
+            fn ($w) => mb_strlen($w, 'UTF-8') > 2
+        ));
+
+        if (empty($words)) {
+            return [];
+        }
+
         $products = \App\Models\Product::notExpired()
             ->where('stock_quantity', '>', 0)
             ->where(function($query) use ($words) {
                 foreach ($words as $word) {
-                    if (strlen($word) > 2) {
-                        $query->orWhere('name', 'LIKE', "%{$word}%");
-                    }
+                    $query->orWhere('name', 'LIKE', "%{$word}%")
+                          ->orWhere('ingredients', 'LIKE', "%{$word}%");
                 }
             })
             ->FEFO()

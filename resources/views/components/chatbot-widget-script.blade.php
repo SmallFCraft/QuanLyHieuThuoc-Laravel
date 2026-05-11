@@ -258,6 +258,7 @@ function chatbotWidget() {
                         const validationMessage = data.error
                             || data?.errors?.message?.[0]
                             || data?.message
+                            || data?.response
                             || 'Dạ, tin nhắn chưa hợp lệ. Anh/chị vui lòng nhập lại giúp em nhé.';
 
                         this.pushMessage({
@@ -395,37 +396,53 @@ function chatbotWidget() {
                 if (data.success && data.recognized_products && data.recognized_products.length > 0) {
                     const matchedCount = data.recognized_products.filter(p => p.matched).length;
                     const unmatchedCount = data.recognized_products.filter(p => !p.matched).length;
-                    
-                    let message = `✅ Đã nhận dạng được ${data.recognized_products.length} sản phẩm từ hình ảnh.\n\n`;
-                    
+
+                    // Only show the summary bubble when there are matched products to display.
+                    // When everything is unmatched, the detail bubble below already conveys
+                    // the same information (avoids the redundant "✅ Đã nhận dạng / ⚠️ không tìm thấy" message).
                     if (matchedCount > 0) {
+                        let message = `✅ Đã nhận dạng được ${data.recognized_products.length} sản phẩm từ hình ảnh.\n\n`;
                         message += `📦 Tìm thấy ${matchedCount} sản phẩm trong kho.\n`;
-                    }
-                    if (unmatchedCount > 0) {
-                        message += `⚠️ ${unmatchedCount} sản phẩm không tìm thấy trong hệ thống.\n`;
-                    }
-                    
-                    // Show matched products
-                    const matchedProducts = data.recognized_products
-                        .filter(p => p.matched)
-                        .map(p => p.product);
-                    
-                    this.pushMessage({
-                        role: 'assistant',
-                        content: message,
-                        products: matchedProducts
-                    });
-                    
-                    // Show unmatched products if any
-                    if (unmatchedCount > 0) {
-                        const unmatchedList = data.recognized_products
-                            .filter(p => !p.matched)
-                            .map(p => `• ${p.parsed_name}`)
-                            .join('\n');
-                        
+                        if (unmatchedCount > 0) {
+                            message += `⚠️ ${unmatchedCount} sản phẩm không tìm thấy trong hệ thống.\n`;
+                        }
+
+                        const matchedProducts = data.recognized_products
+                            .filter(p => p.matched)
+                            .map(p => p.product);
+
                         this.pushMessage({
                             role: 'assistant',
-                            content: `Các sản phẩm không tìm thấy:\n${unmatchedList}\n\nVui lòng kiểm tra lại tên sản phẩm hoặc liên hệ nhà thuốc để được hỗ trợ.`
+                            content: message,
+                            products: matchedProducts
+                        });
+                    }
+                    
+                    // Show unmatched products if any (with suggestions when available)
+                    if (unmatchedCount > 0) {
+                        const unmatched = data.recognized_products.filter(p => !p.matched);
+
+                        const blocks = unmatched.map(p => {
+                            const suggestions = Array.isArray(p.suggestions) ? p.suggestions : [];
+                            if (suggestions.length === 0) {
+                                return `• ${p.parsed_name}`;
+                            }
+                            const suggestionLines = suggestions
+                                .map(s => `    - ${s.name} — ${this.formatCurrency(s.price)}`)
+                                .join('\n');
+                            return `• ${p.parsed_name}\n  Gợi ý sản phẩm tương tự:\n${suggestionLines}`;
+                        });
+
+                        const hasAnySuggestion = unmatched.some(
+                            p => Array.isArray(p.suggestions) && p.suggestions.length > 0
+                        );
+                        const footer = hasAnySuggestion
+                            ? '\n\nAnh/chị có thể chọn một trong các sản phẩm gợi ý phía trên, hoặc liên hệ nhà thuốc nếu cần hỗ trợ thêm nhé.'
+                            : '\n\nVui lòng kiểm tra lại tên sản phẩm hoặc liên hệ nhà thuốc để được hỗ trợ.';
+
+                        this.pushMessage({
+                            role: 'assistant',
+                            content: `Các sản phẩm không tìm thấy:\n\n${blocks.join('\n\n')}${footer}`
                         });
                     }
                     
