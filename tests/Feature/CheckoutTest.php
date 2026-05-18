@@ -34,7 +34,7 @@ class CheckoutTest extends TestCase
     public function test_authenticated_user_can_access_checkout(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -43,7 +43,7 @@ class CheckoutTest extends TestCase
             'batch_number' => 'BATCH-001'
         ]);
 
-        session(['cart' => [$product->id => 2]]);
+        session(['cart' => [$product->MaSP => 2]]);
 
         $response = $this->actingAs($this->user)->get(route('checkout.index'));
 
@@ -61,7 +61,7 @@ class CheckoutTest extends TestCase
     public function test_can_complete_checkout_with_valid_data(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -70,7 +70,7 @@ class CheckoutTest extends TestCase
             'batch_number' => 'BATCH-002'
         ]);
 
-        session(['cart' => [$product->id => 2]]);
+        session(['cart' => [$product->MaSP => 2]]);
 
         $response = $this->actingAs($this->user)->post(route('checkout.process'), [
             'customer_name' => 'Test User',
@@ -83,17 +83,17 @@ class CheckoutTest extends TestCase
 
         // Verify order was created
         $this->assertDatabaseHas('orders', [
-            'user_id' => $this->user->id,
+            'MaKH' => $this->user->MaKH,
             'status' => 'Pending',
             'shipping_address' => '123 Test Street, Test City',
             'shipping_phone' => '0901234567'
         ]);
 
         // Verify order items were created
-        $order = Order::where('user_id', $this->user->id)->first();
+        $order = Order::where('MaKH', $this->user->MaKH)->first();
         $this->assertDatabaseHas('order_items', [
-            'order_id' => $order->id,
-            'product_id' => $product->id,
+            'MaDH' => $order->MaDH,
+            'MaSP' => $product->MaSP,
             'quantity' => 2
         ]);
 
@@ -108,7 +108,7 @@ class CheckoutTest extends TestCase
     public function test_checkout_fails_with_insufficient_stock(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Limited Stock Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -117,7 +117,7 @@ class CheckoutTest extends TestCase
             'batch_number' => 'BATCH-003'
         ]);
 
-        session(['cart' => [$product->id => 5]]);
+        session(['cart' => [$product->MaSP => 5]]);
 
         $response = $this->actingAs($this->user)->post(route('checkout.process'), [
             'customer_name' => 'Test User',
@@ -130,7 +130,7 @@ class CheckoutTest extends TestCase
 
         // Verify no order was created
         $this->assertDatabaseMissing('orders', [
-            'user_id' => $this->user->id
+            'MaKH' => $this->user->MaKH
         ]);
 
         // Verify inventory was not changed
@@ -141,7 +141,7 @@ class CheckoutTest extends TestCase
     public function test_checkout_fails_with_expired_product(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Expired Product',
             'price' => 10000,
             'expiration_date' => now()->subDays(1),
@@ -150,7 +150,7 @@ class CheckoutTest extends TestCase
             'batch_number' => 'BATCH-004'
         ]);
 
-        session(['cart' => [$product->id => 2]]);
+        session(['cart' => [$product->MaSP => 2]]);
 
         $response = $this->actingAs($this->user)->post(route('checkout.process'), [
             'customer_name' => 'Test User',
@@ -163,14 +163,14 @@ class CheckoutTest extends TestCase
 
         // Verify no order was created
         $this->assertDatabaseMissing('orders', [
-            'user_id' => $this->user->id
+            'MaKH' => $this->user->MaKH
         ]);
     }
 
     public function test_checkout_requires_valid_phone_number(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -179,7 +179,7 @@ class CheckoutTest extends TestCase
             'batch_number' => 'BATCH-005'
         ]);
 
-        session(['cart' => [$product->id => 2]]);
+        session(['cart' => [$product->MaSP => 2]]);
 
         $response = $this->actingAs($this->user)->post(route('checkout.process'), [
             'customer_name' => 'Test User',

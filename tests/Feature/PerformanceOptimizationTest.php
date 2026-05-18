@@ -45,7 +45,7 @@ class PerformanceOptimizationTest extends TestCase
         // Create multiple products with categories
         for ($i = 1; $i <= 10; $i++) {
             Product::create([
-                'category_id' => $this->category->id,
+                'MaDM' => $this->category->MaDM,
                 'name' => "Product {$i}",
                 'price' => 10000 * $i,
                 'expiration_date' => now()->addYear(),
@@ -77,7 +77,7 @@ class PerformanceOptimizationTest extends TestCase
         // Create orders with items
         for ($i = 1; $i <= 5; $i++) {
             $product = Product::create([
-                'category_id' => $this->category->id,
+                'MaDM' => $this->category->MaDM,
                 'name' => "Product {$i}",
                 'price' => 10000,
                 'expiration_date' => now()->addYear(),
@@ -87,7 +87,7 @@ class PerformanceOptimizationTest extends TestCase
             ]);
 
             $order = Order::create([
-                'user_id' => $this->user->id,
+                'MaKH' => $this->user->MaKH,
                 'total_amount' => 20000,
                 'status' => 'Pending',
                 'shipping_address' => '123 Test Street',
@@ -95,8 +95,8 @@ class PerformanceOptimizationTest extends TestCase
             ]);
 
             OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $product->id,
+                'MaDH' => $order->MaDH,
+                'MaSP' => $product->MaSP,
                 'quantity' => 2,
                 'unit_price' => 10000,
                 'batch_number' => "BATCH-ORDER-{$i}"
@@ -124,7 +124,7 @@ class PerformanceOptimizationTest extends TestCase
         // Create many products
         for ($i = 1; $i <= 100; $i++) {
             Product::create([
-                'category_id' => $this->category->id,
+                'MaDM' => $this->category->MaDM,
                 'name' => "Product {$i}",
                 'price' => 10000,
                 'expiration_date' => now()->addDays($i),
@@ -188,7 +188,7 @@ class PerformanceOptimizationTest extends TestCase
     {
         // Create test data
         Order::create([
-            'user_id' => $this->user->id,
+            'MaKH' => $this->user->MaKH,
             'total_amount' => 100000,
             'status' => 'Completed',
             'shipping_address' => '123 Test Street',
@@ -240,7 +240,7 @@ class PerformanceOptimizationTest extends TestCase
         // Create many products
         for ($i = 1; $i <= 50; $i++) {
             Product::create([
-                'category_id' => $this->category->id,
+                'MaDM' => $this->category->MaDM,
                 'name' => "Product {$i}",
                 'price' => 10000,
                 'expiration_date' => now()->addYear(),
@@ -262,7 +262,7 @@ class PerformanceOptimizationTest extends TestCase
     {
         // Create product with all fields
         Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'ingredients' => str_repeat('Long ingredient list ', 100),
             'usage' => str_repeat('Long usage instructions ', 100),
@@ -273,13 +273,13 @@ class PerformanceOptimizationTest extends TestCase
             'batch_number' => 'BATCH-SELECT'
         ]);
 
-        $products = Product::select('id', 'name', 'price')->get();
+        $products = Product::select('MaSP', 'name', 'price')->get();
         $allProducts = Product::all();
 
         $selectedAttributes = $products->first()->getAttributes();
         $allAttributes = $allProducts->first()->getAttributes();
 
-        $this->assertArrayHasKey('id', $selectedAttributes);
+        $this->assertArrayHasKey('MaSP', $selectedAttributes);
         $this->assertArrayHasKey('name', $selectedAttributes);
         $this->assertArrayHasKey('price', $selectedAttributes);
         $this->assertArrayNotHasKey('ingredients', $selectedAttributes);
@@ -296,7 +296,7 @@ class PerformanceOptimizationTest extends TestCase
         // Create many products
         for ($i = 1; $i <= 100; $i++) {
             Product::create([
-                'category_id' => $this->category->id,
+                'MaDM' => $this->category->MaDM,
                 'name' => "Product {$i}",
                 'price' => 10000,
                 'expiration_date' => now()->addYear(),

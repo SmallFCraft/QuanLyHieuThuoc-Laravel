@@ -14,10 +14,10 @@ class AuditLogService
     public static function logAuthAttempt(string $email, bool $success, ?string $reason = null)
     {
         AuditLog::create([
-            'user_id' => $success ? Auth::id() : null,
+            'MaKH' => $success ? Auth::id() : null,
             'action' => $success ? 'login_success' : 'login_failed',
             'model_type' => 'Auth',
-            'model_id' => null,
+            'MaDoiTuong' => null,
             'old_values' => null,
             'new_values' => [
                 'email' => $email,
@@ -35,10 +35,10 @@ class AuditLogService
     public static function logLogout()
     {
         AuditLog::create([
-            'user_id' => Auth::id(),
+            'MaKH' => Auth::id(),
             'action' => 'logout',
             'model_type' => 'Auth',
-            'model_id' => null,
+            'MaDoiTuong' => null,
             'old_values' => null,
             'new_values' => null,
             'ip_address' => request()->ip(),
@@ -56,10 +56,10 @@ class AuditLogService
         string $reason
     ) {
         AuditLog::create([
-            'user_id' => Auth::id(),
+            'MaKH' => Auth::id(),
             'action' => 'inventory_adjustment',
             'model_type' => 'Product',
-            'model_id' => $productId,
+            'MaDoiTuong' => $productId,
             'old_values' => ['stock_quantity' => $oldQuantity],
             'new_values' => [
                 'stock_quantity' => $newQuantity,
@@ -79,10 +79,10 @@ class AuditLogService
         string $newStatus
     ) {
         AuditLog::create([
-            'user_id' => Auth::id(),
+            'MaKH' => Auth::id(),
             'action' => 'order_status_change',
             'model_type' => 'Order',
-            'model_id' => $orderId,
+            'MaDoiTuong' => $orderId,
             'old_values' => ['status' => $oldStatus],
             'new_values' => ['status' => $newStatus],
             'ip_address' => request()->ip(),
@@ -101,10 +101,10 @@ class AuditLogService
         ?array $newValues = null
     ) {
         AuditLog::create([
-            'user_id' => Auth::id(),
+            'MaKH' => Auth::id(),
             'action' => $action,
             'model_type' => $modelType ?? 'System',
-            'model_id' => $modelId,
+            'MaDoiTuong' => $modelId,
             'old_values' => $oldValues,
             'new_values' => $newValues,
             'ip_address' => request()->ip(),
@@ -118,7 +118,7 @@ class AuditLogService
     public static function getLogsForModel(string $modelType, int $modelId)
     {
         return AuditLog::where('model_type', $modelType)
-            ->where('model_id', $modelId)
+            ->where('MaDoiTuong', $modelId)
             ->with('user')
             ->orderBy('created_at', 'desc')
             ->get();

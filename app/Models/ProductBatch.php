@@ -11,13 +11,15 @@ class ProductBatch extends Model
 {
     use HasFactory, Auditable;
 
+    protected $primaryKey = 'MaLo';
+
     /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
     protected $fillable = [
-        'product_id',
+        'MaSP',
         'batch_number',
         'expiration_date',
         'stock_quantity',
@@ -40,7 +42,7 @@ class ProductBatch extends Model
      */
     public function product()
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class, 'MaSP', 'MaSP');
     }
 
     /**
@@ -48,7 +50,7 @@ class ProductBatch extends Model
      */
     public function orderItems()
     {
-        return $this->hasMany(OrderItem::class, 'batch_id');
+        return $this->hasMany(OrderItem::class, 'MaLo', 'MaLo');
     }
 
     /**

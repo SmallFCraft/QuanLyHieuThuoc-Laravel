@@ -49,7 +49,7 @@
                 <tbody>
                     @foreach($orders as $order)
                     <tr>
-                        <td>#{{ $order->id }}</td>
+                        <td>#{{ $order->MaDH }}</td>
                         <td>{{ $order->user->name }}</td>
                         <td class="fw-bold">{{ $order->formatted_total }}</td>
                         <td>
@@ -63,7 +63,7 @@
                         </td>
                         <td>{{ $order->formatted_created_at }}</td>
                         <td>
-                            <a href="{{ route('admin.orders.show', $order->id) }}" 
+                            <a href="{{ route('admin.orders.show', $order->MaDH) }}"
                                class="btn btn-sm btn-primary">
                                 <i class="bi bi-eye"></i> Xem
                             </a>

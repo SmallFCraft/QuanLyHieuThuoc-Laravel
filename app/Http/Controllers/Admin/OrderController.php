@@ -36,9 +36,9 @@ class OrderController extends Controller
     /**
      * Display the specified order.
      */
-    public function show($id)
+    public function show($MaDH)
     {
-        $order = Order::with(['user', 'items.product'])->findOrFail($id);
+        $order = Order::with(['user', 'items.product'])->findOrFail($MaDH);
 
         return view('admin.orders.show', compact('order'));
     }
@@ -46,7 +46,7 @@ class OrderController extends Controller
     /**
      * Update the order status.
      */
-    public function updateStatus(Request $request, $id)
+    public function updateStatus(Request $request, $MaDH)
     {
         $request->validate([
             'status' => 'required|in:Pending,Delivering,Completed,Cancelled'
@@ -54,7 +54,7 @@ class OrderController extends Controller
 
         try {
             $order = $this->orderService->updateStatus(
-                $id,
+                $MaDH,
                 $request->status,
                 auth()->id()
             );
@@ -69,10 +69,10 @@ class OrderController extends Controller
     /**
      * Cancel the order.
      */
-    public function cancel($id)
+    public function cancel($MaDH)
     {
         try {
-            $this->orderService->cancelOrder($id, auth()->id());
+            $this->orderService->cancelOrder($MaDH, auth()->id());
 
             return back()->with('success', 'Đã hủy đơn hàng và hoàn trả tồn kho.');
             

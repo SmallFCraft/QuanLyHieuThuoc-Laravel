@@ -15,11 +15,11 @@ return new class extends Migration
     {
         $canonicalCategory = DB::table('categories')
             ->where('name', 'Vitamin và khoáng chất')
-            ->first(['id']);
+            ->first(['MaDM']);
 
         $duplicateCategory = DB::table('categories')
             ->where('name', 'Vitamin')
-            ->first(['id']);
+            ->first(['MaDM']);
 
         if (!$canonicalCategory || !$duplicateCategory) {
             return;
@@ -28,14 +28,14 @@ return new class extends Migration
         $now = Carbon::now();
 
         DB::table('products')
-            ->where('category_id', $duplicateCategory->id)
+            ->where('MaDM', $duplicateCategory->MaDM)
             ->update([
-                'category_id' => $canonicalCategory->id,
+                'MaDM' => $canonicalCategory->MaDM,
                 'updated_at' => $now,
             ]);
 
         DB::table('categories')
-            ->where('id', $duplicateCategory->id)
+            ->where('MaDM', $duplicateCategory->MaDM)
             ->delete();
 
         Cache::forget(Category::NAV_CACHE_KEY);
@@ -51,4 +51,3 @@ return new class extends Migration
         // Intentionally no-op: merged category data should not be re-split automatically.
     }
 };
-

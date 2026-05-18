@@ -119,7 +119,7 @@
                     'name' => $product->name,
                     'description' => $metaDescription,
                     'image' => [$metaImage],
-                    'sku' => $product->batch_number ?: (string) $product->id,
+                    'sku' => $product->batch_number ?: (string) $product->MaSP,
                     'category' => $product->category->name ?? null,
                     'brand' => [
                         '@type' => 'Brand',
@@ -455,7 +455,7 @@
                                     @forelse($navCategories as $cat)
                                         <div class="col-12">
                                             <li>
-                                                <a class="dropdown-item rounded-3 py-2 px-3 d-flex align-items-center justify-content-between" href="{{ route('products.index', ['category' => $cat->id]) }}" style="transition: all 0.2s;">
+                                                <a class="dropdown-item rounded-3 py-2 px-3 d-flex align-items-center justify-content-between" href="{{ route('products.index', ['category' => $cat->MaDM]) }}" style="transition: all 0.2s;">
                                                     <span>{{ $cat->name }}</span>
                                                     <i class="bi bi-chevron-right small text-gray-300"></i>
                                                 </a>
@@ -648,7 +648,7 @@
                                         <ul class="list-unstyled mb-0">
                                             @forelse($footerCategories as $fCat)
                                             <li class="{{ !$loop->last ? 'mb-2' : 'mb-0' }}">
-                                                <a href="{{ route('products.index', ['category' => $fCat->id]) }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                <a href="{{ route('products.index', ['category' => $fCat->MaDM]) }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
                                                     {{ $fCat->name }}
                                                 </a>

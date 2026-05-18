@@ -54,13 +54,13 @@ class UserController extends Controller
     /**
      * Update the specified user
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $MaKH)
     {
-        $user = User::findOrFail($id);
+        $user = User::findOrFail($MaKH);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $id],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $MaKH . ',MaKH'],
             'role' => ['required', 'in:Administrator,User'],
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
         ], [
@@ -89,9 +89,9 @@ class UserController extends Controller
     /**
      * Update user status (activate/deactivate)
      */
-    public function updateStatus(Request $request, $id)
+    public function updateStatus(Request $request, $MaKH)
     {
-        $user = User::findOrFail($id);
+        $user = User::findOrFail($MaKH);
 
         $validated = $request->validate([
             'status' => ['required', 'in:active,inactive'],

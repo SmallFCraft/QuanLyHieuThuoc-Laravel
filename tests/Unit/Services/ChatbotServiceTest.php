@@ -52,7 +52,7 @@ class ChatbotServiceTest extends TestCase
         $category = Category::factory()->create();
 
         Product::factory()->count(10)->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Paracetamol 500mg',
             'stock_quantity' => 100,
             'expiration_date' => now()->addYear(),
@@ -68,14 +68,14 @@ class ChatbotServiceTest extends TestCase
         $category = Category::factory()->create();
 
         Product::factory()->count(3)->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Aspirin',
             'stock_quantity' => 50,
             'expiration_date' => now()->addYear(),
         ]);
 
         Product::factory()->count(2)->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Aspirin',
             'stock_quantity' => 0,
             'expiration_date' => now()->addYear(),
@@ -94,14 +94,14 @@ class ChatbotServiceTest extends TestCase
         $category = Category::factory()->create();
 
         Product::factory()->count(3)->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Ibuprofen',
             'stock_quantity' => 50,
             'expiration_date' => now()->addYear(),
         ]);
 
         Product::factory()->count(2)->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Ibuprofen',
             'stock_quantity' => 50,
             'expiration_date' => now()->subDay(),
@@ -120,21 +120,21 @@ class ChatbotServiceTest extends TestCase
         $category = Category::factory()->create();
 
         $product1 = Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Vitamin C',
             'stock_quantity' => 50,
             'expiration_date' => now()->addMonths(6),
         ]);
 
         $product2 = Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Vitamin C',
             'stock_quantity' => 50,
             'expiration_date' => now()->addMonths(3),
         ]);
 
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Vitamin C',
             'stock_quantity' => 50,
             'expiration_date' => now()->addMonths(9),
@@ -142,8 +142,8 @@ class ChatbotServiceTest extends TestCase
 
         $results = $this->chatbotService->searchProducts('Vitamin C');
 
-        $this->assertEquals($product2->id, $results->first()->id);
-        $this->assertNotEquals($product1->id, $results->first()->id);
+        $this->assertEquals($product2->MaSP, $results->first()->MaSP);
+        $this->assertNotEquals($product1->MaSP, $results->first()->MaSP);
     }
 
     public function test_search_products_searches_multiple_fields(): void
@@ -151,7 +151,7 @@ class ChatbotServiceTest extends TestCase
         $category = Category::factory()->create();
 
         $productByName = Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Paracetamol 500mg',
             'ingredients' => 'Other ingredients',
             'usage' => 'Other usage',
@@ -160,7 +160,7 @@ class ChatbotServiceTest extends TestCase
         ]);
 
         $productByIngredients = Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Pain Relief',
             'ingredients' => 'Contains Paracetamol',
             'usage' => 'Other usage',
@@ -169,7 +169,7 @@ class ChatbotServiceTest extends TestCase
         ]);
 
         $productByUsage = Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Fever Medicine',
             'ingredients' => 'Other ingredients',
             'usage' => 'Use Paracetamol for fever',
@@ -181,8 +181,8 @@ class ChatbotServiceTest extends TestCase
 
         $this->assertEquals(3, $results->count());
         $this->assertEqualsCanonicalizing(
-            [$productByName->id, $productByIngredients->id, $productByUsage->id],
-            $results->pluck('id')->all()
+            [$productByName->MaSP, $productByIngredients->MaSP, $productByUsage->MaSP],
+            $results->pluck('MaSP')->all()
         );
     }
 
@@ -191,7 +191,7 @@ class ChatbotServiceTest extends TestCase
         $category = Category::factory()->create(['name' => 'Pain Relief']);
 
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Aspirin',
             'stock_quantity' => 50,
             'expiration_date' => now()->addYear(),
@@ -240,7 +240,7 @@ class ChatbotServiceTest extends TestCase
     {
         $category = Category::factory()->create(['name' => 'Giảm đau']);
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Paracetamol 500mg',
             'usage' => 'Giảm đau, hạ sốt',
             'stock_quantity' => 20,
@@ -296,7 +296,7 @@ class ChatbotServiceTest extends TestCase
         ]);
 
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Vitamin C 1000mg',
             'stock_quantity' => 10,
             'expiration_date' => now()->addYear(),
@@ -317,7 +317,7 @@ class ChatbotServiceTest extends TestCase
     {
         $category = Category::factory()->create(['name' => 'Tiêu hóa']);
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Smecta',
             'usage' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
             'stock_quantity' => 15,
@@ -339,7 +339,7 @@ class ChatbotServiceTest extends TestCase
     {
         $category = Category::factory()->create(['name' => 'Tiêu hóa']);
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Smecta',
             'usage' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
             'stock_quantity' => 15,
@@ -364,7 +364,7 @@ class ChatbotServiceTest extends TestCase
         ]);
 
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Vitamin C 1000mg',
             'stock_quantity' => 10,
             'expiration_date' => now()->addYear(),
@@ -388,7 +388,7 @@ class ChatbotServiceTest extends TestCase
     {
         $category = Category::factory()->create(['name' => 'Giảm đau']);
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Paracetamol 500mg',
             'usage' => 'Giảm đau, hạ sốt',
             'stock_quantity' => 20,
@@ -422,7 +422,7 @@ class ChatbotServiceTest extends TestCase
     {
         $category = Category::factory()->create(['name' => 'Tiêu hóa']);
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Smecta',
             'usage' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
             'stock_quantity' => 30,
@@ -458,14 +458,14 @@ class ChatbotServiceTest extends TestCase
     {
         $category = Category::factory()->create(['name' => 'Tiêu hóa']);
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Smecta',
             'usage' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
             'stock_quantity' => 30,
             'expiration_date' => now()->addYear(),
         ]);
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Lactulose Syrup',
             'usage' => 'Hỗ trợ táo bón và làm mềm phân.',
             'stock_quantity' => 20,
@@ -510,7 +510,7 @@ class ChatbotServiceTest extends TestCase
     {
         $category = Category::factory()->create(['name' => 'Thực phẩm chức năng']);
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Canxi Kid Plus',
             'usage' => 'Hỗ trợ tăng chiều cao và phát triển xương cho trẻ.',
             'stock_quantity' => 25,
@@ -518,7 +518,7 @@ class ChatbotServiceTest extends TestCase
         ]);
 
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Vitamin C Immunity',
             'usage' => 'Hỗ trợ tăng sức đề kháng và giảm mệt mỏi.',
             'stock_quantity' => 40,
@@ -539,7 +539,7 @@ class ChatbotServiceTest extends TestCase
     {
         $category = Category::factory()->create(['name' => 'Thuốc giảm đau - Hạ sốt']);
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Efferalgan 500mg',
             'usage' => 'Giảm đau, hạ sốt nhanh.',
             'stock_quantity' => 200,
@@ -576,7 +576,7 @@ class ChatbotServiceTest extends TestCase
     {
         $category = Category::factory()->create(['name' => 'Thuốc tim mạch']);
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Isosorbide Dinitrate 5mg',
             'usage' => 'Điều trị đau thắt ngực.',
             'stock_quantity' => 200,
@@ -627,7 +627,7 @@ class ChatbotServiceTest extends TestCase
     {
         $category = Category::factory()->create(['name' => 'Thuốc tiêu hóa']);
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Smecta',
             'usage' => 'Điều trị tiêu chảy.',
             'stock_quantity' => 15,
@@ -671,7 +671,7 @@ class ChatbotServiceTest extends TestCase
     {
         $category = Category::factory()->create();
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Paracetamol 500mg',
             'stock_quantity' => 100,
             'expiration_date' => now()->addYear(),
@@ -712,7 +712,7 @@ class ChatbotServiceTest extends TestCase
     {
         $category = Category::factory()->create(['name' => 'Cảm cúm']);
         Product::factory()->create([
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Decolgen',
             'usage' => 'Hỗ trợ giảm các triệu chứng cảm cúm, nghẹt mũi và đau đầu.',
             'stock_quantity' => 20,

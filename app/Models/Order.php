@@ -10,13 +10,15 @@ class Order extends Model
 {
     use HasFactory, Auditable;
 
+    protected $primaryKey = 'MaDH';
+
     /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
     protected $fillable = [
-        'user_id',
+        'MaKH',
         'total_amount',
         'status',
         'shipping_address',
@@ -39,7 +41,7 @@ class Order extends Model
      */
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
     }
 
     /**
@@ -47,7 +49,7 @@ class Order extends Model
      */
     public function items()
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(OrderItem::class, 'MaDH', 'MaDH');
     }
 
     /**

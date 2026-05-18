@@ -20,7 +20,7 @@ class ProductCatalogController extends Controller
 
         // Apply category filter if provided
         if ($request->has('category') && $request->category) {
-            $query->where('category_id', $request->category);
+            $query->where('MaDM', $request->category);
         }
 
         // Apply search filter if provided
@@ -44,11 +44,11 @@ class ProductCatalogController extends Controller
     /**
      * Display a single product detail page.
      */
-    public function show($id)
+    public function show($MaSP)
     {
         $product = Product::with('category')
             ->notExpired()
-            ->findOrFail($id);
+            ->findOrFail($MaSP);
 
         // Increment views count
         $product->increment('views_count');
@@ -59,13 +59,13 @@ class ProductCatalogController extends Controller
     /**
      * Display products by category.
      */
-    public function byCategory($categoryId)
+    public function byCategory($MaDM)
     {
-        $category = Category::findOrFail($categoryId);
+        $category = Category::findOrFail($MaDM);
         
         $products = Product::with('category')
             ->notExpired()
-            ->where('category_id', $categoryId)
+            ->where('MaDM', $MaDM)
             ->where('stock_quantity', '>', 0)
             ->paginate(12);
 
@@ -130,33 +130,33 @@ class ProductCatalogController extends Controller
                 $q->where('name', 'like', '%' . $query . '%')
                   ->orWhere('ingredients', 'like', '%' . $query . '%');
             })
-            ->select('id', 'name', 'category_id', 'price', 'image')
-            ->with('category:id,name')
+            ->select('MaSP', 'name', 'MaDM', 'price', 'image')
+            ->with('category:MaDM,name')
             ->limit(8)
             ->get();
 
         // Get category suggestions
         $categories = Category::where('name', 'like', '%' . $query . '%')
-            ->select('id', 'name')
+            ->select('MaDM', 'name')
             ->limit(3)
             ->get();
 
         return response()->json([
             'products' => $products->map(function($product) {
                 return [
-                    'id' => $product->id,
+                    'MaSP' => $product->MaSP,
                     'name' => $product->name,
                     'category' => $product->category->name,
                     'price' => $product->formatted_price,
                     'image_url' => $product->image_url,
-                    'url' => route('products.show', $product->id),
+                    'url' => route('products.show', $product->MaSP),
                 ];
             }),
             'categories' => $categories->map(function($category) {
                 return [
-                    'id' => $category->id,
+                    'id' => $category->MaDM,
                     'name' => $category->name,
-                    'url' => route('products.index', ['category' => $category->id]),
+                    'url' => route('products.index', ['category' => $category->MaDM]),
                 ];
             }),
         ]);
@@ -171,7 +171,7 @@ class ProductCatalogController extends Controller
             Category::FILTER_CACHE_KEY,
             now()->addMinutes(10),
             fn () => Category::query()
-                ->select('id', 'name')
+                ->select('MaDM', 'name')
                 ->whereHas('products', function ($query) {
                     $query->notExpired()->where('stock_quantity', '>', 0);
                 })

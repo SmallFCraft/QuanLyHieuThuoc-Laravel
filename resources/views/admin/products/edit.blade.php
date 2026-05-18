@@ -17,7 +17,7 @@
                 </ol>
             </nav>
 
-            <form action="{{ route('admin.products.update', $product->id) }}" method="POST" enctype="multipart/form-data" id="editProductForm">
+            <form action="{{ route('admin.products.update', $product->MaSP) }}" method="POST" enctype="multipart/form-data" id="editProductForm">
                 @csrf
                 @method('PUT')
 
@@ -40,18 +40,18 @@
 
                             <!-- Category -->
                             <div class="mb-3">
-                                <label for="category_id" class="form-label fw-medium">Danh Mục <span class="text-danger">*</span></label>
-                                <select class="form-select select2-basic @error('category_id') is-invalid @enderror"
-                                    id="category_id" name="category_id" required>
+                                <label for="MaDM" class="form-label fw-medium">Danh Mục <span class="text-danger">*</span></label>
+                                <select class="form-select select2-basic @error('MaDM') is-invalid @enderror"
+                                    id="MaDM" name="MaDM" required>
                                     <option value="">-- Chọn danh mục --</option>
                                     @foreach($categories as $category)
-                                        <option value="{{ $category->id }}"
-                                            {{ old('category_id', $product->category_id) == $category->id ? 'selected' : '' }}>
+                                        <option value="{{ $category->MaDM }}"
+                                            {{ old('MaDM', $product->MaDM) == $category->MaDM ? 'selected' : '' }}>
                                             {{ $category->name }}
                                         </option>
                                     @endforeach
                                 </select>
-                                @error('category_id')
+                                @error('MaDM')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -194,7 +194,7 @@
                             <div class="small text-muted">
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>ID Sản phẩm:</span>
-                                    <span class="fw-medium text-dark">#{{ $product->id }}</span>
+                                    <span class="fw-medium text-dark">#{{ $product->MaSP }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Ngày tạo:</span>
@@ -218,7 +218,7 @@
                                     <i class="bi bi-arrow-left me-2"></i>Quay Lại
                                 </a>
                                 <hr class="my-1">
-                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete({{ $product->id }})">
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete({{ $product->MaSP }})">
                                     <i class="bi bi-trash me-2"></i>Xóa Sản Phẩm Này
                                 </button>
                             </div>
@@ -228,7 +228,7 @@
             </form>
 
             <!-- Hidden Delete Form -->
-            <form id="deleteForm" action="{{ route('admin.products.destroy', $product->id) }}" method="POST" style="display: none;">
+            <form id="deleteForm" action="{{ route('admin.products.destroy', $product->MaSP) }}" method="POST" style="display: none;">
                 @csrf
                 @method('DELETE')
             </form>

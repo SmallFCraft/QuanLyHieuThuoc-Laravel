@@ -13,6 +13,13 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
+     * The primary key associated with the table.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'MaKH';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -78,7 +85,7 @@ class User extends Authenticatable
      */
     public function orders()
     {
-        return $this->hasMany(Order::class);
+        return $this->hasMany(Order::class, 'MaKH', 'MaKH');
     }
     
     /**
@@ -86,7 +93,7 @@ class User extends Authenticatable
      */
     public function auditLogs()
     {
-        return $this->hasMany(AuditLog::class);
+        return $this->hasMany(AuditLog::class, 'MaKH', 'MaKH');
     }
     
     /**
@@ -94,7 +101,7 @@ class User extends Authenticatable
      */
     public function chatMessages()
     {
-        return $this->hasMany(ChatMessage::class);
+        return $this->hasMany(ChatMessage::class, 'MaKH', 'MaKH');
     }
     
     /**
@@ -102,6 +109,6 @@ class User extends Authenticatable
      */
     public function chatbotImages()
     {
-        return $this->hasMany(ChatbotImage::class);
+        return $this->hasMany(ChatbotImage::class, 'MaKH', 'MaKH');
     }
 }

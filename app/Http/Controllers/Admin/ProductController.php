@@ -151,8 +151,8 @@ class ProductController extends Controller
         $query = Product::query();
         
         // Filter by Category
-        if ($request->has('category_id') && $request->category_id != '') {
-            $query->where('category_id', $request->category_id);
+        if ($request->has('MaDM') && $request->MaDM != '') {
+            $query->where('MaDM', $request->MaDM);
         }
 
         // Search
@@ -171,7 +171,7 @@ class ProductController extends Controller
         $filteredRecords = $query->count();
         
         $allowedOrderColumns = [
-            'id',
+            'MaSP',
             'name',
             'price',
             'stock_quantity',
@@ -183,14 +183,14 @@ class ProductController extends Controller
         // Sorting
         if ($request->has('order')) {
             $columnIndex = (int) $request->input('order.0.column', 0);
-            $requestedColumn = (string) $request->input("columns.$columnIndex.name", 'id');
+            $requestedColumn = (string) $request->input("columns.$columnIndex.name", 'MaSP');
             $orderColumn = in_array($requestedColumn, $allowedOrderColumns, true)
                 ? $requestedColumn
-                : 'id';
+                : 'MaSP';
             $orderDir = $request->input('order.0.dir') === 'desc' ? 'desc' : 'asc';
 
             if ($orderColumn === 'category.name') {
-                $query->join('categories', 'products.category_id', '=', 'categories.id')
+                $query->join('categories', 'products.MaDM', '=', 'categories.MaDM')
                       ->orderBy('categories.name', $orderDir)
                       ->select('products.*');
             } else {
@@ -206,7 +206,7 @@ class ProductController extends Controller
         // Format data - return raw data instead of HTML
         $data = $products->map(function($product) {
             return [
-                'id' => $product->id,
+                'MaSP' => $product->MaSP,
                 'name' => $product->name,
                 'category' => $product->category->name,
                 'price' => $product->price_vnd,
@@ -263,7 +263,7 @@ class ProductController extends Controller
         $batch = $product->batches()
             ->lockForUpdate()
             ->orderBy('expiration_date')
-            ->orderBy('id')
+            ->orderBy('MaLo')
             ->first();
 
         if ($batch instanceof ProductBatch) {

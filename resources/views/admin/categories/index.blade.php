@@ -44,10 +44,10 @@
                         
                         <!-- Actions -->
                         <div class="d-flex gap-2 justify-content-center">
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditModal({{ $category->id }}, '{{ $category->name }}', '{{ $category->icon }}', '{{ addslashes($category->description) }}')" title="{{ __('messages.admin.categories.edit') }}">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditModal({{ $category->MaDM }}, '{{ $category->name }}', '{{ $category->icon }}', '{{ addslashes($category->description) }}')" title="{{ __('messages.admin.categories.edit') }}">
                                 <i class="bi bi-pencil"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCategory({{ $category->id }})" title="{{ __('messages.admin.categories.delete') }}">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCategory({{ $category->MaDM }})" title="{{ __('messages.admin.categories.delete') }}">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>

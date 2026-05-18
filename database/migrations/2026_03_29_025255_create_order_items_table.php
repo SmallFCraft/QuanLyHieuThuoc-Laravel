@@ -12,20 +12,20 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('order_items', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
-            $table->foreignId('product_id')->constrained('products')->onDelete('restrict');
-            $table->foreignId('batch_id')->nullable()->constrained('product_batches')->onDelete('set null');
+            $table->id('MaCTDH');
+            $table->foreignId('MaDH')->constrained('orders', 'MaDH')->onDelete('cascade');
+            $table->foreignId('MaSP')->constrained('products', 'MaSP')->onDelete('restrict');
+            $table->foreignId('MaLo')->nullable()->constrained('product_batches', 'MaLo')->onDelete('set null');
             $table->integer('quantity');
             $table->decimal('unit_price', 10, 2);
             $table->string('batch_number', 100);
             $table->timestamps();
             
-            $table->index('order_id');
-            $table->index('product_id');
-            $table->index('batch_id');
-            $table->index(['order_id', 'product_id'], 'order_items_order_product_idx');
-            $table->index(['batch_id', 'product_id'], 'order_items_batch_product_idx');
+            $table->index('MaDH', 'order_items_madh_index');
+            $table->index('MaSP', 'order_items_masp_index');
+            $table->index('MaLo', 'order_items_malo_index');
+            $table->index(['MaDH', 'MaSP'], 'order_items_madh_masp_idx');
+            $table->index(['MaLo', 'MaSP'], 'order_items_malo_masp_idx');
         });
     }
 

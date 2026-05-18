@@ -6,13 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class ChatMessage extends Model
 {
+    protected $primaryKey = 'MaTN';
+
     /**
      * The attributes that are mass assignable.
      *
      * @var array<string>
      */
     protected $fillable = [
-        'user_id',
+        'MaKH',
         'session_id',
         'role',
         'content',
@@ -42,6 +44,6 @@ class ChatMessage extends Model
      */
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
     }
 }

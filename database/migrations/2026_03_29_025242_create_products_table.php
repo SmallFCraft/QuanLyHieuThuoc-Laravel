@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('products', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('category_id')->constrained('categories')->onDelete('restrict');
+            $table->id('MaSP');
+            $table->foreignId('MaDM')->constrained('categories', 'MaDM')->onDelete('restrict');
             $table->string('name');
             $table->text('ingredients')->nullable();
             $table->text('usage')->nullable();
@@ -27,12 +27,12 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
             
-            $table->index('category_id');
+            $table->index('MaDM', 'products_madm_index');
             $table->index('expiration_date');
             $table->index('batch_number');
             $table->index('deleted_at');
             $table->index('views_count');
-            $table->index(['category_id', 'expiration_date'], 'products_category_expiration_idx');
+            $table->index(['MaDM', 'expiration_date'], 'products_madm_expiration_idx');
             $table->index(['stock_quantity', 'reorder_point'], 'products_stock_reorder_idx');
             $table->unique(['name', 'batch_number'], 'unique_batch_per_product');
         });

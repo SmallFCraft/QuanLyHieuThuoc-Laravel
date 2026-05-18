@@ -39,17 +39,17 @@
 
                             <!-- Category -->
                             <div class="mb-3">
-                                <label for="category_id" class="form-label fw-medium">Danh Mục <span class="text-danger">*</span></label>
-                                <select class="form-select select2-basic @error('category_id') is-invalid @enderror"
-                                    id="category_id" name="category_id" required>
+                                <label for="MaDM" class="form-label fw-medium">Danh Mục <span class="text-danger">*</span></label>
+                                <select class="form-select select2-basic @error('MaDM') is-invalid @enderror"
+                                    id="MaDM" name="MaDM" required>
                                     <option value="">-- Chọn danh mục --</option>
                                     @foreach($categories as $category)
-                                        <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                        <option value="{{ $category->MaDM }}" {{ old('MaDM') == $category->MaDM ? 'selected' : '' }}>
                                             {{ $category->name }}
                                         </option>
                                     @endforeach
                                 </select>
-                                @error('category_id')
+                                @error('MaDM')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>

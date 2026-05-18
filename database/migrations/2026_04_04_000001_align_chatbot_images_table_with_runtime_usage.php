@@ -58,74 +58,74 @@ return new class extends Migration
         if (Schema::hasColumn('chatbot_images', 'file_path') && Schema::hasColumn('chatbot_images', 'image_path')) {
             DB::table('chatbot_images')
                 ->whereNull('file_path')
-                ->select(['id', 'image_path'])
-                ->orderBy('id')
+                ->select(['MaAnh', 'image_path'])
+                ->orderBy('MaAnh')
                 ->chunkById(100, function ($rows) {
                     foreach ($rows as $row) {
                         DB::table('chatbot_images')
-                            ->where('id', $row->id)
+                            ->where('MaAnh', $row->MaAnh)
                             ->update(['file_path' => $row->image_path]);
                     }
-                });
+                }, 'MaAnh', 'MaAnh');
         }
 
         if (Schema::hasColumn('chatbot_images', 'ocr_text') && Schema::hasColumn('chatbot_images', 'analysis_result')) {
             DB::table('chatbot_images')
                 ->whereNull('ocr_text')
                 ->whereNotNull('analysis_result')
-                ->select(['id', 'analysis_result'])
-                ->orderBy('id')
+                ->select(['MaAnh', 'analysis_result'])
+                ->orderBy('MaAnh')
                 ->chunkById(100, function ($rows) {
                     foreach ($rows as $row) {
                         DB::table('chatbot_images')
-                            ->where('id', $row->id)
+                            ->where('MaAnh', $row->MaAnh)
                             ->update(['ocr_text' => $row->analysis_result]);
                     }
-                });
+                }, 'MaAnh', 'MaAnh');
         }
 
         if (Schema::hasColumn('chatbot_images', 'filename') && Schema::hasColumn('chatbot_images', 'file_path')) {
             DB::table('chatbot_images')
                 ->whereNull('filename')
                 ->whereNotNull('file_path')
-                ->select(['id', 'file_path'])
-                ->orderBy('id')
+                ->select(['MaAnh', 'file_path'])
+                ->orderBy('MaAnh')
                 ->chunkById(100, function ($rows) {
                     foreach ($rows as $row) {
                         DB::table('chatbot_images')
-                            ->where('id', $row->id)
+                            ->where('MaAnh', $row->MaAnh)
                             ->update(['filename' => basename($row->file_path)]);
                     }
-                });
+                }, 'MaAnh', 'MaAnh');
         }
 
         if (Schema::hasColumn('chatbot_images', 'original_name') && Schema::hasColumn('chatbot_images', 'filename')) {
             DB::table('chatbot_images')
                 ->whereNull('original_name')
                 ->whereNotNull('filename')
-                ->select(['id', 'filename'])
-                ->orderBy('id')
+                ->select(['MaAnh', 'filename'])
+                ->orderBy('MaAnh')
                 ->chunkById(100, function ($rows) {
                     foreach ($rows as $row) {
                         DB::table('chatbot_images')
-                            ->where('id', $row->id)
+                            ->where('MaAnh', $row->MaAnh)
                             ->update(['original_name' => $row->filename]);
                     }
-                });
+                }, 'MaAnh', 'MaAnh');
         }
 
         if (Schema::hasColumn('chatbot_images', 'session_id')) {
             DB::table('chatbot_images')
                 ->whereNull('session_id')
-                ->select(['id'])
-                ->orderBy('id')
+                ->select(['MaAnh'])
+                ->orderBy('MaAnh')
                 ->chunkById(100, function ($rows) {
                     foreach ($rows as $row) {
                         DB::table('chatbot_images')
-                            ->where('id', $row->id)
+                            ->where('MaAnh', $row->MaAnh)
                             ->update(['session_id' => (string) Str::uuid()]);
                     }
-                });
+                }, 'MaAnh', 'MaAnh');
         }
     }
 

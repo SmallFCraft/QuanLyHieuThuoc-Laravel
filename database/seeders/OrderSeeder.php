@@ -48,7 +48,7 @@ class OrderSeeder extends Seeder
             
             // Create order
             $order = Order::create([
-                'user_id' => $user->id,
+                'MaKH' => $user->MaKH,
                 'total_amount' => 0, // Will be calculated after adding items
                 'status' => $status,
                 'shipping_address' => $addresses[array_rand($addresses)],
@@ -69,9 +69,9 @@ class OrderSeeder extends Seeder
                 $batch = $product->batches()->first();
                 
                 OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $product->id,
-                    'batch_id' => $batch ? $batch->id : null,
+                    'MaDH' => $order->MaDH,
+                    'MaSP' => $product->MaSP,
+                    'MaLo' => $batch ? $batch->MaLo : null,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'batch_number' => $product->batch_number,

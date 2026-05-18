@@ -64,10 +64,10 @@ trait Auditable
     protected function createAuditLog(string $action, ?array $oldValues, ?array $newValues)
     {
         AuditLog::create([
-            'user_id' => Auth::id(),
+            'MaKH' => Auth::id(),
             'action' => $action,
             'model_type' => get_class($this),
-            'model_id' => $this->id,
+            'MaDoiTuong' => $this->getKey(),
             'old_values' => $oldValues,
             'new_values' => $newValues,
             'ip_address' => request()->ip(),
@@ -93,6 +93,6 @@ trait Auditable
      */
     public function auditLogs()
     {
-        return $this->morphMany(AuditLog::class, 'model');
+        return $this->morphMany(AuditLog::class, 'model', 'model_type', 'MaDoiTuong');
     }
 }

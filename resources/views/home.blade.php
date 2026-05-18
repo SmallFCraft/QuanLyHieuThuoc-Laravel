@@ -127,7 +127,7 @@
             <div class="row g-3">
                 @foreach($categories as $category)
                     <div class="col-6 col-md-4 col-lg-3 col-xl-2-4">
-                        <a href="{{ route('products.category', $category->id) }}" class="home-glass-panel p-3 rounded-4 text-center d-block text-decoration-none transition-all hover-scale-105" style="border: 1px solid rgba(16,185,129,0.15);">
+                        <a href="{{ route('products.category', $category->MaDM) }}" class="home-glass-panel p-3 rounded-4 text-center d-block text-decoration-none transition-all hover-scale-105" style="border: 1px solid rgba(16,185,129,0.15);">
                             <div class="rounded-circle d-inline-flex mx-auto align-items-center justify-content-center mb-2" style="width: 50px; height: 50px; background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.08) 100%); color: #059669;">
                                 <i class="bi bi-{{ $category->icon ?? 'grid-fill' }}" style="font-size: 1.5rem;"></i>
                             </div>
@@ -187,13 +187,13 @@
                                     @endif
                                 </div>
                                 <div class="position-absolute top-0 end-0 m-2 m-md-3">
-                                    <a href="{{ route('products.show', $product->id) }}" class="btn btn-light btn-sm rounded-circle shadow-sm text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="{{ __('messages.home_view_details') }}">
+                                    <a href="{{ route('products.show', $product->MaSP) }}" class="btn btn-light btn-sm rounded-circle shadow-sm text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="{{ __('messages.home_view_details') }}">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 </div>
                             </div>
                             <div class="p-3 p-md-4 d-flex flex-column flex-grow-1">
-                                <a href="{{ route('products.show', $product->id) }}" class="text-decoration-none">
+                                <a href="{{ route('products.show', $product->MaSP) }}" class="text-decoration-none">
                                     <h3 class="h6 fw-bold mb-1 text-dark text-truncate" title="{{ $product->name }}">{{ $product->name }}</h3>
                                 </a>
                                 <p class="text-success small mb-2 fw-medium mb-0">{{ $product->category->name }}</p>
@@ -208,7 +208,7 @@
                                     </div>
                                     <form action="{{ route('cart.add') }}" method="POST" class="d-inline flex-shrink-0 js-add-to-cart-form">
                                         @csrf
-                                        <input type="hidden" name="product_id" value="{{ $product->id }}">
+                                        <input type="hidden" name="MaSP" value="{{ $product->MaSP }}">
                                         <input type="hidden" name="quantity" value="1">
                                         <button type="submit" class="btn text-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background: #10b981;" {{ $product->stock_quantity == 0 ? 'disabled' : '' }} title="{{ __('messages.add_to_cart') }}">
                                             <i class="bi bi-cart-plus fs-5"></i>
@@ -281,13 +281,13 @@
                                     @endif
                                 </div>
                                 <div class="position-absolute top-0 end-0 m-2 m-md-3">
-                                    <a href="{{ route('products.show', $product->id) }}" class="btn btn-light btn-sm rounded-circle shadow-sm text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="{{ __('messages.home_view_details') }}">
+                                    <a href="{{ route('products.show', $product->MaSP) }}" class="btn btn-light btn-sm rounded-circle shadow-sm text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="{{ __('messages.home_view_details') }}">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 </div>
                             </div>
                             <div class="p-3 p-md-4 d-flex flex-column flex-grow-1">
-                                <a href="{{ route('products.show', $product->id) }}" class="text-decoration-none">
+                                <a href="{{ route('products.show', $product->MaSP) }}" class="text-decoration-none">
                                     <h3 class="h6 fw-bold mb-1 text-dark text-truncate" title="{{ $product->name }}">{{ $product->name }}</h3>
                                 </a>
                                 <p class="text-success small mb-2 fw-medium mb-0">{{ $product->category->name }}</p>
@@ -302,7 +302,7 @@
                                     </div>
                                     <form action="{{ route('cart.add') }}" method="POST" class="d-inline flex-shrink-0 js-add-to-cart-form">
                                         @csrf
-                                        <input type="hidden" name="product_id" value="{{ $product->id }}">
+                                        <input type="hidden" name="MaSP" value="{{ $product->MaSP }}">
                                         <input type="hidden" name="quantity" value="1">
                                         <button type="submit" class="btn text-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background: #10b981;" {{ $product->stock_quantity == 0 ? 'disabled' : '' }} title="{{ __('messages.add_to_cart') }}">
                                             <i class="bi bi-cart-plus fs-5"></i>

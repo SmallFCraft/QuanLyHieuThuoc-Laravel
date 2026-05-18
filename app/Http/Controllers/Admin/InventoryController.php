@@ -66,12 +66,12 @@ class InventoryController extends Controller
     public function adjust(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'product_id' => 'required|exists:products,id',
+            'MaSP' => 'required|exists:products,MaSP',
             'adjustment' => 'required|integer|not_in:0',
             'reason' => 'required|string|max:255',
         ], [
-            'product_id.required' => 'Sản phẩm là bắt buộc',
-            'product_id.exists' => 'Sản phẩm không tồn tại',
+            'MaSP.required' => 'Sản phẩm là bắt buộc',
+            'MaSP.exists' => 'Sản phẩm không tồn tại',
             'adjustment.required' => 'Số lượng điều chỉnh là bắt buộc',
             'adjustment.integer' => 'Số lượng điều chỉnh phải là số nguyên',
             'adjustment.not_in' => 'Số lượng điều chỉnh không thể bằng 0',
@@ -88,7 +88,7 @@ class InventoryController extends Controller
 
         try {
             $this->inventoryService->adjustStock(
-                productId: $request->product_id,
+                productId: $request->MaSP,
                 quantity: $request->adjustment,
                 reason: $request->reason,
                 userId: auth()->id()
@@ -172,7 +172,7 @@ class InventoryController extends Controller
             }
             
             return [
-                'id' => $product->id,
+                'MaSP' => $product->MaSP,
                 'name' => $product->name,
                 'category' => $product->category->name,
                 'batch_number' => $product->batch_number,

@@ -26,7 +26,7 @@ class ProductFactory extends Factory
     public function definition(): array
     {
         return [
-            'category_id' => Category::factory(),
+            'MaDM' => Category::factory(),
             'name' => $this->faker->words(3, true),
             'ingredients' => $this->faker->sentence(),
             'usage' => $this->faker->sentence(),

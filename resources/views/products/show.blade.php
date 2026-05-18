@@ -195,7 +195,7 @@
                 @if($product->stock_quantity > 0)
                     <form action="{{ route('cart.add') }}" method="POST" class="glass-card rounded-4 p-3 p-md-4 border-0 mb-4 js-add-to-cart-form">
                         @csrf
-                        <input type="hidden" name="product_id" value="{{ $product->id }}">
+                        <input type="hidden" name="MaSP" value="{{ $product->MaSP }}">
                         
                         <div class="mb-3">
                             <label class="fw-medium text-gray-700 mb-2 d-block">{{ __('messages.cart_quantity') }}:</label>

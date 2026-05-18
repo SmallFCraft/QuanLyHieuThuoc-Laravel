@@ -17,7 +17,7 @@
     @endphp
 
     @forelse($orders as $order)
-        <div class="glass-card-sm mb-3" id="order-{{ $order->id }}">
+        <div class="glass-card-sm mb-3" id="order-{{ $order->MaDH }}">
             <div class="row align-items-center g-3">
                 <div class="col-md-8">
                     <div class="d-flex align-items-start gap-3">
@@ -26,7 +26,7 @@
                         </div>
                         <div class="flex-grow-1">
                             <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                                <h6 class="fw-bold text-gray-900 mb-0">{{ __('messages.profile.order_prefix') }}{{ $order->id }}</h6>
+                                <h6 class="fw-bold text-gray-900 mb-0">{{ __('messages.profile.order_prefix') }}{{ $order->MaDH }}</h6>
                                 @if($order->status == 'Pending')
                                     <span class="badge-glass-warning rounded-pill px-2 py-1 small">
                                         <i class="bi bi-clock me-1"></i>{{ order_status_text($order->status) }}
@@ -57,7 +57,7 @@
                 <div class="col-md-4 text-md-end">
                     <p class="fw-bold text-emerald-700 fs-5 mb-2">{{ format_currency_vi($order->total_amount) }}</p>
                     <button class="btn btn-glass btn-sm rounded-pill px-3" 
-                       data-bs-toggle="modal" data-bs-target="#orderModal{{ $order->id }}">
+                       data-bs-toggle="modal" data-bs-target="#orderModal{{ $order->MaDH }}">
                         <i class="bi bi-eye me-1"></i>{{ __('messages.profile.view_details') }}
                     </button>
                 </div>
@@ -66,14 +66,14 @@
 
         <!-- Order Detail Modal -->
         @push('modals')
-        <div class="modal fade modal-glass" id="orderModal{{ $order->id }}" tabindex="-1">
+        <div class="modal fade modal-glass" id="orderModal{{ $order->MaDH }}" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg modal-fullscreen-sm-down">
                 <div class="modal-content glass-card border-0 shadow-lg rounded-4 overflow-hidden">
                     <div class="modal-header border-bottom-0 pb-0 pt-3 pt-md-4 px-3 px-md-5">
                         <h5 class="modal-title fw-bold text-gray-900 d-flex align-items-center">
                             <i class="bi bi-receipt text-emerald-600 me-2 fs-5"></i>
-                            <span class="d-none d-sm-inline">{{ __('messages.profile.order_details_title') }}{{ $order->id }}</span>
-                            <span class="d-sm-none">{{ __('messages.profile.order_prefix') }}{{ $order->id }}</span>
+                            <span class="d-none d-sm-inline">{{ __('messages.profile.order_details_title') }}{{ $order->MaDH }}</span>
+                            <span class="d-sm-none">{{ __('messages.profile.order_prefix') }}{{ $order->MaDH }}</span>
                         </h5>
                         <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="{{ __('messages.profile.close') }}"></button>
                     </div>

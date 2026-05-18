@@ -25,22 +25,22 @@ Route::post('/contact/submit', [ContactController::class, 'submit'])
 
 // Product catalog routes
 Route::get('/products', [ProductCatalogController::class, 'index'])->name('products.index');
-Route::get('/products/{id}', [ProductCatalogController::class, 'show'])->name('products.show');
-Route::get('/products/category/{id}', [ProductCatalogController::class, 'byCategory'])->name('products.category');
+Route::get('/products/{MaSP}', [ProductCatalogController::class, 'show'])->name('products.show');
+Route::get('/products/category/{MaDM}', [ProductCatalogController::class, 'byCategory'])->name('products.category');
 Route::get('/search', [ProductCatalogController::class, 'search'])->name('products.search');
 Route::get('/api/search/suggestions', [ProductCatalogController::class, 'suggestions'])->name('products.suggestions');
 
 // Shopping cart routes
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
-Route::match(['post', 'put'], '/cart/update/{id}', [CartController::class, 'update'])->name('cart.update');
-Route::match(['post', 'delete'], '/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
+Route::match(['post', 'put'], '/cart/update/{MaSP}', [CartController::class, 'update'])->name('cart.update');
+Route::match(['post', 'delete'], '/cart/remove/{MaSP}', [CartController::class, 'remove'])->name('cart.remove');
 
 // Checkout routes (requires authentication)
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
-    Route::get('/checkout/success/{id}', [CheckoutController::class, 'success'])->name('checkout.success');
+    Route::get('/checkout/success/{MaDH}', [CheckoutController::class, 'success'])->name('checkout.success');
 });
 
 // Profile routes
@@ -67,9 +67,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     
     // Orders management
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/{id}', [AdminOrderController::class, 'show'])->name('orders.show');
-    Route::patch('/orders/{id}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.updateStatus');
-    Route::post('/orders/{id}/cancel', [AdminOrderController::class, 'cancel'])->name('orders.cancel');
+    Route::get('/orders/{MaDH}', [AdminOrderController::class, 'show'])->name('orders.show');
+    Route::patch('/orders/{MaDH}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.updateStatus');
+    Route::post('/orders/{MaDH}/cancel', [AdminOrderController::class, 'cancel'])->name('orders.cancel');
     
     // Inventory management
     Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('inventory.index');
@@ -80,8 +80,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // Users management
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
     Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
-    Route::put('/users/{id}', [AdminUserController::class, 'update'])->name('users.update');
-    Route::patch('/users/{id}/status', [AdminUserController::class, 'updateStatus'])->name('users.updateStatus');
+    Route::put('/users/{MaKH}', [AdminUserController::class, 'update'])->name('users.update');
+    Route::patch('/users/{MaKH}/status', [AdminUserController::class, 'updateStatus'])->name('users.updateStatus');
 });
 
 require __DIR__.'/auth.php';

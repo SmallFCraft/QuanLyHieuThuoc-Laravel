@@ -202,7 +202,7 @@ class DataValidationTest extends TestCase
         ]);
 
         $validData = [
-            'category_id' => $category->id,
+            'MaDM' => $category->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -212,7 +212,7 @@ class DataValidationTest extends TestCase
         ];
 
         $validator = Validator::make($validData, [
-            'category_id' => 'required|exists:categories,id',
+            'MaDM' => 'required|exists:categories,MaDM',
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'expiration_date' => 'required|date|after:today',
@@ -229,7 +229,7 @@ class DataValidationTest extends TestCase
         $user = User::factory()->create();
 
         $validData = [
-            'user_id' => $user->id,
+            'MaKH' => $user->MaKH,
             'total_amount' => 100000,
             'status' => 'Pending',
             'shipping_address' => '123 Test Street, Test City',
@@ -237,7 +237,7 @@ class DataValidationTest extends TestCase
         ];
 
         $validator = Validator::make($validData, [
-            'user_id' => 'required|exists:users,id',
+            'MaKH' => 'required|exists:users,MaKH',
             'total_amount' => 'required|numeric|min:0',
             'status' => 'required|in:Pending,Delivering,Completed,Cancelled',
             'shipping_address' => 'required|string',

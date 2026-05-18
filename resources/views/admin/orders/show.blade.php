@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Chi tiết đơn hàng #' . $order->id)
-@section('page-title', 'Chi tiết đơn hàng #' . $order->id)
+@section('title', 'Chi tiết đơn hàng #' . $order->MaDH)
+@section('page-title', 'Chi tiết đơn hàng #' . $order->MaDH)
 @section('page-subtitle', 'Quản lý và cập nhật trạng thái đơn hàng')
 
 @section('content')
@@ -14,7 +14,7 @@
                 <table class="table table-borderless mb-0">
                     <tr>
                         <td class="text-gray-500 ps-0" style="width: 140px;">{{ __('messages.admin.orders.info_id') }}</td>
-                        <td class="fw-bold">#{{ $order->id }}</td>
+                        <td class="fw-bold">#{{ $order->MaDH }}</td>
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">{{ __('messages.admin.orders.info_date') }}</td>
@@ -140,7 +140,7 @@
     <!-- Actions -->
     <div class="d-flex flex-wrap gap-3 align-items-center">
         @if($order->status != 'Completed' && $order->status != 'Cancelled')
-            <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST" class="d-flex gap-2 align-items-center">
+            <form action="{{ route('admin.orders.updateStatus', $order->MaDH) }}" method="POST" class="d-flex gap-2 align-items-center">
                 @csrf
                 @method('PATCH')
                 <select name="status" class="form-select rounded-3 shadow-none" style="width: auto;">
@@ -158,7 +158,7 @@
         @endif
 
         @if($order->status == 'Pending')
-            <form action="{{ route('admin.orders.cancel', $order->id) }}" method="POST" class="d-inline">
+            <form action="{{ route('admin.orders.cancel', $order->MaDH) }}" method="POST" class="d-inline">
                 @csrf
                 <button type="submit" class="btn btn-outline-danger rounded-pill px-4 fw-medium" onclick="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')">
                     <i class="bi bi-x-lg me-1"></i>Hủy đơn hàng

@@ -275,16 +275,16 @@
                 
                 <!-- Cart Items Detail -->
                 <div x-show="showCartDetail" style="display: none; margin-bottom: 8px; max-height: 140px; overflow-y: auto;">
-                    <template x-for="item in cart.items" :key="item.product_id">
+                    <template x-for="item in cart.items" :key="item.MaSP">
                         <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255,255,255,0.8); padding: 6px 8px; border-radius: 4px; margin-bottom: 6px;">
                             <div style="flex: 1; min-width: 0;">
                                 <div style="font-weight: 500; color: #111827; margin-bottom: 0px; font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="item.name"></div>
                                 <div style="color: #6b7280; font-size: 0.65rem;" x-text="formatCurrency(item.price) + ' x ' + item.quantity"></div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 4px; margin-left: 6px; flex-shrink: 0;">
-                                <button @click="updateQuantity(item.product_id, item.quantity - 1)" style="width: 20px; height: 20px; background: #e5e7eb; border: none; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: #374151;">-</button>
+                                <button @click="updateQuantity(item.MaSP, item.quantity - 1)" style="width: 20px; height: 20px; background: #e5e7eb; border: none; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: #374151;">-</button>
                                 <span style="width: 20px; text-align: center; font-weight: 500; font-size: 0.7rem;" x-text="item.quantity"></span>
-                                <button @click="updateQuantity(item.product_id, item.quantity + 1)" style="width: 20px; height: 20px; background: #e5e7eb; border: none; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: #374151;">+</button>
+                                <button @click="updateQuantity(item.MaSP, item.quantity + 1)" style="width: 20px; height: 20px; background: #e5e7eb; border: none; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: #374151;">+</button>
                             </div>
                         </div>
                     </template>

@@ -49,8 +49,8 @@
                             <i class="bi bi-grid-3x3-gap me-2"></i>{{ __('messages.all') }}
                         </a>
                         @foreach($categories as $cat)
-                            <a href="{{ route('products.index', ['category' => $cat->id]) }}" 
-                               class="btn btn-sm text-start rounded-3 px-3 py-2 {{ request('category') == $cat->id ? 'bg-emerald-500 text-white shadow-sm' : 'btn-light text-gray-700' }}">
+                            <a href="{{ route('products.index', ['category' => $cat->MaDM]) }}"
+                               class="btn btn-sm text-start rounded-3 px-3 py-2 {{ request('category') == $cat->MaDM ? 'bg-emerald-500 text-white shadow-sm' : 'btn-light text-gray-700' }}">
                                 <i class="bi bi-tag me-2"></i>{{ $cat->name }}
                                 <span class="badge bg-gray-100 text-gray-600 rounded-pill float-end">{{ $cat->products_count }}</span>
                             </a>
@@ -90,14 +90,14 @@
                                     @endif
 
                                     <div class="position-absolute top-0 end-0 m-3">
-                                        <a href="{{ route('products.show', $product->id) }}" class="btn btn-light btn-sm rounded-circle shadow-sm" style="width:36px; height:36px; display:flex; align-items:center; justify-content:center;" title="{{ __('messages.view_details') }}">
+                                        <a href="{{ route('products.show', $product->MaSP) }}" class="btn btn-light btn-sm rounded-circle shadow-sm" style="width:36px; height:36px; display:flex; align-items:center; justify-content:center;" title="{{ __('messages.view_details') }}">
                                             <i class="bi bi-eye text-emerald-600"></i>
                                         </a>
                                     </div>
                                 </div>
                                 
                                 <div class="card-body p-4 d-flex flex-column">
-                                    <a href="{{ route('products.show', $product->id) }}" class="text-decoration-none">
+                                    <a href="{{ route('products.show', $product->MaSP) }}" class="text-decoration-none">
                                         <h6 class="fw-bold text-gray-800 mb-1 text-truncate" title="{{ $product->name }}">{{ $product->name }}</h6>
                                     </a>
                                     <p class="text-emerald-600 small mb-3 fw-medium">{{ $product->category->name }}</p>
@@ -108,7 +108,7 @@
                                         @if($product->stock_quantity > 0)
                                             <form action="{{ route('cart.add') }}" method="POST" class="d-inline js-add-to-cart-form">
                                                 @csrf
-                                                <input type="hidden" name="product_id" value="{{ $product->id }}">
+                                                <input type="hidden" name="MaSP" value="{{ $product->MaSP }}">
                                                 <input type="hidden" name="quantity" value="1">
                                                 <button type="submit" class="btn text-white rounded-circle shadow-sm" style="width: 42px; height: 42px; background: #10b981;" title="{{ __('messages.add_to_cart') }}">
                                                     <i class="bi bi-cart-plus"></i>

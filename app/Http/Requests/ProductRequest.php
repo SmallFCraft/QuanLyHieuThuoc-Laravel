@@ -24,9 +24,9 @@ class ProductRequest extends FormRequest
     public function rules(): array
     {
         $product = $this->route('product');
-        $productId = $product ? $product->id : null;
+        $productId = $product ? $product->MaSP : null;
         $batchId = $product
-            ? $product->batches()->orderBy('expiration_date')->orderBy('id')->value('id')
+            ? $product->batches()->orderBy('expiration_date')->orderBy('MaLo')->value('MaLo')
             : null;
         
         return [
@@ -43,10 +43,10 @@ class ProductRequest extends FormRequest
                 'max:100',
                 Rule::unique('products', 'batch_number')
                     ->where(fn ($query) => $query->where('name', $this->input('name')))
-                    ->ignore($productId),
-                Rule::unique('product_batches', 'batch_number')->ignore($batchId),
+                    ->ignore($productId, 'MaSP'),
+                Rule::unique('product_batches', 'batch_number')->ignore($batchId, 'MaLo'),
             ],
-            'category_id' => 'required|exists:categories,id',
+            'MaDM' => 'required|exists:categories,MaDM',
             'image' => $productId ? 'nullable|image|mimes:jpeg,png|max:5120' : 'nullable|image|mimes:jpeg,png|max:5120',
         ];
     }
@@ -77,8 +77,8 @@ class ProductRequest extends FormRequest
             'batch_number.required' => 'Số lô là bắt buộc',
             'batch_number.max' => 'Số lô không được vượt quá 100 ký tự',
             'batch_number.unique' => 'Số lô đã tồn tại cho sản phẩm này',
-            'category_id.required' => 'Danh mục là bắt buộc',
-            'category_id.exists' => 'Danh mục không tồn tại',
+            'MaDM.required' => 'Danh mục là bắt buộc',
+            'MaDM.exists' => 'Danh mục không tồn tại',
             'image.image' => 'File phải là hình ảnh',
             'image.mimes' => 'Hình ảnh phải có định dạng: jpeg, png',
             'image.max' => 'Kích thước hình ảnh không được vượt quá 5MB',

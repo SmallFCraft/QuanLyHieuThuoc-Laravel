@@ -17,7 +17,7 @@
             <table id="usersTable" class="table table-hover">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>MaKH</th>
                         <th>Tên</th>
                         <th>Email</th>
                         <th>Vai Trò</th>
@@ -29,7 +29,7 @@
                 <tbody>
                     @foreach($users as $user)
                     <tr>
-                        <td>{{ $user->id }}</td>
+                        <td>{{ $user->MaKH }}</td>
                         <td>{{ $user->name }}</td>
                         <td>{{ $user->email }}</td>
                         <td>
@@ -44,11 +44,11 @@
                         </td>
                         <td>{{ $user->created_at->format('d/m/Y H:i') }}</td>
                         <td>
-                            <button class="btn btn-sm btn-warning" onclick="editUser({{ $user->id }})">
+                            <button class="btn btn-sm btn-warning" onclick="editUser({{ $user->MaKH }})">
                                 <i class="bi bi-pencil"></i>
                             </button>
                             <button class="btn btn-sm btn-{{ $user->status === 'active' ? 'secondary' : 'success' }}" 
-                                    onclick="toggleStatus({{ $user->id }}, '{{ $user->status }}')">
+                                    onclick="toggleStatus({{ $user->MaKH }}, '{{ $user->status }}')">
                                 <i class="bi bi-{{ $user->status === 'active' ? 'x-circle' : 'check-circle' }}"></i>
                             </button>
                         </td>
@@ -118,7 +118,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" id="edit_user_id">
+                    <input type="hidden" id="edit_MaKH">
                     <div class="mb-3">
                         <label class="form-label">Tên <span class="text-danger">*</span></label>
                         <input type="text" name="name" id="edit_name" class="form-control" required>
@@ -201,7 +201,7 @@
         const role = row.find('td:eq(3) span').text().trim();
 
         // Populate form
-        $('#edit_user_id').val(userId);
+        $('#edit_MaKH').val(userId);
         $('#edit_name').val(name);
         $('#edit_email').val(email);
         $('#edit_role').val(role);

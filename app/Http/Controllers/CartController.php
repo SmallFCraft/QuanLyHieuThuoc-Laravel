@@ -20,11 +20,11 @@ class CartController extends Controller
         
         // OPTIMIZED: Load all products in 1 query instead of N+1
         $productIds = array_keys($cart);
-        $products = Product::whereIn('id', $productIds)
+        $products = Product::whereIn('MaSP', $productIds)
             ->notExpired()
             ->where('stock_quantity', '>', 0)
             ->get()
-            ->keyBy('id'); // Index by ID for O(1) lookup
+            ->keyBy('MaSP'); // Index by MaSP for O(1) lookup
         
         $cartItems = [];
         $total = 0;
@@ -50,7 +50,7 @@ class CartController extends Controller
     public function add(Request $request)
     {
         $request->validate([
-            'product_id' => 'required|exists:products,id',
+            'MaSP' => 'required|exists:products,MaSP',
             'quantity' => 'required|integer|min:1|max:999'
         ]);
 
@@ -58,7 +58,7 @@ class CartController extends Controller
         $wantsJson = $request->expectsJson();
 
         // SECURITY: Limit number of unique items in cart
-        if (count($cart) >= 100 && ! isset($cart[$request->product_id])) {
+        if (count($cart) >= 100 && ! isset($cart[$request->MaSP])) {
             $message = 'Giỏ hàng đã đạt giới hạn 100 sản phẩm khác nhau.';
             if ($wantsJson) {
                 return response()->json(['success' => false, 'message' => $message], 422);
@@ -78,7 +78,7 @@ class CartController extends Controller
             return back()->with('error', $message);
         }
 
-        $product = Product::findOrFail($request->product_id);
+        $product = Product::findOrFail($request->MaSP);
 
         // Validate product is not expired
         if ($product->isExpired()) {
@@ -101,8 +101,8 @@ class CartController extends Controller
         }
 
         // If product already in cart, update quantity
-        if (isset($cart[$request->product_id])) {
-            $newQuantity = $cart[$request->product_id] + $request->quantity;
+        if (isset($cart[$request->MaSP])) {
+            $newQuantity = $cart[$request->MaSP] + $request->quantity;
 
             // Check if new quantity exceeds stock
             if ($newQuantity > $product->stock_quantity) {
@@ -114,9 +114,9 @@ class CartController extends Controller
                 return back()->with('error', $message);
             }
 
-            $cart[$request->product_id] = $newQuantity;
+            $cart[$request->MaSP] = $newQuantity;
         } else {
-            $cart[$request->product_id] = $request->quantity;
+            $cart[$request->MaSP] = $request->quantity;
         }
 
         session()->put('cart', $cart);

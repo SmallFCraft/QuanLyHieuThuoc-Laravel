@@ -95,7 +95,7 @@ class AuthenticationTest extends TestCase
 
         // Check if audit log was created for login
         $this->assertDatabaseHas('audit_logs', [
-            'user_id' => $user->id,
+            'MaKH' => $user->MaKH,
             'action' => 'login_success'
         ]);
     }
@@ -162,7 +162,7 @@ class AuthenticationTest extends TestCase
             'status' => 'active'
         ]);
 
-        $response = $this->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class)
+        $response = $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class)
             ->post(route('login'), [
                 'email' => 'test@example.com',
                 'password' => 'Password123'

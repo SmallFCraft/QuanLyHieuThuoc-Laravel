@@ -23,17 +23,17 @@ class CheckoutService
     public function processCheckout(array $cartItems, int $userId, array $shippingInfo): Order
     {
         // OPTIMIZED: Load all products in 1 query instead of N+1
-        $productIds = array_column($cartItems, 'product_id');
-        $products = Product::whereIn('id', $productIds)
+        $productIds = array_column($cartItems, 'MaSP');
+        $products = Product::whereIn('MaSP', $productIds)
             ->get()
-            ->keyBy('id');
+            ->keyBy('MaSP');
         
         // Quick validation BEFORE transaction (fail fast)
         $errors = [];
         $totalAmount = 0;
         
         foreach ($cartItems as $item) {
-            $product = $products[$item['product_id']] ?? null;
+            $product = $products[$item['MaSP']] ?? null;
             
             if (!$product) {
                 $errors[] = "Sản phẩm không tồn tại.";
@@ -41,7 +41,7 @@ class CheckoutService
             }
             
             // Check total stock across all batches
-            $totalStock = ProductBatch::where('product_id', $product->id)
+            $totalStock = ProductBatch::where('MaSP', $product->MaSP)
                 ->inStock()
                 ->notExpired()
                 ->sum('stock_quantity');
@@ -62,7 +62,7 @@ class CheckoutService
         try {
             // Create order
             $order = Order::create([
-                'user_id' => $userId,
+                'MaKH' => $userId,
                 'total_amount' => $totalAmount,
                 'status' => 'Pending',
                 'shipping_address' => $shippingInfo['address'],
@@ -74,10 +74,10 @@ class CheckoutService
             // Create order items and update inventory with FEFO strategy
             foreach ($cartItems as $item) {
                 $remainingQty = $item['quantity'];
-                $productId = $item['product_id'];
+                $productId = $item['MaSP'];
                 
                 // Get batches using FEFO (First Expired, First Out)
-                $batches = ProductBatch::where('product_id', $productId)
+                $batches = ProductBatch::where('MaSP', $productId)
                     ->inStock()
                     ->notExpired()
                     ->FEFO()
@@ -97,9 +97,9 @@ class CheckoutService
                     
                     // Create order item for this batch
                     OrderItem::create([
-                        'order_id' => $order->id,
-                        'product_id' => $productId,
-                        'batch_id' => $batch->id,
+                        'MaDH' => $order->MaDH,
+                        'MaSP' => $productId,
+                        'MaLo' => $batch->MaLo,
                         'quantity' => $deductQty,
                         'unit_price' => $products[$productId]->price_vnd,
                         'batch_number' => $batch->batch_number,
@@ -118,7 +118,7 @@ class CheckoutService
 
                 $updatedStock = (int) $batches->sum('stock_quantity');
                 DB::table('products')
-                    ->where('id', $productId)
+                    ->where('MaSP', $productId)
                     ->update([
                         'stock_quantity' => $updatedStock,
                         'updated_at' => now(),
@@ -137,7 +137,7 @@ class CheckoutService
             DB::rollBack();
             
             Log::error('Checkout transaction failed', [
-                'user_id' => $userId,
+                'MaKH' => $userId,
                 'cart_items' => $cartItems,
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -172,13 +172,13 @@ class CheckoutService
     {
         // This method kept for backward compatibility
         // Real calculation happens in processCheckout()
-        $productIds = array_column($cartItems, 'product_id');
-        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+        $productIds = array_column($cartItems, 'MaSP');
+        $products = Product::whereIn('MaSP', $productIds)->get()->keyBy('MaSP');
         
         $total = 0;
         foreach ($cartItems as $item) {
-            if (isset($products[$item['product_id']])) {
-                $total += $products[$item['product_id']]->price_vnd * $item['quantity'];
+            if (isset($products[$item['MaSP']])) {
+                $total += $products[$item['MaSP']]->price_vnd * $item['quantity'];
             }
         }
         

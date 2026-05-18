@@ -79,7 +79,7 @@ class ChatbotController extends Controller
             $sessionId = $this->getSessionId();
             
             // Load previous messages from database
-            $previousMessages = ChatMessage::where('user_id', $userId)
+            $previousMessages = ChatMessage::where('MaKH', $userId)
                 ->where('session_id', $sessionId)
                 ->orderBy('created_at', 'desc')
                 ->limit(10)
@@ -102,7 +102,7 @@ class ChatbotController extends Controller
             if (!isset($response['validation_error'])) {
                 // Save user message
                 ChatMessage::create([
-                    'user_id' => $userId,
+                    'MaKH' => $userId,
                     'session_id' => $sessionId,
                     'role' => 'user',
                     'content' => $message,
@@ -114,7 +114,7 @@ class ChatbotController extends Controller
                 // Save assistant response if successful
                 if ($response['success']) {
                     ChatMessage::create([
-                        'user_id' => $userId,
+                        'MaKH' => $userId,
                         'session_id' => $sessionId,
                         'role' => 'assistant',
                         'content' => $response['response'],
@@ -133,7 +133,7 @@ class ChatbotController extends Controller
             
         } catch (\Exception $e) {
             Log::error('Chatbot message processing failed', [
-                'user_id' => auth()->id(),
+                'MaKH' => auth()->id(),
                 'message' => $validated['message'],
                 'error' => $e->getMessage()
             ]);
@@ -207,7 +207,7 @@ class ChatbotController extends Controller
             // Save assistant message to database
             $messageContent = "Đã nhận dạng được " . count($recognizedProducts) . " sản phẩm từ hình ảnh.";
             ChatMessage::create([
-                'user_id' => $userId,
+                'MaKH' => $userId,
                 'session_id' => $sessionId,
                 'role' => 'assistant',
                 'content' => $messageContent,
@@ -229,7 +229,7 @@ class ChatbotController extends Controller
             
         } catch (\Exception $e) {
             Log::error('Image upload processing failed', [
-                'user_id' => auth()->id(),
+                'MaKH' => auth()->id(),
                 'error' => $e->getMessage()
             ]);
             
@@ -253,7 +253,7 @@ class ChatbotController extends Controller
             $sessionId = $this->getSessionId();
             $limit = max(1, min($request->integer('limit', self::MAX_HISTORY_MESSAGES), self::MAX_HISTORY_MESSAGES));
             
-            $messages = ChatMessage::where('user_id', $userId)
+            $messages = ChatMessage::where('MaKH', $userId)
                 ->where('session_id', $sessionId)
                 ->latest('created_at')
                 ->limit($limit)
@@ -288,7 +288,7 @@ class ChatbotController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Get chat history failed', [
-                'user_id' => auth()->id(),
+                'MaKH' => auth()->id(),
                 'error' => $e->getMessage()
             ]);
             
@@ -319,11 +319,11 @@ class ChatbotController extends Controller
             $sessionId = session('chat_session_id');
             
             if ($sessionId) {
-                ChatMessage::where('user_id', $userId)
+                ChatMessage::where('MaKH', $userId)
                     ->where('session_id', $sessionId)
                     ->delete();
 
-                ChatbotImage::where('user_id', $userId)
+                ChatbotImage::where('MaKH', $userId)
                     ->where('session_id', $sessionId)
                     ->chunkById(100, function ($images) {
                         foreach ($images as $image) {
@@ -346,7 +346,7 @@ class ChatbotController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Clear chat history failed', [
-                'user_id' => auth()->id(),
+                'MaKH' => auth()->id(),
                 'error' => $e->getMessage()
             ]);
             
@@ -366,17 +366,17 @@ class ChatbotController extends Controller
     public function addToCart(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'product_id' => 'required|integer|exists:products,id',
+            'MaSP' => 'required|integer|exists:products,MaSP',
             'quantity' => 'nullable|integer|min:1|max:99'
         ], [
-            'product_id.required' => 'Vui lòng chọn sản phẩm.',
-            'product_id.exists' => 'Sản phẩm không tồn tại.',
+            'MaSP.required' => 'Vui lòng chọn sản phẩm.',
+            'MaSP.exists' => 'Sản phẩm không tồn tại.',
             'quantity.min' => 'Số lượng phải ít nhất là 1.',
             'quantity.max' => 'Số lượng tối đa là 99.'
         ]);
 
         try {
-            $product = \App\Models\Product::findOrFail($validated['product_id']);
+            $product = \App\Models\Product::findOrFail($validated['MaSP']);
             $quantity = $validated['quantity'] ?? 1;
 
             // Validate product
@@ -396,7 +396,7 @@ class ChatbotController extends Controller
 
             // Add to session cart (same cart used by CartController)
             $cart = session()->get('cart', []);
-            $currentQty = $cart[$product->id] ?? 0;
+            $currentQty = $cart[$product->MaSP] ?? 0;
             $newQty = $currentQty + $quantity;
 
             if ($newQty > $product->stock_quantity) {
@@ -406,7 +406,7 @@ class ChatbotController extends Controller
                 ], 422);
             }
 
-            $cart[$product->id] = $newQty;
+            $cart[$product->MaSP] = $newQty;
             session()->put('cart', $cart);
 
             // Build cart summary for response
@@ -421,7 +421,7 @@ class ChatbotController extends Controller
         } catch (\Exception $e) {
             Log::error('Chatbot add to cart failed', [
                 'error' => $e->getMessage(),
-                'product_id' => $validated['product_id']
+                'MaSP' => $validated['MaSP']
             ]);
 
             return response()->json([
@@ -465,19 +465,19 @@ class ChatbotController extends Controller
     public function updateCartItem(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'product_id' => 'required|integer|exists:products,id',
+            'MaSP' => 'required|integer|exists:products,MaSP',
             'quantity' => 'required|integer|min:0|max:99'
         ]);
 
         try {
-            $product = \App\Models\Product::findOrFail($validated['product_id']);
+            $product = \App\Models\Product::findOrFail($validated['MaSP']);
             $quantity = $validated['quantity'];
             
             $cart = session()->get('cart', []);
             
             // Remove if quantity is 0
             if ($quantity === 0) {
-                unset($cart[$product->id]);
+                unset($cart[$product->MaSP]);
                 session()->put('cart', $cart);
                 
                 return response()->json([
@@ -495,7 +495,7 @@ class ChatbotController extends Controller
                 ], 422);
             }
             
-            $cart[$product->id] = $quantity;
+            $cart[$product->MaSP] = $quantity;
             session()->put('cart', $cart);
             
             return response()->json([
@@ -507,7 +507,7 @@ class ChatbotController extends Controller
         } catch (\Exception $e) {
             Log::error('Update cart item failed', [
                 'error' => $e->getMessage(),
-                'product_id' => $validated['product_id']
+                'MaSP' => $validated['MaSP']
             ]);
             
             return response()->json([
@@ -556,7 +556,7 @@ class ChatbotController extends Controller
                 $completedOrderId = Cache::get($completedKey);
 
                 if ($completedOrderId) {
-                    $completedOrder = Order::where('user_id', $userId)->find($completedOrderId);
+                    $completedOrder = Order::where('MaKH', $userId)->find($completedOrderId);
 
                     if ($completedOrder) {
                         session()->forget('cart');
@@ -585,19 +585,19 @@ class ChatbotController extends Controller
                     ]
                 );
 
-                Cache::put($completedKey, $order->id, now()->addMinutes(10));
+                Cache::put($completedKey, $order->MaDH, now()->addMinutes(10));
                 session()->forget('cart');
 
                 // Log audit
                 AuditLogService::log(
                     action: 'chatbot_order_placed',
                     modelType: Order::class,
-                    modelId: $order->id,
+                    modelId: $order->MaDH,
                     oldValues: null,
                     newValues: [
-                        'user_id' => $userId,
+                        'MaKH' => $userId,
                         'source' => 'chatbot',
-                        'order_id' => $order->id,
+                        'MaDH' => $order->MaDH,
                         'total_amount' => $order->total_amount
                     ]
                 );
@@ -616,7 +616,7 @@ class ChatbotController extends Controller
             ], 429);
         } catch (\Exception $e) {
             Log::error('Chatbot place order failed', [
-                'user_id' => $userId,
+                'MaKH' => $userId,
                 'error' => $e->getMessage()
             ]);
 
@@ -640,10 +640,10 @@ class ChatbotController extends Controller
             return ['items' => [], 'total' => 0, 'count' => 0];
         }
 
-        $products = \App\Models\Product::whereIn('id', array_keys($cart))
+        $products = \App\Models\Product::whereIn('MaSP', array_keys($cart))
             ->notExpired()
             ->get()
-            ->keyBy('id');
+            ->keyBy('MaSP');
 
         $items = [];
         $total = 0;
@@ -654,7 +654,7 @@ class ChatbotController extends Controller
                 $subtotal = $product->price_vnd * $quantity;
                 $total += $subtotal;
                 $items[] = [
-                    'product_id' => $product->id,
+                    'MaSP' => $product->MaSP,
                     'name' => $product->name,
                     'price' => $product->price_vnd,
                     'quantity' => $quantity,
@@ -695,7 +695,7 @@ class ChatbotController extends Controller
 
         foreach ($cart as $productId => $quantity) {
             $cartItems[] = [
-                'product_id' => (int) $productId,
+                'MaSP' => (int) $productId,
                 'quantity' => (int) $quantity
             ];
         }
@@ -706,7 +706,7 @@ class ChatbotController extends Controller
     private function formatOrderPayload(Order $order): array
     {
         return [
-            'id' => $order->id,
+            'id' => $order->MaDH,
             'total_amount' => $order->total_amount,
             'status' => $order->status,
             'created_at' => $order->created_at->format('d/m/Y H:i')

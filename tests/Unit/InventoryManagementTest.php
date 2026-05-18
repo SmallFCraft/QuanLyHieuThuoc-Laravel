@@ -39,7 +39,7 @@ class InventoryManagementTest extends TestCase
     public function test_low_stock_alert_when_quantity_below_reorder_point(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Low Stock Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -56,7 +56,7 @@ class InventoryManagementTest extends TestCase
     public function test_fefo_sorting_by_expiration_date(): void
     {
         $product1 = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Medicine A',
             'price' => 50000,
             'expiration_date' => now()->addMonths(3),
@@ -66,7 +66,7 @@ class InventoryManagementTest extends TestCase
         ]);
 
         $product2 = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Medicine B',
             'price' => 50000,
             'expiration_date' => now()->addMonths(1),
@@ -76,7 +76,7 @@ class InventoryManagementTest extends TestCase
         ]);
 
         $product3 = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Medicine C',
             'price' => 50000,
             'expiration_date' => now()->addMonths(6),
@@ -87,8 +87,8 @@ class InventoryManagementTest extends TestCase
 
         $sortedProducts = Product::orderBy('expiration_date', 'asc')->get();
 
-        $this->assertEquals($product2->id, $sortedProducts->first()->id);
-        $this->assertEquals($product3->id, $sortedProducts->last()->id);
+        $this->assertEquals($product2->MaSP, $sortedProducts->first()->MaSP);
+        $this->assertEquals($product3->MaSP, $sortedProducts->last()->MaSP);
     }
 
     public function test_inventory_adjustment_with_reason_code(): void
@@ -96,7 +96,7 @@ class InventoryManagementTest extends TestCase
         $this->actingAs($this->admin);
 
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -106,10 +106,10 @@ class InventoryManagementTest extends TestCase
         ]);
 
         $result = $this->inventoryService->adjustStock(
-            $product->id,
+            $product->MaSP,
             20,
             'Received new shipment',
-            $this->admin->id
+            $this->admin->MaKH
         );
 
         $this->assertTrue($result);
@@ -120,9 +120,9 @@ class InventoryManagementTest extends TestCase
         // Verify audit log
         $this->assertDatabaseHas('audit_logs', [
             'model_type' => Product::class,
-            'model_id' => $product->id,
+            'MaDoiTuong' => $product->MaSP,
             'action' => 'inventory_adjustment',
-            'user_id' => $this->admin->id
+            'MaKH' => $this->admin->MaKH
         ]);
     }
 
@@ -131,7 +131,7 @@ class InventoryManagementTest extends TestCase
         $this->actingAs($this->admin);
 
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -144,10 +144,10 @@ class InventoryManagementTest extends TestCase
         $this->expectExceptionMessage('Số lượng tồn kho không thể âm');
 
         $this->inventoryService->adjustStock(
-            $product->id,
+            $product->MaSP,
             -15,
             'Invalid adjustment',
-            $this->admin->id
+            $this->admin->MaKH
         );
     }
 
@@ -156,7 +156,7 @@ class InventoryManagementTest extends TestCase
         // Không tạo lô (bỏ qua observer): test thao tác trực tiếp cột products.stock_quantity
         $product = Product::withoutEvents(function () {
             return Product::create([
-                'category_id' => $this->category->id,
+                'MaDM' => $this->category->MaDM,
                 'name' => 'Test Medicine',
                 'price' => 50000,
                 'expiration_date' => now()->addYear(),
@@ -168,13 +168,13 @@ class InventoryManagementTest extends TestCase
 
         // Simulate concurrent updates
         DB::transaction(function () use ($product) {
-            $lockedProduct = Product::lockForUpdate()->find($product->id);
+            $lockedProduct = Product::lockForUpdate()->find($product->MaSP);
             $lockedProduct->stock_quantity -= 10;
             $lockedProduct->save();
         });
 
         DB::transaction(function () use ($product) {
-            $lockedProduct = Product::lockForUpdate()->find($product->id);
+            $lockedProduct = Product::lockForUpdate()->find($product->MaSP);
             $lockedProduct->stock_quantity -= 5;
             $lockedProduct->save();
         });
@@ -186,7 +186,7 @@ class InventoryManagementTest extends TestCase
     public function test_check_expiration_returns_expiring_products(): void
     {
         $expiringProduct = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Expiring Medicine',
             'price' => 50000,
             'expiration_date' => now()->addDays(15),
@@ -196,7 +196,7 @@ class InventoryManagementTest extends TestCase
         ]);
 
         $validProduct = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Valid Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -216,7 +216,7 @@ class InventoryManagementTest extends TestCase
         $this->actingAs($this->admin);
 
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -226,18 +226,18 @@ class InventoryManagementTest extends TestCase
         ]);
 
         $this->inventoryService->adjustStock(
-            $product->id,
+            $product->MaSP,
             150,
             'Stock replenishment',
-            $this->admin->id
+            $this->admin->MaKH
         );
 
-        $auditLog = AuditLog::where('model_id', $product->id)
+        $auditLog = AuditLog::where('MaDoiTuong', $product->MaSP)
             ->where('action', 'inventory_adjustment')
             ->first();
 
         $this->assertNotNull($auditLog);
-        $this->assertEquals($this->admin->id, $auditLog->user_id);
+        $this->assertEquals($this->admin->MaKH, $auditLog->MaKH);
         $this->assertNotNull($auditLog->old_values);
         $this->assertNotNull($auditLog->new_values);
     }

@@ -29,7 +29,7 @@ class ProductManagementTest extends TestCase
     public function test_product_can_be_created_with_all_required_fields(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine',
             'ingredients' => 'Active ingredient',
             'usage' => 'Take twice daily',
@@ -51,7 +51,7 @@ class ProductManagementTest extends TestCase
         $this->expectException(\Illuminate\Database\QueryException::class);
 
         Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine',
             'price' => -1000,
             'expiration_date' => now()->addYear(),
@@ -66,7 +66,7 @@ class ProductManagementTest extends TestCase
         $this->expectException(\Illuminate\Database\QueryException::class);
 
         Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -81,7 +81,7 @@ class ProductManagementTest extends TestCase
         $this->expectException(\Illuminate\Database\QueryException::class);
 
         Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -94,7 +94,7 @@ class ProductManagementTest extends TestCase
     public function test_product_batch_rejects_negative_stock_quantity(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -106,7 +106,7 @@ class ProductManagementTest extends TestCase
         $this->expectException(\Illuminate\Database\QueryException::class);
 
         ProductBatch::create([
-            'product_id' => $product->id,
+            'MaSP' => $product->MaSP,
             'batch_number' => 'BATCH-003C',
             'expiration_date' => now()->addYear(),
             'stock_quantity' => -5,
@@ -117,7 +117,7 @@ class ProductManagementTest extends TestCase
     public function test_product_expiration_date_must_be_future_date(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addMonths(3),
@@ -132,7 +132,7 @@ class ProductManagementTest extends TestCase
     public function test_product_shows_expiration_warning_when_less_than_six_months(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addMonths(3),
@@ -147,7 +147,7 @@ class ProductManagementTest extends TestCase
     public function test_batch_number_must_be_unique_per_product(): void
     {
         Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine A',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -160,7 +160,7 @@ class ProductManagementTest extends TestCase
 
         // Same product name and batch number should fail
         Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine A',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -180,7 +180,7 @@ class ProductManagementTest extends TestCase
         $this->actingAs($admin);
 
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -193,9 +193,9 @@ class ProductManagementTest extends TestCase
 
         $this->assertDatabaseHas('audit_logs', [
             'model_type' => Product::class,
-            'model_id' => $product->id,
+            'MaDoiTuong' => $product->MaSP,
             'action' => 'updated',
-            'user_id' => $admin->id
+            'MaKH' => $admin->MaKH
         ]);
     }
 
@@ -209,7 +209,7 @@ class ProductManagementTest extends TestCase
         $this->actingAs($admin);
 
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -221,21 +221,21 @@ class ProductManagementTest extends TestCase
         $product->delete();
 
         $this->assertSoftDeleted('products', [
-            'id' => $product->id
+            'MaSP' => $product->MaSP
         ]);
 
         $this->assertDatabaseHas('audit_logs', [
             'model_type' => Product::class,
-            'model_id' => $product->id,
+            'MaDoiTuong' => $product->MaSP,
             'action' => 'deleted',
-            'user_id' => $admin->id
+            'MaKH' => $admin->MaKH
         ]);
     }
 
     public function test_product_is_expired_method_works_correctly(): void
     {
         $expiredProduct = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Expired Medicine',
             'price' => 50000,
             'expiration_date' => now()->subDay(),
@@ -245,7 +245,7 @@ class ProductManagementTest extends TestCase
         ]);
 
         $validProduct = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Valid Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -261,7 +261,7 @@ class ProductManagementTest extends TestCase
     public function test_product_is_low_stock_method_works_correctly(): void
     {
         $lowStockProduct = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Low Stock Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -271,7 +271,7 @@ class ProductManagementTest extends TestCase
         ]);
 
         $normalStockProduct = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Normal Stock Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),

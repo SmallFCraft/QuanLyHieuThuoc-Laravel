@@ -28,7 +28,7 @@ class InventoryService
 
             $hasBatches = $product->batches()->exists();
             if ($hasBatches) {
-                $product->batches()->orderBy('expiration_date')->orderBy('id')->lockForUpdate()->get();
+                $product->batches()->orderBy('expiration_date')->orderBy('MaLo')->lockForUpdate()->get();
                 $oldQuantity = (int) $product->batches()->sum('stock_quantity');
             } else {
                 $oldQuantity = (int) ($product->getAttributes()['stock_quantity'] ?? 0);
@@ -44,7 +44,7 @@ class InventoryService
                 $newQuantity = (int) $product->batches()->sum('stock_quantity');
                 // Sync stock_quantity to products table for consistency
                 DB::table('products')
-                    ->where('id', $product->id)
+                    ->where('MaSP', $product->MaSP)
                     ->update(['stock_quantity' => $newQuantity, 'updated_at' => now()]);
             } else {
                 $product->setAttribute('stock_quantity', $newQuantity);
@@ -64,12 +64,12 @@ class InventoryService
             );
 
             Log::info('Inventory adjusted', [
-                'product_id' => $productId,
+                'MaSP' => $productId,
                 'old_quantity' => $oldQuantity,
                 'new_quantity' => $newQuantity,
                 'adjustment' => $quantity,
                 'reason' => $reason,
-                'user_id' => $userId
+                'MaKH' => $userId
             ]);
 
             return true;
@@ -96,7 +96,7 @@ class InventoryService
                     ->first();
             }
             if (! $batch instanceof ProductBatch) {
-                $batch = $product->batches()->orderBy('expiration_date')->orderBy('id')->first();
+                $batch = $product->batches()->orderBy('expiration_date')->orderBy('MaLo')->first();
             }
             if (! $batch instanceof ProductBatch) {
                 throw new \Exception('Không tìm thấy lô sản phẩm để điều chỉnh tồn kho.');
@@ -108,7 +108,7 @@ class InventoryService
         }
 
         $remaining = abs($delta);
-        foreach ($product->batches()->orderBy('expiration_date')->orderBy('id')->get() as $batch) {
+        foreach ($product->batches()->orderBy('expiration_date')->orderBy('MaLo')->get() as $batch) {
             if ($remaining <= 0) {
                 break;
             }
@@ -156,17 +156,17 @@ class InventoryService
     /**
      * Validate stock availability for multiple items.
      *
-     * @param array $items Array of ['product_id' => id, 'quantity' => qty]
+     * @param array $items Array of ['MaSP' => id, 'quantity' => qty]
      * @return bool
      * @throws \Exception
      */
     public function validateStockAvailability(array $items): bool
     {
         foreach ($items as $item) {
-            $product = Product::find($item['product_id']);
+            $product = Product::find($item['MaSP']);
             
             if (!$product) {
-                throw new \Exception("Sản phẩm không tồn tại (ID: {$item['product_id']})");
+                throw new \Exception("Sản phẩm không tồn tại (ID: {$item['MaSP']})");
             }
             
             if ($product->stock_quantity < $item['quantity']) {
@@ -193,7 +193,7 @@ class InventoryService
      */
     public function applyFEFO(int $productId): ?Product
     {
-        return Product::where('id', $productId)
+        return Product::where('MaSP', $productId)
             ->where('stock_quantity', '>', 0)
             ->notExpired()
             ->orderBy('expiration_date', 'asc')
@@ -234,7 +234,7 @@ class InventoryService
     /**
      * Deduct stock for multiple items (used during checkout).
      *
-     * @param array $items Array of ['product_id' => id, 'quantity' => qty]
+     * @param array $items Array of ['MaSP' => id, 'quantity' => qty]
      * @param int $userId User performing the operation
      * @return bool
      * @throws \Exception
@@ -244,7 +244,7 @@ class InventoryService
         return DB::transaction(function () use ($items, $userId) {
             foreach ($items as $item) {
                 // Lock the product row
-                $product = Product::lockForUpdate()->findOrFail($item['product_id']);
+                $product = Product::lockForUpdate()->findOrFail($item['MaSP']);
                 
                 // Validate stock availability
                 if ($product->stock_quantity < $item['quantity']) {
@@ -262,7 +262,7 @@ class InventoryService
                     $newQuantity = (int) $product->batches()->sum('stock_quantity');
                     // Sync to products table
                     DB::table('products')
-                        ->where('id', $product->id)
+                        ->where('MaSP', $product->MaSP)
                         ->update(['stock_quantity' => $newQuantity, 'updated_at' => now()]);
                 } else {
                     // Deduct directly from product
@@ -275,7 +275,7 @@ class InventoryService
                 app(AuditLogService::class)->log(
                     action: 'stock_deduction',
                     modelType: Product::class,
-                    modelId: $product->id,
+                    modelId: $product->MaSP,
                     oldValues: ['stock_quantity' => $oldQuantity],
                     newValues: [
                         'stock_quantity' => $newQuantity,
@@ -291,7 +291,7 @@ class InventoryService
     /**
      * Restore stock for multiple items (used during order cancellation).
      *
-     * @param array $items Array of ['product_id' => id, 'quantity' => qty]
+     * @param array $items Array of ['MaSP' => id, 'quantity' => qty]
      * @param int $userId User performing the operation
      * @return bool
      * @throws \Exception
@@ -301,7 +301,7 @@ class InventoryService
         return DB::transaction(function () use ($items, $userId) {
             foreach ($items as $item) {
                 // Lock the product row
-                $product = Product::lockForUpdate()->findOrFail($item['product_id']);
+                $product = Product::lockForUpdate()->findOrFail($item['MaSP']);
                 
                 $oldQuantity = $product->stock_quantity;
                 
@@ -312,7 +312,7 @@ class InventoryService
                     $newQuantity = (int) $product->batches()->sum('stock_quantity');
                     // Sync to products table
                     DB::table('products')
-                        ->where('id', $product->id)
+                        ->where('MaSP', $product->MaSP)
                         ->update(['stock_quantity' => $newQuantity, 'updated_at' => now()]);
                 } else {
                     // Restore directly to product
@@ -325,7 +325,7 @@ class InventoryService
                 app(AuditLogService::class)->log(
                     action: 'stock_restoration',
                     modelType: Product::class,
-                    modelId: $product->id,
+                    modelId: $product->MaSP,
                     oldValues: ['stock_quantity' => $oldQuantity],
                     newValues: [
                         'stock_quantity' => $newQuantity,

@@ -52,7 +52,7 @@
                 <div class="col-sm-6">
                     <div class="rounded-3 p-3" style="background: rgba(16,185,129,0.06);">
                         <small class="text-gray-500 d-block mb-1">{{ __('messages.checkout.order_id') }}</small>
-                        <span class="fw-bold text-gray-800">#{{ $order->id }}</span>
+                        <span class="fw-bold text-gray-800">#{{ $order->MaDH }}</span>
                     </div>
                 </div>
                 <div class="col-sm-6">

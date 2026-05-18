@@ -15,7 +15,7 @@ class ProductSeeder extends Seeder
     public function run(): void
     {
         // Get categories from database
-        $categories = Category::pluck('id', 'name')->toArray();
+        $categories = Category::pluck('MaDM', 'name')->toArray();
         
         if (empty($categories)) {
             $this->command->error('No categories found. Please run CategorySeeder first.');
@@ -34,7 +34,7 @@ class ProductSeeder extends Seeder
             // Create corresponding product batch
             \App\Models\ProductBatch::updateOrCreate(
                 [
-                    'product_id' => $product->id,
+                    'MaSP' => $product->MaSP,
                     'batch_number' => $productData['batch_number']
                 ],
                 [
@@ -73,7 +73,7 @@ class ProductSeeder extends Seeder
         return [
             // Category 1: Thuốc giảm đau - Hạ sốt (10 products)
             [
-                'category_id' => $painRelief,
+                'MaDM' => $painRelief,
                 'name' => 'Paracetamol 500mg',
                 'ingredients' => 'Paracetamol 500mg',
                 'usage' => 'Giảm đau, hạ sốt. Uống 1-2 viên mỗi 4-6 giờ, không quá 8 viên/ngày',
@@ -86,7 +86,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_01.jpg',
             ],
             [
-                'category_id' => $painRelief,
+                'MaDM' => $painRelief,
                 'name' => 'Ibuprofen 400mg',
                 'ingredients' => 'Ibuprofen 400mg',
                 'usage' => 'Giảm đau, chống viêm. Uống 1 viên mỗi 6-8 giờ sau ăn',
@@ -99,7 +99,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_02.jpg',
             ],
             [
-                'category_id' => $painRelief,
+                'MaDM' => $painRelief,
                 'name' => 'Aspirin 100mg',
                 'ingredients' => 'Acid acetylsalicylic 100mg',
                 'usage' => 'Phòng ngừa đột quỵ, nhồi máu cơ tim. Uống 1 viên/ngày',
@@ -112,7 +112,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_03.jpg',
             ],
             [
-                'category_id' => $painRelief,
+                'MaDM' => $painRelief,
                 'name' => 'Efferalgan 500mg',
                 'ingredients' => 'Paracetamol 500mg (viên sủi)',
                 'usage' => 'Giảm đau, hạ sốt nhanh. Hòa 1 viên vào nước, uống mỗi 4-6 giờ',
@@ -125,7 +125,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_04.jpg',
             ],
             [
-                'category_id' => $painRelief,
+                'MaDM' => $painRelief,
                 'name' => 'Hapacol 650mg',
                 'ingredients' => 'Paracetamol 650mg',
                 'usage' => 'Giảm đau, hạ sốt. Uống 1 viên mỗi 4-6 giờ',
@@ -138,7 +138,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_05.jpg',
             ],
             [
-                'category_id' => $painRelief,
+                'MaDM' => $painRelief,
                 'name' => 'Diclofenac 50mg',
                 'ingredients' => 'Diclofenac sodium 50mg',
                 'usage' => 'Giảm đau, chống viêm khớp. Uống 1 viên x 2-3 lần/ngày sau ăn',
@@ -151,7 +151,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_06.jpg',
             ],
             [
-                'category_id' => $painRelief,
+                'MaDM' => $painRelief,
                 'name' => 'Meloxicam 7.5mg',
                 'ingredients' => 'Meloxicam 7.5mg',
                 'usage' => 'Điều trị viêm khớp. Uống 1 viên/ngày sau ăn',
@@ -164,7 +164,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_07.jpg',
             ],
             [
-                'category_id' => $painRelief,
+                'MaDM' => $painRelief,
                 'name' => 'Celecoxib 200mg',
                 'ingredients' => 'Celecoxib 200mg',
                 'usage' => 'Giảm đau viêm khớp. Uống 1 viên x 1-2 lần/ngày',
@@ -177,7 +177,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_08.jpg',
             ],
             [
-                'category_id' => $painRelief,
+                'MaDM' => $painRelief,
                 'name' => 'Ketoprofen 100mg',
                 'ingredients' => 'Ketoprofen 100mg',
                 'usage' => 'Giảm đau, chống viêm. Uống 1 viên x 2 lần/ngày',
@@ -190,7 +190,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_09.jpg',
             ],
             [
-                'category_id' => $painRelief,
+                'MaDM' => $painRelief,
                 'name' => 'Naproxen 250mg',
                 'ingredients' => 'Naproxen 250mg',
                 'usage' => 'Giảm đau, hạ sốt. Uống 1-2 viên x 2 lần/ngày',
@@ -205,7 +205,7 @@ class ProductSeeder extends Seeder
 
             // Category 2: Kháng sinh (10 products)
             [
-                'category_id' => $antibiotics,
+                'MaDM' => $antibiotics,
                 'name' => 'Amoxicillin 500mg',
                 'ingredients' => 'Amoxicillin trihydrate 500mg',
                 'usage' => 'Kháng sinh điều trị nhiễm khuẩn. Uống 1 viên x 3 lần/ngày',
@@ -217,7 +217,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_11.jpg',
             ],
             [
-                'category_id' => $antibiotics,
+                'MaDM' => $antibiotics,
                 'name' => 'Augmentin 625mg',
                 'ingredients' => 'Amoxicillin 500mg + Acid clavulanic 125mg',
                 'usage' => 'Kháng sinh phổ rộng. Uống 1 viên x 2-3 lần/ngày',
@@ -229,7 +229,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_12.jpg',
             ],
             [
-                'category_id' => $antibiotics,
+                'MaDM' => $antibiotics,
                 'name' => 'Cefixime 200mg',
                 'ingredients' => 'Cefixime 200mg',
                 'usage' => 'Kháng sinh nhóm cephalosporin. Uống 1 viên x 2 lần/ngày',
@@ -241,7 +241,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_13.jpg',
             ],
             [
-                'category_id' => $antibiotics,
+                'MaDM' => $antibiotics,
                 'name' => 'Azithromycin 250mg',
                 'ingredients' => 'Azithromycin 250mg',
                 'usage' => 'Kháng sinh điều trị nhiễm khuẩn đường hô hấp. Uống 1 viên/ngày',
@@ -253,7 +253,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_14.jpg',
             ],
             [
-                'category_id' => $antibiotics,
+                'MaDM' => $antibiotics,
                 'name' => 'Ciprofloxacin 500mg',
                 'ingredients' => 'Ciprofloxacin 500mg',
                 'usage' => 'Kháng sinh nhóm quinolone. Uống 1 viên x 2 lần/ngày',
@@ -265,7 +265,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_15.jpg',
             ],
             [
-                'category_id' => $antibiotics,
+                'MaDM' => $antibiotics,
                 'name' => 'Levofloxacin 500mg',
                 'ingredients' => 'Levofloxacin 500mg',
                 'usage' => 'Kháng sinh điều trị nhiễm khuẩn. Uống 1 viên/ngày',
@@ -277,7 +277,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_16.jpg',
             ],
             [
-                'category_id' => $antibiotics,
+                'MaDM' => $antibiotics,
                 'name' => 'Metronidazole 250mg',
                 'ingredients' => 'Metronidazole 250mg',
                 'usage' => 'Kháng sinh điều trị nhiễm khuẩn kỵ khí. Uống 1 viên x 3 lần/ngày',
@@ -289,7 +289,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_17.jpg',
             ],
             [
-                'category_id' => $antibiotics,
+                'MaDM' => $antibiotics,
                 'name' => 'Clarithromycin 500mg',
                 'ingredients' => 'Clarithromycin 500mg',
                 'usage' => 'Kháng sinh nhóm macrolide. Uống 1 viên x 2 lần/ngày',
@@ -301,7 +301,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_18.jpg',
             ],
             [
-                'category_id' => $antibiotics,
+                'MaDM' => $antibiotics,
                 'name' => 'Cephalexin 500mg',
                 'ingredients' => 'Cephalexin 500mg',
                 'usage' => 'Kháng sinh nhóm cephalosporin thế hệ 1. Uống 1 viên x 4 lần/ngày',
@@ -313,7 +313,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_19.jpg',
             ],
             [
-                'category_id' => $antibiotics,
+                'MaDM' => $antibiotics,
                 'name' => 'Doxycycline 100mg',
                 'ingredients' => 'Doxycycline 100mg',
                 'usage' => 'Kháng sinh nhóm tetracycline. Uống 1 viên x 2 lần/ngày',
@@ -327,7 +327,7 @@ class ProductSeeder extends Seeder
 
             // Category 3: Vitamin và khoáng chất (10 products)
             [
-                'category_id' => $vitamins,
+                'MaDM' => $vitamins,
                 'name' => 'Vitamin C 1000mg',
                 'ingredients' => 'Acid ascorbic 1000mg',
                 'usage' => 'Bổ sung vitamin C, tăng sức đề kháng. Uống 1 viên/ngày',
@@ -339,7 +339,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_21.jpg',
             ],
             [
-                'category_id' => $vitamins,
+                'MaDM' => $vitamins,
                 'name' => 'Vitamin B Complex',
                 'ingredients' => 'B1, B2, B6, B12, Niacin, Acid folic',
                 'usage' => 'Bổ sung vitamin nhóm B. Uống 1 viên/ngày',
@@ -351,7 +351,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_22.jpg',
             ],
             [
-                'category_id' => $vitamins,
+                'MaDM' => $vitamins,
                 'name' => 'Calcium + D3',
                 'ingredients' => 'Calcium carbonate 600mg + Vitamin D3 400IU',
                 'usage' => 'Bổ sung canxi, phòng loãng xương. Uống 1 viên x 2 lần/ngày',
@@ -363,7 +363,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_23.jpg',
             ],
             [
-                'category_id' => $vitamins,
+                'MaDM' => $vitamins,
                 'name' => 'Omega-3 Fish Oil',
                 'ingredients' => 'Dầu cá chứa EPA 180mg, DHA 120mg',
                 'usage' => 'Bổ sung omega-3, tốt cho tim mạch. Uống 1-2 viên/ngày',
@@ -375,7 +375,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_24.jpg',
             ],
             [
-                'category_id' => $vitamins,
+                'MaDM' => $vitamins,
                 'name' => 'Multivitamin',
                 'ingredients' => 'Tổng hợp vitamin và khoáng chất',
                 'usage' => 'Bổ sung đa vitamin. Uống 1 viên/ngày',
@@ -387,7 +387,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_25.jpg',
             ],
             [
-                'category_id' => $vitamins,
+                'MaDM' => $vitamins,
                 'name' => 'Vitamin E 400IU',
                 'ingredients' => 'Vitamin E 400IU',
                 'usage' => 'Chống oxy hóa, đẹp da. Uống 1 viên/ngày',
@@ -399,7 +399,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_26.jpg',
             ],
             [
-                'category_id' => $vitamins,
+                'MaDM' => $vitamins,
                 'name' => 'Zinc 50mg',
                 'ingredients' => 'Zinc sulfate 50mg',
                 'usage' => 'Bổ sung kẽm, tăng cường miễn dịch. Uống 1 viên/ngày',
@@ -411,7 +411,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_27.jpg',
             ],
             [
-                'category_id' => $vitamins,
+                'MaDM' => $vitamins,
                 'name' => 'Iron + Folic Acid',
                 'ingredients' => 'Ferrous sulfate 60mg + Acid folic 400mcg',
                 'usage' => 'Bổ sung sắt, phòng thiếu máu. Uống 1 viên/ngày',
@@ -423,7 +423,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_28.jpg',
             ],
             [
-                'category_id' => $vitamins,
+                'MaDM' => $vitamins,
                 'name' => 'Magnesium 250mg',
                 'ingredients' => 'Magnesium oxide 250mg',
                 'usage' => 'Bổ sung magie, giảm căng thẳng. Uống 1 viên x 2 lần/ngày',
@@ -435,7 +435,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_29.jpg',
             ],
             [
-                'category_id' => $vitamins,
+                'MaDM' => $vitamins,
                 'name' => 'Coenzyme Q10 100mg',
                 'ingredients' => 'Coenzyme Q10 100mg',
                 'usage' => 'Bổ tim, chống lão hóa. Uống 1 viên/ngày',
@@ -449,7 +449,7 @@ class ProductSeeder extends Seeder
 
             // Category 4: Thuốc tiêu hóa (10 products)
             [
-                'category_id' => $digestive,
+                'MaDM' => $digestive,
                 'name' => 'Omeprazole 20mg',
                 'ingredients' => 'Omeprazole 20mg',
                 'usage' => 'Điều trị loét dạ dày, trào ngược. Uống 1 viên/ngày trước ăn',
@@ -461,7 +461,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_31.jpg',
             ],
             [
-                'category_id' => $digestive,
+                'MaDM' => $digestive,
                 'name' => 'Esomeprazole 40mg',
                 'ingredients' => 'Esomeprazole 40mg',
                 'usage' => 'Điều trị trào ngược dạ dày. Uống 1 viên/ngày',
@@ -473,7 +473,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_32.jpg',
             ],
             [
-                'category_id' => $digestive,
+                'MaDM' => $digestive,
                 'name' => 'Domperidone 10mg',
                 'ingredients' => 'Domperidone 10mg',
                 'usage' => 'Chống nôn, tăng nhu động dạ dày. Uống 1 viên x 3 lần/ngày trước ăn',
@@ -485,7 +485,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_33.jpg',
             ],
             [
-                'category_id' => $digestive,
+                'MaDM' => $digestive,
                 'name' => 'Smecta',
                 'ingredients' => 'Diosmectite 3g',
                 'usage' => 'Điều trị tiêu chảy. Uống 1 gói x 3 lần/ngày',
@@ -497,7 +497,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_34.jpg',
             ],
             [
-                'category_id' => $digestive,
+                'MaDM' => $digestive,
                 'name' => 'Loperamide 2mg',
                 'ingredients' => 'Loperamide HCl 2mg',
                 'usage' => 'Điều trị tiêu chảy cấp. Uống 2 viên lần đầu, sau đó 1 viên sau mỗi lần đi ngoài',
@@ -509,7 +509,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_35.jpg',
             ],
             [
-                'category_id' => $digestive,
+                'MaDM' => $digestive,
                 'name' => 'Bisacodyl 5mg',
                 'ingredients' => 'Bisacodyl 5mg',
                 'usage' => 'Thuốc nhuận tràng. Uống 1-2 viên trước khi đi ngủ',
@@ -521,7 +521,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_36.jpg',
             ],
             [
-                'category_id' => $digestive,
+                'MaDM' => $digestive,
                 'name' => 'Lactulose Syrup',
                 'ingredients' => 'Lactulose 667mg/ml',
                 'usage' => 'Điều trị táo bón. Uống 15-30ml/ngày',
@@ -533,7 +533,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_37.jpg',
             ],
             [
-                'category_id' => $digestive,
+                'MaDM' => $digestive,
                 'name' => 'Ranitidine 150mg',
                 'ingredients' => 'Ranitidine HCl 150mg',
                 'usage' => 'Giảm acid dạ dày. Uống 1 viên x 2 lần/ngày',
@@ -545,7 +545,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_38.jpg',
             ],
             [
-                'category_id' => $digestive,
+                'MaDM' => $digestive,
                 'name' => 'Probiotics',
                 'ingredients' => 'Men vi sinh Lactobacillus, Bifidobacterium',
                 'usage' => 'Cân bằng hệ vi sinh đường ruột. Uống 1-2 viên/ngày',
@@ -557,7 +557,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_39.jpg',
             ],
             [
-                'category_id' => $digestive,
+                'MaDM' => $digestive,
                 'name' => 'Simethicone 80mg',
                 'ingredients' => 'Simethicone 80mg',
                 'usage' => 'Giảm đầy hơi, khó tiêu. Uống 1 viên x 3 lần/ngày sau ăn',
@@ -571,7 +571,7 @@ class ProductSeeder extends Seeder
 
             // Category 5: Thuốc tim mạch (10 products)
             [
-                'category_id' => $cardiovascular,
+                'MaDM' => $cardiovascular,
                 'name' => 'Amlodipine 5mg',
                 'ingredients' => 'Amlodipine besylate 5mg',
                 'usage' => 'Điều trị tăng huyết áp. Uống 1 viên/ngày',
@@ -583,7 +583,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_41.jpg',
             ],
             [
-                'category_id' => $cardiovascular,
+                'MaDM' => $cardiovascular,
                 'name' => 'Losartan 50mg',
                 'ingredients' => 'Losartan potassium 50mg',
                 'usage' => 'Điều trị tăng huyết áp. Uống 1 viên/ngày',
@@ -595,7 +595,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_42.jpg',
             ],
             [
-                'category_id' => $cardiovascular,
+                'MaDM' => $cardiovascular,
                 'name' => 'Atorvastatin 20mg',
                 'ingredients' => 'Atorvastatin calcium 20mg',
                 'usage' => 'Giảm cholesterol. Uống 1 viên/ngày vào buổi tối',
@@ -607,7 +607,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_43.jpg',
             ],
             [
-                'category_id' => $cardiovascular,
+                'MaDM' => $cardiovascular,
                 'name' => 'Bisoprolol 5mg',
                 'ingredients' => 'Bisoprolol fumarate 5mg',
                 'usage' => 'Điều trị tăng huyết áp, suy tim. Uống 1 viên/ngày',
@@ -619,7 +619,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_44.jpg',
             ],
             [
-                'category_id' => $cardiovascular,
+                'MaDM' => $cardiovascular,
                 'name' => 'Clopidogrel 75mg',
                 'ingredients' => 'Clopidogrel bisulfate 75mg',
                 'usage' => 'Chống đông máu, phòng đột quỵ. Uống 1 viên/ngày',
@@ -631,7 +631,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_45.jpg',
             ],
             [
-                'category_id' => $cardiovascular,
+                'MaDM' => $cardiovascular,
                 'name' => 'Enalapril 10mg',
                 'ingredients' => 'Enalapril maleate 10mg',
                 'usage' => 'Điều trị tăng huyết áp, suy tim. Uống 1 viên x 1-2 lần/ngày',
@@ -643,7 +643,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_46.jpg',
             ],
             [
-                'category_id' => $cardiovascular,
+                'MaDM' => $cardiovascular,
                 'name' => 'Metoprolol 50mg',
                 'ingredients' => 'Metoprolol tartrate 50mg',
                 'usage' => 'Điều trị tăng huyết áp, đau thắt ngực. Uống 1 viên x 2 lần/ngày',
@@ -655,7 +655,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_47.jpg',
             ],
             [
-                'category_id' => $cardiovascular,
+                'MaDM' => $cardiovascular,
                 'name' => 'Simvastatin 20mg',
                 'ingredients' => 'Simvastatin 20mg',
                 'usage' => 'Giảm cholesterol máu. Uống 1 viên/ngày vào buổi tối',
@@ -667,7 +667,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_48.jpg',
             ],
             [
-                'category_id' => $cardiovascular,
+                'MaDM' => $cardiovascular,
                 'name' => 'Valsartan 80mg',
                 'ingredients' => 'Valsartan 80mg',
                 'usage' => 'Điều trị tăng huyết áp. Uống 1 viên/ngày',
@@ -679,7 +679,7 @@ class ProductSeeder extends Seeder
                 'image' => 'products/medicine_49.jpg',
             ],
             [
-                'category_id' => $cardiovascular,
+                'MaDM' => $cardiovascular,
                 'name' => 'Isosorbide Dinitrate 5mg',
                 'ingredients' => 'Isosorbide dinitrate 5mg',
                 'usage' => 'Điều trị đau thắt ngực. Uống 1 viên x 3 lần/ngày',

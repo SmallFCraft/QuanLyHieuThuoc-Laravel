@@ -9,6 +9,8 @@ class ContactInquiry extends Model
 {
     use HasFactory;
 
+    protected $primaryKey = 'MaLH';
+
     /**
      * The attributes that are mass assignable.
      *

@@ -488,7 +488,7 @@ function chatbotWidget() {
                         'Accept': 'application/json'
                     },
                     body: JSON.stringify({
-                        product_id: product.id,
+                        MaSP: product.id,
                         quantity: quantity
                     })
                 });
@@ -552,7 +552,7 @@ function chatbotWidget() {
                         'Accept': 'application/json'
                     },
                     body: JSON.stringify({
-                        product_id: productId,
+                        MaSP: productId,
                         quantity: Math.max(0, newQuantity)
                     })
                 });

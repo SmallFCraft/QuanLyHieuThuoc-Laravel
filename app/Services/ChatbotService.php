@@ -489,7 +489,7 @@ PROMPT;
             return $result;
         } catch (\Exception $e) {
             Log::error('Message processing failed', [
-                'user_id' => $userId,
+                'MaKH' => $userId,
                 'message' => $message,
                 'error' => $e->getMessage()
             ]);
@@ -545,7 +545,7 @@ PROMPT;
 
                 $suggestedProducts = $suggestions->map(function ($product) {
                     return [
-                        'id' => $product->id,
+                        'id' => $product->MaSP,
                         'name' => $product->name,
                         'price' => $product->price_vnd,
                         'stock_quantity' => (int) $product->stock_quantity,
@@ -554,7 +554,7 @@ PROMPT;
                         'usage' => $product->usage,
                         'expiration_date' => optional($product->expiration_date)->toDateString(),
                         'category' => $product->category ? $product->category->name : null,
-                        'url' => route('products.show', $product->id)
+                        'url' => route('products.show', $product->MaSP)
                     ];
                 })->toArray();
             } catch (\Exception $suggestionError) {
@@ -761,7 +761,7 @@ PROMPT;
                 continue;
             }
 
-            $searchResults = $searchResults->concat($results)->unique('id')->values();
+            $searchResults = $searchResults->concat($results)->unique('MaSP')->values();
 
             if ($searchResults->count() >= 5) {
                 $searchResults = $searchResults->take(5)->values();
@@ -827,7 +827,7 @@ PROMPT;
 
         $featuredProducts = collect();
         if ($categories->count() === 1) {
-            $featuredProducts = $this->getFeaturedProductsForCategory((int) $categories->first()->id);
+            $featuredProducts = $this->getFeaturedProductsForCategory((int) $categories->first()->MaDM);
         }
 
         return [
@@ -1035,7 +1035,7 @@ PROMPT;
                 modelId: null,
                 oldValues: null,
                 newValues: [
-                    'user_id' => $userId,
+                    'MaKH' => $userId,
                     'query' => $message,
                     'response_type' => $responseType,
                     'products_returned' => count($products),
@@ -1046,7 +1046,7 @@ PROMPT;
             );
         } catch (\Throwable $exception) {
             Log::warning('Chatbot audit logging failed', [
-                'user_id' => $userId,
+                'MaKH' => $userId,
                 'response_type' => $responseType,
                 'error' => $exception->getMessage(),
             ]);
@@ -1056,7 +1056,7 @@ PROMPT;
     protected function searchCategories(string $query = '', int $limit = 5): Collection
     {
         return Category::query()
-            ->select('id', 'name', 'description', 'icon')
+            ->select('MaDM', 'name', 'description', 'icon')
             ->whereHas('products', function ($builder) {
                 $builder->notExpired()->where('stock_quantity', '>', 0);
             })
@@ -1082,7 +1082,7 @@ PROMPT;
         return Product::with('category')
             ->notExpired()
             ->where('stock_quantity', '>', 0)
-            ->where('category_id', $categoryId)
+            ->where('MaDM', $categoryId)
             ->FEFO()
             ->limit(3)
             ->get();
@@ -1092,7 +1092,7 @@ PROMPT;
     {
         return $products->map(function ($product) {
             return [
-                'id' => $product->id,
+                'id' => $product->MaSP,
                 'name' => $product->name,
                 'price' => $product->price_vnd,
                 'stock_quantity' => (int) $product->stock_quantity,
@@ -1101,7 +1101,7 @@ PROMPT;
                 'usage' => $product->usage,
                 'expiration_date' => optional($product->expiration_date)->toDateString(),
                 'category' => $product->category ? $product->category->name : null,
-                'url' => route('products.show', $product->id)
+                'url' => route('products.show', $product->MaSP)
             ];
         })->values()->all();
     }
@@ -1110,12 +1110,12 @@ PROMPT;
     {
         return $categories->map(function ($category) {
             return [
-                'id' => $category->id,
+                'id' => $category->MaDM,
                 'name' => $category->name,
                 'description' => $category->description,
                 'icon' => $category->icon,
                 'product_count' => (int) ($category->products_count ?? 0),
-                'url' => route('products.index', ['category' => $category->id])
+                'url' => route('products.index', ['category' => $category->MaDM])
             ];
         })->values()->all();
     }
@@ -1960,7 +1960,7 @@ PROMPT;
                         ->orWhere('usage', 'LIKE', "%{$query}%");
                 })
                 ->when($products->isNotEmpty(), function ($q) use ($products) {
-                    $q->whereNotIn('id', $products->pluck('id'));
+                    $q->whereNotIn('MaSP', $products->pluck('MaSP'));
                 })
                 ->FEFO()
                 ->limit(5 - $products->count())
@@ -2174,7 +2174,7 @@ PROMPT;
                 $totalAmount += $itemTotal;
 
                 $validProducts[] = [
-                    'product_id' => $product['id'],
+                    'MaSP' => $product['id'],
                     'name' => $product['name'],
                     'price' => $unitPrice,
                     'quantity' => $quantity,
@@ -2192,7 +2192,7 @@ PROMPT;
                 modelId: null,
                 oldValues: null,
                 newValues: [
-                    'user_id' => $userId,
+                    'MaKH' => $userId,
                     'source' => 'AI Chatbot',
                     'order_type' => 'draft',
                     'total_amount' => $totalAmount,
@@ -2215,7 +2215,7 @@ PROMPT;
             ];
         } catch (\Exception $e) {
             Log::error('Draft order creation failed', [
-                'user_id' => $userId,
+                'MaKH' => $userId,
                 'error' => $e->getMessage()
             ]);
 
@@ -2237,7 +2237,7 @@ PROMPT;
         }
 
         foreach ($orderData['products'] as $item) {
-            if (!isset($item['product_id']) || !isset($item['quantity'])) {
+            if (!isset($item['MaSP']) || !isset($item['quantity'])) {
                 throw new \Exception('Thông tin sản phẩm không hợp lệ');
             }
 
@@ -2245,10 +2245,10 @@ PROMPT;
                 throw new \Exception('Số lượng sản phẩm phải lớn hơn 0');
             }
 
-            $product = Product::find($item['product_id']);
+            $product = Product::find($item['MaSP']);
 
             if (!$product) {
-                throw new \Exception("Sản phẩm ID {$item['product_id']} không tồn tại");
+                throw new \Exception("Sản phẩm ID {$item['MaSP']} không tồn tại");
             }
 
             if ($product->stock_quantity < $item['quantity']) {

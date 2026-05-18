@@ -56,7 +56,7 @@ class OrderManagementTest extends TestCase
     public function test_admin_can_update_order_status_from_pending_to_delivering(): void
     {
         $order = Order::create([
-            'user_id' => $this->user->id,
+            'MaKH' => $this->user->MaKH,
             'total_amount' => 20000,
             'status' => 'Pending',
             'shipping_address' => '123 Test Street',
@@ -64,7 +64,7 @@ class OrderManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)->patch(
-            route('admin.orders.updateStatus', $order->id),
+            route('admin.orders.updateStatus', $order->MaDH),
             ['status' => 'Delivering']
         );
 
@@ -78,7 +78,7 @@ class OrderManagementTest extends TestCase
     public function test_admin_can_update_order_status_from_delivering_to_completed(): void
     {
         $order = Order::create([
-            'user_id' => $this->user->id,
+            'MaKH' => $this->user->MaKH,
             'total_amount' => 20000,
             'status' => 'Delivering',
             'shipping_address' => '123 Test Street',
@@ -86,7 +86,7 @@ class OrderManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)->patch(
-            route('admin.orders.updateStatus', $order->id),
+            route('admin.orders.updateStatus', $order->MaDH),
             ['status' => 'Completed']
         );
 
@@ -100,7 +100,7 @@ class OrderManagementTest extends TestCase
     public function test_cannot_update_completed_order_status(): void
     {
         $order = Order::create([
-            'user_id' => $this->user->id,
+            'MaKH' => $this->user->MaKH,
             'total_amount' => 20000,
             'status' => 'Completed',
             'shipping_address' => '123 Test Street',
@@ -108,7 +108,7 @@ class OrderManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)->patch(
-            route('admin.orders.updateStatus', $order->id),
+            route('admin.orders.updateStatus', $order->MaDH),
             ['status' => 'Pending']
         );
 
@@ -122,7 +122,7 @@ class OrderManagementTest extends TestCase
     public function test_admin_can_cancel_pending_order_and_restore_inventory(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -132,7 +132,7 @@ class OrderManagementTest extends TestCase
         ]);
 
         $order = Order::create([
-            'user_id' => $this->user->id,
+            'MaKH' => $this->user->MaKH,
             'total_amount' => 20000,
             'status' => 'Pending',
             'shipping_address' => '123 Test Street',
@@ -140,15 +140,15 @@ class OrderManagementTest extends TestCase
         ]);
 
         OrderItem::create([
-            'order_id' => $order->id,
-            'product_id' => $product->id,
+            'MaDH' => $order->MaDH,
+            'MaSP' => $product->MaSP,
             'quantity' => 2,
             'unit_price' => 10000,
             'batch_number' => 'BATCH-001'
         ]);
 
         $response = $this->actingAs($this->admin)->post(
-            route('admin.orders.cancel', $order->id)
+            route('admin.orders.cancel', $order->MaDH)
         );
 
         $response->assertRedirect();
@@ -166,7 +166,7 @@ class OrderManagementTest extends TestCase
     public function test_cannot_cancel_completed_order(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -176,7 +176,7 @@ class OrderManagementTest extends TestCase
         ]);
 
         $order = Order::create([
-            'user_id' => $this->user->id,
+            'MaKH' => $this->user->MaKH,
             'total_amount' => 20000,
             'status' => 'Completed',
             'shipping_address' => '123 Test Street',
@@ -184,15 +184,15 @@ class OrderManagementTest extends TestCase
         ]);
 
         OrderItem::create([
-            'order_id' => $order->id,
-            'product_id' => $product->id,
+            'MaDH' => $order->MaDH,
+            'MaSP' => $product->MaSP,
             'quantity' => 2,
             'unit_price' => 10000,
             'batch_number' => 'BATCH-002'
         ]);
 
         $response = $this->actingAs($this->admin)->post(
-            route('admin.orders.cancel', $order->id)
+            route('admin.orders.cancel', $order->MaDH)
         );
 
         $response->assertRedirect();

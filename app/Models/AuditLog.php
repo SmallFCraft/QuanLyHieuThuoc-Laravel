@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class AuditLog extends Model
 {
     const UPDATED_AT = null; // Audit logs are immutable, no updated_at
+
+    protected $primaryKey = 'MaNK';
     
     /**
      * The attributes that are mass assignable.
@@ -14,10 +16,10 @@ class AuditLog extends Model
      * @var array
      */
     protected $fillable = [
-        'user_id',
+        'MaKH',
         'action',
         'model_type',
-        'model_id',
+        'MaDoiTuong',
         'old_values',
         'new_values',
         'ip_address',
@@ -40,7 +42,7 @@ class AuditLog extends Model
      */
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
     }
     
     /**
@@ -48,6 +50,6 @@ class AuditLog extends Model
      */
     public function auditable()
     {
-        return $this->morphTo('model');
+        return $this->morphTo('model', 'model_type', 'MaDoiTuong');
     }
 }

@@ -33,10 +33,10 @@ class OrderService
             $order->save();
 
             Log::info('Order status updated', [
-                'order_id' => $orderId,
+                'MaDH' => $orderId,
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
-                'user_id' => $userId
+                'MaKH' => $userId
             ]);
 
             return $order;
@@ -67,19 +67,19 @@ class OrderService
 
             // Restore inventory for all order items (by batch)
             foreach ($order->items as $item) {
-                $affectedProductIds[] = $item->product_id;
+                $affectedProductIds[] = $item->MaSP;
 
-                if ($item->batch_id) {
+                if ($item->MaLo) {
                     // Restore to specific batch
-                    $batch = ProductBatch::lockForUpdate()->find($item->batch_id);
+                    $batch = ProductBatch::lockForUpdate()->find($item->MaLo);
                     if ($batch) {
                         $batch->stock_quantity += $item->quantity;
                         $batch->save();
                     }
                 } else {
-                    // Không có batch_id: ưu tiên lô trùng batch_number (ProductObserver tạo lô khi tạo SP)
+                    // Không có MaLo: ưu tiên lô trùng batch_number (ProductObserver tạo lô khi tạo SP)
                     $batch = ProductBatch::query()
-                        ->where('product_id', $item->product_id)
+                        ->where('MaSP', $item->MaSP)
                         ->where('batch_number', $item->batch_number)
                         ->lockForUpdate()
                         ->first();
@@ -87,7 +87,7 @@ class OrderService
                         $batch->stock_quantity += $item->quantity;
                         $batch->save();
                     } else {
-                        $product = Product::lockForUpdate()->find($item->product_id);
+                        $product = Product::lockForUpdate()->find($item->MaSP);
                         if ($product) {
                             $product->stock_quantity += $item->quantity;
                             $product->save();
@@ -118,8 +118,8 @@ class OrderService
             DB::commit();
 
             Log::info('Order cancelled and inventory restored', [
-                'order_id' => $orderId,
-                'user_id' => $userId
+                'MaDH' => $orderId,
+                'MaKH' => $userId
             ]);
 
             return true;
@@ -128,8 +128,8 @@ class OrderService
             DB::rollBack();
             
             Log::error('Order cancellation failed', [
-                'order_id' => $orderId,
-                'user_id' => $userId,
+                'MaDH' => $orderId,
+                'MaKH' => $userId,
                 'exception' => $e->getMessage()
             ]);
             

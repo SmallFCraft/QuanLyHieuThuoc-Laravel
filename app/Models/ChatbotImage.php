@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class ChatbotImage extends Model
 {
     use Auditable, SoftDeletes;
+
+    protected $primaryKey = 'MaAnh';
     
     /**
      * The attributes that are mass assignable.
@@ -16,7 +18,7 @@ class ChatbotImage extends Model
      * @var array<string>
      */
     protected $fillable = [
-        'user_id',
+        'MaKH',
         'session_id',
         'filename',
         'original_name',
@@ -52,6 +54,6 @@ class ChatbotImage extends Model
      */
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
     }
 }

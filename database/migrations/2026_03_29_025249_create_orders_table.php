@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('orders', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('restrict');
+            $table->id('MaDH');
+            $table->foreignId('MaKH')->constrained('users', 'MaKH')->onDelete('restrict');
             $table->decimal('total_amount', 10, 2);
             $table->enum('status', ['Pending', 'Delivering', 'Completed', 'Cancelled'])->default('Pending');
             $table->text('shipping_address')->nullable();
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->text('order_notes')->nullable();
             $table->timestamps();
             
-            $table->index('user_id');
+            $table->index('MaKH', 'orders_makh_index');
             $table->index(['status', 'created_at'], 'orders_status_created_idx');
             $table->index('created_at');
         });

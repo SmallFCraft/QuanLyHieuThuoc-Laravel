@@ -24,7 +24,7 @@
                 <select id="categoryFilter" class="form-select border-success border-opacity-25 shadow-sm">
                     <option value="">Tất cả danh mục</option>
                     @foreach($categories as $category)
-                        <option value="{{ $category->id }}">{{ $category->name }}</option>
+                        <option value="{{ $category->MaDM }}">{{ $category->name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -39,7 +39,7 @@
             <table id="productsTable" class="table table-hover align-middle w-100">
                 <thead class="bg-success bg-opacity-10">
                     <tr>
-                        <th class="text-success">ID</th>
+                        <th class="text-success">MaSP</th>
                         <th class="text-success">Hình Ảnh</th>
                         <th class="text-success">Tên Sản Phẩm</th>
                         <th class="text-success">Danh Mục</th>
@@ -112,11 +112,11 @@
             ajax: {
                 url: '{{ route('admin.products.data') }}',
                 data: function (d) {
-                    d.category_id = $('#categoryFilter').val();
+                    d.MaDM = $('#categoryFilter').val();
                 }
             },
             columns: [
-                { data: 'id', name: 'id' },
+                { data: 'MaSP', name: 'MaSP' },
                 { data: 'image_url', name: 'image', orderable: false, searchable: false },
                 { data: 'name', name: 'name' },
                 { data: 'category', name: 'category.name' },
@@ -124,11 +124,11 @@
                 { data: 'stock_quantity', name: 'stock_quantity' },
                 { data: 'formatted_expiration_date', name: 'expiration_date' },
                 { data: 'batch_number', name: 'batch_number' },
-                { data: 'id', name: 'actions', orderable: false, searchable: false, className: 'text-center' }
+                { data: 'MaSP', name: 'actions', orderable: false, searchable: false, className: 'text-center' }
             ],
             columnDefs: [
                 {
-                    // ID column
+                    // MaSP column
                     targets: 0,
                     render: function(data) {
                         return '#' + data;

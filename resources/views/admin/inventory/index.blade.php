@@ -53,7 +53,7 @@
             <table id="inventoryTable" class="table table-hover">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>MaSP</th>
                         <th>{{ __('messages.admin.inventory.product_name') }}</th>
                         <th>{{ __('messages.admin.inventory.category') }}</th>
                         <th>{{ __('messages.admin.inventory.batch_number') }}</th>
@@ -67,7 +67,7 @@
                 <tbody>
                     @foreach($products as $product)
                     <tr class="{{ $product->isExpired() ? 'table-danger' : ($product->isExpiringSoon(30) ? 'table-warning' : '') }}">
-                        <td>{{ $product->id }}</td>
+                        <td>{{ $product->MaSP }}</td>
                         <td>{{ $product->name }}</td>
                         <td>{{ $product->category->name }}</td>
                         <td>{{ $product->batch_number }}</td>
@@ -86,7 +86,7 @@
                             @endif
                         </td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="adjustInventory({{ $product->id }})">
+                            <button class="btn btn-sm btn-primary" onclick="adjustInventory({{ $product->MaSP }})">
                                 <i class="bi bi-pencil-square"></i> Điều chỉnh
                             </button>
                         </td>
@@ -110,7 +110,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" name="product_id" id="adjust_product_id">
+                    <input type="hidden" name="MaSP" id="adjust_MaSP">
                     <div class="mb-3">
                         <label class="form-label">{{ __('messages.admin.inventory.product') }}</label>
                         <input type="text" id="adjust_product_name" class="form-control" readonly>
@@ -212,7 +212,7 @@
         const productName = row.find('td:eq(1)').text();
         const currentStock = row.find('td:eq(4) span').text();
 
-        $('#adjust_product_id').val(productId);
+        $('#adjust_MaSP').val(productId);
         $('#adjust_product_name').val(productName);
         $('#adjust_current_stock').val(currentStock);
         $('#adjustInventoryModal').modal('show');

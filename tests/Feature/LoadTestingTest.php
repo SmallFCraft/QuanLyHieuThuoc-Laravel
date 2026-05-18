@@ -40,7 +40,7 @@ class LoadTestingTest extends TestCase
         // Create test products
         for ($i = 1; $i <= 50; $i++) {
             Product::create([
-                'category_id' => $this->category->id,
+                'MaDM' => $this->category->MaDM,
                 'name' => "Product {$i}",
                 'price' => 10000 * $i,
                 'expiration_date' => now()->addYear(),
@@ -72,7 +72,7 @@ class LoadTestingTest extends TestCase
         // Create some orders for dashboard metrics
         for ($i = 1; $i <= 20; $i++) {
             Order::create([
-                'user_id' => $this->user->id,
+                'MaKH' => $this->user->MaKH,
                 'total_amount' => 50000,
                 'status' => ['Pending', 'Delivering', 'Completed', 'Cancelled'][rand(0, 3)],
                 'shipping_address' => '123 Test Street',
@@ -103,7 +103,7 @@ class LoadTestingTest extends TestCase
         for ($i = 0; $i < 10; $i++) {
             $startTime = microtime(true);
             
-            $response = $this->get(route('products.show', $product->id));
+            $response = $this->get(route('products.show', $product->MaSP));
             
             $endTime = microtime(true);
             $times[] = ($endTime - $startTime) * 1000;
@@ -127,7 +127,7 @@ class LoadTestingTest extends TestCase
             $startTime = microtime(true);
             
             $response = $this->post(route('cart.add'), [
-                'product_id' => $product->id,
+                'MaSP' => $product->MaSP,
                 'quantity' => 1
             ]);
             
@@ -165,7 +165,7 @@ class LoadTestingTest extends TestCase
         // Create many orders
         for ($i = 1; $i <= 50; $i++) {
             Order::create([
-                'user_id' => $this->user->id,
+                'MaKH' => $this->user->MaKH,
                 'total_amount' => 50000,
                 'status' => ['Pending', 'Delivering', 'Completed', 'Cancelled'][rand(0, 3)],
                 'shipping_address' => '123 Test Street',
@@ -192,7 +192,7 @@ class LoadTestingTest extends TestCase
         // Create orders with items
         for ($i = 1; $i <= 10; $i++) {
             $order = Order::create([
-                'user_id' => $this->user->id,
+                'MaKH' => $this->user->MaKH,
                 'total_amount' => 100000,
                 'status' => 'Completed',
                 'shipping_address' => '123 Test Street',
@@ -202,8 +202,8 @@ class LoadTestingTest extends TestCase
             $products = Product::take(3)->get();
             foreach ($products as $product) {
                 \App\Models\OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $product->id,
+                    'MaDH' => $order->MaDH,
+                    'MaSP' => $product->MaSP,
                     'quantity' => 2,
                     'unit_price' => $product->price,
                     'batch_number' => $product->batch_number

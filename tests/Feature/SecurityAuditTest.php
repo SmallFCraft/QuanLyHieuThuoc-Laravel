@@ -40,7 +40,7 @@ class SecurityAuditTest extends TestCase
     public function test_sql_injection_prevention_in_product_search(): void
     {
         Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear(),
@@ -74,7 +74,7 @@ class SecurityAuditTest extends TestCase
         $xssPayload = '<script>alert("XSS")</script>';
         
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => $xssPayload,
             'price' => 10000,
             'expiration_date' => now()->addYear(),
@@ -83,7 +83,7 @@ class SecurityAuditTest extends TestCase
             'batch_number' => 'BATCH-002'
         ]);
 
-        $response = $this->get(route('products.show', $product->id));
+        $response = $this->get(route('products.show', $product->MaSP));
 
         $response->assertStatus(200);
         
@@ -102,7 +102,7 @@ class SecurityAuditTest extends TestCase
     public function test_csrf_protection_on_state_changing_requests(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear(),
@@ -112,10 +112,10 @@ class SecurityAuditTest extends TestCase
         ]);
 
         // Attempt POST without CSRF token
-        $response = $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class)
+        $response = $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class)
             ->actingAs($this->admin)
             ->post(route('admin.products.store'), [
-                'category_id' => $this->category->id,
+                'MaDM' => $this->category->MaDM,
                 'name' => 'New Product',
                 'price' => 20000,
                 'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -154,7 +154,7 @@ class SecurityAuditTest extends TestCase
         $fakeImage = \Illuminate\Http\UploadedFile::fake()->create('malicious.php', 100);
 
         $response = $this->post(route('admin.products.store'), [
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -175,7 +175,7 @@ class SecurityAuditTest extends TestCase
         $largeFile = \Illuminate\Http\UploadedFile::fake()->create('large.jpg', 6000);
 
         $response = $this->post(route('admin.products.store'), [
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -202,7 +202,7 @@ class SecurityAuditTest extends TestCase
     public function test_authorization_bypass_prevention(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear(),
@@ -213,13 +213,13 @@ class SecurityAuditTest extends TestCase
 
         // Regular user should not be able to delete products
         $response = $this->actingAs($this->user)
-            ->delete(route('admin.products.destroy', $product->id));
+            ->delete(route('admin.products.destroy', $product->MaSP));
 
         $response->assertStatus(403);
 
         // Verify product was not deleted
         $this->assertDatabaseHas('products', [
-            'id' => $product->id
+            'MaSP' => $product->MaSP
         ]);
     }
 
@@ -241,7 +241,7 @@ class SecurityAuditTest extends TestCase
 
         // Attempt to set role through mass assignment
         $response = $this->post(route('admin.products.store'), [
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -263,7 +263,7 @@ class SecurityAuditTest extends TestCase
     {
         // Create test product
         Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear(),
@@ -276,7 +276,7 @@ class SecurityAuditTest extends TestCase
         $maliciousId = "1 OR 1=1";
         
         try {
-            $products = Product::where('id', $maliciousId)->get();
+            $products = Product::where('MaSP', $maliciousId)->get();
             
             // Should return empty or single result, not all products
             $this->assertLessThanOrEqual(1, $products->count());

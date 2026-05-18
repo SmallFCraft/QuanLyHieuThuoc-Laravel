@@ -10,6 +10,8 @@ class Category extends Model
 {
     use HasFactory;
 
+    protected $primaryKey = 'MaDM';
+
     public const NAV_CACHE_KEY = 'layout.nav_categories';
     public const FOOTER_CACHE_KEY = 'layout.footer_categories';
     public const FILTER_CACHE_KEY = 'catalog.filter_categories';
@@ -41,7 +43,7 @@ class Category extends Model
      */
     public function products()
     {
-        return $this->hasMany(Product::class);
+        return $this->hasMany(Product::class, 'MaDM', 'MaDM');
     }
 
     /**

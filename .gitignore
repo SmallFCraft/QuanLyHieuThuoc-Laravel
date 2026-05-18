@@ -29,3 +29,6 @@ composer.lock
 *.zip
 .playwright-mcp/
 /MonHoc/
+AGENTS.md
+CLAUDE.md
+.claude/

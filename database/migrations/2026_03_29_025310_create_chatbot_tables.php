@@ -13,21 +13,21 @@ return new class extends Migration
     {
         // Create chatbot_images table
         Schema::create('chatbot_images', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->id('MaAnh');
+            $table->foreignId('MaKH')->constrained('users', 'MaKH')->onDelete('cascade');
             $table->uuid('session_id')->index();
             $table->string('image_path');
             $table->enum('image_type', ['prescription', 'receipt'])->default('prescription');
             $table->text('analysis_result')->nullable();
             $table->timestamps();
             
-            $table->index(['user_id', 'session_id']);
+            $table->index(['MaKH', 'session_id'], 'chatbot_images_makh_session_id_index');
         });
 
         // Create chat_messages table
         Schema::create('chat_messages', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->id('MaTN');
+            $table->foreignId('MaKH')->constrained('users', 'MaKH')->onDelete('cascade');
             $table->uuid('session_id')->index();
             $table->enum('role', ['user', 'assistant', 'system']);
             $table->text('content');
@@ -36,7 +36,7 @@ return new class extends Migration
             $table->boolean('show_disclaimer')->default(false);
             $table->timestamps();
             
-            $table->index(['user_id', 'session_id', 'created_at']);
+            $table->index(['MaKH', 'session_id', 'created_at'], 'chat_messages_makh_session_id_created_at_index');
             $table->index('created_at');
         });
     }

@@ -26,7 +26,7 @@ class ShoppingCartTest extends TestCase
     public function test_can_add_product_to_cart(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -36,7 +36,7 @@ class ShoppingCartTest extends TestCase
         ]);
 
         $response = $this->post(route('cart.add'), [
-            'product_id' => $product->id,
+            'MaSP' => $product->MaSP,
             'quantity' => 2
         ]);
 
@@ -44,14 +44,14 @@ class ShoppingCartTest extends TestCase
         $response->assertSessionHas('success');
 
         $cart = session('cart');
-        $this->assertArrayHasKey($product->id, $cart);
-        $this->assertEquals(2, $cart[$product->id]);
+        $this->assertArrayHasKey($product->MaSP, $cart);
+        $this->assertEquals(2, $cart[$product->MaSP]);
     }
 
     public function test_can_add_product_to_cart_via_json(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Ajax Product',
             'price' => 15000,
             'expiration_date' => now()->addMonths(6),
@@ -61,7 +61,7 @@ class ShoppingCartTest extends TestCase
         ]);
 
         $response = $this->postJson(route('cart.add'), [
-            'product_id' => $product->id,
+            'MaSP' => $product->MaSP,
             'quantity' => 3,
         ]);
 
@@ -72,13 +72,13 @@ class ShoppingCartTest extends TestCase
         ]);
 
         $cart = session('cart');
-        $this->assertEquals(3, $cart[$product->id]);
+        $this->assertEquals(3, $cart[$product->MaSP]);
     }
 
     public function test_json_add_rejects_expired_product(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Expired Ajax Product',
             'price' => 10000,
             'expiration_date' => now()->subDays(1),
@@ -88,7 +88,7 @@ class ShoppingCartTest extends TestCase
         ]);
 
         $response = $this->postJson(route('cart.add'), [
-            'product_id' => $product->id,
+            'MaSP' => $product->MaSP,
             'quantity' => 1,
         ]);
 
@@ -101,7 +101,7 @@ class ShoppingCartTest extends TestCase
     public function test_cannot_add_expired_product_to_cart(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Expired Product',
             'price' => 10000,
             'expiration_date' => now()->subDays(1),
@@ -111,7 +111,7 @@ class ShoppingCartTest extends TestCase
         ]);
 
         $response = $this->post(route('cart.add'), [
-            'product_id' => $product->id,
+            'MaSP' => $product->MaSP,
             'quantity' => 1
         ]);
 
@@ -122,7 +122,7 @@ class ShoppingCartTest extends TestCase
     public function test_cannot_add_more_than_stock_quantity(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Limited Stock Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -132,7 +132,7 @@ class ShoppingCartTest extends TestCase
         ]);
 
         $response = $this->post(route('cart.add'), [
-            'product_id' => $product->id,
+            'MaSP' => $product->MaSP,
             'quantity' => 10
         ]);
 
@@ -143,7 +143,7 @@ class ShoppingCartTest extends TestCase
     public function test_can_update_cart_quantity(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -153,9 +153,9 @@ class ShoppingCartTest extends TestCase
         ]);
 
         // Add to cart first
-        session(['cart' => [$product->id => 2]]);
+        session(['cart' => [$product->MaSP => 2]]);
 
-        $response = $this->put(route('cart.update', $product->id), [
+        $response = $this->put(route('cart.update', $product->MaSP), [
             'quantity' => 5
         ]);
 
@@ -163,13 +163,13 @@ class ShoppingCartTest extends TestCase
         $response->assertSessionHas('success');
         
         $cart = session('cart');
-        $this->assertEquals(5, $cart[$product->id]);
+        $this->assertEquals(5, $cart[$product->MaSP]);
     }
 
     public function test_cart_uses_whole_vnd_price_when_rendering_totals(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Decimal Price Product',
             'price' => 343487.26,
             'expiration_date' => now()->addMonths(6),
@@ -178,7 +178,7 @@ class ShoppingCartTest extends TestCase
             'batch_number' => 'BATCH-DECIMAL-001'
         ]);
 
-        session(['cart' => [$product->id => 1]]);
+        session(['cart' => [$product->MaSP => 1]]);
 
         $response = $this->get(route('cart.index'));
 
@@ -191,7 +191,7 @@ class ShoppingCartTest extends TestCase
     public function test_can_remove_product_from_cart(): void
     {
         $product = Product::create([
-            'category_id' => $this->category->id,
+            'MaDM' => $this->category->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -201,14 +201,14 @@ class ShoppingCartTest extends TestCase
         ]);
 
         // Add to cart first
-        session(['cart' => [$product->id => 2]]);
+        session(['cart' => [$product->MaSP => 2]]);
 
-        $response = $this->delete(route('cart.remove', $product->id));
+        $response = $this->delete(route('cart.remove', $product->MaSP));
 
         $response->assertRedirect();
         $response->assertSessionHas('success');
         
         $cart = session('cart');
-        $this->assertArrayNotHasKey($product->id, $cart);
+        $this->assertArrayNotHasKey($product->MaSP, $cart);
     }
 }

@@ -118,14 +118,14 @@ class DashboardService
     public function getTopSellingProducts(int $limit = 10): array
     {
         $topProducts = DB::table('order_items')
-            ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->join('orders', 'order_items.MaDH', '=', 'orders.MaDH')
+            ->join('products', 'order_items.MaSP', '=', 'products.MaSP')
             ->whereIn('orders.status', ['Delivering', 'Completed'])
             ->select(
                 'products.name',
                 DB::raw('SUM(order_items.quantity) as total_quantity')
             )
-            ->groupBy('products.id', 'products.name')
+            ->groupBy('products.MaSP', 'products.name')
             ->orderByDesc('total_quantity')
             ->limit($limit)
             ->get();

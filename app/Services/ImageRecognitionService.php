@@ -46,7 +46,7 @@ class ImageRecognitionService
             
             if (empty($analysisResult['products'])) {
                 Log::warning('No products recognized from prescription image', [
-                    'user_id' => $userId,
+                    'MaKH' => $userId,
                     'description' => $analysisResult['description'] ?? 'N/A'
                 ]);
                 
@@ -68,7 +68,7 @@ class ImageRecognitionService
                 modelId: null,
                 oldValues: null,
                 newValues: [
-                    'user_id' => $userId,
+                    'MaKH' => $userId,
                     'image_type' => 'prescription',
                     'products_recognized' => count($matched),
                     'processing_time_ms' => $processingTime
@@ -83,7 +83,7 @@ class ImageRecognitionService
             ];
         } catch (\Exception $e) {
             Log::error('Prescription processing failed', [
-                'user_id' => $userId,
+                'MaKH' => $userId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -113,7 +113,7 @@ class ImageRecognitionService
             
             if (empty($analysisResult['products'])) {
                 Log::warning('No products recognized from receipt image', [
-                    'user_id' => $userId,
+                    'MaKH' => $userId,
                     'description' => $analysisResult['description'] ?? 'N/A'
                 ]);
                 
@@ -135,7 +135,7 @@ class ImageRecognitionService
                 modelId: null,
                 oldValues: null,
                 newValues: [
-                    'user_id' => $userId,
+                    'MaKH' => $userId,
                     'image_type' => 'receipt',
                     'products_recognized' => count($matched),
                     'processing_time_ms' => $processingTime
@@ -150,7 +150,7 @@ class ImageRecognitionService
             ];
         } catch (\Exception $e) {
             Log::error('Receipt processing failed', [
-                'user_id' => $userId,
+                'MaKH' => $userId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -494,7 +494,7 @@ PROMPT;
         $path = $image->storeAs('chatbot-uploads', $filename, 'local');
         
         ChatbotImage::create([
-            'user_id' => $userId,
+            'MaKH' => $userId,
             'session_id' => $sessionId,
             'filename' => $filename,
             'original_name' => $image->getClientOriginalName(),
@@ -533,7 +533,7 @@ PROMPT;
                     'parsed_name' => $productName,
                     'matched' => true,
                     'product' => [
-                        'id' => $product->id,
+                        'id' => $product->MaSP,
                         'name' => $product->name,
                         'price' => $product->price_vnd,
                         'stock_quantity' => $product->stock_quantity,
@@ -733,7 +733,7 @@ PROMPT;
             
         return $products->map(function($product) {
             return [
-                'id' => $product->id,
+                'id' => $product->MaSP,
                 'name' => $product->name,
                 'price' => $product->price_vnd,
                 'stock_quantity' => $product->stock_quantity

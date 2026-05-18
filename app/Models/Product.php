@@ -12,13 +12,15 @@ class Product extends Model
 {
     use HasFactory, SoftDeletes, Auditable;
 
+    protected $primaryKey = 'MaSP';
+
     /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
     protected $fillable = [
-        'category_id',
+        'MaDM',
         'name',
         'ingredients',
         'usage',
@@ -48,7 +50,7 @@ class Product extends Model
      */
     public function category()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class, 'MaDM', 'MaDM');
     }
 
     /**
@@ -56,7 +58,7 @@ class Product extends Model
      */
     public function orderItems()
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(OrderItem::class, 'MaSP', 'MaSP');
     }
 
     /**
@@ -64,7 +66,7 @@ class Product extends Model
      */
     public function batches()
     {
-        return $this->hasMany(ProductBatch::class);
+        return $this->hasMany(ProductBatch::class, 'MaSP', 'MaSP');
     }
 
     /**

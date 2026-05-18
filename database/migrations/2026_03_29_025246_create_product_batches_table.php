@@ -13,21 +13,21 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('product_batches', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->id('MaLo');
+            $table->foreignId('MaSP')->constrained('products', 'MaSP')->onDelete('cascade');
             $table->string('batch_number')->unique();
             $table->date('expiration_date');
             $table->integer('stock_quantity')->default(0);
             $table->integer('reorder_point')->default(10);
             $table->timestamps();
 
-            $table->index(['product_id', 'expiration_date']);
+            $table->index(['MaSP', 'expiration_date'], 'product_batches_masp_expiration_date_index');
             $table->index(['expiration_date', 'stock_quantity']);
         });
 
         DB::statement('
-            INSERT INTO product_batches (product_id, batch_number, expiration_date, stock_quantity, reorder_point, created_at, updated_at)
-            SELECT id, batch_number, expiration_date, stock_quantity, reorder_point, created_at, updated_at
+            INSERT INTO product_batches (MaSP, batch_number, expiration_date, stock_quantity, reorder_point, created_at, updated_at)
+            SELECT MaSP, batch_number, expiration_date, stock_quantity, reorder_point, created_at, updated_at
             FROM products
             WHERE deleted_at IS NULL
         ');

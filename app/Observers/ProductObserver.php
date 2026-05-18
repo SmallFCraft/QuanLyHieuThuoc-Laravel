@@ -16,7 +16,7 @@ class ProductObserver
         // Auto-create a batch when product is created
         if ($product->batch_number && $product->expiration_date) {
             ProductBatch::create([
-                'product_id' => $product->id,
+                'MaSP' => $product->MaSP,
                 'batch_number' => $product->batch_number,
                 'expiration_date' => $product->expiration_date,
                 'stock_quantity' => $product->stock_quantity ?? 0,

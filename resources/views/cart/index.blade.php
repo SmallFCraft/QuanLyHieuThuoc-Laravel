@@ -75,7 +75,7 @@
                             @foreach($cartItems as $item)
                                 <div class="cart-item d-flex align-items-center gap-3 p-4 border-bottom flex-wrap position-relative" 
                                      style="border-color: rgba(0,0,0,0.04) !important;" 
-                                     data-product-id="{{ $item['product']->id }}"
+                                     data-product-id="{{ $item['product']->MaSP }}"
                                      data-price="{{ $item['product']->price_vnd }}"
                                      data-max-stock="{{ $item['product']->stock_quantity }}">
                                     

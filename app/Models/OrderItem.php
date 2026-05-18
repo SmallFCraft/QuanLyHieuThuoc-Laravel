@@ -9,15 +9,17 @@ class OrderItem extends Model
 {
     use HasFactory;
 
+    protected $primaryKey = 'MaCTDH';
+
     /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
     protected $fillable = [
-        'order_id',
-        'product_id',
-        'batch_id',
+        'MaDH',
+        'MaSP',
+        'MaLo',
         'quantity',
         'unit_price',
         'batch_number',
@@ -38,7 +40,7 @@ class OrderItem extends Model
      */
     public function order()
     {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(Order::class, 'MaDH', 'MaDH');
     }
 
     /**
@@ -46,7 +48,7 @@ class OrderItem extends Model
      */
     public function product()
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class, 'MaSP', 'MaSP');
     }
 
     /**
@@ -54,7 +56,7 @@ class OrderItem extends Model
      */
     public function batch()
     {
-        return $this->belongsTo(ProductBatch::class, 'batch_id');
+        return $this->belongsTo(ProductBatch::class, 'MaLo', 'MaLo');
     }
 
     /**
