@@ -16,10 +16,19 @@ return new class extends Migration
             $table->id('MaAnh');
             $table->foreignId('MaKH')->constrained('users', 'MaKH')->onDelete('cascade');
             $table->uuid('session_id')->index();
+            $table->string('filename')->nullable();
+            $table->string('original_name')->nullable();
             $table->string('image_path');
+            $table->string('file_path')->nullable();
+            $table->unsignedBigInteger('file_size')->nullable();
+            $table->string('mime_type', 120)->nullable();
             $table->enum('image_type', ['prescription', 'receipt'])->default('prescription');
             $table->text('analysis_result')->nullable();
+            $table->longText('ocr_text')->nullable();
+            $table->json('recognized_products')->nullable();
+            $table->timestamp('processed_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
             
             $table->index(['MaKH', 'session_id'], 'chatbot_images_makh_session_id_index');
         });
