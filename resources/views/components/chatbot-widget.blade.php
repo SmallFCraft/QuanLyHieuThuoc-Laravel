@@ -413,8 +413,10 @@
                 </button>
 
                 <textarea
+                    x-ref="messageInput"
                     x-model="inputText"
-                    @keydown.enter.exact.prevent="sendMessage()"
+                    @keydown="handleInputKeydown($event)"
+                    @input="resizeMessageInput($event.target)"
                     :placeholder="attachedImage ? '{{ __('messages.chatbot.placeholder_with_image') }}' : '{{ __('messages.chatbot.placeholder') }}'"
                     class="input-message"
                     :disabled="isLoading"

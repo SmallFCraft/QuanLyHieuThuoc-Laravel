@@ -17,11 +17,11 @@
     @endphp
 
     @forelse($orders as $order)
-        <div class="glass-card-sm mb-3" id="order-{{ $order->MaDH }}">
-            <div class="row align-items-center g-3">
+        <div class="glass-card-sm order-history-entry mb-3" id="order-{{ $order->MaDH }}">
+            <div class="row align-items-center g-3 g-lg-4">
                 <div class="col-md-8">
                     <div class="d-flex align-items-start gap-3">
-                        <div class="bg-emerald-50 rounded-3 p-2 flex-shrink-0">
+                        <div class="order-history-entry__icon rounded-3 p-2 flex-shrink-0">
                             <i class="bi bi-receipt fs-4 text-emerald-600"></i>
                         </div>
                         <div class="flex-grow-1">
@@ -45,21 +45,25 @@
                                     </span>
                                 @endif
                             </div>
-                            <p class="text-gray-500 small mb-2">
-                                <i class="bi bi-calendar3 me-1"></i>{{ $order->created_at->format('d/m/Y H:i') }}
-                            </p>
-                            <p class="text-gray-600 mb-0 small">
-                                {{ $order->items->count() }} {{ __('messages.profile.product_count') }}
-                            </p>
+                            <div class="d-flex flex-wrap align-items-center gap-3 text-gray-500 small mb-0 order-history-entry__meta">
+                                <span class="d-inline-flex align-items-center">
+                                    <i class="bi bi-calendar3 me-1"></i>{{ $order->created_at->format('d/m/Y H:i') }}
+                                </span>
+                                <span class="d-inline-flex align-items-center">
+                                    <i class="bi bi-box-seam me-1"></i>{{ $order->items->count() }} {{ __('messages.profile.product_count') }}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 text-md-end">
-                    <p class="fw-bold text-emerald-700 fs-5 mb-2">{{ format_currency_vi($order->total_amount) }}</p>
-                    <button class="btn btn-glass btn-sm rounded-pill px-3" 
-                       data-bs-toggle="modal" data-bs-target="#orderModal{{ $order->MaDH }}">
-                        <i class="bi bi-eye me-1"></i>{{ __('messages.profile.view_details') }}
-                    </button>
+                <div class="col-md-4">
+                    <div class="order-history-entry__aside h-100 d-flex flex-column align-items-md-end justify-content-center">
+                        <p class="order-history-entry__amount fw-bold text-emerald-700 fs-5 mb-2">{{ format_currency_vi($order->total_amount) }}</p>
+                        <button class="btn btn-glass btn-sm rounded-pill px-3" 
+                           data-bs-toggle="modal" data-bs-target="#orderModal{{ $order->MaDH }}">
+                            <i class="bi bi-eye me-1"></i>{{ __('messages.profile.view_details') }}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -162,16 +166,13 @@
                         <div class="rounded-3 rounded-md-4 border overflow-hidden mb-3 mb-md-4 shadow-sm" style="border-color: rgba(16,185,129,0.15) !important;">
                             @foreach($order->items as $item)
                                 <div class="d-flex align-items-center gap-2 gap-md-3 p-2 p-md-3 {{ !$loop->last ? 'border-bottom' : '' }}" style="border-color: rgba(16,185,129,0.1) !important; background: rgba(255,255,255,0.7);">
-                                    <div class="bg-white rounded-2 rounded-md-3 overflow-hidden flex-shrink-0 border" style="width: 48px; height: 48px; border-color: rgba(0,0,0,0.05) !important;">
-                                        @if($item->product && $item->product->image)
-                                            <img src="{{ asset('storage/' . $item->product->image) }}" 
-                                                 alt="{{ $item->product->name }}" 
-                                                 class="w-100 h-100 object-fit-contain p-1">
-                                        @else
-                                            <div class="w-100 h-100 d-flex align-items-center justify-content-center">
-                                                <i class="bi bi-capsule text-gray-300 fs-6"></i>
-                                            </div>
-                                        @endif
+                                    <div class="bg-white rounded-2 rounded-md-3 overflow-hidden flex-shrink-0 border" style="width: 48px; height: 48px; border-color: rgba(0,0,0,0.05) !important;" data-product-image-container>
+                                        <x-product-image
+                                            :src="$item->product?->image_url"
+                                            :alt="$item->product?->name ?? __('messages.profile.product_not_exist')"
+                                            class="w-100 h-100 object-fit-contain p-1"
+                                            icon-size="1rem"
+                                        />
                                     </div>
                                     <div class="flex-grow-1 min-w-0">
                                         <p class="fw-bold text-gray-800 mb-1 text-truncate" style="font-size: 0.85rem;">{{ $item->product ? $item->product->name : __('messages.profile.product_not_exist') }}</p>
@@ -218,3 +219,47 @@
         </div>
     @endif
 </div>
+
+@once
+    @push('styles')
+    <style>
+    .order-history-entry {
+        background: rgba(255, 255, 255, 0.66);
+        border: 1px solid rgba(16, 185, 129, 0.16);
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+    }
+
+    .order-history-entry__icon {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.04));
+        border: 1px solid rgba(16, 185, 129, 0.14);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    }
+
+    .order-history-entry__meta span {
+        line-height: 1.4;
+    }
+
+    .order-history-entry__aside {
+        gap: 0.5rem;
+        padding-top: 0.85rem;
+        border-top: 1px solid rgba(16, 185, 129, 0.12);
+    }
+
+    .order-history-entry__amount {
+        letter-spacing: 0;
+    }
+
+    @media (min-width: 768px) {
+        .order-history-entry__aside {
+            padding-top: 0;
+            padding-left: 1.25rem;
+            border-top: 0;
+            border-left: 1px solid rgba(16, 185, 129, 0.12);
+            min-height: 100%;
+        }
+    }
+    </style>
+    @endpush
+@endonce

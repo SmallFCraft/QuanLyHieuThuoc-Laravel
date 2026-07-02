@@ -294,16 +294,13 @@
                     <div class="mb-3" style="max-height: 300px; overflow-y: auto;">
                         @foreach($cartItems as $item)
                             <div class="order-item d-flex align-items-center gap-3 mb-2 pb-2 border-bottom rounded-2 p-2" style="border-color: rgba(0,0,0,0.06) !important;">
-                                <div class="bg-gray-50 rounded-3 overflow-hidden flex-shrink-0" style="width: 56px; height: 56px;">
-                                    @if($item['product']->image)
-                                        <img src="{{ asset('storage/' . $item['product']->image) }}" 
-                                             alt="{{ $item['product']->name }}" 
-                                             class="w-100 h-100 object-fit-contain p-1">
-                                    @else
-                                        <div class="w-100 h-100 d-flex align-items-center justify-content-center">
-                                            <i class="bi bi-capsule text-gray-300" style="font-size: 1.5rem;"></i>
-                                        </div>
-                                    @endif
+                                <div class="bg-gray-50 rounded-3 overflow-hidden flex-shrink-0" style="width: 56px; height: 56px;" data-product-image-container>
+                                    <x-product-image
+                                        :src="$item['product']->image_url"
+                                        :alt="$item['product']->name"
+                                        class="w-100 h-100 object-fit-contain p-1"
+                                        icon-size="1.5rem"
+                                    />
                                 </div>
                                 <div class="flex-grow-1 min-w-0">
                                     <p class="fw-medium text-gray-800 mb-0 small text-truncate">{{ $item['product']->name }}</p>

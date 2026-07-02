@@ -42,6 +42,36 @@ function chatbotWidget() {
             
             // Setup paste event listener for images
             this.setupPasteListener();
+
+            this.$nextTick(() => {
+                this.resizeMessageInput();
+            });
+        },
+
+        handleInputKeydown(event) {
+            if (event.key !== 'Enter' || event.isComposing) {
+                return;
+            }
+
+            if (event.shiftKey) {
+                this.$nextTick(() => {
+                    this.resizeMessageInput(event.target);
+                });
+                return;
+            }
+
+            event.preventDefault();
+            this.sendMessage();
+        },
+
+        resizeMessageInput(element = null) {
+            const input = element ?? this.$refs.messageInput;
+            if (!input) {
+                return;
+            }
+
+            input.style.height = 'auto';
+            input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
         },
         
         setupPasteListener() {
@@ -212,6 +242,9 @@ function chatbotWidget() {
             } else {
                 // Text-only message
                 this.inputText = '';
+                this.$nextTick(() => {
+                    this.resizeMessageInput();
+                });
                 
                 this.pushMessage({
                     role: 'user',
@@ -331,6 +364,9 @@ function chatbotWidget() {
             this.inputText = '';
             this.attachedImage = null;
             this.imagePreviewUrl = null;
+            this.$nextTick(() => {
+                this.resizeMessageInput();
+            });
             
             this.scrollToBottom();
             
@@ -962,6 +998,7 @@ function chatbotWidget() {
             this.$nextTick(() => {
                 const input = this.$el.querySelector('.input-message');
                 if (input) {
+                    this.resizeMessageInput(input);
                     input.focus();
                 }
             });

@@ -336,6 +336,7 @@ Trả về kết quả theo ĐÚNG định dạng JSON sau (CHỈ JSON, KHÔNG t
   ]
 }
 
+
 Lưu ý quan trọng:
 - Đọc TẤT CẢ text trên hình ảnh, kể cả tên thương hiệu, tên hoạt chất
 - Nếu thấy tên thuốc trên hộp/vỉ/nhãn → trích xuất ra
@@ -537,7 +538,7 @@ PROMPT;
                         'name' => $product->name,
                         'price' => $product->price_vnd,
                         'stock_quantity' => $product->stock_quantity,
-                        'image_url' => $product->image ? asset('storage/' . $product->image) : null,
+                        'image_url' => $product->image_url,
                         'expiration_date' => $product->expiration_date,
                         'is_expired' => $product->isExpired(),
                     ],
@@ -754,4 +755,3 @@ PROMPT;
         }
     }
 }
-

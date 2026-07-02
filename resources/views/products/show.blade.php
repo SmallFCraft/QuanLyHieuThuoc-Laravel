@@ -24,21 +24,22 @@
                 <div class="position-sticky" style="top: 100px;">
                     <!-- Main Image -->
                     <div class="glass-card rounded-4 p-3 p-md-4 border-0 mb-3">
-                        <div class="product-image-main bg-white rounded-3 overflow-hidden position-relative" style="aspect-ratio: 1/1;">
-                            @if($product->image)
-                                <img src="{{ asset('storage/' . $product->image) }}" 
-                                     alt="{{ $product->name }}" 
-                                     class="w-100 h-100 object-fit-contain p-2 product-main-img"
-                                     id="mainProductImage">
+                        <div class="product-image-main bg-white rounded-3 overflow-hidden position-relative" style="aspect-ratio: 1/1;" data-product-image-container>
+                            <x-product-image
+                                :src="$product->image_url"
+                                :alt="$product->name"
+                                class="w-100 h-100 object-fit-contain p-2 product-main-img"
+                                id="mainProductImage"
+                                icon-size="4rem"
+                                loading="eager"
+                            />
+                            @if($product->image_url)
                                 <button class="btn btn-light btn-sm rounded-circle position-absolute top-0 end-0 m-3 shadow-sm" 
                                         onclick="toggleImageZoom()" 
-                                        title="{{ __('messages.zoom_image') }}">
+                                        title="{{ __('messages.zoom_image') }}"
+                                        data-product-image-action>
                                     <i class="bi bi-zoom-in"></i>
                                 </button>
-                            @else
-                                <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light">
-                                    <i class="bi bi-capsule text-gray-300" style="font-size: 4rem;"></i>
-                                </div>
                             @endif
                         </div>
                     </div>
@@ -393,12 +394,16 @@
 <div class="modal fade" id="imageZoomModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content bg-transparent border-0">
-            <div class="modal-body p-0 position-relative">
+            <div class="modal-body p-0 position-relative bg-white rounded-4 overflow-hidden" data-product-image-container style="aspect-ratio: 1/1;">
                 <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 z-3" 
                         data-bs-dismiss="modal" aria-label="Close"></button>
-                <img src="{{ $product->image ? asset('storage/' . $product->image) : '' }}" 
-                     alt="{{ $product->name }}" 
-                     class="w-100 rounded-4">
+                <x-product-image
+                    :src="$product->image_url"
+                    :alt="$product->name"
+                    class="w-100 h-100 object-fit-contain rounded-4"
+                    icon-size="4rem"
+                    loading="eager"
+                />
             </div>
         </div>
     </div>

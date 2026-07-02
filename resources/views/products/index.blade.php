@@ -71,17 +71,13 @@
                     @forelse($products as $product)
                             <div class="col-sm-6 col-xl-4">
                             <div class="card border-0 rounded-4 shadow-sm h-100 overflow-hidden product-card bg-white">
-                                <div class="position-relative overflow-hidden bg-gray-50" style="aspect-ratio: 1/1;">
-                                    @if($product->image)
-                                        <img src="{{ asset('storage/' . $product->image) }}" 
-                                             alt="{{ $product->name }}" 
-                                             class="w-100 h-100 object-fit-contain p-2" 
-                                             loading="lazy">
-                                    @else
-                                        <div class="w-100 h-100 d-flex align-items-center justify-content-center">
-                                            <i class="bi bi-capsule text-gray-300" style="font-size: 4rem;"></i>
-                                        </div>
-                                    @endif
+                                <div class="position-relative overflow-hidden bg-gray-50" style="aspect-ratio: 1/1;" data-product-image-container>
+                                    <x-product-image
+                                        :src="$product->image_url"
+                                        :alt="$product->name"
+                                        class="w-100 h-100 object-fit-contain p-2"
+                                        icon-size="4rem"
+                                    />
                                     
                                     @if($product->stock_quantity == 0)
                                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle position-absolute top-0 start-0 m-3 rounded-pill px-2 py-1">

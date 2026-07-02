@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 use App\Traits\Auditable;
 use Carbon\Carbon;
 
@@ -163,22 +164,21 @@ class Product extends Model
      */
     public function getImageUrlAttribute(): ?string
     {
-        if ($this->image) {
-            // Check if image is already a full URL (starts with http:// or https://)
-            if (preg_match('/^https?:\/\//', $this->image)) {
-                return $this->image;
-            }
-            
-            // If image already has directory prefix (e.g. 'products/uuid.png')
-            if (str_contains($this->image, '/')) {
-                return asset('storage/' . $this->image);
-            }
-            
-            // Legacy format: just filename, assume products/ directory
-            return asset('storage/products/' . $this->image);
+        if (blank($this->image)) {
+            return null;
         }
-        
-        return null;
+
+        if (preg_match('/^https?:\/\//', $this->image)) {
+            return $this->image;
+        }
+
+        $path = str_contains($this->image, '/')
+            ? ltrim($this->image, '/')
+            : 'products/' . $this->image;
+
+        return is_file(Storage::disk('public')->path($path))
+            ? asset('storage/' . $path)
+            : null;
     }
 
     /**

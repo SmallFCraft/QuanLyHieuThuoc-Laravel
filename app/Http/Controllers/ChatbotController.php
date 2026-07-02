@@ -660,7 +660,7 @@ class ChatbotController extends Controller
                     'quantity' => $quantity,
                     'subtotal' => $subtotal,
                     'stock_quantity' => $product->stock_quantity,
-                    'image_url' => $product->image ? asset('storage/' . $product->image) : null
+                    'image_url' => $product->image_url
                 ];
             }
         }

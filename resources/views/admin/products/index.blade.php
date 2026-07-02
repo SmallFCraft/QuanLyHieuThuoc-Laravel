@@ -139,9 +139,12 @@
                     targets: 1,
                     render: function(data, type, row) {
                         if (data) {
-                            return '<img src="' + data + '" alt="' + row.name + '" class="rounded-3 shadow-sm border border-success border-opacity-25" style="width: 45px; height: 45px; object-fit: cover;">';
+                            return '<div class="position-relative" style="width: 45px; height: 45px;">'
+                                + '<img src="' + data + '" alt="' + row.name + '" class="w-100 h-100 rounded-3 shadow-sm border border-success border-opacity-25" style="object-fit: cover;" onerror="this.classList.add(\'d-none\'); this.nextElementSibling.classList.remove(\'d-none\');">'
+                                + '<div class="w-100 h-100 bg-gray-50 rounded-3 d-flex d-none align-items-center justify-content-center border border-success border-opacity-25"><i class="bi bi-capsule text-gray-300" aria-hidden="true"></i><span class="visually-hidden">Không có hình ảnh sản phẩm</span></div>'
+                                + '</div>';
                         }
-                        return '<div class="bg-gray-50 rounded-3 d-flex align-items-center justify-content-center border border-success border-opacity-25" style="width: 45px; height: 45px;"><i class="bi bi-capsule text-gray-300"></i></div>';
+                        return '<div class="bg-gray-50 rounded-3 d-flex align-items-center justify-content-center border border-success border-opacity-25" style="width: 45px; height: 45px;"><i class="bi bi-capsule text-gray-300" aria-hidden="true"></i><span class="visually-hidden">Không có hình ảnh sản phẩm</span></div>';
                     }
                 },
                 {

@@ -80,16 +80,13 @@
                                      data-max-stock="{{ $item['product']->stock_quantity }}">
                                     
                                     <!-- Image -->
-                                    <div class="bg-gray-50 rounded-3 overflow-hidden flex-shrink-0" style="width: 90px; height: 90px;">
-                                        @if($item['product']->image)
-                                            <img src="{{ asset('storage/' . $item['product']->image) }}" 
-                                                 alt="{{ $item['product']->name }}" 
-                                                 class="w-100 h-100 object-fit-contain p-1">
-                                        @else
-                                            <div class="w-100 h-100 d-flex align-items-center justify-content-center">
-                                                <i class="bi bi-capsule text-gray-300" style="font-size: 2.5rem;"></i>
-                                            </div>
-                                        @endif
+                                    <div class="bg-gray-50 rounded-3 overflow-hidden flex-shrink-0" style="width: 90px; height: 90px;" data-product-image-container>
+                                        <x-product-image
+                                            :src="$item['product']->image_url"
+                                            :alt="$item['product']->name"
+                                            class="w-100 h-100 object-fit-contain p-1"
+                                            icon-size="2.5rem"
+                                        />
                                     </div>
                                     
                                     <!-- Info -->

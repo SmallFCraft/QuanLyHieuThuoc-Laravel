@@ -211,9 +211,10 @@ class SearchAutocomplete {
                     <a href="${this.escapeAttribute(product.url)}" class="suggestion-item product-item">
                         <div class="product-image">
                             ${product.image_url
-                                ? `<img src="${this.escapeAttribute(product.image_url)}" alt="${this.escapeAttribute(product.name)}">`
-                                : '<i class="bi bi-capsule text-gray-300"></i>'
+                                ? `<img src="${this.escapeAttribute(product.image_url)}" alt="${this.escapeAttribute(product.name)}" onerror="this.classList.add('d-none'); this.nextElementSibling.classList.remove('d-none');"><i class="bi bi-capsule text-gray-300 d-none" aria-hidden="true"></i>`
+                                : '<i class="bi bi-capsule text-gray-300" aria-hidden="true"></i>'
                             }
+                            <span class="visually-hidden">Không có hình ảnh sản phẩm</span>
                         </div>
                         <div class="product-info">
                             <div class="product-name">${this.highlightMatch(product.name, query)}</div>

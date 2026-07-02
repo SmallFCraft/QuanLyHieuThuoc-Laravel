@@ -226,6 +226,132 @@
                 from { opacity: 0; transform: translateY(-10px); }
                 to { opacity: 1; transform: translateY(0); }
             }
+            .nav-categories-menu {
+                width: min(320px, calc(100vw - 32px));
+                min-width: 320px;
+                max-width: calc(100vw - 32px);
+                padding: 0.85rem;
+                border: 1px solid rgba(16, 185, 129, 0.16);
+                background: rgba(255, 255, 255, 0.98);
+                backdrop-filter: blur(20px);
+                box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
+                box-sizing: border-box;
+                overflow-x: hidden;
+            }
+            .nav-categories-list {
+                display: flex;
+                flex-direction: column;
+                gap: 0.45rem;
+            }
+            .nav-categories-label {
+                display: block;
+                padding: 0 0.4rem 0.5rem;
+                font-size: 0.72rem;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: #059669;
+            }
+            .nav-category-link {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                min-height: 50px;
+                padding: 0.7rem 0.8rem;
+                border-radius: 1rem;
+                border: 1px solid transparent;
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(240, 253, 244, 0.92) 100%);
+                color: #111827;
+                text-decoration: none;
+            }
+            .nav-category-link:hover,
+            .nav-category-link:focus {
+                background: linear-gradient(135deg, rgba(236, 253, 245, 1) 0%, rgba(209, 250, 229, 0.85) 100%);
+                border-color: rgba(16, 185, 129, 0.22);
+                color: #047857;
+                transform: translateX(4px);
+            }
+            .nav-category-link.is-active {
+                border-color: rgba(16, 185, 129, 0.24);
+                background: linear-gradient(135deg, rgba(209, 250, 229, 0.95) 0%, rgba(236, 253, 245, 1) 100%);
+                color: #047857;
+                box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.08);
+            }
+            .nav-category-icon {
+                width: 36px;
+                height: 36px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                border-radius: 12px;
+                background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(16, 185, 129, 0.08) 100%);
+                color: #059669;
+                box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.08);
+            }
+            .nav-category-icon i {
+                font-size: 0.92rem;
+            }
+            .nav-category-copy {
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+                gap: 0.15rem;
+                flex: 1;
+            }
+            .nav-category-title {
+                font-size: 0.9rem;
+                font-weight: 600;
+                color: inherit;
+                line-height: 1.25;
+            }
+            .nav-category-meta {
+                font-size: 0.74rem;
+                line-height: 1.2;
+                color: #6b7280;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .nav-category-link:hover .nav-category-meta,
+            .nav-category-link:focus .nav-category-meta,
+            .nav-category-link.is-active .nav-category-meta {
+                color: #047857;
+            }
+            .nav-category-chevron {
+                color: #9ca3af;
+                font-size: 0.85rem;
+                transition: transform 0.2s ease, color 0.2s ease;
+            }
+            .nav-category-link:hover .nav-category-chevron,
+            .nav-category-link:focus .nav-category-chevron,
+            .nav-category-link.is-active .nav-category-chevron {
+                color: #059669;
+                transform: translateX(2px);
+            }
+            .nav-categories-divider {
+                margin: 0.75rem 0 0.35rem;
+                border-color: rgba(16, 185, 129, 0.12);
+            }
+            .nav-categories-cta {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.55rem;
+                min-height: 46px;
+                border-radius: 1rem;
+                font-weight: 700;
+                font-size: 0.95rem;
+                color: #059669;
+                background: linear-gradient(135deg, rgba(236, 253, 245, 0.95) 0%, rgba(209, 250, 229, 0.88) 100%);
+                border: 1px solid rgba(16, 185, 129, 0.18);
+            }
+            .nav-categories-cta:hover,
+            .nav-categories-cta:focus {
+                color: #047857;
+                background: linear-gradient(135deg, rgba(209, 250, 229, 1) 0%, rgba(167, 243, 208, 0.92) 100%);
+                transform: translateY(-1px);
+            }
             .dropdown-item {
                 transition: all 0.2s ease;
             }
@@ -350,6 +476,30 @@
                     padding: 12px 16px;
                     white-space: normal; /* prevent text from pushing offscreen */
                 }
+                .nav-categories-menu {
+                    padding: 0.65rem;
+                    margin-top: 0.35rem !important;
+                    min-width: 0 !important;
+                    width: 100%;
+                    max-width: 100%;
+                    box-sizing: border-box;
+                }
+                .nav-category-link {
+                    min-height: 52px;
+                    padding: 0.75rem 0.85rem;
+                    gap: 0.75rem;
+                }
+                .nav-category-icon {
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 12px;
+                }
+                .nav-category-title {
+                    font-size: 0.95rem;
+                }
+                .nav-category-meta {
+                    font-size: 0.75rem;
+                }
             }
             
             /* Desktop Styles (>= 992px) */
@@ -450,25 +600,57 @@
                             <a class="nav-link dropdown-toggle text-gray-700" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-grid me-1"></i>{{ __('messages.categories') }}
                             </a>
-                            <ul class="dropdown-menu border-0 shadow-lg rounded-4 p-3 mt-2" style="min-width: 280px; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px);">
-                                <div class="row g-2">
-                                    @forelse($navCategories as $cat)
-                                        <div class="col-12">
-                                            <li>
-                                                <a class="dropdown-item rounded-3 py-2 px-3 d-flex align-items-center justify-content-between" href="{{ route('products.index', ['category' => $cat->MaDM]) }}" style="transition: all 0.2s;">
-                                                    <span>{{ $cat->name }}</span>
-                                                    <i class="bi bi-chevron-right small text-gray-300"></i>
-                                                </a>
-                                            </li>
-                                        </div>
-                                    @empty
-                                        <li class="px-3 py-2 text-muted small text-center">{{ __('messages.loading_categories') }}</li>
-                                    @endforelse
-                                </div>
-                                <li><hr class="dropdown-divider my-2"></li>
+                            @php
+                                $activeCategoryId = request('category');
+                                $activeCategoryRoute = request()->route('category');
+
+                                if ($activeCategoryId === null && $activeCategoryRoute !== null) {
+                                    $activeCategoryId = is_object($activeCategoryRoute)
+                                        ? ($activeCategoryRoute->MaDM ?? null)
+                                        : $activeCategoryRoute;
+                                }
+                            @endphp
+                            <ul class="dropdown-menu nav-categories-menu rounded-4 mt-2">
+                                <li class="list-unstyled">
+                                    <span class="nav-categories-label">{{ __('messages.categories') }}</span>
+                                </li>
+                                <li class="list-unstyled">
+                                    <div class="nav-categories-list">
+                                        @forelse($navCategories as $cat)
+                                            @php
+                                                $rawIcon = trim((string) ($cat->icon ?? ''));
+                                                $iconName = \Illuminate\Support\Str::startsWith($rawIcon, 'bi-')
+                                                    ? \Illuminate\Support\Str::after($rawIcon, 'bi-')
+                                                    : ($rawIcon !== '' && !\Illuminate\Support\Str::startsWith($rawIcon, 'fa-') ? $rawIcon : 'grid-fill');
+                                                $isActiveCategory = $activeCategoryId !== null && (string) $activeCategoryId === (string) $cat->MaDM;
+                                                $categoryMeta = !empty($cat->description)
+                                                    ? \Illuminate\Support\Str::limit($cat->description, 42)
+                                                    : 'Xem nhanh các sản phẩm theo nhu cầu';
+                                            @endphp
+                                            <a
+                                                class="dropdown-item nav-category-link {{ $isActiveCategory ? 'is-active' : '' }}"
+                                                href="{{ route('products.index', ['category' => $cat->MaDM]) }}"
+                                                @if($isActiveCategory) aria-current="page" @endif
+                                            >
+                                                <span class="nav-category-icon" aria-hidden="true">
+                                                    <i class="bi bi-{{ $iconName }}"></i>
+                                                </span>
+                                                <span class="nav-category-copy">
+                                                    <span class="nav-category-title">{{ $cat->name }}</span>
+                                                    <span class="nav-category-meta">{{ $categoryMeta }}</span>
+                                                </span>
+                                                <i class="bi bi-chevron-right nav-category-chevron" aria-hidden="true"></i>
+                                            </a>
+                                        @empty
+                                            <span class="px-3 py-2 text-muted small text-center">{{ __('messages.loading_categories') }}</span>
+                                        @endforelse
+                                    </div>
+                                </li>
+                                <li><hr class="dropdown-divider nav-categories-divider"></li>
                                 <li>
-                                    <a class="dropdown-item rounded-3 text-center fw-bold text-emerald-600" href="{{ route('products.index') }}">
-                                        {{ __('messages.all_products') }}
+                                    <a class="dropdown-item nav-categories-cta" href="{{ route('products.index') }}">
+                                        <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>
+                                        <span>{{ __('messages.all_products') }}</span>
                                     </a>
                                 </li>
                             </ul>

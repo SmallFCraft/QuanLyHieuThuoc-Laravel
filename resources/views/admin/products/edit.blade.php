@@ -154,26 +154,28 @@
                             <h6 class="fw-bold mb-4" style="color: #064e3b;"><i class="bi bi-image me-2"></i>Hình Ảnh Sản Phẩm</h6>
 
                             <div class="text-center mb-3">
-                                <div id="imagePreviewContainer" class="mb-3" style="{{ $product->image ? '' : 'display: none;' }}">
+                                <div id="imagePreviewContainer" class="mb-3" style="{{ $product->image_url ? '' : 'display: none;' }}">
                                     <img id="imagePreview"
-                                        src="{{ $product->image ? asset('storage/products/' . $product->image) : '#' }}"
+                                        src="{{ $product->image_url ?? '#' }}"
                                         alt="Preview"
-                                        class="img-fluid rounded-3" style="max-height: 200px; object-fit: cover; width: 100%;">
+                                        class="img-fluid rounded-3"
+                                        style="max-height: 200px; object-fit: cover; width: 100%;"
+                                        onerror="this.parentElement.style.display='none'; const placeholder = document.getElementById('imagePlaceholder'); placeholder.style.display='flex'; document.getElementById('imagePlaceholderIcon').className='bi bi-capsule fs-2 d-block mb-2 text-gray-300'; document.getElementById('imagePlaceholderText').textContent='Ảnh hiện tại không khả dụng. Nhấn để chọn ảnh mới';">
                                 </div>
                                 <div id="imagePlaceholder" class="border rounded-3 d-flex align-items-center justify-content-center"
-                                    style="height: 160px; background: #f8fafc; border-style: dashed !important; cursor: pointer; transition: 0.3s; {{ $product->image ? 'display: none;' : '' }}"
+                                    style="height: 160px; background: #f8fafc; border-style: dashed !important; cursor: pointer; transition: 0.3s; {{ $product->image_url ? 'display: none;' : '' }}"
                                     onclick="document.getElementById('image').click()"
                                     ondragover="event.preventDefault(); this.style.backgroundColor='#d1fae5';"
                                     ondragleave="event.preventDefault(); this.style.backgroundColor='#f8fafc';"
                                     ondrop="event.preventDefault(); this.style.backgroundColor='#f8fafc'; document.getElementById('image').files = event.dataTransfer.files; previewImage(document.getElementById('image'));">
                                     <div class="text-center text-muted">
-                                        <i class="bi bi-cloud-upload fs-2 d-block mb-2" style="color: #10b981;"></i>
-                                        <small>Nhấn hoặc Kéo thả ảnh vào đây</small>
+                                        <i id="imagePlaceholderIcon" class="bi bi-cloud-upload fs-2 d-block mb-2" style="color: #10b981;" aria-hidden="true"></i>
+                                        <small id="imagePlaceholderText">Nhấn hoặc Kéo thả ảnh vào đây</small>
                                     </div>
                                 </div>
                             </div>
 
-                            @if($product->image)
+                            @if($product->image_url)
                                 <div class="mb-2">
                                     <small class="text-muted"><i class="bi bi-check-circle text-success me-1"></i>Đã có ảnh. Chọn ảnh mới để thay thế.</small>
                                 </div>
