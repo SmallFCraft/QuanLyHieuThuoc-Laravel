@@ -32,3 +32,4 @@ composer.lock
 AGENTS.md
 CLAUDE.md
 .claude/
+.agents/
