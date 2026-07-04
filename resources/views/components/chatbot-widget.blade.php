@@ -123,126 +123,129 @@
 
             <template x-for="(message, index) in messages" :key="index">
                 <div :class="message.role === 'user' ? 'message-user' : 'message-assistant' + (message.isSystemMessage ? ' system-message' : '')">
-                    <div class="message-content">
-                        <!-- User message with optional image -->
-                        <template x-if="message.role === 'user'">
-                            <div>
-                                <template x-if="message.hasImage && message.imageUrl">
-                                    <div class="message-image-preview">
-                                        <img :src="message.imageUrl" alt="Uploaded image" style="max-width: 150px; max-height: 100px; border-radius: 6px; margin-bottom: 6px; object-fit: cover; display: block;">
-                                    </div>
-                                </template>
-                                <div x-text="message.content" x-show="message.content"></div>
-                            </div>
-                        </template>
-                        
-                        <!-- Assistant message -->
-                        <template x-if="message.role !== 'user'">
-                            <div class="assistant-message-wrapper">
-                                <div class="assistant-message-tools">
-                                    <button
-                                        type="button"
-                                        class="copy-message-btn"
-                                        @click="copyMessage(message.content, index)"
-                                        :aria-label="copiedMessageIndex === index ? 'Đã sao chép' : 'Sao chép nội dung trả lời'"
-                                        :title="copiedMessageIndex === index ? 'Đã sao chép' : 'Sao chép'"
-                                    >
-                                        <span x-show="copiedMessageIndex !== index" aria-hidden="true">
-                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                                                <rect x="9" y="9" width="11" height="11" rx="2" ry="2"></rect>
-                                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                            </svg>
-                                        </span>
-                                        <span x-show="copiedMessageIndex === index" aria-hidden="true">
-                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M20 6L9 17l-5-5"></path>
-                                            </svg>
-                                        </span>
-                                    </button>
+                    <div class="message-stack">
+                        <div class="message-content">
+                            <!-- User message with optional image -->
+                            <template x-if="message.role === 'user'">
+                                <div>
+                                    <template x-if="message.hasImage && message.imageUrl">
+                                        <div class="message-image-preview">
+                                            <img :src="message.imageUrl" alt="Uploaded image" style="max-width: 150px; max-height: 100px; border-radius: 6px; margin-bottom: 6px; object-fit: cover; display: block;">
+                                        </div>
+                                    </template>
+                                    <div x-text="message.content" x-show="message.content"></div>
                                 </div>
+                            </template>
+                            
+                            <!-- Assistant message -->
+                            <template x-if="message.role !== 'user'">
                                 <div class="markdown-body" x-html="parseMarkdown(message.content)"></div>
-                            </div>
-                        </template>
-                        
-                        <!-- Auth Buttons (Login/Register) -->
-                        <template x-if="message.showAuthButtons">
-                            <div class="mt-3 d-flex flex-column flex-sm-row gap-2" style="width: 100%;">
-                                <a :href="message.loginUrl" 
-                                   class="btn btn-emerald text-white fw-semibold d-flex align-items-center justify-content-center gap-2 text-decoration-none"
-                                   style="flex: 1; background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 10px 16px; border-radius: 10px; transition: all 0.2s; font-size: 0.875rem;"
-                                   onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(16, 185, 129, 0.3)'"
-                                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(16, 185, 129, 0.2)'">
-                                    <span>🔑</span>
-                                    <span>Đăng nhập</span>
-                                </a>
-                                <a :href="message.registerUrl" 
-                                   class="btn btn-outline-emerald fw-semibold d-flex align-items-center justify-content-center gap-2 text-decoration-none"
-                                   style="flex: 1; background: white; color: #059669; border: 2px solid #10b981; padding: 10px 16px; border-radius: 10px; transition: all 0.2s; font-size: 0.875rem;"
-                                   onmouseover="this.style.background='#f0fdf4'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(16, 185, 129, 0.15)'"
-                                   onmouseout="this.style.background='white'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                                    <span>✨</span>
-                                    <span>Đăng ký</span>
-                                </a>
-                            </div>
-                        </template>
-                        
-                        <!-- Products Display -->
-                        <template x-if="message.products && message.products.length > 0">
-                            <div class="mt-3 space-y-2">
-                                <template x-for="product in message.products" :key="product.id">
-                                    <div class="product-card" x-data="{ imageError: false }">
-                                        <template x-if="product.image_url && !imageError">
-                                            <img :src="product.image_url" :alt="product.name" class="product-image" x-on:error="imageError = true">
-                                        </template>
-                                        <template x-if="!product.image_url || imageError">
-                                            <div class="product-image product-image-placeholder">
-                                                <i class="bi bi-capsule text-secondary opacity-25" style="font-size: 1.5rem;"></i>
-                                            </div>
-                                        </template>
-                                        <div class="product-info">
-                                            <h4 class="product-name" x-text="product.name"></h4>
-                                            <p class="product-price" x-text="formatCurrency(product.price)"></p>
-                                            <p class="product-stock">Còn <span x-text="product.stock_quantity"></span> sản phẩm</p>
-                                            <template x-if="product.expiration_date">
-                                                <p class="product-expiry" x-text="'HSD: ' + formatDate(product.expiration_date)"></p>
-                                            </template>
-                                            <div class="flex items-center gap-2 mt-2">
-                                                <button @click="addToCart(product, 1)" class="btn-add-cart flex-1">
-                                                    Thêm vào giỏ
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </template>
-
-                        <template x-if="message.categories && message.categories.length > 0">
-                            <div class="mt-3 space-y-2">
-                                <template x-for="category in message.categories" :key="category.id">
-                                    <a :href="category.url" class="category-card text-decoration-none">
-                                        <div class="category-card__content">
-                                            <div>
-                                                <h4 class="category-card__title" x-text="category.name"></h4>
-                                                <p class="category-card__meta">
-                                                    <span x-text="(category.product_count || 0) + ' sản phẩm'"></span>
-                                                </p>
-                                                <template x-if="category.description">
-                                                    <p class="category-card__description" x-text="category.description"></p>
-                                                </template>
-                                            </div>
-                                            <span class="category-card__arrow">Xem</span>
-                                        </div>
+                            </template>
+                            
+                            <!-- Auth Buttons (Login/Register) -->
+                            <template x-if="message.showAuthButtons">
+                                <div class="mt-3 d-flex flex-column flex-sm-row gap-2" style="width: 100%;">
+                                    <a :href="message.loginUrl" 
+                                       class="btn btn-emerald text-white fw-semibold d-flex align-items-center justify-content-center gap-2 text-decoration-none"
+                                       style="flex: 1; background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 10px 16px; border-radius: 10px; transition: all 0.2s; font-size: 0.875rem;"
+                                       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(16, 185, 129, 0.3)'"
+                                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(16, 185, 129, 0.2)'">
+                                        <span>🔑</span>
+                                        <span>Đăng nhập</span>
                                     </a>
-                                </template>
-                            </div>
-                        </template>
+                                    <a :href="message.registerUrl" 
+                                       class="btn btn-outline-emerald fw-semibold d-flex align-items-center justify-content-center gap-2 text-decoration-none"
+                                       style="flex: 1; background: white; color: #059669; border: 2px solid #10b981; padding: 10px 16px; border-radius: 10px; transition: all 0.2s; font-size: 0.875rem;"
+                                       onmouseover="this.style.background='#f0fdf4'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(16, 185, 129, 0.15)'"
+                                       onmouseout="this.style.background='white'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                        <span>✨</span>
+                                        <span>Đăng ký</span>
+                                    </a>
+                                </div>
+                            </template>
+                            
+                            <!-- Products Display -->
+                            <template x-if="message.products && message.products.length > 0">
+                                <div class="mt-3 space-y-2">
+                                    <template x-for="product in message.products" :key="product.id">
+                                        <div class="product-card" x-data="{ imageError: false }">
+                                            <template x-if="product.image_url && !imageError">
+                                                <img :src="product.image_url" :alt="product.name" class="product-image" x-on:error="imageError = true">
+                                            </template>
+                                            <template x-if="!product.image_url || imageError">
+                                                <div class="product-image product-image-placeholder">
+                                                    <i class="bi bi-capsule text-secondary opacity-25" style="font-size: 1.5rem;"></i>
+                                                </div>
+                                            </template>
+                                            <div class="product-info">
+                                                <h4 class="product-name" x-text="product.name"></h4>
+                                                <p class="product-price" x-text="formatCurrency(product.price)"></p>
+                                                <p class="product-stock">Còn <span x-text="product.stock_quantity"></span> sản phẩm</p>
+                                                <template x-if="product.expiration_date">
+                                                    <p class="product-expiry" x-text="'HSD: ' + formatDate(product.expiration_date)"></p>
+                                                </template>
+                                                <div class="flex items-center gap-2 mt-2">
+                                                    <button @click="addToCart(product, 1)" class="btn-add-cart flex-1">
+                                                        Thêm vào giỏ
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
 
-                        <!-- Disclaimer -->
-                        <template x-if="message.show_disclaimer">
-                            <div class="mt-2 text-xs text-yellow-600 bg-yellow-50 p-2 rounded" style="display: flex; gap: 4px; align-items: flex-start;">
-                                <span>⚠️</span>
-                                <span x-text="message.disclaimer || '{{ __('messages.chatbot.disclaimer_text') }}'"></span>
+                            <template x-if="message.categories && message.categories.length > 0">
+                                <div class="mt-3 space-y-2">
+                                    <template x-for="category in message.categories" :key="category.id">
+                                        <a :href="category.url" class="category-card text-decoration-none">
+                                            <div class="category-card__content">
+                                                <div>
+                                                    <h4 class="category-card__title" x-text="category.name"></h4>
+                                                    <p class="category-card__meta">
+                                                        <span x-text="(category.product_count || 0) + ' sản phẩm'"></span>
+                                                    </p>
+                                                    <template x-if="category.description">
+                                                        <p class="category-card__description" x-text="category.description"></p>
+                                                    </template>
+                                                </div>
+                                                <span class="category-card__arrow">Xem</span>
+                                            </div>
+                                        </a>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- Disclaimer -->
+                            <template x-if="message.show_disclaimer">
+                                <div class="mt-2 text-xs text-yellow-600 bg-yellow-50 p-2 rounded" style="display: flex; gap: 4px; align-items: flex-start;">
+                                    <span>⚠️</span>
+                                    <span x-text="message.disclaimer || '{{ __('messages.chatbot.disclaimer_text') }}'"></span>
+                                </div>
+                            </template>
+                        </div>
+
+                        <template x-if="message.content">
+                            <div class="message-actions">
+                                <button
+                                    type="button"
+                                    class="copy-message-btn"
+                                    @click="copyMessage(message.content, index)"
+                                    :aria-label="copiedMessageIndex === index ? 'Đã sao chép' : (message.role === 'user' ? 'Sao chép tin nhắn của bạn' : 'Sao chép nội dung trả lời')"
+                                    :title="copiedMessageIndex === index ? 'Đã sao chép' : 'Sao chép'"
+                                >
+                                    <span x-show="copiedMessageIndex !== index" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="9" y="9" width="11" height="11" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                    </span>
+                                    <span x-show="copiedMessageIndex === index" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M20 6L9 17l-5-5"></path>
+                                        </svg>
+                                    </span>
+                                </button>
                             </div>
                         </template>
                     </div>
@@ -631,8 +634,19 @@
     display: flex;
 }
 
+.message-stack {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .message-user {
     justify-content: flex-end;
+}
+
+.message-user .message-stack {
+    align-items: flex-end;
+    max-width: 80%;
 }
 
 .message-user .message-content {
@@ -640,12 +654,17 @@
     color: white;
     padding: 12px 16px;
     border-radius: 20px 20px 4px 20px;
-    max-width: 80%;
+    max-width: 100%;
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     overflow-wrap: anywhere;
     word-break: break-word;
+}
+
+.message-assistant .message-stack {
+    align-items: flex-start;
+    max-width: 85%;
 }
 
 .message-assistant .message-content {
@@ -656,7 +675,7 @@
     color: #1f2937;
     padding: 14px 18px;
     border-radius: 20px 20px 20px 4px;
-    max-width: 85%;
+    max-width: 100%;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -1014,36 +1033,41 @@
     transform: translateY(-1px);
 }
 
-.assistant-message-wrapper {
+.message-actions {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    align-items: center;
+    padding: 0 6px;
 }
 
-.assistant-message-tools {
-    display: flex;
+.message-user .message-actions {
     justify-content: flex-end;
 }
 
+.message-assistant .message-actions {
+    justify-content: flex-start;
+}
+
 .copy-message-btn {
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    background: rgba(16, 185, 129, 0.08);
-    color: #047857;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(255, 255, 255, 0.72);
+    color: #64748b;
     border-radius: 999px;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     line-height: 1;
     transition: all 0.2s ease;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
 }
 
 .copy-message-btn:hover {
-    background: #10b981;
-    color: #ffffff;
-    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    border-color: rgba(16, 185, 129, 0.28);
+    transform: translateY(-1px);
 }
 
 /* Welcome Message Styles */

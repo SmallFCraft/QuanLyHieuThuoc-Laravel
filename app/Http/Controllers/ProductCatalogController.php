@@ -171,7 +171,7 @@ class ProductCatalogController extends Controller
             Category::FILTER_CACHE_KEY,
             now()->addMinutes(10),
             fn () => Category::query()
-                ->select('MaDM', 'name')
+                ->select('MaDM', 'name', 'icon')
                 ->whereHas('products', function ($query) {
                     $query->notExpired()->where('stock_quantity', '>', 0);
                 })
