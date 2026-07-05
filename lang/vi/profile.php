@@ -1,6 +1,18 @@
 <?php
 
 return [
+    'favorites_count' => 'Yêu thích',
+    'nav_favorites' => 'Sản phẩm yêu thích',
+    'mobile_favorites' => 'Yêu thích',
+    'favorites_title' => 'Sản phẩm yêu thích',
+    'favorites_desc' => 'Lưu nhanh các sản phẩm bạn quan tâm để xem lại hoặc mua sau',
+    'favorites_empty_title' => 'Chưa có sản phẩm yêu thích',
+    'favorites_empty_desc' => 'Nhấn biểu tượng trái tim ở trang sản phẩm để lưu vào danh sách này.',
+    'remove_favorite' => 'Bỏ yêu thích',
+    'available_now' => 'Còn hàng',
+    'unavailable_now' => 'Tạm hết hàng',
+    'expires_on' => 'HSD',
+    'view_product' => 'Xem sản phẩm',
     'title' => 'Tài Khoản Của Tôi',
     'breadcrumb_account' => 'Tài khoản',
     'orders_count' => 'Đơn hàng',

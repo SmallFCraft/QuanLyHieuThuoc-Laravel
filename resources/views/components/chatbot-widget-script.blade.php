@@ -13,6 +13,7 @@ function chatbotWidget() {
         isPlacingOrder: false,
         attachedImage: null,
         imagePreviewUrl: null,
+        isAuthenticated: false,
         maxMessages: 50,
         pasteListener: null,
         objectUrls: [],
@@ -29,15 +30,19 @@ function chatbotWidget() {
         
         init() {
             this.disclaimerAccepted = localStorage.getItem('chatbot_disclaimer_accepted') === 'true';
-            this.loadHistory();
-            this.loadCart();
             
             // Load user data from data attributes
             const container = this.$el;
             if (container) {
+                this.isAuthenticated = container.dataset.authenticated === 'true';
                 this.checkoutForm.customer_name = container.dataset.userName || '';
                 this.checkoutForm.shipping_phone = container.dataset.userPhone || '';
                 this.checkoutForm.shipping_address = container.dataset.userAddress || '';
+            }
+
+            if (this.isAuthenticated) {
+                this.loadHistory();
+                this.loadCart();
             }
             
             // Setup paste event listener for images
@@ -558,6 +563,10 @@ function chatbotWidget() {
         },
         
         async loadCart() {
+            if (!this.isAuthenticated) {
+                return;
+            }
+
             try {
                 const response = await fetch('/api/chatbot/cart', {
                     headers: {
@@ -964,6 +973,10 @@ function chatbotWidget() {
         },
         
         async loadHistory() {
+            if (!this.isAuthenticated) {
+                return;
+            }
+
             try {
                 const response = await fetch(`/api/chatbot/history?limit=${this.maxMessages}`, {
                     headers: {

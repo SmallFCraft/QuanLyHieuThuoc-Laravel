@@ -50,19 +50,19 @@
                     </div>
 
                     <div class="row g-3 mt-2 mt-md-3 text-center text-lg-start">
-                        <div class="col-6 col-sm-4 col-lg-auto">
+                        <div class="col-4 col-sm-4 col-lg-auto">
                             <div class="home-glass-panel px-3 py-2 rounded-4">
                                 <span class="d-block fw-bold text-success fs-4 mb-0">{{ __('messages.home_stat_products_value') }}</span>
                                 <span class="small text-muted">{{ __('messages.home_stat_products_label') }}</span>
                             </div>
                         </div>
-                        <div class="col-6 col-sm-4 col-lg-auto">
+                        <div class="col-4 col-sm-4 col-lg-auto">
                             <div class="home-glass-panel px-3 py-2 rounded-4">
                                 <span class="d-block fw-bold text-success fs-4 mb-0">{{ __('messages.home_stat_support_value') }}</span>
                                 <span class="small text-muted">{{ __('messages.home_stat_support_label') }}</span>
                             </div>
                         </div>
-                        <div class="col-12 col-sm-4 col-lg-auto">
+                        <div class="col-4 col-sm-4 col-lg-auto">
                             <div class="home-glass-panel px-3 py-2 rounded-4">
                                 <span class="d-block fw-bold text-success fs-4 mb-0">{{ __('messages.home_stat_fefo_value') }}</span>
                                 <span class="small text-muted">{{ __('messages.home_stat_fefo_label') }}</span>
@@ -72,6 +72,39 @@
                 </div>
 
                 <div class="col-lg-6 fade-in" style="animation-delay: 0.12s;">
+                    <div class="home-visual-board">
+                        <div class="home-visual-frame">
+                            <img src="https://images.unsplash.com/photo-1576602976047-174e57a47881?auto=format&fit=crop&q=80&w=900&h=620" alt="Đội ngũ nhà thuốc" class="w-100 h-100 object-fit-cover">
+                            <div class="home-visual-badge">
+                                <span class="home-visual-pulse" aria-hidden="true"></span>
+                                <div>
+                                    <strong>{{ __('messages.home_support_247') }}</strong>
+                                    <span>{{ __('messages.home_get_advice') }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="home-visual-feature-grid">
+                            <div class="home-visual-feature">
+                                <i class="bi bi-shield-check"></i>
+                                <div>
+                                    <strong>{{ __('messages.home_quality_badge') }}</strong>
+                                    <span>{{ __('messages.home_quality_desc') }}</span>
+                                </div>
+                            </div>
+                            <div class="home-visual-feature">
+                                <i class="bi bi-truck"></i>
+                                <div>
+                                    <strong>{{ __('messages.home_fast_delivery') }}</strong>
+                                    <span>{{ __('messages.home_genuine_products') }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="col-lg-6 fade-in d-none" style="animation-delay: 0.12s;">
                     <div class="glass-card border-0 p-3 p-md-4 rounded-4 shadow-sm home-hero-visual">
                         <img src="https://images.unsplash.com/photo-1576602976047-174e57a47881?auto=format&fit=crop&q=80&w=800&h=600" alt="Đội ngũ nhà thuốc" class="img-fluid rounded-4 w-100 object-fit-cover shadow-sm" style="min-height: 200px; max-height: min(52vh, 440px);">
                         <div class="d-flex justify-content-center justify-content-lg-start mt-3">
@@ -92,27 +125,38 @@
     </section>
 
     <!-- Tìm kiếm nhanh -->
-    <section class="pb-4 pb-md-5 position-relative overflow-hidden" id="tim-kiem">
+    <section class="home-search-band pb-4 pb-md-5 position-relative overflow-hidden" id="tim-kiem">
         <div class="home-section-mesh home-section-mesh--subtle" aria-hidden="true"></div>
         <div class="container position-relative">
             <form action="{{ route('products.search') }}" method="GET" class="home-glass-panel p-2 p-md-3 rounded-pill mx-auto shadow-sm" style="max-width: 800px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);" role="search" aria-label="Tìm sản phẩm">
-                <div class="input-group input-group-lg align-items-center">
+                <div class="home-search-copy">
+                    <span class="text-success fw-bold text-uppercase small">{{ __('messages.home_explore') }}</span>
+                    <strong>{{ __('messages.home_search_placeholder') }}</strong>
+                </div>
+                <div class="input-group input-group-lg align-items-center home-search-control">
                     <span class="input-group-text border-0 bg-transparent ps-3 ps-md-4">
                         <i class="bi bi-search text-success"></i>
                     </span>
                     <input type="text" id="home-search-q" name="q" value="{{ request('q') }}" class="form-control border-0 bg-transparent py-2 py-md-3 fs-6 fs-md-5 shadow-none" placeholder="{{ __('messages.home_search_placeholder') }}" autocomplete="off" style="box-shadow: none !important; outline: none !important;">
-                    <button type="submit" class="btn btn-success rounded-pill px-4 px-md-5 fw-semibold shadow-sm ms-2 me-1" style="background: #10b981; border-color: #10b981; height: 100%; min-height: 48px;">
+                    <button type="submit" class="btn btn-success rounded-pill px-4 px-md-5 fw-semibold shadow-sm ms-2 me-1">
                         <span class="d-none d-sm-inline">{{ __('messages.search') }}</span>
                         <i class="bi bi-search d-sm-none"></i>
                     </button>
                 </div>
+                @if($categories->isNotEmpty())
+                    <div class="home-search-chips">
+                        @foreach($categories->take(4) as $category)
+                            <a href="{{ route('products.category', $category->MaDM) }}">{{ $category->name }}</a>
+                        @endforeach
+                    </div>
+                @endif
             </form>
         </div>
     </section>
 
     <!-- Danh mục -->
     @if($categories->isNotEmpty())
-    <section class="pb-4 pb-md-5 position-relative overflow-hidden" id="danh-muc">
+    <section class="home-categories-section pb-4 pb-md-5 position-relative overflow-hidden" id="danh-muc">
         <div class="home-section-mesh home-section-mesh--subtle" aria-hidden="true"></div>
         <div class="container position-relative">
             <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3 mb-md-4">
@@ -120,19 +164,20 @@
                     <span class="text-success fw-bold text-uppercase small" style="letter-spacing: 0.06em;">{{ __('messages.home_explore') }}</span>
                     <h2 class="h4 fw-bold text-dark mb-0 mt-1">{{ __('messages.home_categories') }}</h2>
                 </div>
-                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0">
-                    {{ __('messages.home_view_all') }} <i class="bi bi-arrow-right ms-1"></i>
+                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0 home-section-link">
+                    <span>{{ __('messages.home_view_all') }}</span><i class="bi bi-arrow-right" aria-hidden="true"></i>
                 </a>
             </div>
-            <div class="row g-3">
+            <div class="row g-3 g-lg-4">
                 @foreach($categories as $category)
                     <div class="col-6 col-md-4 col-lg-3 col-xl-2-4">
-                        <a href="{{ route('products.category', $category->MaDM) }}" class="home-glass-panel p-3 rounded-4 text-center d-block text-decoration-none transition-all hover-scale-105" style="border: 1px solid rgba(16,185,129,0.15);">
-                            <div class="rounded-circle d-inline-flex mx-auto align-items-center justify-content-center mb-2" style="width: 50px; height: 50px; background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.08) 100%); color: #059669;">
+                        <a href="{{ route('products.category', $category->MaDM) }}" class="home-category-card text-decoration-none">
+                            <div class="home-category-icon">
                                 <i class="bi bi-{{ $category->icon ?? 'grid-fill' }}" style="font-size: 1.5rem;"></i>
                             </div>
-                            <span class="fw-semibold text-truncate d-block text-dark mb-1 small" title="{{ $category->name }}">{{ $category->name }}</span>
-                            <span class="small text-success" style="font-size: 0.75rem;">{{ $category->available_products_count }} {{ mb_strtolower(__('messages.products')) }}</span>
+                            <span class="fw-semibold text-truncate d-block text-dark mb-1" title="{{ $category->name }}">{{ $category->name }}</span>
+                            <span class="home-category-count">{{ $category->available_products_count }} {{ mb_strtolower(__('messages.products')) }}</span>
+                            <i class="bi bi-arrow-up-right home-category-arrow" aria-hidden="true"></i>
                         </a>
                     </div>
                 @endforeach
@@ -151,68 +196,38 @@
                     <h2 class="h3 fw-bold text-dark mt-1 mb-0">{{ __('messages.home_new_products') }}</h2>
                     <p class="text-muted small mb-0 mt-1 d-none d-md-block">{{ __('messages.home_new_products_desc') }}</p>
                 </div>
-                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0">
-                    {{ __('messages.home_view_all') }} <i class="bi bi-arrow-right ms-1"></i>
+                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0 home-section-link">
+                    <span>{{ __('messages.home_view_all') }}</span><i class="bi bi-arrow-right" aria-hidden="true"></i>
                 </a>
             </div>
 
             <div class="row g-3 g-md-4">
                 @forelse($newProducts as $product)
                     <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
-                        <div class="product-card h-100 border-0">
-                            <div class="position-relative overflow-hidden home-product-media" style="border-radius: 16px 16px 0 0; aspect-ratio: 1/1;" data-product-image-container>
-                                <x-product-image
-                                    :src="$product->image_url"
-                                    :alt="$product->name"
-                                    class="w-100 h-100 object-fit-cover"
-                                    icon-class="text-secondary opacity-25"
-                                    icon-size="4rem"
-                                />
-                                <div class="position-absolute top-0 start-0 m-2 m-md-3 d-flex flex-column gap-2">
-                                    <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle px-2 py-1 rounded-pill">
-                                        <i class="bi bi-stars me-1"></i>{{ __('messages.home_new_badge') }}
+                        <x-product-card
+                            :product="$product"
+                            card-class="home-product-card border-0"
+                            media-class="home-product-media"
+                            body-class="home-product-body"
+                            :show-detail-action="true"
+                            :show-compare-price="true"
+                            detail-label="{{ __('messages.home_view_details') }}"
+                        >
+                            <x-slot:badges>
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle px-2 py-1 rounded-pill">
+                                    <i class="bi bi-stars me-1"></i>{{ __('messages.home_new_badge') }}
+                                </span>
+                                @if($product->stock_quantity == 0)
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
+                                        <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
                                     </span>
-                                    @if($product->stock_quantity == 0)
-                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
-                                        </span>
-                                    @elseif($product->stock_quantity <= $product->reorder_point)
-                                        <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ __('messages.low_stock') }}
-                                        </span>
-                                    @endif
-                                </div>
-                                <div class="position-absolute top-0 end-0 m-2 m-md-3">
-                                    <a href="{{ route('products.show', $product->MaSP) }}" class="btn btn-light btn-sm rounded-circle shadow-sm text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="{{ __('messages.home_view_details') }}">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                </div>
-                            </div>
-                            <div class="p-3 p-md-4 d-flex flex-column flex-grow-1">
-                                <a href="{{ route('products.show', $product->MaSP) }}" class="text-decoration-none">
-                                    <h3 class="h6 fw-bold mb-1 text-dark text-truncate" title="{{ $product->name }}">{{ $product->name }}</h3>
-                                </a>
-                                <p class="text-success small mb-2 fw-medium mb-0">{{ $product->category->name }}</p>
-                                <div class="mt-auto d-flex justify-content-between align-items-end pt-3 gap-2">
-                                    <div class="min-w-0">
-                                        <span class="text-muted small text-decoration-line-through d-block mb-1">
-                                            {{ format_currency_vi($product->price_vnd * 1.1) }}
-                                        </span>
-                                        <span class="h5 mb-0 text-success fw-bold">
-                                            {{ format_currency_vi($product->price_vnd) }}
-                                        </span>
-                                    </div>
-                                    <form action="{{ route('cart.add') }}" method="POST" class="d-inline flex-shrink-0 js-add-to-cart-form">
-                                        @csrf
-                                        <input type="hidden" name="MaSP" value="{{ $product->MaSP }}">
-                                        <input type="hidden" name="quantity" value="1">
-                                        <button type="submit" class="btn text-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background: #10b981;" {{ $product->stock_quantity == 0 ? 'disabled' : '' }} title="{{ __('messages.add_to_cart') }}">
-                                            <i class="bi bi-cart-plus fs-5"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
+                                @elseif($product->stock_quantity <= $product->reorder_point)
+                                    <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>{{ __('messages.low_stock') }}
+                                    </span>
+                                @endif
+                            </x-slot:badges>
+                        </x-product-card>
                     </div>
                 @empty
                     <div class="col-12">
@@ -239,70 +254,40 @@
                     <h2 class="h3 fw-bold text-dark mt-1 mb-0">{{ __('messages.home_featured_products') }}</h2>
                     <p class="text-muted small mb-0 mt-1 d-none d-md-block">{{ __('messages.home_featured_desc') }}</p>
                 </div>
-                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0">
-                    {{ __('messages.home_view_all') }} <i class="bi bi-arrow-right ms-1"></i>
+                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0 home-section-link">
+                    <span>{{ __('messages.home_view_all') }}</span><i class="bi bi-arrow-right" aria-hidden="true"></i>
                 </a>
             </div>
 
             <div class="row g-3 g-md-4">
                 @forelse($featuredProducts as $product)
                     <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
-                        <div class="product-card h-100 border-0">
-                            <div class="position-relative overflow-hidden home-product-media" style="border-radius: 16px 16px 0 0; aspect-ratio: 1/1;" data-product-image-container>
-                                <x-product-image
-                                    :src="$product->image_url"
-                                    :alt="$product->name"
-                                    class="w-100 h-100 object-fit-cover"
-                                    icon-class="text-secondary opacity-25"
-                                    icon-size="4rem"
-                                />
-                                <div class="position-absolute top-0 start-0 m-2 m-md-3 d-flex flex-column gap-2">
-                                    @if($product->views_count > 0)
-                                        <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-eye-fill me-1"></i>{{ __('messages.home_views_count', ['count' => number_format($product->views_count)]) }}
-                                        </span>
-                                    @endif
-                                    @if($product->stock_quantity == 0)
-                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
-                                        </span>
-                                    @elseif($product->stock_quantity <= $product->reorder_point)
-                                        <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">
-                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ __('messages.low_stock') }}
-                                        </span>
-                                    @endif
-                                </div>
-                                <div class="position-absolute top-0 end-0 m-2 m-md-3">
-                                    <a href="{{ route('products.show', $product->MaSP) }}" class="btn btn-light btn-sm rounded-circle shadow-sm text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="{{ __('messages.home_view_details') }}">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                </div>
-                            </div>
-                            <div class="p-3 p-md-4 d-flex flex-column flex-grow-1">
-                                <a href="{{ route('products.show', $product->MaSP) }}" class="text-decoration-none">
-                                    <h3 class="h6 fw-bold mb-1 text-dark text-truncate" title="{{ $product->name }}">{{ $product->name }}</h3>
-                                </a>
-                                <p class="text-success small mb-2 fw-medium mb-0">{{ $product->category->name }}</p>
-                                <div class="mt-auto d-flex justify-content-between align-items-end pt-3 gap-2">
-                                    <div class="min-w-0">
-                                        <span class="text-muted small text-decoration-line-through d-block mb-1">
-                                            {{ format_currency_vi($product->price_vnd * 1.1) }}
-                                        </span>
-                                        <span class="h5 mb-0 text-success fw-bold">
-                                            {{ format_currency_vi($product->price_vnd) }}
-                                        </span>
-                                    </div>
-                                    <form action="{{ route('cart.add') }}" method="POST" class="d-inline flex-shrink-0 js-add-to-cart-form">
-                                        @csrf
-                                        <input type="hidden" name="MaSP" value="{{ $product->MaSP }}">
-                                        <input type="hidden" name="quantity" value="1">
-                                        <button type="submit" class="btn text-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background: #10b981;" {{ $product->stock_quantity == 0 ? 'disabled' : '' }} title="{{ __('messages.add_to_cart') }}">
-                                            <i class="bi bi-cart-plus fs-5"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
+                        <x-product-card
+                            :product="$product"
+                            card-class="home-product-card border-0"
+                            media-class="home-product-media"
+                            body-class="home-product-body"
+                            :show-detail-action="true"
+                            :show-compare-price="true"
+                            detail-label="{{ __('messages.home_view_details') }}"
+                        >
+                            <x-slot:badges>
+                                @if($product->views_count > 0)
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1 rounded-pill">
+                                        <i class="bi bi-eye-fill me-1"></i>{{ __('messages.home_views_count', ['count' => number_format($product->views_count)]) }}
+                                    </span>
+                                @endif
+                                @if($product->stock_quantity == 0)
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
+                                        <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
+                                    </span>
+                                @elseif($product->stock_quantity <= $product->reorder_point)
+                                    <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>{{ __('messages.low_stock') }}
+                                    </span>
+                                @endif
+                            </x-slot:badges>
+                        </x-product-card>
                     </div>
                 @empty
                     <div class="col-12">
@@ -330,8 +315,8 @@
             </div>
             <div class="row g-3 g-md-4">
                 <div class="col-md-4">
-                    <div class="glass-card text-center h-100 p-4 p-md-5 rounded-4 border-0 hover-lift">
-                        <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 72px; height: 72px; background: rgba(16,185,129,0.15); color: #059669;">
+                    <div class="home-reason-card h-100 p-4 p-md-5 rounded-4 border-0 hover-lift">
+                        <div class="home-reason-icon mb-3">
                             <i class="bi bi-shield-check fs-2"></i>
                         </div>
                         <h3 class="h5 fw-bold mb-2 text-dark">{{ __('messages.home_reason1_title') }}</h3>
@@ -339,8 +324,8 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="glass-card text-center h-100 p-4 p-md-5 rounded-4 border-0 hover-lift">
-                        <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 72px; height: 72px; background: rgba(16,185,129,0.12); color: #059669;">
+                    <div class="home-reason-card h-100 p-4 p-md-5 rounded-4 border-0 hover-lift">
+                        <div class="home-reason-icon mb-3">
                             <i class="bi bi-truck fs-2"></i>
                         </div>
                         <h3 class="h5 fw-bold mb-2 text-dark">{{ __('messages.home_reason2_title') }}</h3>
@@ -348,8 +333,8 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="glass-card text-center h-100 p-4 p-md-5 rounded-4 border-0 hover-lift">
-                        <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 72px; height: 72px; background: rgba(16,185,129,0.1); color: #059669;">
+                    <div class="home-reason-card h-100 p-4 p-md-5 rounded-4 border-0 hover-lift">
+                        <div class="home-reason-icon mb-3">
                             <i class="bi bi-heart-pulse fs-2"></i>
                         </div>
                         <h3 class="h5 fw-bold mb-2 text-dark">{{ __('messages.home_reason3_title') }}</h3>
@@ -368,7 +353,7 @@
                 <span class="text-success fw-bold text-uppercase small">{{ __('messages.home_few_steps') }}</span>
                 <h2 class="h3 fw-bold text-dark mt-1">{{ __('messages.home_simple_shopping') }}</h2>
             </div>
-            <div class="row g-3 g-md-4">
+            <div class="row g-3 g-md-4 home-process-grid">
                 <div class="col-md-4">
                     <div class="home-glass-panel home-step-card h-100 rounded-4">
                         <span class="home-step-num">1</span>
@@ -437,11 +422,16 @@
                 <div class="position-absolute top-0 end-0 rounded-circle bg-white opacity-25" style="width: 200px; height: 200px; transform: translate(35%, -35%);" aria-hidden="true"></div>
                 <div class="position-absolute bottom-0 start-0 rounded-circle bg-white opacity-20" style="width: 140px; height: 140px; transform: translate(-30%, 30%);" aria-hidden="true"></div>
                 <div class="row align-items-center position-relative gy-4">
-                    <div class="col-lg-8 text-center text-lg-start">
+                    <div class="col-lg-8 text-center text-lg-start home-cta-content">
                         <h2 class="home-cta-heading fw-bold text-white mb-2" style="text-shadow: 0 1px 2px rgba(0,0,0,0.08);">{{ __('messages.home_cta_heading') }}</h2>
                         <p class="text-white mb-0 opacity-90 pe-lg-4">
                             {{ __('messages.home_cta_desc') }}
                         </p>
+                        <div class="home-cta-points">
+                            <span><i class="bi bi-shield-check"></i>{{ __('messages.home_genuine_products') }}</span>
+                            <span><i class="bi bi-truck"></i>{{ __('messages.home_fast_delivery') }}</span>
+                            <span><i class="bi bi-headset"></i>{{ __('messages.home_support_247') }}</span>
+                        </div>
                     </div>
                     <div class="col-lg-4 text-center text-lg-end">
                         @guest

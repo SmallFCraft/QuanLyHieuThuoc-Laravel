@@ -41,10 +41,7 @@
                             <button type="button" 
                                     x-data 
                                     @click="$dispatch('open-chatbot')" 
-                                    class="btn bg-white text-emerald-600 btn-lg rounded-pill fw-bold px-4 py-3 shadow-sm"
-                                    style="transition: transform 0.3s;"
-                                    onmouseover="this.style.transform='translateY(-3px)'"
-                                    onmouseout="this.style.transform='translateY(0)'">
+                                    class="btn bg-white text-emerald-600 btn-lg rounded-pill fw-bold px-4 py-3 shadow-sm contact-ai-button">
                                 {{ __('messages.open_ai_assistant') }}
                             </button>
                         </div>

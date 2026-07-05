@@ -43,16 +43,22 @@
                     
                     <!-- Quick Stats -->
                     <div class="row g-2 mt-3 pt-3 border-top">
-                        <div class="col-6">
+                        <div class="col-4">
                             <div class="text-center">
                                 <h6 class="fw-bold text-emerald-600 mb-0">{{ auth()->user()->orders()->count() }}</h6>
                                 <small class="text-gray-500">{{ __('messages.profile.orders_count') }}</small>
                             </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-4">
                             <div class="text-center">
                                 <h6 class="fw-bold text-emerald-600 mb-0">{{ auth()->user()->orders()->where('status', 'Completed')->count() }}</h6>
                                 <small class="text-gray-500">{{ __('messages.profile.orders_completed') }}</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <h6 class="fw-bold text-rose-600 mb-0" data-favorites-count>{{ $favoriteItems->total() }}</h6>
+                                <small class="text-gray-500">{{ __('messages.profile.favorites_count') }}</small>
                             </div>
                         </div>
                     </div>
@@ -66,6 +72,9 @@
                         </a>
                         <a href="#orders" class="nav-link profile-nav-link rounded-3 px-3 py-2" data-bs-toggle="pill">
                             <i class="bi bi-bag me-2"></i>{{ __('messages.profile.nav_orders') }}
+                        </a>
+                        <a href="#favorites" class="nav-link profile-nav-link rounded-3 px-3 py-2" data-bs-toggle="pill">
+                            <i class="bi bi-heart me-2"></i>{{ __('messages.profile.nav_favorites') }}
                         </a>
                         <a href="#security" class="nav-link profile-nav-link rounded-3 px-3 py-2" data-bs-toggle="pill">
                             <i class="bi bi-shield-lock me-2"></i>{{ __('messages.profile.nav_security') }}
@@ -89,6 +98,12 @@
                             <a class="nav-link rounded-3 py-2" data-bs-toggle="pill" href="#orders">
                                 <i class="bi bi-bag d-block fs-5"></i>
                                 <small class="d-none d-sm-inline">{{ __('messages.profile.mobile_orders') }}</small>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link rounded-3 py-2" data-bs-toggle="pill" href="#favorites">
+                                <i class="bi bi-heart d-block fs-5"></i>
+                                <small class="d-none d-sm-inline">{{ __('messages.profile.mobile_favorites') }}</small>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -118,6 +133,11 @@
                     <!-- Orders Tab -->
                     <div class="tab-pane fade" id="orders">
                         @include('profile.partials.order-history')
+                    </div>
+
+                    <!-- Favorites Tab -->
+                    <div class="tab-pane fade" id="favorites">
+                        @include('profile.partials.favorites')
                     </div>
 
                     <!-- Security Tab -->

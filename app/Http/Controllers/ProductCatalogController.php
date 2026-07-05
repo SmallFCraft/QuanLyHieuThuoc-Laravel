@@ -53,7 +53,16 @@ class ProductCatalogController extends Controller
         // Increment views count
         $product->increment('views_count');
 
-        return view('products.show', compact('product'));
+        $relatedProducts = Product::with('category')
+            ->notExpired()
+            ->where('stock_quantity', '>', 0)
+            ->where('MaDM', $product->MaDM)
+            ->where('MaSP', '!=', $product->MaSP)
+            ->orderByDesc('views_count')
+            ->limit(4)
+            ->get();
+
+        return view('products.show', compact('product', 'relatedProducts'));
     }
 
     /**

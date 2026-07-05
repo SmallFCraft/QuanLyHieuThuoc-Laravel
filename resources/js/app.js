@@ -1,5 +1,6 @@
 import './bootstrap';
 import './cart-add';
+import './favorites';
 import './search-autocomplete';
 
 import Alpine from 'alpinejs';
@@ -18,6 +19,7 @@ window.SweetAlert = SweetAlert;
 window.DataTables = DataTables;
 window.Charts = Charts;
 
-// Import Bootstrap JS
-import 'bootstrap';
+// Import Bootstrap JS and expose it for legacy inline Blade handlers.
+import * as bootstrap from 'bootstrap';
 
+window.bootstrap = bootstrap;

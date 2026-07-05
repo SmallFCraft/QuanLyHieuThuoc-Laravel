@@ -1,6 +1,8 @@
 @import 'bootstrap/dist/css/bootstrap.min.css';
-/* Import Glassmorphism Design System */
-@import './glassmorphism.css';
+/* Import global theme and shared components */
+@import './theme.css';
+/* Import public storefront page styles */
+@import './storefront.css';
 /* Import Search Autocomplete Styles */
 @import './search-autocomplete.css';
 

@@ -2,577 +2,510 @@
 
 @section('title', $product->name . ' - Nhà Thuốc Sinh Thái')
 
-@section('content')
-<!-- Breadcrumb -->
-<section class="py-3" style="background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 50%, #f8fafc 100%);">
-    <div class="container">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-emerald-600 text-decoration-none hover:text-emerald-700">{{ __('messages.home') }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('products.index') }}" class="text-emerald-600 text-decoration-none hover:text-emerald-700">{{ __('messages.products') }}</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ $product->name }}</li>
-            </ol>
-        </nav>
-    </div>
-</section>
+@php
+    $discountPrice = $product->price_vnd * 1.1;
+    $isLowStock = $product->stock_quantity > 0 && $product->stock_quantity <= $product->reorder_point;
+    $hasIngredients = filled($product->ingredients);
+    $hasUsage = filled($product->usage);
+    $careScore = $product->stock_quantity > 0 ? ($isLowStock ? 82 : 96) : 0;
+@endphp
 
-<section class="py-4 py-lg-5">
-    <div class="container">
-        <div class="row g-4 g-lg-5">
-            <!-- Product Image Gallery -->
-            <div class="col-lg-5">
-                <div class="position-sticky" style="top: 100px;">
-                    <!-- Main Image -->
-                    <div class="glass-card rounded-4 p-3 p-md-4 border-0 mb-3">
-                        <div class="product-image-main bg-white rounded-3 overflow-hidden position-relative" style="aspect-ratio: 1/1;" data-product-image-container>
-                            <x-product-image
-                                :src="$product->image_url"
-                                :alt="$product->name"
-                                class="w-100 h-100 object-fit-contain p-2 product-main-img"
-                                id="mainProductImage"
-                                icon-size="4rem"
-                                loading="eager"
-                            />
-                            @if($product->image_url)
-                                <button class="btn btn-light btn-sm rounded-circle position-absolute top-0 end-0 m-3 shadow-sm" 
-                                        onclick="toggleImageZoom()" 
-                                        title="{{ __('messages.zoom_image') }}"
-                                        data-product-image-action>
-                                    <i class="bi bi-zoom-in"></i>
-                                </button>
+@section('content')
+<div class="product-detail-page" data-product-id="{{ $product->MaSP }}">
+    <section class="product-detail-hero product-detail-hero--rich">
+        <div class="container position-relative">
+            <nav aria-label="breadcrumb" class="product-detail-breadcrumb">
+                <ol class="breadcrumb mb-0 small">
+                    <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('messages.home') }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('products.index') }}">{{ __('messages.products') }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ $product->name }}</li>
+                </ol>
+            </nav>
+
+            <div class="row g-4 g-xl-5 align-items-start product-detail-main">
+                <div class="col-lg-5">
+                    <div class="product-media-stack">
+                        <div class="product-media-card">
+                            <div class="product-image-main" data-product-image-container>
+                                <x-product-image
+                                    :src="$product->image_url"
+                                    :alt="$product->name"
+                                    class="w-100 h-100 object-fit-cover product-main-img"
+                                    id="mainProductImage"
+                                    icon-size="4rem"
+                                    loading="eager"
+                                />
+                                @auth
+                                    <button class="product-favorite-media-button" type="button"
+                                            data-favorite-toggle
+                                            data-product-id="{{ $product->MaSP }}"
+                                            data-favorite-label="{{ __('messages.save_favorite') }}"
+                                            data-saved-label="{{ __('messages.saved_favorite') }}"
+                                            aria-pressed="false"
+                                            aria-label="{{ __('messages.save_favorite') }}"
+                                            title="{{ __('messages.save_favorite') }}">
+                                        <i class="bi bi-heart"></i>
+                                    </button>
+                                @endauth
+                                @if($product->image_url)
+                                    <button class="product-zoom-button" type="button"
+                                            onclick="toggleImageZoom()"
+                                            title="{{ __('messages.zoom_image') }}"
+                                            aria-label="{{ __('messages.zoom_image') }}"
+                                            data-product-image-action>
+                                        <i class="bi bi-zoom-in"></i>
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="product-mini-metrics">
+                            <div>
+                                <i class="bi bi-eye"></i>
+                                <span>{{ number_format($product->views_count, 0, ',', '.') }}</span>
+                                <small>lượt xem</small>
+                            </div>
+                            <div>
+                                <i class="bi bi-box-seam"></i>
+                                <span>{{ $product->stock_quantity }}</span>
+                                <small>{{ __('messages.product_stock') }}</small>
+                            </div>
+                            <div>
+                                <i class="bi bi-calendar2-check"></i>
+                                <span>{{ $product->formatted_expiration_date }}</span>
+                                <small>{{ __('messages.product_expiration') }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="product-summary-panel">
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="product-status-chip product-status-chip--trust">
+                                <i class="bi bi-patch-check-fill"></i>{{ __('messages.product_detail_badge') }}
+                            </span>
+                            <a href="{{ route('products.category', $product->MaDM) }}" class="product-status-chip product-status-chip--link">
+                                <i class="bi bi-bookmark"></i>{{ $product->category->name }}
+                            </a>
+                            @if($product->stock_quantity > 0)
+                                <span class="product-status-chip {{ $isLowStock ? 'product-status-chip--warning' : 'product-status-chip--success' }}">
+                                    <i class="bi {{ $isLowStock ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill' }}"></i>
+                                    {{ $isLowStock ? __('messages.low_stock') : __('messages.in_stock') }}
+                                </span>
+                            @else
+                                <span class="product-status-chip product-status-chip--danger">
+                                    <i class="bi bi-x-circle-fill"></i>{{ __('messages.out_of_stock') }}
+                                </span>
                             @endif
                         </div>
-                    </div>
-                    
-                    <!-- Status Badges -->
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        @if($product->stock_quantity > 0)
-                            <span class="badge-glass-success rounded-pill px-3 py-2 d-inline-flex align-items-center">
-                                <i class="bi bi-check-circle me-1" style="font-size: 0.9rem;"></i>
-                                <span class="fw-medium">{{ __('messages.in_stock') }}</span>
-                            </span>
-                        @else
-                            <span class="badge-glass-danger rounded-pill px-3 py-2 d-inline-flex align-items-center">
-                                <i class="bi bi-x-circle me-1" style="font-size: 0.9rem;"></i>
-                                <span class="fw-medium">{{ __('messages.out_of_stock') }}</span>
-                            </span>
-                        @endif
-                        <span class="badge-glass-info rounded-pill px-3 py-2 d-inline-flex align-items-center">
-                            <i class="bi bi-tag me-1" style="font-size: 0.9rem;"></i>
-                            <span class="fw-medium">{{ $product->category->name }}</span>
-                        </span>
-                    </div>
 
-                    <!-- Quick Info Cards - Desktop Only -->
-                    <div class="row g-2 d-none d-lg-flex">
-                        <div class="col-6">
-                            <div class="glass-card-sm rounded-3 text-center p-3 h-100">
-                                <i class="bi bi-shield-check text-emerald-600 d-block mb-2" style="font-size: 1.5rem;"></i>
-                                <small class="text-gray-700 fw-medium d-block">{{ __('messages.authentic') }}</small>
-                                <small class="text-gray-500" style="font-size: 0.75rem;">100% authentic</small>
+                        <h1 class="product-detail-title">{{ $product->name }}</h1>
+                        <p class="product-detail-subtitle">{{ __('messages.product_detail_subtitle') }}</p>
+
+                        <div class="product-price-card">
+                            <div>
+                                <span class="product-price-label">{{ __('messages.product_price') }}</span>
+                                <div class="product-price-row">
+                                    <strong>{{ $product->formatted_price }}</strong>
+                                    <span>{{ format_currency_vi($discountPrice) }}</span>
+                                    <em>-10%</em>
+                                </div>
+                                <p><i class="bi bi-info-circle"></i>{{ __('messages.vat_included') }}</p>
+                            </div>
+                            <div class="product-score-ring" style="--score: {{ $careScore }};">
+                                <span>{{ $careScore }}%</span>
+                                <small>{{ __('messages.care_score') }}</small>
                             </div>
                         </div>
-                        <div class="col-6">
-                            <div class="glass-card-sm rounded-3 text-center p-3 h-100">
-                                <i class="bi bi-truck text-blue-600 d-block mb-2" style="font-size: 1.5rem;"></i>
-                                <small class="text-gray-700 fw-medium d-block">{{ __('messages.fast_delivery') }}</small>
-                                <small class="text-gray-500" style="font-size: 0.75rem;">{{ __('messages.fast_delivery_time') }}</small>
+
+                        <div class="product-insight-grid">
+                            <div class="product-insight-card">
+                                <i class="bi bi-shield-check"></i>
+                                <div>
+                                    <strong>{{ __('messages.authentic') }}</strong>
+                                    <span>100% authentic</span>
+                                </div>
+                            </div>
+                            <div class="product-insight-card">
+                                <i class="bi bi-truck"></i>
+                                <div>
+                                    <strong>{{ __('messages.fast_delivery') }}</strong>
+                                    <span>{{ __('messages.fast_delivery_time') }}</span>
+                                </div>
+                            </div>
+                            <div class="product-insight-card">
+                                <i class="bi bi-calendar-heart"></i>
+                                <div>
+                                    <strong>{{ __('messages.expiry_priority') }}</strong>
+                                    <span>{{ __('messages.expiry_priority_desc') }}</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-6">
-                            <div class="glass-card-sm rounded-3 text-center p-3 h-100">
-                                <i class="bi bi-arrow-repeat text-warning d-block mb-2" style="font-size: 1.5rem;"></i>
-                                <small class="text-gray-700 fw-medium d-block">{{ __('messages.return_exchange') }}</small>
-                                <small class="text-gray-500" style="font-size: 0.75rem;">{{ __('messages.return_time') }}</small>
+
+                        @if($product->stock_quantity > 0)
+                            <form action="{{ route('cart.add') }}" method="POST" class="product-buy-panel js-add-to-cart-form" id="buy-panel">
+                                @csrf
+                                <input type="hidden" name="MaSP" value="{{ $product->MaSP }}">
+
+                                <div class="product-quantity-row">
+                                    <div>
+                                        <label for="qty-input">{{ __('messages.cart_quantity') }}</label>
+                                        <span>{!! __('messages.products_left', ['count' => '<strong>' . $product->stock_quantity . '</strong>']) !!}</span>
+                                    </div>
+                                    <div class="product-qty-control">
+                                        <button type="button" onclick="changeQty(-1)" aria-label="Giảm số lượng">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <input type="number" name="quantity" id="qty-input" value="1" min="1" max="{{ $product->stock_quantity }}" data-unit-price="{{ $product->price_vnd }}">
+                                        <button type="button" onclick="changeQty(1)" aria-label="Tăng số lượng">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="product-total-row">
+                                    <span>{{ __('messages.estimated_total') }}</span>
+                                    <strong id="estimated-total">{{ $product->formatted_price }}</strong>
+                                </div>
+
+                                <div class="product-action-grid">
+                                    <button type="submit" class="product-primary-action">
+                                        <i class="bi bi-cart-plus"></i>{{ __('messages.add_to_cart') }}
+                                    </button>
+                                    <button type="button" class="product-icon-action" onclick="shareProduct()" title="{{ __('messages.share_product') }}">
+                                        <i class="bi bi-share"></i>
+                                        <span>{{ __('messages.share_product') }}</span>
+                                    </button>
+                                    <button type="button" class="product-icon-action" onclick="openProductAssistant()" title="{{ __('messages.advisor_cta') }}">
+                                        <i class="bi bi-headset"></i>
+                                        <span>{{ __('messages.advisor_cta') }}</span>
+                                    </button>
+                                </div>
+                            </form>
+                        @else
+                            <div class="product-out-panel">
+                                <i class="bi bi-box-seam"></i>
+                                <div>
+                                    <h2>{{ __('messages.temporary_out_of_stock') }}</h2>
+                                    <p>{{ __('messages.contact_to_preorder') }}</p>
+                                </div>
+                                <button type="button" onclick="openProductAssistant()">
+                                    <i class="bi bi-bell"></i>{{ __('messages.notify_when_available') }}
+                                </button>
                             </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="glass-card-sm rounded-3 text-center p-3 h-100">
-                                <i class="bi bi-headset text-purple-600 d-block mb-2" style="font-size: 1.5rem;"></i>
-                                <small class="text-gray-700 fw-medium d-block">{{ __('messages.support') }}</small>
-                                <small class="text-gray-500" style="font-size: 0.75rem;">{{ __('messages.support_time') }}</small>
-                            </div>
-                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
+        </div>
+    </section>
 
-            <!-- Product Details -->
-            <div class="col-lg-7">
-                <h1 class="fw-bold text-gray-900 mb-3" style="font-size: clamp(1.5rem, 4vw, 2.5rem); line-height: 1.2;">
-                    {{ $product->name }}
-                </h1>
-                
-                <!-- Views Count -->
-                <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-                    <span class="text-gray-600 small">
-                        <i class="bi bi-eye me-1"></i>{{ number_format($product->views_count, 0, ',', '.') }} lượt xem
-                    </span>
-                </div>
-                
-                <!-- Price -->
-                <div class="glass-card rounded-4 p-3 p-md-4 border-0 mb-4">
-                    <div class="d-flex align-items-center gap-3 flex-wrap">
-                        <span class="fw-bold text-emerald-700" style="font-size: clamp(1.75rem, 5vw, 2.5rem);">
-                            {{ $product->formatted_price }}
-                        </span>
-                        <span class="text-muted text-decoration-line-through fs-5">
-                            {{ number_format($product->price_vnd * 1.1, 0, ',', '.') }} ₫
-                        </span>
-                        <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2 fw-medium">
-                            <i class="bi bi-tag-fill me-1"></i>-10%
-                        </span>
-                    </div>
-                    <p class="text-gray-600 small mb-0 mt-2">
-                        <i class="bi bi-info-circle me-1"></i>{{ __('messages.vat_included') }}
-                    </p
-                </div>
-
-                <!-- Quick Info - Mobile Only -->
-                <div class="row g-2 mb-4 d-lg-none">
-                    <div class="col-6">
-                        <div class="glass-card-sm rounded-3 text-center p-2">
-                            <i class="bi bi-shield-check text-emerald-600 d-block mb-1" style="font-size: 1.25rem;"></i>
-                            <small class="text-gray-700 fw-medium d-block" style="font-size: 0.8rem;">{{ __('messages.authentic') }}</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="glass-card-sm rounded-3 text-center p-2">
-                            <i class="bi bi-truck text-blue-600 d-block mb-1" style="font-size: 1.25rem;"></i>
-                            <small class="text-gray-700 fw-medium d-block" style="font-size: 0.8rem;">{{ __('messages.fast_delivery') }}</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="glass-card-sm rounded-3 text-center p-2">
-                            <i class="bi bi-arrow-repeat text-warning d-block mb-1" style="font-size: 1.25rem;"></i>
-                            <small class="text-gray-700 fw-medium d-block" style="font-size: 0.8rem;">{{ __('messages.return_exchange') }} 30 ngày</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="glass-card-sm rounded-3 text-center p-2">
-                            <i class="bi bi-headset text-purple-600 d-block mb-1" style="font-size: 1.25rem;"></i>
-                            <small class="text-gray-700 fw-medium d-block" style="font-size: 0.8rem;">{{ __('messages.support') }} 24/7</small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Product Specifications -->
-                <div class="glass-card rounded-4 p-3 p-md-4 border-0 mb-4">
-                    <h6 class="fw-bold text-gray-800 mb-3">
-                        <i class="bi bi-info-circle-fill text-emerald-600 me-2"></i>{{ __('messages.product_info_details') }}
-                    </h6>
-                    <div class="row g-3">
-                        <div class="col-6 col-md-4">
-                            <div class="d-flex align-items-start">
-                                <i class="bi bi-calendar-event text-emerald-600 me-2 mt-1"></i>
-                                <div>
-                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">Hạn sử dụng</small>
-                                    <span class="fw-medium text-gray-800 small">{{ $product->formatted_expiration_date }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <div class="d-flex align-items-start">
-                                <i class="bi bi-box text-blue-600 me-2 mt-1"></i>
-                                <div>
-                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">{{ __('messages.product_stock') }}</small>
-                                    <span class="fw-medium text-gray-800 small">{{ __('messages.products_left', ['count' => $product->stock_quantity]) }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <div class="d-flex align-items-start">
-                                <i class="bi bi-bookmark text-purple-600 me-2 mt-1"></i>
-                                <div>
-                                    <small class="text-gray-500 d-block" style="font-size: 0.75rem;">{{ __('messages.product_category') }}</small>
-                                    <span class="fw-medium text-gray-800 small">{{ $product->category->name }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Add to Cart -->
-                @if($product->stock_quantity > 0)
-                    <form action="{{ route('cart.add') }}" method="POST" class="glass-card rounded-4 p-3 p-md-4 border-0 mb-4 js-add-to-cart-form">
-                        @csrf
-                        <input type="hidden" name="MaSP" value="{{ $product->MaSP }}">
-                        
-                        <div class="mb-3">
-                            <label class="fw-medium text-gray-700 mb-2 d-block">{{ __('messages.cart_quantity') }}:</label>
-                            <div class="d-flex align-items-center gap-3 flex-wrap">
-                                <div class="input-group" style="max-width: 150px;">
-                                    <button type="button" class="btn btn-outline-emerald-600 rounded-start-pill px-3" onclick="changeQty(-1)">
-                                        <i class="bi bi-dash"></i>
+    <section class="product-detail-shell py-4 py-lg-5">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="product-info-card d-none d-md-block">
+                        <ul class="nav product-info-tabs" id="productTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                                    <i class="bi bi-grid"></i>{{ __('messages.product_overview') }}
+                                </button>
+                            </li>
+                            @if($hasIngredients)
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="ingredients-tab" data-bs-toggle="tab" data-bs-target="#ingredients" type="button" role="tab">
+                                        <i class="bi bi-list-check"></i>{{ __('messages.product_ingredients') }}
                                     </button>
-                                    <input type="number" name="quantity" id="qty-input" value="1" min="1" max="{{ $product->stock_quantity }}"
-                                           class="form-control text-center border-emerald-200 shadow-none fw-medium">
-                                    <button type="button" class="btn btn-outline-emerald-600 rounded-end-pill px-3" onclick="changeQty(1)">
-                                        <i class="bi bi-plus"></i>
+                                </li>
+                            @endif
+                            @if($hasUsage)
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="usage-tab" data-bs-toggle="tab" data-bs-target="#usage" type="button" role="tab">
+                                        <i class="bi bi-capsule"></i>{{ __('messages.product_usage') }}
                                     </button>
+                                </li>
+                            @endif
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="safety-tab" data-bs-toggle="tab" data-bs-target="#safety" type="button" role="tab">
+                                    <i class="bi bi-heart-pulse"></i>{{ __('messages.safety_note') }}
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content product-info-content" id="productTabContent">
+                            <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                                <div class="product-spec-grid">
+                                    <div>
+                                        <span>{{ __('messages.product_id') }}</span>
+                                        <strong>#{{ $product->MaSP }}</strong>
+                                    </div>
+                                    <div>
+                                        <span>{{ __('messages.product_category') }}</span>
+                                        <strong>{{ $product->category->name }}</strong>
+                                    </div>
+                                    <div>
+                                        <span>{{ __('messages.product_stock') }}</span>
+                                        <strong>{{ __('messages.products_left', ['count' => $product->stock_quantity]) }}</strong>
+                                    </div>
+                                    <div>
+                                        <span>{{ __('messages.product_expiration') }}</span>
+                                        <strong>{{ $product->formatted_expiration_date }}</strong>
+                                    </div>
+                                    @if($product->batch_number)
+                                        <div>
+                                            <span>{{ __('messages.product_batch') }}</span>
+                                            <strong>{{ $product->batch_number }}</strong>
+                                        </div>
+                                    @endif
                                 </div>
-                                <small class="text-gray-600">
-                                    <i class="bi bi-box-seam me-1"></i>{!! __('messages.products_left', ['count' => '<span class="fw-medium text-emerald-600">' . $product->stock_quantity . '</span>']) !!}
-                                </small>
+                            </div>
+
+                            @if($hasIngredients)
+                                <div class="tab-pane fade" id="ingredients" role="tabpanel">
+                                    <div class="product-long-text">{{ $product->ingredients }}</div>
+                                </div>
+                            @endif
+
+                            @if($hasUsage)
+                                <div class="tab-pane fade" id="usage" role="tabpanel">
+                                    <div class="product-long-text">{{ $product->usage }}</div>
+                                </div>
+                            @endif
+
+                            <div class="tab-pane fade" id="safety" role="tabpanel">
+                                <div class="product-safety-note">
+                                    <i class="bi bi-info-circle"></i>
+                                    <p>{{ __('messages.safety_note_desc') }}</p>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="d-flex gap-2 gap-md-3">
-                            <button type="submit" class="btn btn-lg flex-grow-1 text-white fw-bold rounded-pill shadow-sm hover-lift" 
-                                    style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                                <i class="bi bi-cart-plus me-2"></i>
-                                <span class="d-none d-sm-inline">{{ __('messages.add_to_cart') }}</span>
-                                <span class="d-inline d-sm-none">{{ mb_substr(__('messages.add_to_cart'), 0, 13) }}...</span>
-                            </button>
-                            <button type="button" class="btn btn-lg btn-outline-emerald-600 rounded-pill px-3 px-md-4" title="Yêu thích">
-                                <i class="bi bi-heart"></i>
-                            </button>
+                    </div>
+
+                    <div class="product-mobile-accordion d-md-none">
+                        <details open>
+                            <summary>{{ __('messages.product_overview') }}</summary>
+                            <div class="product-spec-grid">
+                                <div><span>{{ __('messages.product_id') }}</span><strong>#{{ $product->MaSP }}</strong></div>
+                                <div><span>{{ __('messages.product_stock') }}</span><strong>{{ __('messages.products_left', ['count' => $product->stock_quantity]) }}</strong></div>
+                                <div><span>{{ __('messages.product_expiration') }}</span><strong>{{ $product->formatted_expiration_date }}</strong></div>
+                            </div>
+                        </details>
+                        <details>
+                            <summary>{{ __('messages.product_ingredients') }}</summary>
+                            <div class="product-long-text">{{ $product->ingredients ?: __('messages.not_available') }}</div>
+                        </details>
+                        <details>
+                            <summary>{{ __('messages.product_usage') }}</summary>
+                            <div class="product-long-text">{{ $product->usage ?: __('messages.not_available') }}</div>
+                        </details>
+                        <details>
+                            <summary>{{ __('messages.safety_note') }}</summary>
+                            <div class="product-safety-note">
+                                <i class="bi bi-info-circle"></i>
+                                <p>{{ __('messages.safety_note_desc') }}</p>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <aside class="product-service-panel">
+                        <h2>{{ __('messages.service_commitments') }}</h2>
+                        <div class="product-service-list">
+                            <div>
+                                <i class="bi bi-truck"></i>
+                                <div>
+                                    <strong>{{ __('messages.shipping_info') }}</strong>
+                                    <span>{{ __('messages.delivery_time_estimate') }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <i class="bi bi-arrow-repeat"></i>
+                                <div>
+                                    <strong>{{ __('messages.return_policy_title') }}</strong>
+                                    <span>{{ __('messages.return_within_30_days') }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <i class="bi bi-shield-check"></i>
+                                <div>
+                                    <strong>{{ __('messages.authentic') }}</strong>
+                                    <span>{{ __('messages.product_intact') }}</span>
+                                </div>
+                            </div>
                         </div>
-                    </form>
+                    </aside>
+                </div>
+            </div>
+
+            <section class="product-related-section">
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3">
+                    <div>
+                        <span>{{ __('messages.related_products_desc') }}</span>
+                        <h2>{{ __('messages.related_products') }}</h2>
+                    </div>
+                    <a href="{{ route('products.category', $product->MaDM) }}" class="product-text-link">
+                        {{ __('messages.home_view_all') }} <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+
+                @if(($relatedProducts ?? collect())->isNotEmpty())
+                    <div class="row g-3 g-md-4">
+                        @foreach($relatedProducts as $related)
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <x-product-card
+                                    :product="$related"
+                                    icon-size="3rem"
+                                />
+                            </div>
+                        @endforeach
+                    </div>
                 @else
-                    <div class="glass-card rounded-4 p-4 border-0 mb-4 text-center">
-                        <i class="bi bi-box-seam text-danger d-block mb-3" style="font-size: 3rem;"></i>
-                        <h6 class="fw-bold text-danger mb-2">{{ __('messages.temporary_out_of_stock') }}</h6>
-                        <p class="text-gray-600 small mb-3">{{ __('messages.contact_to_preorder') }}</p>
-                        <button class="btn btn-outline-emerald-600 rounded-pill px-4">
-                            <i class="bi bi-bell me-2"></i>{{ __('messages.notify_when_available') }}
-                        </button>
+                    <div class="product-empty-related">
+                        <i class="bi bi-box2"></i>{{ __('messages.no_related_products') }}
                     </div>
                 @endif
+            </section>
 
-                <!-- Product Info Tabs -->
-                <div class="glass-card rounded-4 border-0 p-0 overflow-hidden">
-                    <ul class="nav nav-tabs border-0 px-3 px-md-4 pt-3 gap-1" id="productTab" role="tablist">
-                        @if($product->ingredients)
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active border-0 fw-medium text-gray-600 px-3 pb-3 rounded-top" 
-                                    id="ingredients-tab" data-bs-toggle="tab" data-bs-target="#ingredients" type="button" role="tab">
-                                <i class="bi bi-list-check me-1"></i>
-                                <span class="d-none d-sm-inline">{{ __('messages.product_ingredients') }}</span>
-                            </button>
-                        </li>
-                        @endif
-                        @if($product->usage)
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link {{ !$product->ingredients ? 'active' : '' }} border-0 fw-medium text-gray-600 px-3 pb-3 rounded-top" 
-                                    id="usage-tab" data-bs-toggle="tab" data-bs-target="#usage" type="button" role="tab">
-                                <i class="bi bi-capsule me-1"></i>
-                                <span class="d-none d-sm-inline">{{ __('messages.product_usage') }}</span>
-                            </button>
-                        </li>
-                        @endif
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link {{ !$product->ingredients && !$product->usage ? 'active' : '' }} border-0 fw-medium text-gray-600 px-3 pb-3 rounded-top" 
-                                    id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab">
-                                <i class="bi bi-info-circle me-1"></i>
-                                <span class="d-none d-sm-inline">{{ __('messages.tab_details') }}</span>
-                            </button>
-                        </li>
-                    </ul>
-                    <div class="tab-content p-3 p-md-4" id="productTabContent">
-                        @if($product->ingredients)
-                        <div class="tab-pane fade show active" id="ingredients" role="tabpanel">
-                            <p class="text-gray-700 lh-lg mb-0">{{ $product->ingredients }}</p>
-                        </div>
-                        @endif
-                        @if($product->usage)
-                        <div class="tab-pane fade {{ !$product->ingredients ? 'show active' : '' }}" id="usage" role="tabpanel">
-                            <p class="text-gray-700 lh-lg mb-0">{{ $product->usage }}</p>
-                        </div>
-                        @endif
-                        <div class="tab-pane fade {{ !$product->ingredients && !$product->usage ? 'show active' : '' }}" id="details" role="tabpanel">
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <div class="d-flex align-items-start p-3 rounded-3" style="background: rgba(16,185,129,0.05);">
-                                        <i class="bi bi-calendar-event text-emerald-600 me-3 mt-1"></i>
-                                        <div class="flex-grow-1">
-                                            <small class="text-gray-500 d-block mb-1">{{ __('messages.product_expiration') }}</small>
-                                            <span class="fw-medium text-gray-800">{{ $product->formatted_expiration_date }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="d-flex align-items-start p-3 rounded-3" style="background: rgba(59,130,246,0.05);">
-                                        <i class="bi bi-box text-blue-600 me-3 mt-1"></i>
-                                        <div class="flex-grow-1">
-                                            <small class="text-gray-500 d-block mb-1">{{ __('messages.product_stock') }}</small>
-                                            <span class="fw-medium text-gray-800">{{ __('messages.products_left', ['count' => $product->stock_quantity]) }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="d-flex align-items-start p-3 rounded-3" style="background: rgba(139,92,246,0.05);">
-                                        <i class="bi bi-bookmark text-purple-600 me-3 mt-1"></i>
-                                        <div class="flex-grow-1">
-                                            <small class="text-gray-500 d-block mb-1">{{ __('messages.product_category') }}</small>
-                                            <span class="fw-medium text-gray-800">{{ $product->category->name }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="mt-4 pt-2">
+                <a href="{{ route('products.index') }}" class="product-back-link">
+                    <i class="bi bi-arrow-left"></i>{{ __('messages.back_to_products') }}
+                </a>
             </div>
         </div>
+    </section>
 
-        <!-- Additional Information Section -->
-        <div class="row g-4 mt-4">
-            <!-- Delivery Info -->
-            <div class="col-md-6">
-                <div class="glass-card rounded-4 p-4 border-0 h-100">
-                    <h6 class="fw-bold text-gray-800 mb-3">
-                        <i class="bi bi-truck text-emerald-600 me-2"></i>{{ __('messages.shipping_info') }}
-                    </h6>
-                    <div class="mb-0">
-                        <div class="d-flex align-items-start mb-2">
-                            <i class="bi bi-check-circle-fill text-emerald-600 me-2 mt-1"></i>
-                            <small class="text-gray-700">{{ __('messages.free_shipping_over') }}</small>
-                        </div>
-                        <div class="d-flex align-items-start mb-2">
-                            <i class="bi bi-check-circle-fill text-emerald-600 me-2 mt-1"></i>
-                            <small class="text-gray-700">{{ __('messages.delivery_time_estimate') }}</small>
-                        </div>
-                        <div class="d-flex align-items-start">
-                            <i class="bi bi-check-circle-fill text-emerald-600 me-2 mt-1"></i>
-                            <small class="text-gray-700">{{ __('messages.check_before_payment') }}</small>
-                        </div>
-                    </div>
-                </div>
+    @if($product->stock_quantity > 0)
+        <div class="sticky-cart-bar d-lg-none">
+            <div>
+                <strong>{{ $product->formatted_price }}</strong>
+                <span>{{ __('messages.products_left', ['count' => $product->stock_quantity]) }}</span>
             </div>
+            <button onclick="scrollToBuyPanel()" class="btn">
+                <i class="bi bi-cart-plus"></i>{{ __('messages.buy_now') }}
+            </button>
+        </div>
+    @endif
 
-            <!-- Return Policy -->
-            <div class="col-md-6">
-                <div class="glass-card rounded-4 p-4 border-0 h-100">
-                    <h6 class="fw-bold text-gray-800 mb-3">
-                        <i class="bi bi-arrow-repeat text-warning me-2"></i>{{ __('messages.return_policy_title') }}
-                    </h6>
-                    <div class="mb-0">
-                        <div class="d-flex align-items-start mb-2">
-                            <i class="bi bi-check-circle-fill text-warning me-2 mt-1"></i>
-                            <small class="text-gray-700">{{ __('messages.return_within_30_days') }}</small>
-                        </div>
-                        <div class="d-flex align-items-start mb-2">
-                            <i class="bi bi-check-circle-fill text-warning me-2 mt-1"></i>
-                            <small class="text-gray-700">{{ __('messages.product_intact') }}</small>
-                        </div>
-                        <div class="d-flex align-items-start">
-                            <i class="bi bi-check-circle-fill text-warning me-2 mt-1"></i>
-                            <small class="text-gray-700">{{ __('messages.refund_if_defective') }}</small>
-                        </div>
-                    </div>
+    <div class="modal fade" id="imageZoomModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-transparent border-0">
+                <div class="modal-body product-zoom-modal-body p-0 position-relative bg-white rounded-4 overflow-hidden" data-product-image-container>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-3 z-3"
+                            data-bs-dismiss="modal" aria-label="Close"></button>
+                    <x-product-image
+                        :src="$product->image_url"
+                        :alt="$product->name"
+                        class="w-100 h-100 object-fit-contain rounded-4"
+                        icon-size="4rem"
+                        loading="eager"
+                    />
                 </div>
-            </div>
-        </div>
-
-        <!-- Back Link -->
-        <div class="mt-4 pt-3">
-            <a href="{{ route('products.index') }}" class="btn btn-outline-emerald-600 rounded-pill px-4">
-                <i class="bi bi-arrow-left me-2"></i>{{ __('messages.back_to_products') }}
-            </a>
-        </div>
-    </div>
-</section>
-
-<!-- Sticky Add to Cart Bar (Mobile) -->
-@if($product->stock_quantity > 0)
-<div class="sticky-cart-bar d-lg-none glass-card border-top shadow-lg" style="position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; padding: 12px 16px;">
-    <div class="d-flex align-items-center gap-3">
-        <div class="flex-grow-1">
-            <div class="fw-bold text-emerald-700" style="font-size: 1.25rem;">{{ $product->formatted_price }}</div>
-            <small class="text-gray-600">{{ __('messages.products_left', ['count' => $product->stock_quantity]) }}</small>
-        </div>
-        <button onclick="document.querySelector('.js-add-to-cart-form').scrollIntoView({behavior: 'smooth', block: 'center'})" 
-                class="btn btn-emerald-600 text-white fw-bold rounded-pill px-4 shadow-sm">
-            <i class="bi bi-cart-plus me-1"></i>{{ __('messages.buy_now') }}
-        </button>
-    </div>
-</div>
-@endif
-
-<!-- Image Zoom Modal -->
-<div class="modal fade" id="imageZoomModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-transparent border-0">
-            <div class="modal-body p-0 position-relative bg-white rounded-4 overflow-hidden" data-product-image-container style="aspect-ratio: 1/1;">
-                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 z-3" 
-                        data-bs-dismiss="modal" aria-label="Close"></button>
-                <x-product-image
-                    :src="$product->image_url"
-                    :alt="$product->name"
-                    class="w-100 h-100 object-fit-contain rounded-4"
-                    icon-size="4rem"
-                    loading="eager"
-                />
             </div>
         </div>
     </div>
 </div>
+@endsection
 
 @push('scripts')
 <script>
+const productDetailState = {
+    id: @json((string) $product->MaSP),
+    name: @json($product->name),
+    shareUrl: @json(route('products.show', $product->MaSP)),
+    copiedLabel: @json(__('messages.copied_link')),
+};
+
+function formatVnd(value) {
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        maximumFractionDigits: 0,
+    }).format(value);
+}
+
+function updateEstimatedTotal() {
+    const input = document.getElementById('qty-input');
+    const target = document.getElementById('estimated-total');
+
+    if (!input || !target) {
+        return;
+    }
+
+    const quantity = Number(input.value || 1);
+    const unitPrice = Number(input.dataset.unitPrice || 0);
+    target.textContent = formatVnd(quantity * unitPrice);
+}
+
 function changeQty(delta) {
     const input = document.getElementById('qty-input');
-    let val = parseInt(input.value) + delta;
-    val = Math.max(parseInt(input.min), Math.min(parseInt(input.max), val));
-    input.value = val;
+
+    if (!input) {
+        return;
+    }
+
+    const min = Number(input.min || 1);
+    const max = Number(input.max || min);
+    const nextValue = Math.max(min, Math.min(max, Number(input.value || min) + delta));
+    input.value = nextValue;
+    updateEstimatedTotal();
 }
 
 function toggleImageZoom() {
-    const modal = new bootstrap.Modal(document.getElementById('imageZoomModal'));
-    modal.show();
+    const modalElement = document.getElementById('imageZoomModal');
+    if (!modalElement || !window.bootstrap?.Modal) {
+        return;
+    }
+
+    window.bootstrap.Modal.getOrCreateInstance(modalElement).show();
 }
 
-// Smooth scroll for anchor links
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+async function copyProductLink() {
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(productDetailState.shareUrl);
+    }
+}
+
+async function shareProduct() {
+    try {
+        if (navigator.share) {
+            await navigator.share({
+                title: productDetailState.name,
+                url: productDetailState.shareUrl,
+            });
+            return;
         }
-    });
+
+        await copyProductLink();
+        if (window.Swal?.fire) {
+            window.Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: productDetailState.copiedLabel,
+                showConfirmButton: false,
+                timer: 1800,
+            });
+        }
+    } catch (error) {
+        if (error?.name !== 'AbortError') {
+            console.warn('Unable to share product link', error);
+        }
+    }
+}
+
+function openProductAssistant() {
+    window.dispatchEvent(new CustomEvent('open-chatbot'));
+}
+
+function scrollToBuyPanel() {
+    document.getElementById('buy-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('qty-input')?.addEventListener('input', updateEstimatedTotal);
+    updateEstimatedTotal();
 });
 </script>
 @endpush
-
-<style>
-/* Tab Styling */
-.nav-tabs .nav-link {
-    border-bottom: 3px solid transparent !important;
-    transition: all 0.3s ease;
-}
-
-.nav-tabs .nav-link.active { 
-    color: #059669 !important; 
-    border-bottom: 3px solid #059669 !important;
-    background: rgba(16, 185, 129, 0.05);
-}
-
-.nav-tabs .nav-link:hover { 
-    color: #059669;
-    background: rgba(16, 185, 129, 0.03);
-}
-
-/* Button Styling */
-.btn-outline-emerald-600 {
-    border-color: #059669;
-    color: #059669;
-}
-
-.btn-outline-emerald-600:hover {
-    background: #059669;
-    border-color: #059669;
-    color: white;
-}
-
-.btn-emerald-600 {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    border: none;
-}
-
-.btn-emerald-600:hover {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-}
-
-/* Image Zoom Effect */
-.product-main-img {
-    transition: transform 0.3s ease;
-    cursor: zoom-in;
-}
-
-.product-main-img:hover {
-    transform: scale(1.05);
-}
-
-/* Sticky Cart Bar Animation */
-.sticky-cart-bar {
-    animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* Progress Bar */
-.progress {
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 999px;
-}
-
-.progress-bar {
-    border-radius: 999px;
-}
-
-.bg-emerald-600 {
-    background-color: #059669 !important;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 991.98px) {
-    .sticky-cart-bar {
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-    }
-}
-
-@media (max-width: 575.98px) {
-    .nav-tabs .nav-link {
-        font-size: 0.875rem;
-        padding-left: 0.75rem !important;
-        padding-right: 0.75rem !important;
-    }
-}
-
-/* Hover Effects */
-.hover-lift {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.hover-lift:hover {
-    transform: translateY(-2px);
-}
-
-/* Badge Glass Variants */
-.badge-glass-success {
-    background: rgba(16, 185, 129, 0.2);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    color: #047857;
-}
-
-.badge-glass-danger {
-    background: rgba(239, 68, 68, 0.2);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #dc2626;
-}
-
-.badge-glass-info {
-    background: rgba(59, 130, 246, 0.2);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    color: #2563eb;
-}
-
-/* Input Group Styling */
-.input-group .form-control:focus {
-    border-color: #10b981;
-    box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.15);
-}
-
-.border-emerald-200 {
-    border-color: rgba(16, 185, 129, 0.3) !important;
-}
-</style>
-@endsection

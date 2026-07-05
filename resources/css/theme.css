@@ -1,0 +1,513 @@
+/* Glassmorphism Design System for Pharmacy Management System */
+
+/* Color Palette */
+:root {
+    --primary-gradient: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    --background-gradient: linear-gradient(to right, #f0fdf4 0%, #f8fafc 50%, #ecfdf5 100%);
+    --glass-bg: rgba(255, 255, 255, 0.25);
+    --glass-border: rgba(255, 255, 255, 0.18);
+    --text-primary: #2c3e50;
+    --text-secondary: #7f8c8d;
+    --success: #27ae60;
+    --warning: #f39c12;
+    --danger: #e74c3c;
+    --info: #3498db;
+    --emerald-500: #10b981;
+    --emerald-600: #059669;
+    --emerald-700: #047857;
+    --pharma-primary: #15803d;
+    --pharma-primary-dark: #14532d;
+    --pharma-accent: #0369a1;
+    --pharma-surface: rgba(255, 255, 255, 0.84);
+    --pharma-surface-strong: rgba(255, 255, 255, 0.94);
+    --pharma-border: rgba(21, 128, 61, 0.14);
+    --pharma-shadow: 0 18px 44px rgba(20, 83, 45, 0.1);
+    --pharma-shadow-hover: 0 22px 54px rgba(20, 83, 45, 0.16);
+    --pharma-motion: 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Global Custom Scrollbar */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+    width: 6px !important;
+    height: 6px !important;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+    background: #f8fafc !important;
+    border-radius: 10px !important;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+    background: var(--emerald-500) !important;
+    border-radius: 10px !important;
+    border: 1px solid #f8fafc !important;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--emerald-600) !important;
+}
+
+/* Firefox */
+html, body {
+    scrollbar-width: thin !important;
+    scrollbar-color: var(--emerald-500) #f8fafc !important;
+}
+
+* {
+    scrollbar-width: thin !important;
+    scrollbar-color: var(--emerald-500) #f8fafc !important;
+}
+
+/* Body Background — không dùng fixed: repaint toàn nền mỗi lần cuộn gây giật (đặc biệt + nhiều backdrop-filter) */
+body {
+    background: var(--background-gradient);
+    background-attachment: scroll;
+    min-height: 100vh;
+    color: var(--text-primary);
+    text-rendering: optimizeLegibility;
+}
+
+/* Glass Card Styling */
+.glass-card {
+    background: var(--pharma-surface);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 14px;
+    border: 1px solid var(--pharma-border);
+    box-shadow: var(--pharma-shadow);
+    padding: 24px;
+    transition: transform var(--pharma-motion), box-shadow var(--pharma-motion), border-color var(--pharma-motion), background-color var(--pharma-motion);
+}
+
+.glass-card:hover {
+    box-shadow: var(--pharma-shadow-hover);
+    transform: translateY(-3px);
+    border-color: rgba(21, 128, 61, 0.22);
+}
+
+/* Glass Card Variants */
+.glass-card-sm {
+    padding: 16px;
+    border-radius: 12px;
+}
+
+.glass-card-lg {
+    padding: 32px;
+    border-radius: 20px;
+}
+
+/* Button Glass Styling */
+.btn-glass {
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    color: var(--text-primary);
+}
+
+.btn-glass:hover {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(1.05);
+    color: var(--text-primary);
+}
+
+.btn-glass:active {
+    transform: scale(0.98);
+}
+
+/* Button Variants */
+.btn-glass-primary {
+    background: rgba(16, 185, 129, 0.3);
+    color: #fff;
+}
+
+.btn-glass-primary:hover {
+    background: rgba(16, 185, 129, 0.5);
+    color: #fff;
+}
+
+.btn-glass-success {
+    background: rgba(16, 185, 129, 0.35);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #fff;
+}
+
+.btn-glass-success:hover {
+    background: rgba(16, 185, 129, 0.55);
+    color: #fff;
+}
+
+.btn-glass-danger {
+    background: rgba(231, 76, 60, 0.3);
+    color: #fff;
+}
+
+.btn-glass-danger:hover {
+    background: rgba(231, 76, 60, 0.5);
+    color: #fff;
+}
+
+/* Navigation Bar Glass */
+.navbar-glass {
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.1);
+}
+
+/* Product Card Glass */
+.product-card {
+    background: var(--pharma-surface-strong);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-radius: 14px;
+    border: 1px solid rgba(21, 128, 61, 0.12);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+    overflow: hidden;
+    transition: transform var(--pharma-motion), box-shadow var(--pharma-motion), border-color var(--pharma-motion);
+}
+
+.product-card:hover {
+    box-shadow: 0 22px 48px rgba(21, 128, 61, 0.16);
+    border-color: rgba(21, 128, 61, 0.24);
+    transform: translateY(-6px);
+}
+
+.product-card img {
+    transition: transform 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.product-card:hover img {
+    transform: scale(1.045);
+}
+
+/* Navbar Enhancements */
+.hover-scale-105:hover {
+    transform: scale(1.05);
+}
+
+.hover-bg-emerald-50:hover {
+    background-color: rgba(16, 185, 129, 0.08) !important;
+    color: #059669 !important;
+}
+
+.navbar .nav-link {
+    position: relative;
+}
+
+.navbar .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 16px;
+    right: 16px;
+    height: 2px;
+    background: #10b981;
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.navbar .nav-link:hover::after,
+.navbar .nav-link.active::after {
+    transform: scaleX(1);
+}
+
+.navbar .nav-item .dropdown-menu {
+    border-top: 3px solid #10b981 !important;
+}
+
+
+/* Form Input Glass */
+.form-control-glass {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    padding: 12px 16px;
+    transition: all 0.3s ease;
+}
+
+.form-control-glass:focus {
+    background: rgba(255, 255, 255, 0.35);
+    border-color: rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.15);
+    outline: none;
+}
+
+/* Modal Glass */
+.modal-glass .modal-content {
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 20px;
+    box-shadow: 0 12px 48px 0 rgba(31, 38, 135, 0.25);
+}
+
+.modal-glass .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.modal-glass .modal-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Modal Backdrop Override for Glassmorphism */
+.modal-backdrop {
+    background: rgba(236, 253, 245, 0.6) !important;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.modal-backdrop.show {
+    opacity: 1 !important;
+}
+
+/* Badge Glass */
+.badge-glass {
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-weight: 600;
+}
+
+.badge-glass-success {
+    background: rgba(39, 174, 96, 0.3);
+    color: #fff;
+}
+
+.badge-glass-warning {
+    background: rgba(243, 156, 18, 0.3);
+    color: #fff;
+}
+
+.badge-glass-danger {
+    background: rgba(231, 76, 60, 0.3);
+    color: #fff;
+}
+
+.badge-glass-info {
+    background: rgba(52, 152, 219, 0.3);
+    color: #fff;
+}
+
+/* Sidebar Glass */
+.sidebar-glass {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-right: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 4px 0 16px 0 rgba(31, 38, 135, 0.1);
+}
+
+/* Table Glass */
+.table-glass {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.table-glass thead {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.table-glass tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    transition: background 0.2s ease;
+}
+
+.table-glass tbody tr:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Metric Card Glass */
+.metric-card {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    padding: 24px;
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.25);
+}
+
+.metric-card .metric-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: 16px;
+}
+
+.metric-card .metric-value {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.metric-card .metric-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Chart Container Glass */
+.chart-container {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    padding: 24px;
+}
+
+/* Loading Spinner Glass */
+.spinner-glass {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid rgba(16, 185, 129, 0.8);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease;
+}
+
+/* Page Transitions */
+.page-transition {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Focus Indicators for Accessibility */
+.btn-glass:focus,
+.form-control-glass:focus,
+a:focus {
+    outline: 2px solid rgba(16, 185, 129, 0.5);
+    outline-offset: 2px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .glass-card {
+        padding: 16px;
+        border-radius: 12px;
+    }
+    
+    .metric-card .metric-value {
+        font-size: 24px;
+    }
+    
+    .metric-card .metric-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+    }
+}
+
+/* Hero Section Glass */
+.hero-glass {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 12px 48px 0 rgba(31, 38, 135, 0.2);
+    padding: 60px 40px;
+    text-align: center;
+}
+
+/* Testimonial Card Glass */
+.testimonial-card {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    padding: 24px;
+    transition: all 0.3s ease;
+}
+
+.testimonial-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.25);
+}
+
+/* Alert Glass */
+.alert-glass {
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+}
+
+.alert-glass-success {
+    background: rgba(39, 174, 96, 0.2);
+    border-color: rgba(39, 174, 96, 0.3);
+}
+
+.alert-glass-warning {
+    background: rgba(243, 156, 18, 0.2);
+    border-color: rgba(243, 156, 18, 0.3);
+}
+
+.alert-glass-danger {
+    background: rgba(231, 76, 60, 0.2);
+    border-color: rgba(231, 76, 60, 0.3);
+}
+
+.alert-glass-info {
+    background: rgba(52, 152, 219, 0.2);
+    border-color: rgba(52, 152, 219, 0.3);
+}

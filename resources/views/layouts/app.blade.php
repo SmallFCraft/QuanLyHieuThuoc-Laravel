@@ -194,6 +194,18 @@
         <!-- Bootstrap Icons -->
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
+        <script>
+            window.PharmacyFavorites = {
+                authenticated: @json(auth()->check()),
+                idsUrl: @json(route('favorites.ids')),
+                sectionUrl: @json(route('favorites.section')),
+                syncUrl: @json(route('favorites.sync')),
+                toggleUrlTemplate: @json(route('favorites.toggle', ['product' => '__PRODUCT_ID__'])),
+                destroyUrlTemplate: @json(route('favorites.destroy', ['product' => '__PRODUCT_ID__'])),
+                loginUrl: @json(route('login')),
+            };
+        </script>
+
         <!-- Scripts & Styles -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         

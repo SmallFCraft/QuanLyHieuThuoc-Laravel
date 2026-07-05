@@ -11,22 +11,18 @@
         opacity: 0;
         transform: translateX(-20px);
     }
+    .cart-product-link {
+        color: #1f2937;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+    .cart-product-link:hover,
+    .cart-product-link:focus-visible {
+        color: #059669;
+    }
     .quantity-input::-webkit-inner-spin-button,
     .quantity-input::-webkit-outer-spin-button {
         opacity: 1;
-    }
-    .loading-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255, 255, 255, 0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10;
-        border-radius: 1rem;
     }
 </style>
 @endpush
@@ -60,7 +56,7 @@
                 </a>
             </div>
         @else
-            <div class="row g-4">
+            <div class="row g-4" id="cart-content">
                 <!-- Cart Items -->
                 <div class="col-lg-8">
                     <div class="glass-card rounded-4 border-0 p-0 overflow-hidden">
@@ -80,7 +76,7 @@
                                      data-max-stock="{{ $item['product']->stock_quantity }}">
                                     
                                     <!-- Image -->
-                                    <div class="bg-gray-50 rounded-3 overflow-hidden flex-shrink-0" style="width: 90px; height: 90px;" data-product-image-container>
+                                    <div class="bg-gray-50 rounded-3 overflow-hidden flex-shrink-0 position-relative" style="width: 90px; height: 90px;" data-product-image-container>
                                         <x-product-image
                                             :src="$item['product']->image_url"
                                             :alt="$item['product']->name"
@@ -91,7 +87,11 @@
                                     
                                     <!-- Info -->
                                     <div class="flex-grow-1 min-w-0">
-                                        <h6 class="fw-bold text-gray-800 mb-1 text-truncate">{{ $item['product']->name }}</h6>
+                                        <h6 class="fw-bold text-gray-800 mb-1 text-truncate">
+                                            <a href="{{ route('products.show', $item['product']->MaSP) }}" class="cart-product-link">
+                                                {{ $item['product']->name }}
+                                            </a>
+                                        </h6>
                                         <p class="text-emerald-600 small mb-1 fw-medium">{{ $item['product']->category->name }}</p>
                                         <p class="text-gray-500 small mb-0">{{ $item['product']->formatted_price }} / {{ __('messages.cart.per_item') }}</p>
                                     </div>
@@ -211,9 +211,15 @@ document.addEventListener('DOMContentLoaded', function() {
             subtotal += itemSubtotal;
         });
         
-        // Update subtotal and total
-        document.getElementById('subtotal-amount').textContent = formatVND(subtotal);
-        document.getElementById('total-amount').textContent = formatVND(subtotal);
+        // Update subtotal and total when the summary panel is still mounted.
+        const subtotalAmountEl = document.getElementById('subtotal-amount');
+        const totalAmountEl = document.getElementById('total-amount');
+        if (subtotalAmountEl) {
+            subtotalAmountEl.textContent = formatVND(subtotal);
+        }
+        if (totalAmountEl) {
+            totalAmountEl.textContent = formatVND(subtotal);
+        }
         
         const lineCount = document.querySelectorAll('.cart-item').length;
         const cartCountEl = document.getElementById('cart-count');
@@ -225,13 +231,50 @@ document.addEventListener('DOMContentLoaded', function() {
             window.cartNavbarSetCount(lineCount);
         }
     }
+
+    function renderEmptyCartState() {
+        const cartContent = document.getElementById('cart-content');
+        if (!cartContent) {
+            return;
+        }
+
+        cartContent.innerHTML = `
+            <div class="col-12">
+                <div class="glass-card rounded-4 border-0 text-center py-5 px-4">
+                    <div class="bg-emerald-50 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width:100px; height:100px;">
+                        <i class="bi bi-cart-x text-emerald-500" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h3 class="fw-bold text-gray-800 mb-2">{{ __('messages.cart.empty_title') }}</h3>
+                    <p class="text-gray-500 mb-4">{{ __('messages.cart.empty_message') }}</p>
+                    <a href="{{ route('products.index') }}" class="btn btn-glass-success rounded-pill px-5 py-3 fw-medium shadow-sm border-0">
+                        <i class="bi bi-cart-plus me-2"></i>{{ __('messages.cart.start_shopping') }}
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+
+    function showCartError(message) {
+        Swal.fire({
+            icon: 'error',
+            title: '{{ __("messages.cart.js.error_title") }}',
+            text: message || '{{ __("messages.cart.js.generic_error") }}',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+        });
+    }
     
     // Update quantity via AJAX
     function updateQuantity(productId, quantity, itemElement) {
         const maxStock = parseInt(itemElement.dataset.maxStock);
+        const quantityInput = itemElement.querySelector('.quantity-input');
+        const previousQuantity = parseInt(quantityInput.dataset.lastQuantity || quantityInput.value) || 1;
         
         if (quantity < 1) {
-            quantity = 1;
+            quantityInput.value = previousQuantity;
+            return;
         }
         if (quantity > maxStock) {
             Swal.fire({
@@ -245,13 +288,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             quantity = maxStock;
         }
-        
-        // Show loading
-        const loadingOverlay = document.createElement('div');
-        loadingOverlay.className = 'loading-overlay';
-        loadingOverlay.innerHTML = '<div class="spinner-border text-emerald-600" role="status"></div>';
-        itemElement.style.position = 'relative';
-        itemElement.appendChild(loadingOverlay);
+
+        quantityInput.value = quantity;
+        calculateTotals();
         
         fetch(`/cart/update/${productId}`, {
             method: 'POST',
@@ -266,44 +305,20 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            loadingOverlay.remove();
-            
             if (data.success) {
-                itemElement.querySelector('.quantity-input').value = quantity;
+                quantityInput.dataset.lastQuantity = quantity;
                 calculateTotals();
-                
-                Swal.fire({
-                    icon: 'success',
-                    title: '{{ __("messages.cart.js.updated") }}',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 2000
-                });
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: '{{ __("messages.cart.js.error_title") }}',
-                    text: data.message || '{{ __("messages.cart.js.update_error") }}',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000
-                });
+                quantityInput.value = previousQuantity;
+                calculateTotals();
+                showCartError(data.message || '{{ __("messages.cart.js.update_error") }}');
             }
         })
         .catch(error => {
-            loadingOverlay.remove();
             console.error('Error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: '{{ __("messages.cart.js.error_title") }}',
-                text: '{{ __("messages.cart.js.generic_error") }}',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000
-            });
+            quantityInput.value = previousQuantity;
+            calculateTotals();
+            showCartError('{{ __("messages.cart.js.generic_error") }}');
         });
     }
     
@@ -320,7 +335,32 @@ document.addEventListener('DOMContentLoaded', function() {
             cancelButtonText: '{{ __("messages.cart.js.btn_cancel") }}'
         }).then((result) => {
             if (result.isConfirmed) {
+                if (itemElement.dataset.removing === 'true') {
+                    return;
+                }
+
+                const parentElement = itemElement.parentElement;
+                const nextElement = itemElement.nextElementSibling;
+                const restoreItem = () => {
+                    itemElement.classList.remove('removing');
+                    delete itemElement.dataset.removing;
+
+                    if (parentElement && !itemElement.isConnected) {
+                        parentElement.insertBefore(itemElement, nextElement);
+                    }
+
+                    calculateTotals();
+                };
+
+                itemElement.dataset.removing = 'true';
                 itemElement.classList.add('removing');
+
+                setTimeout(() => {
+                    if (itemElement.dataset.removing === 'true') {
+                        itemElement.remove();
+                        calculateTotals();
+                    }
+                }, 180);
                 
                 fetch(`/cart/remove/${productId}`, {
                     method: 'POST',
@@ -334,49 +374,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        setTimeout(() => {
+                        if (itemElement.isConnected) {
                             itemElement.remove();
                             calculateTotals();
-                            
-                            // Check if cart is empty
-                            if (document.querySelectorAll('.cart-item').length === 0) {
-                                location.reload();
-                            }
-                            
-                            Swal.fire({
-                                icon: 'success',
-                                title: '{{ __("messages.cart.js.removed") }}',
-                                toast: true,
-                                position: 'top-end',
-                                showConfirmButton: false,
-                                timer: 2000
-                            });
-                        }, 300);
+                        }
+
+                        if (document.querySelectorAll('.cart-item').length === 0) {
+                            renderEmptyCartState();
+                        }
                     } else {
-                        itemElement.classList.remove('removing');
-                        Swal.fire({
-                            icon: 'error',
-                            title: '{{ __("messages.cart.js.error_title") }}',
-                            text: data.message || '{{ __("messages.cart.js.remove_error") }}',
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 3000
-                        });
+                        restoreItem();
+                        showCartError(data.message || '{{ __("messages.cart.js.remove_error") }}');
                     }
                 })
                 .catch(error => {
-                    itemElement.classList.remove('removing');
                     console.error('Error:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: '{{ __("messages.cart.js.error_title") }}',
-                        text: '{{ __("messages.cart.js.generic_error") }}',
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 3000
-                    });
+                    restoreItem();
+                    showCartError('{{ __("messages.cart.js.generic_error") }}');
                 });
             }
         });
@@ -389,12 +403,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const decreaseBtn = item.querySelector('.quantity-decrease');
         const increaseBtn = item.querySelector('.quantity-increase');
         const removeBtn = item.querySelector('.remove-item');
+        quantityInput.dataset.lastQuantity = quantityInput.value;
         
         // Decrease quantity
         decreaseBtn.addEventListener('click', function() {
             const currentQty = parseInt(quantityInput.value);
             if (currentQty > 1) {
                 updateQuantity(productId, currentQty - 1, item);
+            } else {
+                removeItem(productId, item);
             }
         });
         

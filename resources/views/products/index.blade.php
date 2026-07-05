@@ -141,8 +141,9 @@
 @endpush
 
 @section('content')
+<div class="public-catalog-page">
 <!-- Page Header -->
-<section class="py-4" style="background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 50%, #f8fafc 100%);">
+<section class="catalog-hero py-4">
     <div class="container">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
             <div>
@@ -154,8 +155,13 @@
                     </ol>
                 </nav>
             </div>
+            <div class="catalog-hero-metrics order-md-2">
+                <span><i class="bi bi-capsule-pill"></i> {{ $products->total() }} {{ mb_strtolower(__('messages.products')) }}</span>
+                <span><i class="bi bi-shield-check"></i> Chính hãng</span>
+                <span><i class="bi bi-lightning-charge"></i> Lọc nhanh</span>
+            </div>
             <!-- Search -->
-            <form action="{{ route('products.search') }}" method="GET" class="d-flex gap-2" style="max-width: 400px; width: 100%;">
+            <form action="{{ route('products.search') }}" method="GET" class="catalog-search-form d-flex gap-2" style="max-width: 400px; width: 100%;">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0 rounded-start-pill text-gray-400"><i class="bi bi-search"></i></span>
                     <input type="text" name="q" placeholder="{{ __('messages.search_product_placeholder') }}" 
@@ -172,7 +178,7 @@
     </div>
 </section>
 
-<section class="py-5">
+<section class="catalog-shell py-5">
     <div class="container">
         @php
             $activeCategoryId = request('category');
@@ -231,53 +237,13 @@
 
                 <div class="row g-4">
                     @forelse($products as $product)
-                            <div class="col-sm-6 col-xl-4">
-                            <div class="card border-0 rounded-4 shadow-sm h-100 overflow-hidden product-card bg-white">
-                                <div class="position-relative overflow-hidden bg-gray-50" style="aspect-ratio: 1/1;" data-product-image-container>
-                                    <x-product-image
-                                        :src="$product->image_url"
-                                        :alt="$product->name"
-                                        class="w-100 h-100 object-fit-contain p-2"
-                                        icon-size="4rem"
-                                    />
-                                    
-                                    @if($product->stock_quantity == 0)
-                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle position-absolute top-0 start-0 m-3 rounded-pill px-2 py-1">
-                                            <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
-                                        </span>
-                                    @endif
-
-                                    <div class="position-absolute top-0 end-0 m-3">
-                                        <a href="{{ route('products.show', $product->MaSP) }}" class="btn btn-light btn-sm rounded-circle shadow-sm" style="width:36px; height:36px; display:flex; align-items:center; justify-content:center;" title="{{ __('messages.view_details') }}">
-                                            <i class="bi bi-eye text-emerald-600"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                                
-                                <div class="card-body p-4 d-flex flex-column">
-                                    <a href="{{ route('products.show', $product->MaSP) }}" class="text-decoration-none">
-                                        <h6 class="fw-bold text-gray-800 mb-1 text-truncate" title="{{ $product->name }}">{{ $product->name }}</h6>
-                                    </a>
-                                    <p class="text-emerald-600 small mb-3 fw-medium">{{ $product->category->name }}</p>
-                                    
-                                    <div class="mt-auto d-flex justify-content-between align-items-end">
-                                        <span class="h5 mb-0 text-emerald-700 fw-bold">{{ $product->formatted_price }}</span>
-                                        
-                                        @if($product->stock_quantity > 0)
-                                            <form action="{{ route('cart.add') }}" method="POST" class="d-inline js-add-to-cart-form">
-                                                @csrf
-                                                <input type="hidden" name="MaSP" value="{{ $product->MaSP }}">
-                                                <input type="hidden" name="quantity" value="1">
-                                                <button type="submit" class="btn text-white rounded-circle shadow-sm" style="width: 42px; height: 42px; background: #10b981;" title="{{ __('messages.add_to_cart') }}">
-                                                    <i class="bi bi-cart-plus"></i>
-                                                </button>
-                                            </form>
-                                        @else
-                                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">{{ __('messages.out_of_stock') }}</span>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="col-sm-6 col-xl-4">
+                            <x-product-card
+                                :product="$product"
+                                card-class="card border-0 rounded-4 shadow-sm overflow-hidden catalog-product-card bg-white"
+                                media-class="catalog-product-media bg-gray-50"
+                                body-class="card-body p-4"
+                            />
                         </div>
                     @empty
                         <div class="col-12">
@@ -300,4 +266,5 @@
         </div>
     </div>
 </section>
+</div>
 @endsection

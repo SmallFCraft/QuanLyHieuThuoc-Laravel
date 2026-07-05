@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'widget_label' => 'Trợ lý AI 💬',
+    'widget_label' => 'Trợ lý AI',
     'header_title' => 'Trợ Lý AI Medicare Pharmacy',
     'header_subtitle' => 'Luôn sẵn sàng hỗ trợ kịp thời cho bạn',
     'disclaimer_title' => 'Dạ, em có lưu ý nhỏ ạ',
