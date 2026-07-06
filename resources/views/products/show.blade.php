@@ -7,7 +7,6 @@
     $isLowStock = $product->stock_quantity > 0 && $product->stock_quantity <= $product->reorder_point;
     $hasIngredients = filled($product->ingredients);
     $hasUsage = filled($product->usage);
-    $careScore = $product->stock_quantity > 0 ? ($isLowStock ? 82 : 96) : 0;
 @endphp
 
 @section('content')
@@ -113,9 +112,21 @@
                                 </div>
                                 <p><i class="bi bi-info-circle"></i>{{ __('messages.vat_included') }}</p>
                             </div>
-                            <div class="product-score-ring" style="--score: {{ $careScore }};">
-                                <span>{{ $careScore }}%</span>
-                                <small>{{ __('messages.care_score') }}</small>
+                            <div class="product-stock-summary {{ $product->stock_quantity > 0 ? ($isLowStock ? 'is-low' : 'is-ready') : 'is-out' }}">
+                                <span class="product-stock-summary__icon">
+                                    <i class="bi {{ $product->stock_quantity > 0 ? ($isLowStock ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill') : 'bi-x-circle-fill' }}"></i>
+                                </span>
+                                <div>
+                                    <small>{{ __('messages.stock_status') }}</small>
+                                    <strong>{{ $product->stock_quantity > 0 ? ($isLowStock ? __('messages.low_stock') : __('messages.in_stock')) : __('messages.out_of_stock') }}</strong>
+                                    <em>
+                                        @if($product->stock_quantity > 0)
+                                            {{ __('messages.products_left', ['count' => number_format($product->stock_quantity, 0, ',', '.')]) }}
+                                        @else
+                                            {{ __('messages.contact_to_preorder') }}
+                                        @endif
+                                    </em>
+                                </div>
                             </div>
                         </div>
 

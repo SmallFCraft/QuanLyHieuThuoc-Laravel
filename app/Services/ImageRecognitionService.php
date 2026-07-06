@@ -2,12 +2,9 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiProviderVisionNotSupportedException;
 use App\Models\ChatbotImage;
-use Gemini\Client;
-use Gemini\Data\Blob;
-use Gemini\Enums\MimeType;
-use GuzzleHttp\Client as GuzzleClient;
-use GuzzleHttp\RequestOptions;
+use App\Models\Product;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -17,18 +14,22 @@ use Intervention\Image\ImageManager;
 class ImageRecognitionService
 {
     protected AuditLogService $auditLogService;
-    protected const GEMINI_MAX_IMAGE_WIDTH = 1600;
-    protected const GEMINI_MAX_IMAGE_HEIGHT = 1600;
-    protected const GEMINI_JPEG_QUALITY = 75;
+    protected AiProviderService $aiProviderService;
+    protected const VISION_MAX_IMAGE_WIDTH = 1600;
+    protected const VISION_MAX_IMAGE_HEIGHT = 1600;
+    protected const VISION_JPEG_QUALITY = 75;
+    protected const VISION_MIME_TYPE = 'image/jpeg';
 
     public function __construct(
-        AuditLogService $auditLogService
+        AuditLogService $auditLogService,
+        AiProviderService $aiProviderService
     ) {
         $this->auditLogService = $auditLogService;
+        $this->aiProviderService = $aiProviderService;
     }
 
     /**
-     * Process a prescription image using Gemini Vision AI.
+     * Process a prescription image using the configured AI provider.
      *
      * @param UploadedFile $image
      * @param int $userId
@@ -41,8 +42,7 @@ class ImageRecognitionService
         try {
             $imagePath = $this->storeImage($image, $userId, 'prescription');
             
-            // Use Gemini Vision to analyze the image directly
-            $analysisResult = $this->analyzeImageWithGemini($imagePath, 'prescription');
+            $analysisResult = $this->analyzeImageWithProvider($imagePath, 'prescription');
             
             if (empty($analysisResult['products'])) {
                 Log::warning('No products recognized from prescription image', [
@@ -60,6 +60,7 @@ class ImageRecognitionService
             $matched = $this->matchProducts($analysisResult['products']);
             
             $processingTime = (microtime(true) - $startTime) * 1000;
+            $this->markLatestImageAnalysisResult($userId, 'prescription', $analysisResult, $matched);
             
             // Log audit
             $this->auditLogService->log(
@@ -87,6 +88,29 @@ class ImageRecognitionService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+
+            if ($e->getPrevious() instanceof AiProviderVisionNotSupportedException) {
+                $this->markLatestImageAnalysisDebug($userId, 'prescription', [
+                    'ai_provider_used' => true,
+                    'ai_provider_mode' => config('chatbot.ai.mode', 'chat_completions'),
+                    'ai_provider_model' => config('chatbot.ai.model'),
+                    'vision_supported' => false,
+                    'provider_error_type' => 'vision_not_supported',
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'debug' => [
+                        'ai_provider_used' => true,
+                        'ai_provider_mode' => config('chatbot.ai.mode', 'chat_completions'),
+                        'ai_provider_model' => config('chatbot.ai.model'),
+                        'vision_supported' => false,
+                        'provider_error_type' => 'vision_not_supported',
+                    ],
+                ];
+            }
+
             return [
                 'success' => false,
                 'error' => 'Dạ, em gặp chút khó khăn khi đọc ảnh đơn thuốc. Anh/chị vui lòng gửi lại ảnh rõ hơn hoặc nhập tên thuốc để em tìm nhanh cho mình nhé.'
@@ -95,7 +119,7 @@ class ImageRecognitionService
     }
 
     /**
-     * Process a receipt image using Gemini Vision AI.
+     * Process a receipt image using the configured AI provider.
      *
      * @param UploadedFile $image
      * @param int $userId
@@ -108,8 +132,7 @@ class ImageRecognitionService
         try {
             $imagePath = $this->storeImage($image, $userId, 'receipt');
             
-            // Use Gemini Vision to analyze the image directly
-            $analysisResult = $this->analyzeImageWithGemini($imagePath, 'receipt');
+            $analysisResult = $this->analyzeImageWithProvider($imagePath, 'receipt');
             
             if (empty($analysisResult['products'])) {
                 Log::warning('No products recognized from receipt image', [
@@ -127,6 +150,7 @@ class ImageRecognitionService
             $matched = $this->matchProducts($analysisResult['products']);
             
             $processingTime = (microtime(true) - $startTime) * 1000;
+            $this->markLatestImageAnalysisResult($userId, 'receipt', $analysisResult, $matched);
             
             // Log audit
             $this->auditLogService->log(
@@ -154,6 +178,29 @@ class ImageRecognitionService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+
+            if ($e->getPrevious() instanceof AiProviderVisionNotSupportedException) {
+                $this->markLatestImageAnalysisDebug($userId, 'receipt', [
+                    'ai_provider_used' => true,
+                    'ai_provider_mode' => config('chatbot.ai.mode', 'chat_completions'),
+                    'ai_provider_model' => config('chatbot.ai.model'),
+                    'vision_supported' => false,
+                    'provider_error_type' => 'vision_not_supported',
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'debug' => [
+                        'ai_provider_used' => true,
+                        'ai_provider_mode' => config('chatbot.ai.mode', 'chat_completions'),
+                        'ai_provider_model' => config('chatbot.ai.model'),
+                        'vision_supported' => false,
+                        'provider_error_type' => 'vision_not_supported',
+                    ],
+                ];
+            }
+
             return [
                 'success' => false,
                 'error' => 'Dạ, em chưa đọc được hóa đơn này. Anh/chị vui lòng gửi lại ảnh rõ nét hơn giúp em với ạ.'
@@ -162,150 +209,62 @@ class ImageRecognitionService
     }
 
     /**
-     * Analyze image using Gemini Vision AI directly (no OCR needed).
+     * Analyze image using the configured AI provider.
      *
      * @param string $imagePath Absolute path to the image file
      * @param string $type Image type (prescription or receipt)
      * @return array Analysis result with 'products' and 'description'
      * @throws \Exception
      */
-    protected function analyzeImageWithGemini(string $imagePath, string $type): array
+    protected function analyzeImageWithProvider(string $imagePath, string $type): array
     {
-        [$base64Image, $mimeType] = $this->prepareImageForGemini($imagePath);
-
-        // Build the prompt based on type
+        [$base64Image, $mimeType] = $this->prepareImageForProvider($imagePath);
         $prompt = $this->buildVisionPrompt($type);
 
-        // Create Blob for Gemini Vision
-        $blob = new Blob(
-            mimeType: $mimeType,
-            data: $base64Image
-        );
-
         try {
-            // Call Gemini Vision API
-            $client = $this->makeGeminiClient($this->resolveGeminiApiKey());
-            
-            $model = $client->generativeModel(
-                model: config('chatbot.gemini.model', 'gemini-2.5-flash')
-            );
+            $textContent = $this->aiProviderService->analyzeImage($prompt, $base64Image, $mimeType);
 
-            // Use array format for multimodal input (text + image)
-            $response = $model->generateContent([$prompt, $blob]);
-
-            $textContent = '';
-            try {
-                $textContent = $response->text();
-            } catch (\Exception $e) {
-                try {
-                    $parts = $response->parts();
-                    foreach ($parts as $part) {
-                        if (isset($part->text)) {
-                            $textContent .= $part->text;
-                        }
-                    }
-                } catch (\Exception $e2) {
-                    Log::error('Failed to extract Gemini Vision response', [
-                        'error' => $e2->getMessage(),
-                        'trace' => $e2->getTraceAsString()
-                    ]);
-                    throw new \Exception('Không thể phân tích hình ảnh. Vui lòng thử lại.');
-                }
-            }
-
-            // Check if response is too short (likely an error or "I can't help with that")
-            if (strlen($textContent) < 20) {
-                Log::warning('Gemini Vision returned very short response', [
+            if (strlen(trim($textContent)) < 20) {
+                Log::warning('AI provider vision returned very short response', [
                     'type' => $type,
                     'response_length' => strlen($textContent),
-                    'response' => $textContent
+                    'response' => $textContent,
                 ]);
-                throw new \Exception('Không thể nhận dạng nội dung từ hình ảnh. Hình ảnh có thể không rõ ràng hoặc không phải là ' . ($type === 'prescription' ? 'đơn thuốc' : 'hóa đơn') . '.');
+                throw new \Exception('Không thể nhận dạng nội dung từ hình ảnh. Hình ảnh có thể không rõ ràng hoặc không đúng loại.');
             }
 
-            Log::info('Gemini Vision analysis completed', [
+            Log::info('AI provider vision analysis completed', [
                 'type' => $type,
                 'response_length' => strlen($textContent),
-                'response_preview' => substr($textContent, 0, 200)
+                'response_preview' => substr($textContent, 0, 200),
+                'ai_provider_mode' => config('chatbot.ai.mode', 'chat_completions'),
             ]);
 
-            // Parse JSON response from Gemini
-            return $this->parseGeminiVisionResponse($textContent);
-            
+            return $this->parseVisionProviderResponse($textContent);
+        } catch (AiProviderVisionNotSupportedException $e) {
+            Log::warning('AI provider vision is not supported by current model', [
+                'type' => $type,
+                'ai_provider_mode' => config('chatbot.ai.mode', 'chat_completions'),
+                'error' => $e->getMessage(),
+            ]);
+
+            throw new \Exception('Dạ, model AI hiện tại chưa hỗ trợ đọc ảnh. Anh/chị vui lòng đổi sang model có hỗ trợ hình ảnh hoặc nhập trực tiếp tên thuốc/sản phẩm để em tra cứu nhanh nhé.', previous: $e);
         } catch (\Exception $e) {
-            // Check for quota exceeded error
-            if (strpos($e->getMessage(), 'quota') !== false || strpos($e->getMessage(), 'Quota exceeded') !== false) {
-                Log::warning('Gemini API quota exceeded', [
+            $message = mb_strtolower($e->getMessage(), 'UTF-8');
+
+            if (str_contains($message, 'quota') || str_contains($message, 'rate limit') || str_contains($message, 'too many requests') || str_contains($message, '429')) {
+                Log::warning('AI provider vision capacity limit hit', [
                     'type' => $type,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
-                throw new \Exception('Dạ, hiện tại cửa hàng đang tiếp nhận nhiều yêu cầu nên em chưa xử lý ảnh ngay được. Anh/chị vui lòng đợi một chút hoặc nhập tên thuốc trực tiếp để em hỗ trợ ngay nhé.');
+                throw new \Exception('Dạ, nhà cung cấp AI đang quá tải hoặc bị giới hạn lượt đọc ảnh. Anh/chị vui lòng thử lại sau ít phút hoặc nhập tên thuốc trực tiếp để em hỗ trợ ngay nhé.', previous: $e);
             }
-            
-            // Check for rate limit error
-            if (strpos($e->getMessage(), 'rate limit') !== false || strpos($e->getMessage(), 'Too Many Requests') !== false) {
-                Log::warning('Gemini API rate limit hit', [
-                    'type' => $type,
-                    'error' => $e->getMessage()
-                ]);
-                throw new \Exception('Dạ, em đang xử lý hơi nhiều dữ liệu. Anh/chị vui lòng đợi khoảng 30 giây rồi gửi lại ảnh giúp em nhé.');
-            }
-            
-            // Re-throw other exceptions
+
             throw $e;
         }
     }
-
-    protected function resolveGeminiApiKey(): string
-    {
-        $rawSources = [];
-        $primary = config('chatbot.gemini.api_key');
-
-        if (is_string($primary) && trim($primary) !== '') {
-            $rawSources[] = $primary;
-        }
-
-        $fallback = config('chatbot.gemini.api_keys', []);
-        if (is_string($fallback) && trim($fallback) !== '') {
-            $rawSources[] = $fallback;
-        } elseif (is_array($fallback)) {
-            foreach ($fallback as $item) {
-                if (is_string($item) && trim($item) !== '') {
-                    $rawSources[] = $item;
-                }
-            }
-        }
-
-        foreach ($rawSources as $source) {
-            $parts = preg_split('/[\s,;|]+/', trim($source)) ?: [];
-            foreach ($parts as $part) {
-                $candidate = trim($part);
-                if ($candidate !== '') {
-                    return $candidate;
-                }
-            }
-        }
-
-        throw new \RuntimeException('Gemini API key not configured');
-    }
-
-    protected function makeGeminiClient(string $apiKey): Client
-    {
-        $timeout = min(max((int) config('chatbot.gemini.timeout', 30), 1), 120);
-        $httpClient = new GuzzleClient([
-            RequestOptions::CONNECT_TIMEOUT => min(10, $timeout),
-            RequestOptions::READ_TIMEOUT => $timeout,
-            RequestOptions::TIMEOUT => $timeout,
-        ]);
-
-        return \Gemini::factory()
-            ->withApiKey($apiKey)
-            ->withHttpClient($httpClient)
-            ->make();
-    }
-
     /**
-     * Build prompt for Gemini Vision based on image type.
+     * Build prompt for provider vision based on image type.
      *
      * @param string $type
      * @return string
@@ -314,73 +273,76 @@ class ImageRecognitionService
     {
         if ($type === 'prescription') {
             return <<<PROMPT
-Bạn là trợ lý AI chuyên phân tích hình ảnh y tế. Nhiệm vụ của bạn là đọc và trích xuất thông tin từ hình ảnh.
+You are a pharmacy vision assistant. Read the image and extract all visible medicines, supplements, prescriptions, labels, packages, blister packs, or receipts.
 
-Hãy phân tích hình ảnh này và trích xuất TẤT CẢ các loại thuốc/sản phẩm y tế. Hình ảnh có thể là:
-- Đơn thuốc (prescription)
-- Hộp thuốc (medicine box/package)
-- Vỉ thuốc (blister pack)
-- Nhãn thuốc (medicine label)
+Return ONLY valid JSON. Do not use markdown.
 
-Trả về kết quả theo ĐÚNG định dạng JSON sau (CHỈ JSON, KHÔNG thêm markdown, KHÔNG thêm giải thích):
-
+Schema:
 {
-  "description": "Mô tả ngắn về hình ảnh (ví dụ: Hộp thuốc Diclofenac 50mg)",
+  "description": "Short Vietnamese description of the image and visible text",
   "products": [
     {
-      "name": "Tên thuốc chính xác (ví dụ: Diclofenac)",
-      "dosage": "Liều lượng nếu có (ví dụ: 50mg)",
+      "name": "Exact visible brand/product name",
+      "dosage": "Visible strength, e.g. 500mg or 1000mg",
       "quantity": 1,
-      "instructions": "Thông tin sử dụng nếu có"
+      "active_ingredients": ["Likely active ingredient or nutrient if visible or strongly inferable"],
+      "generic_names": ["Generic/common names if known"],
+      "category": "Medicine/supplement category if inferable",
+      "uses": ["Common intended uses shown or strongly inferable from package text"],
+      "health_goals": ["Short searchable goals such as immunity, fever, pain, digestion"],
+      "visible_text": "Important raw text seen on the package/label",
+      "instructions": "Directions or claims visible on the image"
     }
   ]
 }
 
-
-Lưu ý quan trọng:
-- Đọc TẤT CẢ text trên hình ảnh, kể cả tên thương hiệu, tên hoạt chất
-- Nếu thấy tên thuốc trên hộp/vỉ/nhãn → trích xuất ra
-- Nếu KHÔNG đọc được text hoặc không phải thuốc, trả về: {"description": "Không thể nhận dạng thuốc từ hình ảnh", "products": []}
-- Tên thuốc có thể là tên thương hiệu (Mylan Diclofenac) hoặc tên hoạt chất (Diclofenac)
-- Đảm bảo JSON hợp lệ
-- CHỈ trả về JSON, không thêm text khác
-PROMPT;
-        } else {
-            return <<<PROMPT
-Bạn là trợ lý AI chuyên phân tích hóa đơn mua thuốc. Nhiệm vụ của bạn là đọc và trích xuất thông tin từ hình ảnh hóa đơn.
-
-Hãy phân tích hình ảnh này và trích xuất TẤT CẢ các sản phẩm được liệt kê trên hóa đơn.
-
-Trả về kết quả theo ĐÚNG định dạng JSON sau (CHỈ JSON, KHÔNG thêm markdown, KHÔNG thêm giải thích):
-
-{
-  "description": "Hóa đơn có X sản phẩm",
-  "products": [
-    {
-      "name": "Tên sản phẩm chính xác",
-      "quantity": 1,
-      "price": 0
-    }
-  ]
-}
-
-Lưu ý quan trọng:
-- Nếu hình ảnh KHÔNG phải hóa đơn hoặc không đọc được, trả về: {"description": "Không thể nhận dạng hóa đơn", "products": []}
-- Tên sản phẩm phải chính xác như trên hóa đơn
-- Giá và số lượng phải là số
-- Đảm bảo JSON hợp lệ
-- CHỈ trả về JSON, không thêm text khác
+Rules:
+- Prefer exact visible text for "name"; use knowledge only for active_ingredients, generic_names, category, uses, and health_goals.
+- If the brand name is not in the local catalog, the extra fields will be used to match local products by ingredient/usage.
+- Do not invent dosage or quantity if not visible.
+- If no medicine/supplement can be recognized, return {"description":"Không thể nhận dạng thuốc từ hình ảnh","products":[]}.
+- JSON only.
 PROMPT;
         }
+
+        return <<<PROMPT
+You are a pharmacy receipt vision assistant. Read the receipt image and extract all listed pharmacy products.
+
+Return ONLY valid JSON. Do not use markdown.
+
+Schema:
+{
+  "description": "Short Vietnamese description of the receipt",
+  "products": [
+    {
+      "name": "Exact visible product name",
+      "quantity": 1,
+      "price": 0,
+      "dosage": "Visible strength if any",
+      "active_ingredients": ["Likely active ingredient or nutrient if visible or strongly inferable"],
+      "generic_names": ["Generic/common names if known"],
+      "category": "Medicine/supplement category if inferable",
+      "uses": ["Common intended uses if inferable"],
+      "visible_text": "Important raw receipt line"
+    }
+  ]
+}
+
+Rules:
+- Keep product names as printed on the receipt.
+- Use extra fields only to support local catalog matching.
+- If no receipt/product can be recognized, return {"description":"Không thể nhận dạng hóa đơn","products":[]}.
+- JSON only.
+PROMPT;
     }
 
     /**
-     * Parse Gemini Vision response text into structured data.
+     * Parse provider vision response text into structured data.
      *
      * @param string $responseText
      * @return array
      */
-    protected function parseGeminiVisionResponse(string $responseText): array
+    protected function parseVisionProviderResponse(string $responseText): array
     {
         // Try to extract JSON from the response
         $jsonText = trim($responseText);
@@ -394,7 +356,7 @@ PROMPT;
         $parsed = json_decode($jsonText, true);
         
         if (json_last_error() === JSON_ERROR_NONE && is_array($parsed)) {
-            Log::info('Successfully parsed Gemini Vision response', [
+            Log::info('Successfully parsed provider vision response', [
                 'products_count' => count($parsed['products'] ?? [])
             ]);
             return [
@@ -408,7 +370,7 @@ PROMPT;
             $parsed = json_decode($jsonMatch[0], true);
             
             if (json_last_error() === JSON_ERROR_NONE && is_array($parsed)) {
-                Log::info('Successfully parsed Gemini Vision response from extracted JSON', [
+                Log::info('Successfully parsed provider vision response from extracted JSON', [
                     'products_count' => count($parsed['products'] ?? [])
                 ]);
                 return [
@@ -418,7 +380,7 @@ PROMPT;
             }
         }
         
-        Log::warning('Could not parse Gemini Vision response as JSON', [
+        Log::warning('Could not parse provider vision response as JSON', [
             'response' => substr($responseText, 0, 500),
             'json_error' => json_last_error_msg(),
             'response_length' => strlen($responseText)
@@ -431,12 +393,12 @@ PROMPT;
     }
 
     /**
-     * Resize and normalize the image before sending it to Gemini.
+     * Resize and normalize the image before sending it to the AI provider.
      *
      * @param string $imagePath
-     * @return array{0: string, 1: MimeType}
+     * @return array{0: string, 1: string}
      */
-    protected function prepareImageForGemini(string $imagePath): array
+    protected function prepareImageForProvider(string $imagePath): array
     {
         if (!is_file($imagePath)) {
             throw new \Exception('Unable to read image file.');
@@ -447,25 +409,25 @@ PROMPT;
             $encodedImage = $manager
                 ->decodePath($imagePath)
                 ->scaleDown(
-                    width: self::GEMINI_MAX_IMAGE_WIDTH,
-                    height: self::GEMINI_MAX_IMAGE_HEIGHT
+                    width: self::VISION_MAX_IMAGE_WIDTH,
+                    height: self::VISION_MAX_IMAGE_HEIGHT
                 )
                 ->encodeUsingMediaType(
-                    MimeType::IMAGE_JPEG->value,
-                    quality: self::GEMINI_JPEG_QUALITY
+                    self::VISION_MIME_TYPE,
+                    quality: self::VISION_JPEG_QUALITY
                 );
         } catch (\Throwable $e) {
-            Log::warning('Failed to normalize image before Gemini analysis', [
+            Log::warning('Failed to normalize image before provider vision analysis', [
                 'image_path' => $imagePath,
                 'error' => $e->getMessage(),
             ]);
 
-            throw new \Exception('Unable to normalize image for Gemini analysis.', previous: $e);
+            throw new \Exception('Unable to normalize image for provider vision analysis.', previous: $e);
         }
 
         return [
             base64_encode((string) $encodedImage),
-            MimeType::IMAGE_JPEG,
+            self::VISION_MIME_TYPE,
         ];
     }
 
@@ -509,6 +471,62 @@ PROMPT;
         return storage_path('app/private/' . $path);
     }
 
+    protected function markLatestImageAnalysisDebug(int $userId, string $type, array $debug): void
+    {
+        $sessionId = session('chat_session_id');
+        if (!$sessionId) {
+            return;
+        }
+
+        $image = ChatbotImage::where('MaKH', $userId)
+            ->where('session_id', $sessionId)
+            ->where('image_type', $type)
+            ->latest('MaAnh')
+            ->first();
+
+        if (!$image) {
+            return;
+        }
+
+        $image->update([
+            'analysis_result' => json_encode(['debug' => $debug], JSON_UNESCAPED_UNICODE),
+            'processed_at' => now(),
+        ]);
+    }
+
+    protected function markLatestImageAnalysisResult(int $userId, string $type, array $analysisResult, array $matchedProducts): void
+    {
+        $sessionId = session('chat_session_id');
+        if (!$sessionId) {
+            return;
+        }
+
+        $image = ChatbotImage::where('MaKH', $userId)
+            ->where('session_id', $sessionId)
+            ->where('image_type', $type)
+            ->latest('MaAnh')
+            ->first();
+
+        if (!$image) {
+            return;
+        }
+
+        $image->update([
+            'analysis_result' => json_encode([
+                'description' => $analysisResult['description'] ?? '',
+                'debug' => [
+                    'ai_provider_used' => true,
+                    'ai_provider_mode' => config('chatbot.ai.mode', 'chat_completions'),
+                    'ai_provider_model' => config('chatbot.ai.model'),
+                    'vision_supported' => true,
+                ],
+            ], JSON_UNESCAPED_UNICODE),
+            'ocr_text' => $analysisResult['description'] ?? '',
+            'recognized_products' => $matchedProducts,
+            'processed_at' => now(),
+        ]);
+    }
+
     /**
      * Match parsed products against the database.
      *
@@ -526,8 +544,8 @@ PROMPT;
                 continue;
             }
             
-            // Search for product in database with fuzzy matching
-            $product = $this->findProductByName($productName);
+            // Search for product in database with provider-extracted context.
+            $product = $this->findProductByParsedData($parsedProduct);
             
             if ($product) {
                 $matched[] = [
@@ -545,7 +563,7 @@ PROMPT;
                     'quantity' => $parsedProduct['quantity'] ?? 1,
                     'dosage' => $parsedProduct['dosage'] ?? null,
                     'instructions' => $parsedProduct['instructions'] ?? null,
-                    'confidence' => $this->calculateMatchConfidence($productName, $product->name)
+                    'confidence' => $this->calculateMatchConfidenceFromParsedData($parsedProduct, $product)
                 ];
             } else {
                 // Product not found
@@ -556,7 +574,7 @@ PROMPT;
                     'quantity' => $parsedProduct['quantity'] ?? 1,
                     'dosage' => $parsedProduct['dosage'] ?? null,
                     'instructions' => $parsedProduct['instructions'] ?? null,
-                    'suggestions' => $this->findSimilarProducts($productName)
+                    'suggestions' => $this->findSimilarProductsFromParsedData($parsedProduct)
                 ];
             }
         }
@@ -570,13 +588,18 @@ PROMPT;
      * @param string $name Product name to search
      * @return \App\Models\Product|null
      */
-    protected function findProductByName(string $name): ?\App\Models\Product
+    protected function findProductByParsedData(array $parsedProduct): ?Product
     {
+        $name = trim((string) ($parsedProduct['name'] ?? ''));
+        if ($name === '') {
+            return null;
+        }
+
         // Clean the name: remove brand names, dosage, common words
         $cleanName = $this->cleanProductName($name);
         
         // Try exact match first
-        $product = \App\Models\Product::notExpired()
+        $product = Product::notExpired()
             ->where('stock_quantity', '>', 0)
             ->where('name', 'LIKE', $name)
             ->FEFO()
@@ -587,7 +610,7 @@ PROMPT;
         }
         
         // Try partial match with cleaned name
-        $product = \App\Models\Product::notExpired()
+        $product = Product::notExpired()
             ->where('stock_quantity', '>', 0)
             ->where(function($query) use ($name, $cleanName) {
                 $query->where('name', 'LIKE', "%{$name}%")
@@ -599,6 +622,11 @@ PROMPT;
             
         if ($product) {
             return $product;
+        }
+
+        $scoredProduct = $this->findProductByProviderContext($parsedProduct);
+        if ($scoredProduct) {
+            return $scoredProduct;
         }
         
         // Try word-by-word matching with cleaned name.
@@ -616,7 +644,7 @@ PROMPT;
             return null;
         }
 
-        $query = \App\Models\Product::notExpired()
+        $query = Product::notExpired()
             ->where('stock_quantity', '>', 0);
 
         foreach ($meaningfulWords as $word) {
@@ -627,6 +655,154 @@ PROMPT;
         }
 
         return $query->FEFO()->first();
+    }
+
+    protected function findProductByProviderContext(array $parsedProduct): ?Product
+    {
+        $queryText = $this->buildProviderProductSearchText($parsedProduct);
+        $queryTokens = $this->extractMeaningfulProductTokens($queryText);
+
+        if (count($queryTokens) < 2) {
+            return null;
+        }
+
+        $candidates = Product::with('category')
+            ->notExpired()
+            ->where('stock_quantity', '>', 0)
+            ->FEFO()
+            ->get()
+            ->map(function (Product $product) use ($parsedProduct, $queryText, $queryTokens) {
+                return [
+                    'product' => $product,
+                    'score' => $this->scoreProductCandidate($parsedProduct, $queryText, $queryTokens, $product),
+                ];
+            })
+            ->filter(fn (array $candidate): bool => $candidate['score'] >= 45)
+            ->sortByDesc('score')
+            ->values();
+
+        return $candidates->first()['product'] ?? null;
+    }
+
+    protected function buildProviderProductSearchText(array $parsedProduct): string
+    {
+        $parts = [];
+
+        foreach (['name', 'dosage', 'instructions', 'category', 'visible_text', 'description'] as $field) {
+            $value = trim((string) ($parsedProduct[$field] ?? ''));
+            if ($value !== '') {
+                $parts[] = $value;
+            }
+        }
+
+        foreach (['active_ingredients', 'generic_names', 'aliases', 'uses', 'health_goals'] as $field) {
+            $value = $parsedProduct[$field] ?? [];
+            if (is_string($value) && trim($value) !== '') {
+                $parts[] = $value;
+                continue;
+            }
+
+            if (is_array($value)) {
+                foreach ($value as $item) {
+                    if (is_scalar($item) && trim((string) $item) !== '') {
+                        $parts[] = (string) $item;
+                    }
+                }
+            }
+        }
+
+        return implode(' ', $parts);
+    }
+
+    protected function scoreProductCandidate(array $parsedProduct, string $queryText, array $queryTokens, Product $product): int
+    {
+        $parsedName = trim((string) ($parsedProduct['name'] ?? ''));
+        $cleanParsedName = $this->cleanProductName($parsedName);
+        $productText = implode(' ', array_filter([
+            $product->name,
+            $product->ingredients,
+            $product->usage,
+            $product->category?->name,
+        ]));
+
+        $normalizedQuery = $this->normalizeProductText($queryText);
+        $normalizedProductText = $this->normalizeProductText($productText);
+        $normalizedProductName = $this->normalizeProductText($product->name);
+        $normalizedParsedName = $this->normalizeProductText($parsedName);
+        $normalizedCleanParsedName = $this->normalizeProductText($cleanParsedName);
+
+        $score = 0;
+
+        if ($normalizedParsedName !== '' && $normalizedProductName === $normalizedParsedName) {
+            $score += 100;
+        }
+
+        if ($normalizedParsedName !== '' && str_contains($normalizedProductText, $normalizedParsedName)) {
+            $score += 70;
+        }
+
+        if ($normalizedCleanParsedName !== '' && str_contains($normalizedProductText, $normalizedCleanParsedName)) {
+            $score += 55;
+        }
+
+        foreach ($queryTokens as $token) {
+            if (preg_match('/^\d+$/', $token) === 1) {
+                $score += preg_match('/\b' . preg_quote($token, '/') . '\s*(?:mg|g|ml|mcg|iu)?\b/u', $normalizedProductText) ? 20 : 0;
+                continue;
+            }
+
+            if ($this->isVitaminLetterToken($token, $normalizedQuery)) {
+                $score += preg_match('/\b(?:vitamin\s*)?' . preg_quote($token, '/') . '\b/u', $normalizedProductText) ? 20 : 0;
+                continue;
+            }
+
+            if (preg_match('/\b' . preg_quote($token, '/') . '\b/u', $normalizedProductText)) {
+                $score += 12;
+            }
+        }
+
+        $dosage = $this->normalizeProductText((string) ($parsedProduct['dosage'] ?? ''));
+        if ($dosage !== '' && str_contains($normalizedProductText, $dosage)) {
+            $score += 15;
+        }
+
+        return $score;
+    }
+
+    protected function normalizeProductText(string $text): string
+    {
+        $text = mb_strtolower($text, 'UTF-8');
+        $text = str_replace(['đ', 'Đ'], ['d', 'd'], $text);
+        $text = preg_replace('/(\d+)\s*(mg|g|ml|mcg|iu)\b/u', '$1 $2', $text) ?? $text;
+        $text = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $text) ?? $text;
+        $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+
+        return trim($text);
+    }
+
+    protected function extractMeaningfulProductTokens(string $text): array
+    {
+        $normalized = $this->normalizeProductText($text);
+        $tokens = preg_split('/\s+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return array_values(array_unique(array_filter($tokens, function (string $token) use ($normalized): bool {
+            if (preg_match('/^\d+$/', $token) === 1) {
+                return true;
+            }
+
+            if ($this->isVitaminLetterToken($token, $normalized)) {
+                return true;
+            }
+
+            return mb_strlen($token, 'UTF-8') > 2
+                && !in_array($token, ['tablet', 'tablets', 'vien', 'hop', 'chai', 'lo', 'box', 'pack'], true);
+        })));
+    }
+
+    protected function isVitaminLetterToken(string $token, string $normalizedText): bool
+    {
+        return in_array($token, ['a', 'b', 'c', 'd', 'e', 'k'], true)
+            && preg_match('/\b(?:vitamin|bio)\s*' . preg_quote($token, '/') . '\b/u', $normalizedText) === 1;
     }
     
     /**
@@ -674,6 +850,20 @@ PROMPT;
      * @param string $actualName Actual product name from database
      * @return float Confidence score (0-1)
      */
+    protected function calculateMatchConfidenceFromParsedData(array $parsedProduct, Product $product): float
+    {
+        $parsedName = trim((string) ($parsedProduct['name'] ?? ''));
+        $baseConfidence = $this->calculateMatchConfidence($parsedName, $product->name);
+        $contextScore = $this->scoreProductCandidate(
+            $parsedProduct,
+            $this->buildProviderProductSearchText($parsedProduct),
+            $this->extractMeaningfulProductTokens($this->buildProviderProductSearchText($parsedProduct)),
+            $product
+        );
+
+        return max($baseConfidence, min(0.95, $contextScore / 100));
+    }
+
     protected function calculateMatchConfidence(string $parsedName, string $actualName): float
     {
         $parsedLower = mb_strtolower($parsedName, 'UTF-8');
@@ -707,6 +897,41 @@ PROMPT;
      * @param string $name Product name
      * @return array
      */
+    protected function findSimilarProductsFromParsedData(array $parsedProduct): array
+    {
+        $queryText = $this->buildProviderProductSearchText($parsedProduct);
+        $words = $this->extractMeaningfulProductTokens($queryText);
+
+        if (empty($words)) {
+            return [];
+        }
+
+        $products = Product::with('category')
+            ->notExpired()
+            ->where('stock_quantity', '>', 0)
+            ->FEFO()
+            ->get()
+            ->map(function (Product $product) use ($parsedProduct, $queryText, $words) {
+                return [
+                    'product' => $product,
+                    'score' => $this->scoreProductCandidate($parsedProduct, $queryText, $words, $product),
+                ];
+            })
+            ->filter(fn (array $candidate): bool => $candidate['score'] >= 24)
+            ->sortByDesc('score')
+            ->take(3)
+            ->pluck('product');
+
+        return $products->map(function(Product $product) {
+            return [
+                'id' => $product->MaSP,
+                'name' => $product->name,
+                'price' => $product->price_vnd,
+                'stock_quantity' => $product->stock_quantity
+            ];
+        })->toArray();
+    }
+
     protected function findSimilarProducts(string $name): array
     {
         // Use cleaned name so brand/dosage/separators don't dilute the search.
@@ -720,7 +945,7 @@ PROMPT;
             return [];
         }
 
-        $products = \App\Models\Product::notExpired()
+        $products = Product::notExpired()
             ->where('stock_quantity', '>', 0)
             ->where(function($query) use ($words) {
                 foreach ($words as $word) {

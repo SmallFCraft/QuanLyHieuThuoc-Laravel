@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ProductCodeGenerator;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -23,12 +24,18 @@ class Category extends Model
      */
     protected $fillable = [
         'name',
+        'code',
         'icon',
         'description',
     ];
 
     protected static function booted(): void
     {
+        static::saving(function (Category $category): void {
+            $category->code = ProductCodeGenerator::normalizeCategoryCode($category->code)
+                ?: ProductCodeGenerator::uniqueCategoryCode($category->name, $category->exists ? $category->getKey() : null);
+        });
+
         static::saved(function (): void {
             static::flushCategoryCaches();
         });

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ProductCodeGenerator;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -22,6 +23,7 @@ class Product extends Model
      */
     protected $fillable = [
         'MaDM',
+        'product_code',
         'name',
         'ingredients',
         'usage',
@@ -45,6 +47,21 @@ class Product extends Model
         'stock_quantity' => 'integer',
         'reorder_point' => 'integer',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Product $product): void {
+            if (filled($product->product_code) || blank($product->MaDM)) {
+                return;
+            }
+
+            $category = Category::find($product->MaDM);
+
+            if ($category instanceof Category) {
+                $product->product_code = ProductCodeGenerator::productCodeForCategory($category);
+            }
+        });
+    }
 
     /**
      * Get the category that owns the product.
@@ -155,6 +172,11 @@ class Product extends Model
     public function getFormattedExpirationDateAttribute(): string
     {
         return $this->expiration_date->format('d/m/Y');
+    }
+
+    public function getDisplayCodeAttribute(): string
+    {
+        return $this->product_code ?: '#' . $this->MaSP;
     }
 
     /**

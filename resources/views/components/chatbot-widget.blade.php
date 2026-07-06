@@ -33,15 +33,37 @@
     >
         <!-- Header -->
         <div class="chatbot-header">
-            <div class="flex items-center">
+            <div class="flex items-center min-w-0">
                 <div class="w-10 h-10 bg-emerald-500 shadow-md border border-emerald-300/50 rounded-full flex items-center justify-center text-white">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                     </svg>
                 </div>
-                <div class="ml-3">
+                <div class="ml-3 min-w-0">
                     <h3 class="font-semibold text-white">{{ __('messages.chatbot.header_title') }}</h3>
                     <p class="text-xs text-emerald-50">{{ __('messages.chatbot.header_subtitle') }}</p>
+                    <div x-show="sessionId" class="chatbot-session-chip" style="display: none;">
+                        <span x-text="'Phiên: ' + displaySessionId()"></span>
+                        <button
+                            type="button"
+                            class="chatbot-session-copy"
+                            @click="copySessionId()"
+                            :aria-label="sessionCopied ? 'Đã sao chép mã phiên chatbot' : 'Sao chép mã phiên chatbot'"
+                            :title="sessionCopied ? 'Đã sao chép' : 'Sao chép mã phiên'"
+                        >
+                            <span x-show="!sessionCopied" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="11" height="11" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </span>
+                            <span x-show="sessionCopied" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 6L9 17l-5-5"></path>
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
                 </div>
             </div>
             <button @click="toggleWidget()" class="text-white hover:text-emerald-50">
@@ -217,8 +239,13 @@
                             </template>
 
                             <!-- Disclaimer -->
-                            <template x-if="message.show_disclaimer">
-                                <div class="mt-2 text-xs text-yellow-600 bg-yellow-50 p-2 rounded" style="display: flex; gap: 4px; align-items: flex-start;">
+                            <template x-if="shouldShowInlineDisclaimer(message, index)">
+                                <div class="chatbot-inline-disclaimer mt-2 text-xs text-yellow-700 bg-yellow-50 p-2 rounded" style="display: flex; gap: 6px; align-items: flex-start;">
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="flex: 0 0 auto; margin-top: 1px;">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 17h.01"></path>
+                                    </svg>
                                     <span>⚠️</span>
                                     <span x-text="message.disclaimer || '{{ __('messages.chatbot.disclaimer_text') }}'"></span>
                                 </div>
@@ -246,6 +273,11 @@
                                         </svg>
                                     </span>
                                 </button>
+                                <time
+                                    class="message-timestamp"
+                                    :datetime="message.created_at || message.createdAt || ''"
+                                    x-text="formatMessageTime(message.created_at || message.createdAt)"
+                                ></time>
                             </div>
                         </template>
                     </div>
@@ -610,6 +642,54 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.chatbot-header h3,
+.chatbot-header p {
+    overflow-wrap: anywhere;
+}
+
+.chatbot-session-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    margin-top: 7px;
+    padding: 4px 6px 4px 9px;
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ecfdf5;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.chatbot-session-chip span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chatbot-session-copy {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.chatbot-session-copy:hover {
+    background: rgba(255, 255, 255, 0.28);
+    border-color: rgba(255, 255, 255, 0.48);
+}
+
 .chatbot-messages {
     flex: 1;
     overflow-y: auto;
@@ -688,6 +768,10 @@
     font-style: italic;
     padding: 10px 14px;
     border-color: rgba(255, 255, 255, 0.4);
+}
+
+.chatbot-inline-disclaimer > span:first-of-type {
+    display: none;
 }
 
 .chatbot-widget-container .product-card {
@@ -911,6 +995,19 @@
     line-height: 1.45;
     resize: none;
     overflow-y: auto;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none;
+}
+
+.input-message::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.input-message::-webkit-scrollbar-track,
+.input-message::-webkit-scrollbar-thumb {
+    background: transparent !important;
+    border: 0 !important;
 }
 
 .input-message:focus {
@@ -1036,6 +1133,7 @@
 .message-actions {
     display: flex;
     align-items: center;
+    gap: 8px;
     padding: 0 6px;
 }
 
@@ -1068,6 +1166,14 @@
     color: #047857;
     border-color: rgba(16, 185, 129, 0.28);
     transform: translateY(-1px);
+}
+
+.message-timestamp {
+    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 /* Welcome Message Styles */
@@ -1229,7 +1335,7 @@
         width: 56px; 
         height: 56px; 
     }
-    .product-card { 
+    .chatbot-widget-container .product-card {
         flex-direction: row; 
         align-items: stretch;
     }

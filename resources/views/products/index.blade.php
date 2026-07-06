@@ -50,9 +50,13 @@
         box-shadow: 0 16px 32px rgba(5, 150, 105, 0.24);
     }
 
-    .catalog-filter-link.is-active .catalog-filter-label,
-    .catalog-filter-link.is-active .catalog-filter-count {
+    .catalog-filter-link.is-active .catalog-filter-label {
         color: #ffffff;
+    }
+
+    .catalog-filter-link.is-active .catalog-filter-count {
+        background: rgba(255, 255, 255, 0.92);
+        color: #047857;
     }
 
     .catalog-filter-link.is-active .catalog-filter-icon {
@@ -108,6 +112,12 @@
     .catalog-filter-link:hover .catalog-filter-count,
     .catalog-filter-link:focus .catalog-filter-count {
         background: rgba(16, 185, 129, 0.12);
+        color: #047857;
+    }
+
+    .catalog-filter-link.is-active:hover .catalog-filter-count,
+    .catalog-filter-link.is-active:focus .catalog-filter-count {
+        background: rgba(255, 255, 255, 0.92);
         color: #047857;
     }
 

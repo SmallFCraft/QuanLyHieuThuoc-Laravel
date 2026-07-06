@@ -14,6 +14,9 @@ function chatbotWidget() {
         attachedImage: null,
         imagePreviewUrl: null,
         isAuthenticated: false,
+        sessionId: null,
+        sessionCopied: false,
+        sessionCopyTimer: null,
         maxMessages: 50,
         pasteListener: null,
         objectUrls: [],
@@ -115,6 +118,11 @@ function chatbotWidget() {
                 this.copyFeedbackTimer = null;
             }
 
+            if (this.sessionCopyTimer) {
+                window.clearTimeout(this.sessionCopyTimer);
+                this.sessionCopyTimer = null;
+            }
+
             this.revokeTimers.forEach((timer) => window.clearTimeout(timer));
             this.revokeTimers = [];
 
@@ -123,7 +131,7 @@ function chatbotWidget() {
         },
 
         pushMessage(message) {
-            const nextMessages = [...this.messages, message];
+            const nextMessages = [...this.messages, this.normalizeMessageTimestamp(message)];
             const overflow = nextMessages.length - this.maxMessages;
 
             if (overflow > 0) {
@@ -145,8 +153,33 @@ function chatbotWidget() {
             });
 
             this.messages = Array.isArray(messages)
-                ? messages.slice(-this.maxMessages)
+                ? messages.map((message) => this.normalizeMessageTimestamp(message)).slice(-this.maxMessages)
                 : [];
+        },
+
+        normalizeMessageTimestamp(message) {
+            const normalized = { ...(message || {}) };
+
+            if (!normalized.created_at && !normalized.createdAt) {
+                normalized.created_at = new Date().toISOString();
+            }
+
+            return normalized;
+        },
+
+        shouldShowInlineDisclaimer(message, index) {
+            if (!message || message.role === 'user' || !message.show_disclaimer) {
+                return false;
+            }
+
+            for (let i = this.messages.length - 1; i >= 0; i--) {
+                const entry = this.messages[i];
+                if (entry && entry.role !== 'user' && entry.show_disclaimer) {
+                    return i === index;
+                }
+            }
+
+            return false;
         },
 
         trackObjectUrl(url) {
@@ -205,10 +238,6 @@ function chatbotWidget() {
         toggleWidget() {
             this.isOpen = !this.isOpen;
             
-            if (this.isOpen && !this.disclaimerAccepted) {
-                this.showDisclaimer = true;
-            }
-            
             if (this.isOpen) {
                 this.$nextTick(() => {
                     this.scrollToBottom();
@@ -220,6 +249,39 @@ function chatbotWidget() {
             this.disclaimerAccepted = true;
             this.showDisclaimer = false;
             localStorage.setItem('chatbot_disclaimer_accepted', 'true');
+        },
+
+        setSessionId(sessionId) {
+            this.sessionId = sessionId || null;
+            this.sessionCopied = false;
+        },
+
+        displaySessionId() {
+            if (!this.sessionId) {
+                return '';
+            }
+
+            return `CHAT-${String(this.sessionId).slice(0, 8).toUpperCase()}`;
+        },
+
+        async copySessionId() {
+            if (!this.sessionId) {
+                return;
+            }
+
+            const copied = await this.copyTextToClipboard(this.sessionId);
+            if (!copied) {
+                return;
+            }
+
+            this.sessionCopied = true;
+            if (this.sessionCopyTimer) {
+                window.clearTimeout(this.sessionCopyTimer);
+            }
+            this.sessionCopyTimer = window.setTimeout(() => {
+                this.sessionCopied = false;
+                this.sessionCopyTimer = null;
+            }, 1800);
         },
         
         async sendMessage() {
@@ -275,6 +337,9 @@ function chatbotWidget() {
                     });
 
                     const data = await response.json().catch(() => ({}));
+                    if (Object.prototype.hasOwnProperty.call(data, 'session_id')) {
+                        this.setSessionId(data.session_id);
+                    }
                     
                     // Handle authentication required
                     if (response.status === 401 && data.require_login) {
@@ -323,9 +388,6 @@ function chatbotWidget() {
                             disclaimer: data.disclaimer
                         });
                         
-                        if (data.show_disclaimer && !this.disclaimerAccepted) {
-                            this.showDisclaimer = true;
-                        }
                     } else {
                         this.pushMessage({
                             role: 'assistant',
@@ -433,6 +495,9 @@ function chatbotWidget() {
                 }
                 
                 const data = await response.json();
+                if (Object.prototype.hasOwnProperty.call(data, 'session_id')) {
+                    this.setSessionId(data.session_id);
+                }
                 
                 if (data.success && data.recognized_products && data.recognized_products.length > 0) {
                     const matchedCount = data.recognized_products.filter(p => p.matched).length;
@@ -750,10 +815,44 @@ function chatbotWidget() {
             return date.toLocaleDateString('vi-VN');
         },
 
+        formatMessageTime(value) {
+            if (!value) {
+                return '';
+            }
+
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) {
+                return '';
+            }
+
+            return date.toLocaleString('vi-VN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        },
+
         async copyMessage(content, index) {
             const text = String(content ?? '').trim();
             if (!text) return;
 
+            const copied = await this.copyTextToClipboard(text);
+
+            if (!copied) return;
+
+            this.copiedMessageIndex = index;
+            if (this.copyFeedbackTimer) {
+                window.clearTimeout(this.copyFeedbackTimer);
+            }
+            this.copyFeedbackTimer = window.setTimeout(() => {
+                this.copiedMessageIndex = null;
+                this.copyFeedbackTimer = null;
+            }, 1800);
+        },
+
+        async copyTextToClipboard(text) {
             let copied = false;
 
             if (navigator.clipboard && window.isSecureContext) {
@@ -786,16 +885,7 @@ function chatbotWidget() {
                 document.body.removeChild(textarea);
             }
 
-            if (!copied) return;
-
-            this.copiedMessageIndex = index;
-            if (this.copyFeedbackTimer) {
-                window.clearTimeout(this.copyFeedbackTimer);
-            }
-            this.copyFeedbackTimer = window.setTimeout(() => {
-                this.copiedMessageIndex = null;
-                this.copyFeedbackTimer = null;
-            }, 1800);
+            return copied;
         },
 
         parseMarkdown(text) {
@@ -988,6 +1078,9 @@ function chatbotWidget() {
                 
                 if (response.ok) {
                     const data = await response.json();
+                    if (Object.prototype.hasOwnProperty.call(data, 'session_id')) {
+                        this.setSessionId(data.session_id);
+                    }
                     if (data.success && data.messages) {
                         this.setMessages(data.messages);
                         this.$nextTick(() => {

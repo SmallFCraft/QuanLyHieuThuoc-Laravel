@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\AdminProductsExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductRequest;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\ProductBatch;
+use App\Support\ProductCodeGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProductController extends Controller
 {
@@ -39,6 +42,8 @@ class ProductController extends Controller
     public function store(ProductRequest $request)
     {
         $data = $request->validated();
+        $category = Category::findOrFail($data['MaDM']);
+        $data['product_code'] = ProductCodeGenerator::productCodeForCategory($category);
         $uploadedImage = null;
         
         // Handle image upload
@@ -161,6 +166,7 @@ class ProductController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('batch_number', 'like', "%{$search}%")
+                  ->orWhere('product_code', 'like', "%{$search}%")
                   ->orWhereHas('category', function($q) use ($search) {
                       $q->where('name', 'like', "%{$search}%");
                   });
@@ -172,6 +178,7 @@ class ProductController extends Controller
         
         $allowedOrderColumns = [
             'MaSP',
+            'product_code',
             'name',
             'price',
             'stock_quantity',
@@ -207,6 +214,8 @@ class ProductController extends Controller
         $data = $products->map(function($product) {
             return [
                 'MaSP' => $product->MaSP,
+                'product_code' => $product->product_code,
+                'display_code' => $product->display_code,
                 'name' => $product->name,
                 'category' => $product->category->name,
                 'price' => $product->price_vnd,
@@ -228,6 +237,17 @@ class ProductController extends Controller
             'recordsFiltered' => $filteredRecords,
             'data' => $data
         ]);
+    }
+
+    public function export(Request $request)
+    {
+        return Excel::download(
+            new AdminProductsExport(
+                categoryId: $request->filled('MaDM') ? $request->string('MaDM')->toString() : null,
+                search: $request->filled('q') ? $request->string('q')->trim()->toString() : null,
+            ),
+            'san-pham.xlsx'
+        );
     }
 
     /**

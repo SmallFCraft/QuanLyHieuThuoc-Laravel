@@ -166,16 +166,39 @@
                         <div class="rounded-3 rounded-md-4 border overflow-hidden mb-3 mb-md-4 shadow-sm" style="border-color: rgba(16,185,129,0.15) !important;">
                             @foreach($order->items as $item)
                                 <div class="d-flex align-items-center gap-2 gap-md-3 p-2 p-md-3 {{ !$loop->last ? 'border-bottom' : '' }}" style="border-color: rgba(16,185,129,0.1) !important; background: rgba(255,255,255,0.7);">
-                                    <div class="bg-white rounded-2 rounded-md-3 overflow-hidden flex-shrink-0 border" style="width: 48px; height: 48px; border-color: rgba(0,0,0,0.05) !important;" data-product-image-container>
-                                        <x-product-image
-                                            :src="$item->product?->image_url"
-                                            :alt="$item->product?->name ?? __('messages.profile.product_not_exist')"
-                                            class="w-100 h-100 object-fit-contain p-1"
-                                            icon-size="1rem"
-                                        />
-                                    </div>
+                                    @if($item->product)
+                                        <a href="{{ route('products.show', $item->product->MaSP) }}"
+                                           class="position-relative bg-white rounded-2 rounded-md-3 overflow-hidden flex-shrink-0 border d-block"
+                                           style="width: 48px; height: 48px; border-color: rgba(0,0,0,0.05) !important;"
+                                           data-product-image-container
+                                           aria-label="{{ __('messages.view_details') }}: {{ $item->product->name }}">
+                                            <x-product-image
+                                                :src="$item->product->image_url"
+                                                :alt="$item->product->name"
+                                                class="w-100 h-100 object-fit-contain p-1"
+                                                icon-size="1rem"
+                                            />
+                                        </a>
+                                    @else
+                                        <div class="position-relative bg-white rounded-2 rounded-md-3 overflow-hidden flex-shrink-0 border" style="width: 48px; height: 48px; border-color: rgba(0,0,0,0.05) !important;" data-product-image-container>
+                                            <x-product-image
+                                                :src="null"
+                                                :alt="__('messages.profile.product_not_exist')"
+                                                class="w-100 h-100 object-fit-contain p-1"
+                                                icon-size="1rem"
+                                            />
+                                        </div>
+                                    @endif
                                     <div class="flex-grow-1 min-w-0">
-                                        <p class="fw-bold text-gray-800 mb-1 text-truncate" style="font-size: 0.85rem;">{{ $item->product ? $item->product->name : __('messages.profile.product_not_exist') }}</p>
+                                        @if($item->product)
+                                            <a href="{{ route('products.show', $item->product->MaSP) }}"
+                                               class="fw-bold text-gray-800 mb-1 text-truncate text-decoration-none d-block"
+                                               style="font-size: 0.85rem;">
+                                                {{ $item->product->name }}
+                                            </a>
+                                        @else
+                                            <p class="fw-bold text-gray-800 mb-1 text-truncate" style="font-size: 0.85rem;">{{ __('messages.profile.product_not_exist') }}</p>
+                                        @endif
                                         <div class="d-flex align-items-center gap-2 flex-wrap">
                                             <span class="badge bg-gray-100 text-gray-600 rounded-pill fw-normal" style="font-size: 0.7rem;">{{ format_currency_vi($item->unit_price) }}</span>
                                             <span class="text-gray-400 small">×</span>
@@ -215,7 +238,7 @@
 
     @if($orders->hasPages())
         <div class="mt-4">
-            {{ $orders->links() }}
+            {{ $orders->fragment('orders')->links() }}
         </div>
     @endif
 </div>

@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\ChatSessionController as AdminChatSessionController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -67,6 +68,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     
     // Products management
     Route::get('/products/data', [AdminProductController::class, 'data'])->name('products.data');
+    Route::get('/products/export', [AdminProductController::class, 'export'])->name('products.export');
     Route::resource('products', AdminProductController::class);
     
     // Categories management
@@ -74,18 +76,30 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     
     // Orders management
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/export', [AdminOrderController::class, 'export'])->name('orders.export');
     Route::get('/orders/{MaDH}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{MaDH}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::post('/orders/{MaDH}/cancel', [AdminOrderController::class, 'cancel'])->name('orders.cancel');
     
     // Inventory management
     Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('inventory.index');
+    Route::get('/inventory/export', [AdminInventoryController::class, 'export'])->name('inventory.export');
     Route::get('/inventory/low-stock', [AdminInventoryController::class, 'lowStock'])->name('inventory.lowStock');
     Route::get('/inventory/expiring', [AdminInventoryController::class, 'expiring'])->name('inventory.expiring');
     Route::post('/inventory/adjust', [AdminInventoryController::class, 'adjust'])->name('inventory.adjust');
     
+    // Chat session lookup
+    Route::get('/chat-sessions', [AdminChatSessionController::class, 'index'])->name('chatSessions.index');
+    Route::get('/chat-sessions/{sessionId}/images/{image}', [AdminChatSessionController::class, 'image'])
+        ->whereUuid('sessionId')
+        ->whereNumber('image')
+        ->name('chatSessions.images.show');
+    Route::get('/chat-sessions/{sessionId}', [AdminChatSessionController::class, 'show'])
+        ->whereUuid('sessionId')
+        ->name('chatSessions.show');
     // Users management
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::get('/users/export', [AdminUserController::class, 'export'])->name('users.export');
     Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
     Route::put('/users/{MaKH}', [AdminUserController::class, 'update'])->name('users.update');
     Route::patch('/users/{MaKH}/status', [AdminUserController::class, 'updateStatus'])->name('users.updateStatus');

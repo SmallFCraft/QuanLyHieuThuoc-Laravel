@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\AdminOrdersExport;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class OrderController extends Controller
 {
@@ -41,6 +43,17 @@ class OrderController extends Controller
         $order = Order::with(['user', 'items.product'])->findOrFail($MaDH);
 
         return view('admin.orders.show', compact('order'));
+    }
+
+    public function export(Request $request)
+    {
+        return Excel::download(
+            new AdminOrdersExport(
+                status: $request->filled('status') ? $request->string('status')->toString() : null,
+                search: $request->filled('q') ? $request->string('q')->trim()->toString() : null,
+            ),
+            'don-hang.xlsx'
+        );
     }
 
     /**

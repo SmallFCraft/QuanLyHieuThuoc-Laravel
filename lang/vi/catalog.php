@@ -55,7 +55,7 @@ return [
     'stock_status' => 'Trạng thái kho',
     'expiry_priority' => 'Ưu tiên hạn dùng',
     'expiry_priority_desc' => 'Theo dõi hạn dùng rõ ràng trước khi mua',
-    'advisor_cta' => 'Tư vấn với trợ lý',
+    'advisor_cta' => 'Tư vấn với AI',
     'save_favorite' => 'Lưu yêu thích',
     'saved_favorite' => 'Đã lưu',
     'share_product' => 'Chia sẻ',

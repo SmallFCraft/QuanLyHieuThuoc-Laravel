@@ -69,11 +69,13 @@ class ChatbotController extends Controller
         }
 
         $validated = $validator->validated();
+        $sessionId = null;
 
         try {
             $userId = auth()->id();
             $message = $validated['message'];
             $context = $validated['context'] ?? [];
+            $userMessageSaved = false;
             
             // Get or create session ID
             $sessionId = $this->getSessionId();
@@ -82,7 +84,26 @@ class ChatbotController extends Controller
             $previousMessages = ChatMessage::where('MaKH', $userId)
                 ->where('session_id', $sessionId)
                 ->orderBy('created_at', 'desc')
+                ->orderBy('MaTN', 'desc')
                 ->limit(10)
+                ->get()
+                ->reverse()
+                ->map(function($msg) {
+                    return [
+                        'role' => $msg->role,
+                        'content' => $this->formatMessageContentForAiContext($msg),
+                        'products' => $msg->products,
+                        'metadata' => $msg->metadata,
+                    ];
+                })
+                ->toArray();
+
+            $nameMemoryMessages = ChatMessage::where('MaKH', $userId)
+                ->where('session_id', $sessionId)
+                ->where('role', 'user')
+                ->orderBy('created_at', 'desc')
+                ->orderBy('MaTN', 'desc')
+                ->limit(100)
                 ->get()
                 ->reverse()
                 ->map(function($msg) {
@@ -94,6 +115,8 @@ class ChatbotController extends Controller
                 ->toArray();
             
             $context['previous_messages'] = $previousMessages;
+            $context['name_memory_messages'] = $nameMemoryMessages;
+            $context['recent_image_products'] = $this->extractRecentImageProducts($previousMessages);
             
             // Process message through ChatbotService
             $response = $this->chatbotService->processMessage($message, $userId, $context);
@@ -110,6 +133,7 @@ class ChatbotController extends Controller
                     'metadata' => null,
                     'show_disclaimer' => false
                 ]);
+                $userMessageSaved = true;
                 
                 // Save assistant response if successful
                 if ($response['success']) {
@@ -123,25 +147,57 @@ class ChatbotController extends Controller
                             'explanations' => $response['explanations'] ?? [],
                             'categories' => $response['categories'] ?? [],
                             'disclaimer' => $response['disclaimer'] ?? null,
+                            'response_type' => $response['response_type'] ?? null,
+                            'debug' => $response['debug'] ?? null,
                         ],
                         'show_disclaimer' => $response['show_disclaimer'] ?? false
                     ]);
                 }
             }
             
-            return response()->json($response);
+            return response()->json(array_merge($response, [
+                'session_id' => $sessionId,
+            ]));
             
         } catch (\Exception $e) {
+            if ($sessionId) {
+                if (! $userMessageSaved) {
+                    ChatMessage::create([
+                        'MaKH' => auth()->id(),
+                        'session_id' => $sessionId,
+                        'role' => 'user',
+                        'content' => $validated['message'],
+                        'products' => null,
+                        'metadata' => null,
+                        'show_disclaimer' => false,
+                    ]);
+                }
+
+                ChatMessage::create([
+                    'MaKH' => auth()->id(),
+                    'session_id' => $sessionId,
+                    'role' => 'system',
+                    'content' => 'Không thể xử lý tin nhắn do lỗi hệ thống.',
+                    'products' => null,
+                    'metadata' => [
+                        'error' => $e->getMessage(),
+                    ],
+                    'show_disclaimer' => false,
+                ]);
+            }
+
             Log::error('Chatbot message processing failed', [
                 'MaKH' => auth()->id(),
+                'session_id' => $sessionId,
                 'message' => $validated['message'],
                 'error' => $e->getMessage()
             ]);
             
             return response()->json([
                 'success' => false,
-                'error' => 'Dạ, hiện tại em không thể xử lý tin nhắn này. Anh/chị vui lòng thử lại sau giây lát nhé.'
-            ], 500);
+                'error' => 'Dạ, hiện tại em không thể xử lý tin nhắn này. Anh/chị vui lòng thử lại sau giây lát nhé.',
+                'session_id' => $sessionId,
+            ] + ($sessionId ? ['session_id' => $sessionId] : []), 500);
         }
     }
 
@@ -165,7 +221,8 @@ class ChatbotController extends Controller
         
         $validated = $request->validate([
             'image' => 'required|image|mimes:jpeg,png,jpg|max:5120', // 5MB
-            'type' => 'nullable|in:prescription,receipt'
+            'type' => 'nullable|in:prescription,receipt',
+            'message' => 'nullable|string|max:1000'
         ], [
             'image.required' => 'Vui lòng chọn hình ảnh',
             'image.image' => 'File phải là hình ảnh',
@@ -173,10 +230,30 @@ class ChatbotController extends Controller
             'image.max' => 'Kích thước file không được vượt quá 5MB'
         ]);
 
+        $sessionId = null;
+        $userImageMessage = null;
+
         try {
             $userId = auth()->id();
             $image = $request->file('image');
             $type = $validated['type'] ?? 'prescription';
+            $imageMessage = trim((string) ($validated['message'] ?? ''));
+            $sessionId = $this->getSessionId();
+
+            $userImageMessage = ChatMessage::create([
+                'MaKH' => $userId,
+                'session_id' => $sessionId,
+                'role' => 'user',
+                'content' => $imageMessage !== '' ? $imageMessage : 'Đã gửi hình ảnh',
+                'products' => null,
+                'metadata' => [
+                    'image_upload' => [
+                        'type' => $type,
+                        'status' => 'processing',
+                    ],
+                ],
+                'show_disclaimer' => false,
+            ]);
             
             // Process image based on type
             if ($type === 'prescription') {
@@ -184,9 +261,21 @@ class ChatbotController extends Controller
             } else {
                 $result = $this->imageRecognitionService->processReceipt($image, $userId);
             }
-            
+
             if (!$result['success']) {
-                return response()->json($result, 400);
+                $userImageMessage->update([
+                    'metadata' => [
+                        'image_upload' => [
+                            'type' => $type,
+                            'status' => 'failed',
+                            'error' => $result['error'] ?? null,
+                        ],
+                    ],
+                ]);
+
+                return response()->json(array_merge($result, [
+                    'session_id' => $sessionId,
+                ]), 400);
             }
             
             // Create draft order from recognized products
@@ -200,12 +289,20 @@ class ChatbotController extends Controller
                     $draftOrder = $draftOrderResult['draft_order'];
                 }
             }
-            
-            // Get or create session ID
-            $sessionId = $this->getSessionId();
+
+            $userImageMessage->update([
+                'metadata' => [
+                    'image_upload' => [
+                        'type' => $type,
+                        'status' => 'processed',
+                        'recognized_count' => count($recognizedProducts),
+                        'ocr_text' => $result['ocr_text'] ?? null,
+                    ],
+                ],
+            ]);
             
             // Save assistant message to database
-            $messageContent = "Đã nhận dạng được " . count($recognizedProducts) . " sản phẩm từ hình ảnh.";
+            $messageContent = $this->buildImageRecognitionMessageContent($recognizedProducts);
             ChatMessage::create([
                 'MaKH' => $userId,
                 'session_id' => $sessionId,
@@ -224,7 +321,8 @@ class ChatbotController extends Controller
                 'recognized_products' => $recognizedProducts,
                 'draft_order' => $draftOrder,
                 'ocr_text' => $result['ocr_text'] ?? null,
-                'processing_time_ms' => $result['processing_time_ms'] ?? null
+                'processing_time_ms' => $result['processing_time_ms'] ?? null,
+                'session_id' => $sessionId,
             ]);
             
         } catch (\Exception $e) {
@@ -232,6 +330,18 @@ class ChatbotController extends Controller
                 'MaKH' => auth()->id(),
                 'error' => $e->getMessage()
             ]);
+
+            if ($userImageMessage) {
+                $userImageMessage->update([
+                    'metadata' => [
+                        'image_upload' => [
+                            'type' => $validated['type'] ?? 'prescription',
+                            'status' => 'failed',
+                            'error' => $e->getMessage(),
+                        ],
+                    ],
+                ]);
+            }
             
             return response()->json([
                 'success' => false,
@@ -250,8 +360,17 @@ class ChatbotController extends Controller
     {
         try {
             $userId = auth()->id();
-            $sessionId = $this->getSessionId();
+            $sessionId = session('chat_session_id');
             $limit = max(1, min($request->integer('limit', self::MAX_HISTORY_MESSAGES), self::MAX_HISTORY_MESSAGES));
+
+            if (!$sessionId) {
+                return response()->json([
+                    'success' => true,
+                    'messages' => [],
+                    'count' => 0,
+                    'session_id' => null,
+                ]);
+            }
             
             $messages = ChatMessage::where('MaKH', $userId)
                 ->where('session_id', $sessionId)
@@ -280,11 +399,13 @@ class ChatbotController extends Controller
                 })
                 ->toArray();
             
+            $count = count($messages);
+
             return response()->json([
                 'success' => true,
                 'messages' => $messages,
-                'count' => count($messages),
-                'session_id' => $sessionId
+                'count' => $count,
+                'session_id' => $count > 0 ? $sessionId : null,
             ]);
         } catch (\Exception $e) {
             Log::error('Get chat history failed', [
@@ -342,7 +463,8 @@ class ChatbotController extends Controller
             
             return response()->json([
                 'success' => true,
-                'message' => 'Lịch sử trò chuyện đã được xóa'
+                'message' => 'Lịch sử trò chuyện đã được xóa',
+                'session_id' => null,
             ]);
         } catch (\Exception $e) {
             Log::error('Clear chat history failed', [
@@ -746,5 +868,74 @@ class ChatbotController extends Controller
         }
         
         return $sessionId;
+    }
+
+    protected function formatMessageContentForAiContext(ChatMessage $message): string
+    {
+        $content = trim((string) $message->content);
+        $productNames = $this->extractProductNamesFromRecognitionPayload($message->products ?? []);
+
+        if ($message->role === 'assistant' && !empty($productNames)) {
+            $content .= "\n\nSản phẩm đã nhận dạng từ ảnh: " . implode(', ', $productNames) . '.';
+            $content .= "\nNếu người dùng hỏi \"thuốc đó\", \"thuốc này\", \"sản phẩm đó\" hoặc \"sản phẩm này\", hãy hiểu là đang hỏi về các sản phẩm này.";
+        }
+
+        return trim($content);
+    }
+
+    protected function extractRecentImageProducts(array $messages): array
+    {
+        for ($index = count($messages) - 1; $index >= 0; $index--) {
+            $message = $messages[$index];
+            if (!is_array($message) || ($message['role'] ?? null) !== 'assistant') {
+                continue;
+            }
+
+            $products = $message['products'] ?? [];
+            if (is_array($products) && !empty($products)) {
+                return $products;
+            }
+        }
+
+        return [];
+    }
+
+    protected function buildImageRecognitionMessageContent(array $recognizedProducts): string
+    {
+        $count = count($recognizedProducts);
+        $productNames = $this->extractProductNamesFromRecognitionPayload($recognizedProducts);
+        $content = "Đã nhận dạng được {$count} sản phẩm từ hình ảnh.";
+
+        if (!empty($productNames)) {
+            $content .= "\nSản phẩm đã nhận dạng: " . implode(', ', $productNames) . '.';
+            $content .= "\nNếu anh/chị hỏi \"thuốc đó\" hoặc \"sản phẩm đó\", em sẽ hiểu là đang hỏi về sản phẩm này.";
+        }
+
+        return $content;
+    }
+
+    protected function extractProductNamesFromRecognitionPayload($products): array
+    {
+        if (!is_array($products)) {
+            return [];
+        }
+
+        $names = [];
+        foreach ($products as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $product = $item['product'] ?? null;
+            $name = is_array($product)
+                ? trim((string) ($product['name'] ?? ''))
+                : trim((string) ($item['parsed_name'] ?? ''));
+
+            if ($name !== '') {
+                $names[] = $name;
+            }
+        }
+
+        return array_values(array_unique($names));
     }
 }

@@ -7,7 +7,7 @@ use App\Models\Product;
 use App\Services\AuditLogService;
 use App\Services\ChatbotService;
 use App\Services\CheckoutService;
-use App\Services\GeminiService;
+use App\Services\AiProviderService;
 use App\Services\InventoryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -18,7 +18,7 @@ class ChatbotServiceTest extends TestCase
     use RefreshDatabase;
 
     protected ChatbotService $chatbotService;
-    protected MockObject $geminiService;
+    protected MockObject $aiProviderService;
 
     protected function getEnvironmentSetUp($app)
     {
@@ -34,13 +34,13 @@ class ChatbotServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->geminiService = $this->createMock(GeminiService::class);
+        $this->aiProviderService = $this->createMock(AiProviderService::class);
         $inventoryService = $this->createMock(InventoryService::class);
         $checkoutService = $this->createMock(CheckoutService::class);
         $auditLogService = $this->createMock(AuditLogService::class);
 
         $this->chatbotService = new ChatbotService(
-            $this->geminiService,
+            $this->aiProviderService,
             $inventoryService,
             $checkoutService,
             $auditLogService
@@ -237,7 +237,24 @@ class ChatbotServiceTest extends TestCase
         $this->assertArrayHasKey('symptoms', $schema[0]['parameters']['properties']);
     }
 
-    public function test_process_message_uses_local_product_lookup_without_gemini(): void
+    public function test_validate_message_does_not_block_cong_dung_as_bad_word(): void
+    {
+        $message = "v\u{1EAD}y c\u{00F2}n thu\u{1ED1}c n\u{00E0}o b\u{1ED5} m\u{1EAF}t kh\u{00F4}ng? n\u{1EBF}u c\u{00F3} cho v\u{00ED} d\u{1EE5}? h\u{00E3}y cho t\u{00F4}i th\u{00EA}m c\u{00F4}ng d\u{1EE5}ng";
+
+        $result = $this->chatbotService->validateMessage($message);
+
+        $this->assertTrue($result['valid']);
+    }
+
+    public function test_validate_message_still_blocks_exact_blacklisted_token(): void
+    {
+        $result = $this->chatbotService->validateMessage("m\u{00E0}y ngu");
+
+        $this->assertFalse($result['valid']);
+        $this->assertNotEmpty($result['reason']);
+    }
+
+    public function test_process_message_uses_local_product_lookup_without_ai_provider(): void
     {
         $category = Category::factory()->create(['name' => 'Giảm đau']);
         Product::factory()->create([
@@ -248,7 +265,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage('mua paracetamol', 1, []);
 
@@ -258,9 +275,46 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('Paracetamol 500mg', $result['response']);
     }
 
+    public function test_process_message_uses_recent_image_product_for_demonstrative_follow_up(): void
+    {
+        $category = Category::factory()->create(['name' => 'Vitamin']);
+        $product = Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Vitamin E 400IU',
+            'usage' => 'Bổ sung vitamin E, hỗ trợ chống oxy hóa.',
+            'stock_quantity' => 20,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage(
+            'thuốc đó có công dụng gì?',
+            1,
+            [
+                'recent_image_products' => [
+                    [
+                        'matched' => true,
+                        'product' => [
+                            'id' => $product->MaSP,
+                            'name' => 'Vitamin E 400IU',
+                        ],
+                    ],
+                ],
+            ]
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertNotEmpty($result['products']);
+        $this->assertSame('Vitamin E 400IU', $result['products'][0]['name']);
+        $this->assertStringContainsString('sản phẩm vừa nhận dạng từ ảnh', $result['response']);
+        $this->assertStringContainsString('Vitamin E 400IU', $result['response']);
+        $this->assertTrue($result['debug']['resolved_from_recent_image_products'] ?? false);
+    }
+
     public function test_process_message_returns_symptom_guidance_without_product_lookup_for_general_symptom_question(): void
     {
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage("T\u{00F4}i b\u{1ECB} ti\u{00EA}u ch\u{1EA3}y th\u{00EC} sao?", 1, []);
 
@@ -273,7 +327,7 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_answers_colloquial_diarrhea_question_without_catalog_fallback(): void
     {
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage('ỉa chảy có cần ỉa ko?', 1, []);
 
@@ -288,7 +342,7 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_uses_previous_symptom_context_for_prolonged_abdominal_pain_follow_up(): void
     {
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage(
             'triệu chứng của tôi đang kéo dài cả tuần này rồi, cần bạn hỗ trợ gấp',
@@ -318,7 +372,7 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_blocks_catalog_lookup_for_urgent_medical_context(): void
     {
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $message = "Hello, are you oke? t\u{00F4}i b\u{1ECB} \u{1EC9}a ch\u{1EA3}y c\u{1EA5}p \u{0111}\u{1ED9} 9, v\u{00E0} b\u{1ECB} ung th\u{01B0} giai \u{0111}o\u{1EA1}n cu\u{1ED1}i. n\u{00EA}n s\u{1EED} d\u{1EE5}ng sao \u{0111}\u{00E2}y??";
 
@@ -332,6 +386,113 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('ung thư', $result['response']);
         $this->assertStringNotContainsString('chưa thấy sản phẩm', $result['response']);
         $this->assertStringNotContainsString('từ khóa', $result['response']);
+    }
+
+    public function test_process_message_handles_dengue_fever_as_urgent_medical_context(): void
+    {
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage('tôi bị sốt xuất huyết nên làm gì?', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertTrue($result['show_disclaimer']);
+        $this->assertStringContainsString('sốt xuất huyết', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringContainsString('không nên tự chọn thuốc', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringContainsString('cấp cứu', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_process_message_answers_cause_question_for_diarrhea_and_stomach_pain(): void
+    {
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage('Vậy tiêu chảy, đau dạ dày là do đâu?', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertTrue($result['show_disclaimer']);
+        $this->assertStringContainsString('nguyên nhân', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringContainsString('rối loạn tiêu hóa', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringContainsString('đau dạ dày', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_process_message_blocks_generic_product_follow_up_after_dengue_context(): void
+    {
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage('sản phẩm?', 1, [
+            'previous_messages' => [
+                [
+                    'role' => 'user',
+                    'content' => 'tôi bị sốt xuất huyết nên làm gì?',
+                ],
+                [
+                    'role' => 'assistant',
+                    'content' => 'Anh/chị nên đi khám sớm.',
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertTrue($result['show_disclaimer']);
+        $this->assertStringContainsString('sốt xuất huyết', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringContainsString('không nên tự chọn thuốc', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_process_message_blocks_generic_medicine_or_product_request_after_dengue_context(): void
+    {
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage('tôi cần thuốc hoặc sản phẩm', 1, [
+            'previous_messages' => [
+                [
+                    'role' => 'user',
+                    'content' => 'tôi bị sốt xuất huyết nên làm gì?',
+                ],
+                [
+                    'role' => 'assistant',
+                    'content' => 'Anh/chị nên đi khám sớm.',
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertTrue($result['show_disclaimer']);
+        $this->assertStringContainsString('sốt xuất huyết', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringContainsString('không nên tự chọn thuốc', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('hoac san pham', $result['response']);
+        $this->assertStringNotContainsString('chưa thấy sản phẩm khớp', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_process_message_provider_failure_does_not_return_random_products(): void
+    {
+        $category = Category::factory()->create(['name' => 'Tiêu hóa']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Smecta',
+            'usage' => 'Điều trị tiêu chảy.',
+            'stock_quantity' => 20,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->aiProviderService->expects($this->once())
+            ->method('chat')
+            ->willThrowException(new \RuntimeException('Your project has been denied access. Please contact support.'));
+
+        $result = $this->chatbotService->processMessage('tôi cần thuốc hoặc sản phẩm', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertSame('auth_or_access_denied', $result['debug']['provider_error_type'] ?? null);
+        $this->assertFalse($result['debug']['used_product_suggestions'] ?? true);
+        $this->assertStringContainsString('kết nối AI', $result['response']);
     }
 
     public function test_process_message_returns_website_intro_without_product_search(): void
@@ -348,7 +509,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage("Website n\u{00E0}y l\u{00E0} g\u{00EC}?", 1, []);
 
@@ -360,9 +521,9 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('website', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_answers_identity_question_locally_without_calling_gemini(): void
+    public function test_process_message_answers_identity_question_locally_without_calling_ai_provider(): void
     {
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage('bạn là model gì?', 1, []);
 
@@ -371,29 +532,29 @@ class ChatbotServiceTest extends TestCase
         $this->assertEmpty($result['categories']);
         $this->assertStringContainsString('Medicare Pharmacy', $result['response']);
         $this->assertStringNotContainsString('L? Huy', $result['response']);
-        $this->assertStringNotContainsString('Gemini', $result['response']);
+        $this->assertStringNotContainsString('nhà cung cấp nội bộ', mb_strtolower($result['response'], 'UTF-8'));
         $this->assertStringNotContainsString('Google', $result['response']);
         $this->assertStringNotContainsString('mô hình ngôn ngữ lớn', mb_strtolower($result['response'], 'UTF-8'));
     }
 
     public function test_process_message_answers_vendor_question_locally_without_confirming_vendor(): void
     {
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
-        $result = $this->chatbotService->processMessage('bạn dùng Gemini à?', 1, []);
+        $result = $this->chatbotService->processMessage('bạn dùng provider nào?', 1, []);
 
         $this->assertTrue($result['success']);
         $this->assertEmpty($result['products']);
         $this->assertEmpty($result['categories']);
         $this->assertStringContainsString('Medicare Pharmacy', $result['response']);
         $this->assertStringNotContainsString('L? Huy', $result['response']);
-        $this->assertStringNotContainsString('Gemini', $result['response']);
+        $this->assertStringNotContainsString('nhà cung cấp nội bộ', mb_strtolower($result['response'], 'UTF-8'));
         $this->assertStringNotContainsString('Google', $result['response']);
     }
 
-    public function test_process_message_answers_internet_access_question_locally_without_calling_gemini(): void
+    public function test_process_message_answers_internet_access_question_locally_without_calling_ai_provider(): void
     {
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage('bạn có truy cập internet không?', 1, []);
 
@@ -405,9 +566,9 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('không tự truy cập internet', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_answers_google_maps_question_locally_without_calling_gemini(): void
+    public function test_process_message_answers_google_maps_question_locally_without_calling_ai_provider(): void
     {
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage('bạn có xem Google Maps được không?', 1, []);
 
@@ -429,7 +590,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage("Website n\u{00E0}y l\u{00E0} g\u{00EC}? c\u{00F3} thu\u{1ED1}c smecta ko?", 1, []);
 
@@ -452,7 +613,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage("Website n\u{00E0}y l\u{00E0} g\u{00EC}? c\u{00F3} thu\u{1ED1}c smecta ko? C\u{00F3} c\u{00F4}ng d\u{1EE5}ng hay t\u{00E1}c d\u{1EE5}ng g\u{00EC}?", 1, []);
 
@@ -462,7 +623,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('tiêu chảy', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_category_lookup_response_returns_categories_without_gemini(): void
+    public function test_category_lookup_response_returns_categories_without_ai_provider(): void
     {
         $category = Category::factory()->create([
             'name' => 'Vitamin',
@@ -476,7 +637,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('buildCategoryLookupResponse');
@@ -490,7 +651,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('danh mục', $result['response']);
     }
 
-    public function test_process_message_uses_gemini_for_symptom_queries_and_returns_disclaimer(): void
+    public function test_process_message_uses_ai_provider_for_symptom_queries_and_returns_disclaimer(): void
     {
         $category = Category::factory()->create(['name' => 'Giảm đau']);
         Product::factory()->create([
@@ -501,7 +662,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->once())
+        $this->aiProviderService->expects($this->once())
             ->method('chat')
             ->willReturn([
                 'choices' => [
@@ -535,7 +696,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->once())
+        $this->aiProviderService->expects($this->once())
             ->method('chat')
             ->willReturn([
                 'choices' => [
@@ -578,7 +739,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->once())
+        $this->aiProviderService->expects($this->once())
             ->method('chat')
             ->willReturn([
                 'choices' => [
@@ -631,7 +792,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage('Có sản phẩm nào hỗ trợ tăng chiều cao hay tăng sức đề kháng?', 1, []);
 
@@ -652,7 +813,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->once())
+        $this->aiProviderService->expects($this->once())
             ->method('chat')
             ->willReturn([
                 'choices' => [
@@ -689,7 +850,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->once())
+        $this->aiProviderService->expects($this->once())
             ->method('chat')
             ->willReturn([
                 'choices' => [
@@ -722,7 +883,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage('tôi tên là Huy', 1, []);
 
@@ -741,13 +902,91 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_preserves_diacritics_in_declared_name(): void
     {
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage('tôi tên là Bằng', 1, []);
 
         $this->assertTrue($result['success']);
         $this->assertStringContainsString('Bằng', $result['response']);
         $this->assertStringNotContainsString('Bang', $result['response']);
+    }
+
+    public function test_process_message_recalls_declared_name_from_history(): void
+    {
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage('tôi tên là gì?', 1, [
+            'previous_messages' => [
+                [
+                    'role' => 'user',
+                    'content' => 'tôi tên là Huy',
+                ],
+                [
+                    'role' => 'assistant',
+                    'content' => 'Dạ, em chào Huy.',
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertStringContainsString('Huy', $result['response']);
+        $this->assertStringNotContainsString('chào Gì', $result['response']);
+        $this->assertStringNotContainsString('chào Gi', $result['response']);
+        $this->assertStringNotContainsString('chưa thấy sản phẩm', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_process_message_recalls_declared_name_from_session_memory_when_recent_context_drops_it(): void
+    {
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage('toi ten la gi?', 1, [
+            'previous_messages' => [
+                [
+                    'role' => 'user',
+                    'content' => 'thuoc vitamin c co dac trung gi khong?',
+                ],
+                [
+                    'role' => 'assistant',
+                    'content' => 'Da, voi tu khoa vitamin c, em tim thay san pham Vitamin C 1000mg.',
+                ],
+            ],
+            'name_memory_messages' => [
+                [
+                    'role' => 'user',
+                    'content' => 'minh la Huy',
+                ],
+                [
+                    'role' => 'user',
+                    'content' => 'cho toi xin 1 bat com',
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertStringContainsString('Huy', $result['response']);
+        $this->assertStringNotContainsString('Gi', $result['response']);
+        $this->assertStringNotContainsString('chua thay san pham', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_process_message_name_question_without_history_does_not_learn_gi_as_name(): void
+    {
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage('tôi tên là gì?', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertStringContainsString('chưa thấy', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('chào Gì', $result['response']);
+        $this->assertStringNotContainsString('chào Gi', $result['response']);
     }
 
     public function test_process_message_treats_product_named_query_as_catalog_lookup_not_self_introduction(): void
@@ -761,7 +1000,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage('thuốc có tên là Vitamin C', 1, []);
 
@@ -772,9 +1011,83 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('tra cứu Vitamin C', mb_strtolower($result['response'], 'UTF-8'));
     }
 
+    public function test_process_message_does_not_append_catalog_miss_for_product_safety_follow_up(): void
+    {
+        $this->aiProviderService->expects($this->once())
+            ->method('chat')
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Dạ, các loại vitamin thường an toàn khi dùng đúng liều. Nếu anh/chị có bệnh nền, đang dùng thuốc khác hoặc muốn dùng liều cao thì nên hỏi dược sĩ/bác sĩ trước.',
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage('uống vào có bị làm sao không?', 1, [
+            'previous_messages' => [
+                [
+                    'role' => 'user',
+                    'content' => 'thuốc vitamin',
+                ],
+                [
+                    'role' => 'assistant',
+                    'content' => 'Dạ, với từ khóa `vitamin`, em tìm thấy các sản phẩm sau: Vitamin C 1000mg, Vitamin E 400IU, Vitamin B Complex.',
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertStringContainsString('vitamin', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('chưa thấy sản phẩm khớp', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('từ khóa', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_process_message_does_not_append_catalog_miss_for_product_usage_timing_follow_up(): void
+    {
+        $this->aiProviderService->expects($this->once())
+            ->method('chat')
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Da, vitamin C thuong nen uong sau an, tot nhat la sau bua sang hoac bua trua. Neu san pham ghi 1 vien/ngay thi dung 1 vien/ngay sau an.',
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage('vay toi nen uong khi nao? an khi nao?', 1, [
+            'previous_messages' => [
+                [
+                    'role' => 'user',
+                    'content' => 'thuoc vitamin c co dac trung gi khong?',
+                ],
+                [
+                    'role' => 'assistant',
+                    'content' => 'Da, voi tu khoa `vitamin c`, em tim thay san pham Vitamin C 1000mg.',
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertTrue($result['show_disclaimer']);
+        $this->assertTrue($result['debug']['ai_provider_used'] ?? false);
+        $this->assertStringContainsString('sau an', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('chua thay san pham', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('tu khoa', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('vay nen uong khi an khi', mb_strtolower($result['response'], 'UTF-8'));
+    }
     public function test_process_message_uses_declared_name_from_history_in_later_local_response(): void
     {
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage('bạn có thể làm gì?', 1, [
             'previous_messages' => [
@@ -824,7 +1137,7 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_personalizes_ai_response_with_declared_name_from_history(): void
     {
-        $this->geminiService->expects($this->once())
+        $this->aiProviderService->expects($this->once())
             ->method('chat')
             ->willReturn([
                 'choices' => [
@@ -851,9 +1164,9 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('anh/chị', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_rewrites_identity_leakage_from_gemini_response(): void
+    public function test_process_message_rewrites_identity_leakage_from_ai_provider_response(): void
     {
-        $this->geminiService->expects($this->once())
+        $this->aiProviderService->expects($this->once())
             ->method('chat')
             ->willReturn([
                 'choices' => [
@@ -872,13 +1185,13 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('Medicare Pharmacy', $result['response']);
         $this->assertStringNotContainsString('L? Huy', $result['response']);
         $this->assertStringNotContainsString('Google', $result['response']);
-        $this->assertStringNotContainsString('Gemini', $result['response']);
+        $this->assertStringNotContainsString('nhà cung cấp nội bộ', mb_strtolower($result['response'], 'UTF-8'));
         $this->assertStringNotContainsString('mô hình ngôn ngữ lớn', mb_strtolower($result['response'], 'UTF-8'));
     }
 
     public function test_process_message_with_url_only_returns_link_guidance_instead_of_symptom_advice(): void
     {
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $result = $this->chatbotService->processMessage(
             'https://svh-22298.azdigihost.com:2222/evo/user/filemanager/files?path=/domains/pharmacy.phmyhu1710.dev/public_html',
@@ -894,6 +1207,33 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('nên nghỉ ngơi', mb_strtolower($result['response'], 'UTF-8'));
     }
 
+    public function test_process_message_food_request_stays_out_of_domain_without_catalog_miss(): void
+    {
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage('cho tôi xin 1 bát cơm', 1, [
+            'previous_messages' => [
+                [
+                    'role' => 'user',
+                    'content' => 'mình là Huy',
+                ],
+                [
+                    'role' => 'assistant',
+                    'content' => 'Dạ, em chào Huy.',
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertStringContainsString('nhà thuốc', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('chưa thấy sản phẩm khớp', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('từ khóa', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('một trợ lý ảo', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
     public function test_process_message_with_nearby_pharmacy_location_request_does_not_return_categories(): void
     {
         $category = Category::factory()->create(['name' => 'Thuốc tiêu hóa']);
@@ -905,7 +1245,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->never())->method('chat');
+        $this->aiProviderService->expects($this->never())->method('chat');
 
         $message = 'Dạ, là một AI, em không có khả năng truy cập thông tin vị trí địa lý hoặc danh sách các tiệm thuốc cụ thể gần khu vực Đà Nẵng, quận Ngũ Hành Sơn. Anh/chị có thể thử tìm kiếm trên Google Maps hoặc các ứng dụng bản đồ khác để tìm tiệm thuốc gần nhất nhé.';
         $result = $this->chatbotService->processMessage($message, 1, []);
@@ -920,7 +1260,7 @@ class ChatbotServiceTest extends TestCase
 
     public function test_recommend_by_symptoms_includes_disclaimer(): void
     {
-        $this->geminiService->method('chat')->willReturn([
+        $this->aiProviderService->method('chat')->willReturn([
             'choices' => [
                 [
                     'message' => [
@@ -949,7 +1289,7 @@ class ChatbotServiceTest extends TestCase
             'usage' => 'Giảm đau và hạ sốt',
         ]);
 
-        $this->geminiService->method('chat')->willReturn([
+        $this->aiProviderService->method('chat')->willReturn([
             'choices' => [
                 [
                     'message' => [
@@ -971,7 +1311,7 @@ class ChatbotServiceTest extends TestCase
 
     public function test_recommend_by_symptoms_handles_errors_gracefully(): void
     {
-        $this->geminiService->method('chat')->willThrowException(new \Exception('API Error'));
+        $this->aiProviderService->method('chat')->willThrowException(new \Exception('API Error'));
 
         $result = $this->chatbotService->recommendBySymptoms('đau đầu');
 
@@ -990,7 +1330,7 @@ class ChatbotServiceTest extends TestCase
             'expiration_date' => now()->addYear(),
         ]);
 
-        $this->geminiService->expects($this->once())
+        $this->aiProviderService->expects($this->once())
             ->method('chat')
             ->willReturn([
                 'choices' => [

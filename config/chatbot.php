@@ -4,24 +4,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Google Gemini Configuration
+    | Chatbot AI Provider Configuration
     |--------------------------------------------------------------------------
     |
-    | Configuration for Google Gemini API integration used by the chatbot AI engine.
+    | Generic /v1-compatible AI provider used by the text chatbot.
+    | Supported modes: chat_completions, responses.
     |
     */
 
-    'gemini' => [
-        'api_key' => env('GEMINI_API_KEY'),
-        // Comma/semicolon/pipe/newline separated fallback keys, e.g.:
-        // GEMINI_API_KEYS="key_1,key_2,key_3"
-        'api_keys' => env('GEMINI_API_KEYS', ''),
-        'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
-        'max_tokens' => env('GEMINI_MAX_TOKENS', 500),
-        'temperature' => env('GEMINI_TEMPERATURE', 0.7),
-        'timeout' => env('GEMINI_TIMEOUT', 30),
-        'include_thoughts' => env('GEMINI_INCLUDE_THOUGHTS', false),
-        'thinking_budget' => env('GEMINI_THINKING_BUDGET', 0),
+    'ai' => [
+        'mode' => env('AI_API_MODE', 'chat_completions'),
+        'base_url' => env('AI_BASE_URL'),
+        'api_key' => env('AI_API_KEY'),
+        'model' => env('AI_MODEL'),
+        'grounded_response' => true,
     ],
 
     /*

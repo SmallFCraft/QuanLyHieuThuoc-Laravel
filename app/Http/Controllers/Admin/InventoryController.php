@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\AdminInventoryExport;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
 
 class InventoryController extends Controller
 {
@@ -20,15 +22,27 @@ class InventoryController extends Controller
     /**
      * Display inventory list with FEFO sorting and expiration highlighting.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::with('category')
-            ->FEFO()
-            ->paginate(20);
+        $status = $request->query('status');
+        $days = min(max($request->integer('days', 30), 1), 365);
+        $query = Product::with('category');
+
+        match ($status) {
+            'low_stock' => $query->lowStock(),
+            'expiring' => $query->expiringSoon($days),
+            'expired' => $query->where('expiration_date', '<', now()),
+            'out_of_stock' => $query->where('stock_quantity', 0),
+            default => null,
+        };
+
+        $products = $query->FEFO()
+            ->paginate(20)
+            ->withQueryString();
         
         $summary = $this->inventoryService->getInventorySummary();
         
-        return view('admin.inventory.index', compact('products', 'summary'));
+        return view('admin.inventory.index', compact('products', 'summary', 'status', 'days'));
     }
 
     /**
@@ -36,9 +50,7 @@ class InventoryController extends Controller
      */
     public function lowStock()
     {
-        $products = $this->inventoryService->getLowStockProducts();
-        
-        return view('admin.inventory.low-stock', compact('products'));
+        return redirect()->route('admin.inventory.index', ['status' => 'low_stock']);
     }
 
     /**
@@ -47,17 +59,25 @@ class InventoryController extends Controller
     public function expiring(Request $request)
     {
         $days = min(max($request->integer('days', 30), 1), 365);
-        $products = $this->inventoryService->checkExpiration($days);
-        
-        return view('admin.inventory.expiring', compact('products', 'days'));
+
+        return redirect()->route('admin.inventory.index', [
+            'status' => 'expiring',
+            'days' => $days,
+        ]);
     }
 
-    /**
-     * Show the inventory adjustment form.
-     */
-    public function adjustForm(Product $product)
+    public function export(Request $request)
     {
-        return view('admin.inventory.adjust', compact('product'));
+        $days = min(max($request->integer('days', 30), 1), 365);
+
+        return Excel::download(
+            new AdminInventoryExport(
+                status: $request->filled('status') ? $request->string('status')->toString() : null,
+                days: $days,
+                search: $request->filled('q') ? $request->string('q')->trim()->toString() : null,
+            ),
+            'ton-kho.xlsx'
+        );
     }
 
     /**
@@ -106,92 +126,4 @@ class InventoryController extends Controller
         }
     }
 
-    /**
-     * Get inventory data for DataTables.
-     */
-    public function data(Request $request)
-    {
-        $query = Product::with('category');
-        
-        // Filter by status
-        if ($request->has('status')) {
-            switch ($request->status) {
-                case 'expired':
-                    $query->where('expiration_date', '<', now());
-                    break;
-                case 'expiring':
-                    $query->expiringSoon(30);
-                    break;
-                case 'low_stock':
-                    $query->lowStock();
-                    break;
-                case 'out_of_stock':
-                    $query->where('stock_quantity', 0);
-                    break;
-            }
-        }
-        
-        // Search
-        if ($request->has('search') && $request->search['value']) {
-            $search = $request->search['value'];
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('batch_number', 'like', "%{$search}%");
-            });
-        }
-        
-        // Total records
-        $totalRecords = Product::count();
-        $filteredRecords = $query->count();
-        
-        // FEFO sorting by default
-        $query->FEFO();
-        
-        // Pagination
-        $start = max(0, $request->integer('start', 0));
-        $length = min(max($request->integer('length', 20), 1), 100);
-        $products = $query->skip($start)->take($length)->get();
-        
-        // Format data
-        $data = $products->map(function($product) {
-            $statusClass = '';
-            $statusText = '';
-            
-            if ($product->isExpired()) {
-                $statusClass = 'danger';
-                $statusText = 'Đã hết hạn';
-            } elseif ($product->isExpiringSoon(30)) {
-                $statusClass = 'warning';
-                $statusText = 'Sắp hết hạn';
-            } elseif ($product->isLowStock()) {
-                $statusClass = 'info';
-                $statusText = 'Tồn kho thấp';
-            } else {
-                $statusClass = 'success';
-                $statusText = 'Bình thường';
-            }
-            
-            return [
-                'MaSP' => $product->MaSP,
-                'name' => $product->name,
-                'category' => $product->category->name,
-                'batch_number' => $product->batch_number,
-                'stock_quantity' => $product->stock_quantity,
-                'reorder_point' => $product->reorder_point,
-                'expiration_date' => $product->formatted_expiration_date,
-                'status' => [
-                    'class' => $statusClass,
-                    'text' => $statusText
-                ],
-                'actions' => view('admin.inventory.partials.actions', compact('product'))->render()
-            ];
-        });
-        
-        return response()->json([
-            'draw' => intval($request->draw),
-            'recordsTotal' => $totalRecords,
-            'recordsFiltered' => $filteredRecords,
-            'data' => $data
-        ]);
-    }
 }

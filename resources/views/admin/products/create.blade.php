@@ -44,11 +44,12 @@
                                     id="MaDM" name="MaDM" required>
                                     <option value="">-- Chọn danh mục --</option>
                                     @foreach($categories as $category)
-                                        <option value="{{ $category->MaDM }}" {{ old('MaDM') == $category->MaDM ? 'selected' : '' }}>
+                                        <option value="{{ $category->MaDM }}" data-code="{{ $category->code }}" {{ old('MaDM') == $category->MaDM ? 'selected' : '' }}>
                                             {{ $category->name }}
                                         </option>
                                     @endforeach
                                 </select>
+                                <div class="form-text" id="productCodeHint">Mã sản phẩm sẽ tự sinh sau khi chọn danh mục.</div>
                                 @error('MaDM')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -194,55 +195,20 @@
 </div>
 @endsection
 
-@push('styles')
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/summernote@0.9.0/dist/summernote-lite.min.css" rel="stylesheet">
-<style>
-    .form-control:focus, .form-select:focus {
-        border-color: #10b981;
-        box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.15);
-    }
-    .btn-primary {
-        background: linear-gradient(135deg, #059669, #10b981);
-        border: none;
-    }
-    .btn-primary:hover {
-        background: linear-gradient(135deg, #047857, #059669);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-    }
-    .input-group-text {
-        background: #ecfdf5;
-        border-color: #d1fae5;
-        color: #059669;
-    }
-</style>
-@endpush
-
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/summernote@0.9.0/dist/summernote-lite.min.js"></script>
-<script>
-    $(document).ready(function() {
-        // Initialize Select2
-        $('.select2-basic').select2({
-            width: '100%',
-            placeholder: "-- Chọn danh mục --",
-            allowClear: true
-        });
+<script type="module">
+    function updateProductCodeHint() {
+        const select = document.getElementById('MaDM');
+        const hint = document.getElementById('productCodeHint');
+        const code = select.selectedOptions[0]?.dataset.code;
+        hint.textContent = code
+            ? `Mã sản phẩm sẽ tự sinh dạng ${code}XXXXX, với XXXXX là 5 số ngẫu nhiên.`
+            : 'Mã sản phẩm sẽ tự sinh sau khi chọn danh mục.';
+    }
 
-        // Initialize Summernote
-        $('.summernote').summernote({
-            height: 150,
-            toolbar: [
-                ['style', ['bold', 'italic', 'underline', 'clear']],
-                ['font', ['strikethrough', 'superscript', 'subscript']],
-                ['para', ['ul', 'ol', 'paragraph']],
-                ['view', ['fullscreen', 'codeview']]
-            ],
-            lang: 'vi-VN' // Set language to Vietnamese if available, or fallbacks
-        });
-    });
+    document.getElementById('MaDM')?.addEventListener('change', updateProductCodeHint);
+    updateProductCodeHint();
+
     function previewImage(input) {
         const preview = document.getElementById('imagePreview');
         const previewContainer = document.getElementById('imagePreviewContainer');
@@ -258,5 +224,7 @@
             reader.readAsDataURL(input.files[0]);
         }
     }
+
+    window.previewImage = previewImage;
 </script>
 @endpush

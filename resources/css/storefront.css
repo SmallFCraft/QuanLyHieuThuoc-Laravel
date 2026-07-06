@@ -1630,37 +1630,84 @@
     font-size: 0.86rem;
 }
 
-.product-score-ring {
-    --score: 0;
-    width: 96px;
-    height: 96px;
-    display: grid;
-    place-items: center;
+.product-stock-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 190px;
+    max-width: 245px;
+    padding: 0.85rem;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(21, 128, 61, 0.14);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.product-stock-summary__icon {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex: 0 0 auto;
-    border-radius: 999px;
-    background:
-        radial-gradient(circle, #ffffff 58%, transparent 60%),
-        conic-gradient(#15803d calc(var(--score) * 1%), rgba(21, 128, 61, 0.14) 0);
-}
-
-.product-score-ring span,
-.product-score-ring small {
-    grid-area: 1 / 1;
-    display: block;
-    text-align: center;
-}
-
-.product-score-ring span {
-    margin-top: -0.55rem;
+    border-radius: 14px;
     color: #047857;
+    background: rgba(16, 185, 129, 0.12);
+    font-size: 1.15rem;
+}
+
+.product-stock-summary small,
+.product-stock-summary strong,
+.product-stock-summary em {
+    display: block;
+}
+
+.product-stock-summary small {
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.product-stock-summary strong {
+    margin-top: 0.1rem;
+    color: #064e3b;
+    font-size: 1rem;
     font-weight: 900;
 }
 
-.product-score-ring small {
-    margin-top: 1.15rem;
-    color: #64748b;
-    font-size: 0.66rem;
-    font-weight: 700;
+.product-stock-summary em {
+    margin-top: 0.15rem;
+    color: #475569;
+    font-size: 0.78rem;
+    font-style: normal;
+    line-height: 1.35;
+}
+
+.product-stock-summary.is-low {
+    border-color: rgba(217, 119, 6, 0.2);
+}
+
+.product-stock-summary.is-low .product-stock-summary__icon {
+    color: #b45309;
+    background: rgba(245, 158, 11, 0.14);
+}
+
+.product-stock-summary.is-low strong {
+    color: #92400e;
+}
+
+.product-stock-summary.is-out {
+    border-color: rgba(220, 38, 38, 0.18);
+}
+
+.product-stock-summary.is-out .product-stock-summary__icon {
+    color: #b91c1c;
+    background: rgba(248, 113, 113, 0.14);
+}
+
+.product-stock-summary.is-out strong {
+    color: #991b1b;
 }
 
 .product-insight-grid {
@@ -2449,9 +2496,9 @@
         grid-template-columns: 1fr;
     }
 
-    .product-score-ring {
-        width: 86px;
-        height: 86px;
+    .product-stock-summary {
+        width: 100%;
+        max-width: none;
     }
 
     .product-quantity-row,

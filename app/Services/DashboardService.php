@@ -69,8 +69,8 @@ class DashboardService
      */
     public function getDailyRevenueChart(int $days = 30): array
     {
-        $startDate = Carbon::today()->subDays($days - 1);
-        $endDate = Carbon::today();
+        $startDate = Carbon::today()->subDays($days - 1)->startOfDay();
+        $endDate = Carbon::today()->endOfDay();
 
         $revenues = Order::select(
                 DB::raw('DATE(created_at) as date'),

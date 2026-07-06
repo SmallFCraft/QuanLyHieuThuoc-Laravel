@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\AdminUsersExport;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Maatwebsite\Excel\Facades\Excel;
 
 class UserController extends Controller
 {
@@ -17,6 +19,16 @@ class UserController extends Controller
     {
         $users = User::orderBy('created_at', 'desc')->get();
         return view('admin.users.index', compact('users'));
+    }
+
+    public function export(Request $request)
+    {
+        return Excel::download(
+            new AdminUsersExport(
+                search: $request->filled('q') ? $request->string('q')->trim()->toString() : null,
+            ),
+            'nguoi-dung.xlsx'
+        );
     }
 
     /**

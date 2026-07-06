@@ -1,6 +1,8 @@
 @extends('layouts.admin')
 
 @section('title', 'Quản lý danh mục')
+@section('page-title', 'Quản lý danh mục')
+@section('page-subtitle', 'Nhóm sản phẩm, biểu tượng và mô tả hiển thị trong hệ thống')
 
 @section('content')
 <div class="container-fluid">
@@ -28,6 +30,9 @@
                         
                         <!-- Name -->
                         <h5 class="fw-bold text-dark mb-2">{{ $category->name }}</h5>
+                        <div class="mb-3">
+                            <span class="badge text-bg-success">Mã: {{ $category->code }}</span>
+                        </div>
                         
                         <!-- Description -->
                         @if($category->description)
@@ -44,7 +49,7 @@
                         
                         <!-- Actions -->
                         <div class="d-flex gap-2 justify-content-center">
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditModal({{ $category->MaDM }}, '{{ $category->name }}', '{{ $category->icon }}', '{{ addslashes($category->description) }}')" title="{{ __('messages.admin.categories.edit') }}">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditModal({{ $category->MaDM }}, {{ Illuminate\Support\Js::from($category->name) }}, {{ Illuminate\Support\Js::from($category->code) }}, {{ Illuminate\Support\Js::from($category->icon) }}, {{ Illuminate\Support\Js::from($category->description) }})" title="{{ __('messages.admin.categories.edit') }}">
                                 <i class="bi bi-pencil"></i>
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCategory({{ $category->MaDM }})" title="{{ __('messages.admin.categories.delete') }}">
@@ -83,6 +88,13 @@
                         <input type="text" class="form-control" id="categoryName" required>
                         <div class="invalid-feedback"></div>
                     </div>
+
+                    <div class="mb-3">
+                        <label for="categoryCode" class="form-label">Mã viết tắt</label>
+                        <input type="text" class="form-control text-uppercase" id="categoryCode" maxlength="10" pattern="[A-Za-z0-9]+">
+                        <div class="form-text">Tự sinh từ tên danh mục. Ví dụ: Kháng sinh → KS, Thuốc Tim Mạch → TTM.</div>
+                        <div class="invalid-feedback"></div>
+                    </div>
                     
                     <div class="mb-3">
                         <label for="categoryIcon" class="form-label">Icon Bootstrap</label>
@@ -111,7 +123,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script type="module">
 // Icon preview
 document.getElementById('categoryIcon').addEventListener('input', function(e) {
     const iconName = e.target.value || 'grid-fill';
@@ -123,15 +135,18 @@ function openCreateModal() {
     document.getElementById('modalTitle').textContent = '{{ __('messages.admin.categories.add_title') }}';
     document.getElementById('categoryForm').reset();
     document.getElementById('categoryId').value = '';
+    document.getElementById('categoryCode').dataset.manual = '';
     document.getElementById('iconPreview').className = 'bi bi-grid-fill';
     document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
 }
 
 // Open edit modal
-function openEditModal(id, name, icon, description) {
+function openEditModal(id, name, code, icon, description) {
     document.getElementById('modalTitle').textContent = '{{ __('messages.admin.categories.edit_title') }}';
     document.getElementById('categoryId').value = id;
     document.getElementById('categoryName').value = name;
+    document.getElementById('categoryCode').value = code || buildCategoryCode(name);
+    document.getElementById('categoryCode').dataset.manual = '1';
     document.getElementById('categoryIcon').value = icon || '';
     document.getElementById('categoryDescription').value = description || '';
     document.getElementById('iconPreview').className = `bi bi-${icon || 'grid-fill'}`;
@@ -150,6 +165,7 @@ document.getElementById('categoryForm').addEventListener('submit', async functio
     
     const data = {
         name: document.getElementById('categoryName').value,
+        code: document.getElementById('categoryCode').value,
         icon: document.getElementById('categoryIcon').value,
         description: document.getElementById('categoryDescription').value,
         _token: '{{ csrf_token() }}'
@@ -188,7 +204,10 @@ document.getElementById('categoryForm').addEventListener('submit', async functio
                     const input = document.getElementById('category' + key.charAt(0).toUpperCase() + key.slice(1));
                     if (input) {
                         input.classList.add('is-invalid');
-                        input.nextElementSibling.textContent = result.errors[key][0];
+                        const feedback = input.closest('.mb-3')?.querySelector('.invalid-feedback');
+                        if (feedback) {
+                            feedback.textContent = result.errors[key][0];
+                        }
                     }
                 });
             }
@@ -252,5 +271,37 @@ async function deleteCategory(id) {
         }
     }
 }
+
+window.openCreateModal = openCreateModal;
+window.openEditModal = openEditModal;
+window.deleteCategory = deleteCategory;
+
+function buildCategoryCode(name) {
+    const normalized = (name || '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'D')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const words = normalized
+        .toUpperCase()
+        .split(/[^A-Z0-9]+/)
+        .filter(word => word && !['VA', 'AND', 'THE'].includes(word));
+
+    const code = words.map(word => word[0]).join('') || normalized.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase();
+    return (code || 'DM').slice(0, 10);
+}
+
+document.getElementById('categoryName').addEventListener('input', function(event) {
+    const codeInput = document.getElementById('categoryCode');
+    if (!codeInput.dataset.manual) {
+        codeInput.value = buildCategoryCode(event.target.value);
+    }
+});
+
+document.getElementById('categoryCode').addEventListener('input', function(event) {
+    event.target.dataset.manual = '1';
+    event.target.value = event.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 10);
+});
 </script>
 @endpush

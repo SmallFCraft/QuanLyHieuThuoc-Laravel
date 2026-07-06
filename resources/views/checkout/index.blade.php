@@ -294,7 +294,7 @@
                     <div class="mb-3" style="max-height: 300px; overflow-y: auto;">
                         @foreach($cartItems as $item)
                             <div class="order-item d-flex align-items-center gap-3 mb-2 pb-2 border-bottom rounded-2 p-2" style="border-color: rgba(0,0,0,0.06) !important;">
-                                <div class="bg-gray-50 rounded-3 overflow-hidden flex-shrink-0" style="width: 56px; height: 56px;" data-product-image-container>
+                                <div class="bg-gray-50 rounded-3 overflow-hidden flex-shrink-0 position-relative" style="width: 56px; height: 56px;" data-product-image-container>
                                     <x-product-image
                                         :src="$item['product']->image_url"
                                         :alt="$item['product']->name"

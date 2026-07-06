@@ -2,7 +2,7 @@
 
 @section('title', 'Chỉnh Sửa Sản Phẩm')
 @section('page-title', 'Chỉnh Sửa Sản Phẩm')
-@section('page-subtitle', '{{ $product->name }}')
+@section('page-subtitle', $product->name)
 
 @section('content')
 <div class="container-fluid">
@@ -195,8 +195,8 @@
                             <h6 class="fw-bold mb-3" style="color: #064e3b;"><i class="bi bi-clock-history me-2"></i>Thông Tin Khác</h6>
                             <div class="small text-muted">
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span>ID Sản phẩm:</span>
-                                    <span class="fw-medium text-dark">#{{ $product->MaSP }}</span>
+                                    <span>Mã sản phẩm:</span>
+                                    <span class="fw-medium text-dark">{{ $product->display_code }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Ngày tạo:</span>
@@ -239,59 +239,8 @@
 </div>
 @endsection
 
-@push('styles')
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/summernote@0.9.0/dist/summernote-lite.min.css" rel="stylesheet">
-<style>
-    .form-control:focus, .form-select:focus {
-        border-color: #10b981;
-        box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.15);
-    }
-    .btn-primary {
-        background: linear-gradient(135deg, #059669, #10b981);
-        border: none;
-    }
-    .btn-primary:hover {
-        background: linear-gradient(135deg, #047857, #059669);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-    }
-    .input-group-text {
-        background: #ecfdf5;
-        border-color: #d1fae5;
-        color: #059669;
-    }
-    #imagePlaceholder:hover {
-        background: #f0fdf4 !important;
-        border-color: #10b981 !important;
-    }
-</style>
-@endpush
-
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/summernote@0.9.0/dist/summernote-lite.min.js"></script>
-<script>
-    $(document).ready(function() {
-        // Initialize Select2
-        $('.select2-basic').select2({
-            width: '100%',
-            placeholder: "-- Chọn danh mục --",
-            allowClear: true
-        });
-
-        // Initialize Summernote
-        $('.summernote').summernote({
-            height: 150,
-            toolbar: [
-                ['style', ['bold', 'italic', 'underline', 'clear']],
-                ['font', ['strikethrough', 'superscript', 'subscript']],
-                ['para', ['ul', 'ol', 'paragraph']],
-                ['view', ['fullscreen', 'codeview']]
-            ],
-            lang: 'vi-VN'
-        });
-    });
+<script type="module">
     function previewImage(input) {
         const preview = document.getElementById('imagePreview');
         const previewContainer = document.getElementById('imagePreviewContainer');
@@ -339,5 +288,8 @@
             }
         });
     }
+
+    window.previewImage = previewImage;
+    window.confirmDelete = confirmDelete;
 </script>
 @endpush

@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Carbon\Carbon;
 use Illuminate\Validation\Rule;
 
 class ProductRequest extends FormRequest
@@ -85,25 +84,4 @@ class ProductRequest extends FormRequest
         ];
     }
 
-    /**
-     * Configure the validator instance.
-     *
-     * @param  \Illuminate\Validation\Validator  $validator
-     * @return void
-     */
-    public function withValidator($validator)
-    {
-        $validator->after(function ($validator) {
-            // Check if expiration date is less than 6 months from now
-            if ($this->has('expiration_date')) {
-                $expirationDate = Carbon::parse($this->input('expiration_date'));
-                $sixMonthsFromNow = Carbon::now()->addMonths(6);
-                
-                if ($expirationDate->lessThan($sixMonthsFromNow)) {
-                    $validator->warnings()->add('expiration_date', 
-                        'Cảnh báo: Sản phẩm sẽ hết hạn trong vòng 6 tháng tới.');
-                }
-            }
-        });
-    }
 }
