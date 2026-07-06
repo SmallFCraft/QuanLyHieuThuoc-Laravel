@@ -325,6 +325,36 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('ORESOL', $result['response']);
     }
 
+    public function test_process_message_does_not_search_catalog_for_general_date_question(): void
+    {
+        $aiAnswer = "H\u{00F4}m nay l\u{00E0} ng\u{00E0}y 06/07/2026.";
+
+        $this->aiProviderService->expects($this->once())
+            ->method('chat')
+            ->with(
+                $this->anything(),
+                $this->callback(static fn (array $options): bool => $options === [])
+            )
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => $aiAnswer,
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage("h\u{00F4}m nay l\u{00E0} ng\u{00E0}y g\u{00EC}?", 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame($aiAnswer, $result['response']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertFalse($result['show_disclaimer']);
+    }
+
     public function test_process_message_answers_colloquial_diarrhea_question_without_catalog_fallback(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');

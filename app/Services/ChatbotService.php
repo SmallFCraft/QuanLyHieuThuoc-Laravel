@@ -421,10 +421,13 @@ PROMPT;
                 : [];
 
             $messages = $this->buildConversationMessages($workingMessage, $context);
-            $response = $this->aiService->chat($messages, [
-                'functions' => $this->getFunctionSchema(),
-                'function_call' => 'auto'
-            ]);
+            $chatOptions = $this->shouldDisableCatalogToolsForMessage($workingMessage)
+                ? []
+                : [
+                    'functions' => $this->getFunctionSchema(),
+                    'function_call' => 'auto'
+                ];
+            $response = $this->aiService->chat($messages, $chatOptions);
 
             $products = [];
             $categories = [];
@@ -616,7 +619,9 @@ PROMPT;
             ]);
 
             $providerFallback = $this->buildProviderFallbackDebug($e);
-            $fallbackQuery = $this->resolveCatalogQuery($workingMessage);
+            $fallbackQuery = $this->shouldDisableCatalogToolsForMessage($workingMessage)
+                ? ''
+                : $this->resolveCatalogQuery($workingMessage);
             $normalizedMessage = $this->normalizeMessage($workingMessage);
             $fallbackDisclaimer = $this->requiresAiConsultation($normalizedMessage);
 
@@ -1796,6 +1801,10 @@ PROMPT;
         string $defaultQuery,
         array $contextSymptoms
     ): bool {
+        if ($this->shouldDisableCatalogToolsForMessage($workingMessage)) {
+            return false;
+        }
+
         if ($this->isCategoryIntent($normalizedMessage)) {
             return true;
         }
@@ -1817,6 +1826,51 @@ PROMPT;
         }
 
         return $defaultQuery !== '' && !$this->isSymptomRelatedQuery($catalogLookupMessage);
+    }
+
+    protected function shouldDisableCatalogToolsForMessage(string $message): bool
+    {
+        return $this->isGeneralDateTimeQuestion($message);
+    }
+
+    protected function isGeneralDateTimeQuestion(string $message): bool
+    {
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return false;
+        }
+
+        if (
+            $this->isCategoryIntent($normalized)
+            || $this->wantsProductSuggestionForSymptom($message)
+            || $this->isSymptomRelatedQuery($message)
+            || $this->extractExplicitProductQuery($message) !== ''
+            || $this->isWebsiteInfoIntent($normalized)
+            || $this->isSupportIntent($normalized)
+            || $this->isCapabilityIntent($normalized)
+            || $this->isIdentityIntent($normalized)
+            || $this->isNearbyPharmacyLocationIntent($message)
+        ) {
+            return false;
+        }
+
+        return $this->containsAnyKeyword($normalized, [
+            'hom nay',
+            'ngay gi',
+            'ngay bao nhieu',
+            'ngay may',
+            'thu may',
+            'bay gio',
+            'may gio',
+            'gio nao',
+            'ngay thang',
+            'lich hom nay',
+            'today',
+            'current date',
+            'current time',
+            'date today',
+            'time now',
+        ]);
     }
 
     protected function isProductUsageTimingFollowUpMessage(string $message): bool
