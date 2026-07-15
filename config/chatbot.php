@@ -17,6 +17,8 @@ return [
         'base_url' => env('AI_BASE_URL'),
         'api_key' => env('AI_API_KEY'),
         'model' => env('AI_MODEL'),
+        'timeout' => env('AI_TIMEOUT', 20),
+        'connect_timeout' => env('AI_CONNECT_TIMEOUT', 5),
         'grounded_response' => true,
     ],
 

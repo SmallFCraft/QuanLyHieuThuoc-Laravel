@@ -117,6 +117,8 @@ class ChatbotController extends Controller
             $context['previous_messages'] = $previousMessages;
             $context['name_memory_messages'] = $nameMemoryMessages;
             $context['recent_image_products'] = $this->extractRecentImageProducts($previousMessages);
+            $context['session_id'] = $sessionId;
+            $context['current_session_id'] = $sessionId;
             
             // Process message through ChatbotService
             $response = $this->chatbotService->processMessage($message, $userId, $context);

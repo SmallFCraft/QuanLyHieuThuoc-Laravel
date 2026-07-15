@@ -75,6 +75,32 @@ class AiProviderServiceTest extends TestCase
         });
     }
 
+    public function test_provider_timeout_config_is_loaded_and_normalized(): void
+    {
+        $this->configureProvider('chat_completions');
+        config()->set('chatbot.ai.timeout', 12);
+        config()->set('chatbot.ai.connect_timeout', 3);
+
+        $service = new AiProviderService();
+        $reflection = new \ReflectionClass($service);
+
+        $timeout = $reflection->getProperty('timeout');
+        $timeout->setAccessible(true);
+        $connectTimeout = $reflection->getProperty('connectTimeout');
+        $connectTimeout->setAccessible(true);
+
+        $this->assertSame(12, $timeout->getValue($service));
+        $this->assertSame(3, $connectTimeout->getValue($service));
+
+        config()->set('chatbot.ai.timeout', 0);
+        config()->set('chatbot.ai.connect_timeout', -5);
+
+        $service = new AiProviderService();
+
+        $this->assertSame(1, $timeout->getValue($service));
+        $this->assertSame(1, $connectTimeout->getValue($service));
+    }
+
     public function test_responses_mode_normalizes_function_call_output(): void
     {
         $this->configureProvider('responses');

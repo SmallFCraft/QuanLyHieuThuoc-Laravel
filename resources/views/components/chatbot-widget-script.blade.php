@@ -168,18 +168,41 @@ function chatbotWidget() {
         },
 
         shouldShowInlineDisclaimer(message, index) {
-            if (!message || message.role === 'user' || !message.show_disclaimer) {
+            if (!message || message.role === 'user') {
                 return false;
             }
 
+            let latestAssistantIndex = -1;
+            let hasDisclaimer = false;
+
             for (let i = this.messages.length - 1; i >= 0; i--) {
                 const entry = this.messages[i];
-                if (entry && entry.role !== 'user' && entry.show_disclaimer) {
-                    return i === index;
+                if (!entry || entry.role === 'user') {
+                    continue;
+                }
+
+                if (latestAssistantIndex === -1) {
+                    latestAssistantIndex = i;
+                }
+
+                if (entry.show_disclaimer) {
+                    hasDisclaimer = true;
+                    break;
                 }
             }
 
-            return false;
+            return hasDisclaimer && latestAssistantIndex === index;
+        },
+
+        getInlineDisclaimerText(message) {
+            for (let i = this.messages.length - 1; i >= 0; i--) {
+                const entry = this.messages[i];
+                if (entry && entry.role !== 'user' && entry.show_disclaimer) {
+                    return entry.disclaimer || message?.disclaimer || '';
+                }
+            }
+
+            return message?.disclaimer || '';
         },
 
         trackObjectUrl(url) {
@@ -889,88 +912,27 @@ function chatbotWidget() {
         },
 
         parseMarkdown(text) {
-            if (!text) return '';
-
-            const rawText = String(text);
-            const normalizedText = rawText.replace(
-                /(?:https?:\/\/|www\.)[^\s<)]+/g,
-                (url, offset, source) => {
-                    const prefix = offset >= 2 ? source.slice(offset - 2, offset) : '';
-                    if (prefix === '](') {
-                        return url;
-                    }
-
-                    const href = url.startsWith('www.') ? `https://${url}` : url;
-                    return `[${url}](${href})`;
-                }
-            );
-
-            if (
-                window.marked
-                && typeof window.marked.parse === 'function'
-                && window.DOMPurify
-                && typeof window.DOMPurify.sanitize === 'function'
-            ) {
-                try {
-                    const html = window.marked.parse(normalizedText, {
-                        gfm: true,
-                        breaks: true
-                    });
-
-                    return this.decorateMarkdownHtml(html);
-                } catch (error) {
-                    console.warn('Marked parse failed, fallback to legacy parser', error);
-                }
-            }
-
-            return this.parseMarkdownLegacy(normalizedText);
+            return window.ChatbotMarkdownRenderer?.parse
+                ? window.ChatbotMarkdownRenderer.parse(text)
+                : this.parseMarkdownLegacy(text);
         },
 
         decorateMarkdownHtml(html) {
-            let safeHtml = String(html || '');
-
-            safeHtml = window.DOMPurify.sanitize(safeHtml, {
-                USE_PROFILES: { html: true },
-                ADD_ATTR: ['target', 'rel', 'class']
-            });
-
-            const container = document.createElement('div');
-            container.innerHTML = safeHtml;
-
-            container.querySelectorAll('a').forEach((link) => {
-                const textValue = (link.textContent || '').trim();
-                const normalized = textValue.toLowerCase();
-                const isDetailLink = /^(xem chi tiết|xem chi tiet|mở sản phẩm|mo san pham|xem danh mục|xem danh muc|mở liên kết|mo lien ket)$/i.test(normalized);
-
-                const href = this.normalizeMarkdownUrl(link.getAttribute('href') || '');
-
-                if (!href) {
-                    link.replaceWith(document.createTextNode(link.textContent || ''));
-                    return;
-                }
-
-                link.setAttribute('href', href);
-                link.setAttribute('target', '_blank');
-                link.setAttribute('rel', 'noopener noreferrer');
-
-                if (isDetailLink) {
-                    link.className = 'chatbot-link-btn';
-                } else {
-                    link.classList.add('chatbot-inline-link');
-                }
-            });
-
-            return container.innerHTML;
+            return window.ChatbotMarkdownRenderer?.decorate
+                ? window.ChatbotMarkdownRenderer.decorate(html)
+                : String(html || '');
         },
 
         escapeHtml(value) {
-            return String(value ?? '').replace(/[&<>"']/g, (character) => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            }[character]));
+            return window.ChatbotMarkdownRenderer?.escapeHtml
+                ? window.ChatbotMarkdownRenderer.escapeHtml(value)
+                : String(value ?? '').replace(/[&<>"']/g, (character) => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[character]));
         },
 
         escapeAttribute(value) {
@@ -978,73 +940,15 @@ function chatbotWidget() {
         },
 
         normalizeMarkdownUrl(value) {
-            const rawUrl = String(value ?? '')
-                .trim()
-                .replace(/&amp;/g, '&')
-                .replace(/&quot;/g, '"')
-                .replace(/&#039;/g, "'");
-
-            if (!rawUrl) {
-                return '';
-            }
-
-            if (/[\s"'<>]/.test(rawUrl)) {
-                return '';
-            }
-
-            if (rawUrl.startsWith('www.')) {
-                return `https://${rawUrl}`;
-            }
-
-            if (/^(https?:\/\/|\/|#)/i.test(rawUrl)) {
-                return rawUrl;
-            }
-
-            return '';
+            return window.ChatbotMarkdownRenderer?.normalizeMarkdownUrl
+                ? window.ChatbotMarkdownRenderer.normalizeMarkdownUrl(value)
+                : '';
         },
 
         parseMarkdownLegacy(text) {
-            let html = text
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-
-            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
-                const normalizedLinkText = String(linkText).trim().toLowerCase();
-                const isDetailLink = /^(xem chi tiết|xem chi tiet|mở sản phẩm|mo san pham|xem danh mục|xem danh muc|mở liên kết|mo lien ket)$/i.test(normalizedLinkText);
-                const linkClass = isDetailLink ? 'chatbot-link-btn' : 'chatbot-inline-link';
-                const href = this.normalizeMarkdownUrl(url);
-
-                if (!href) {
-                    return linkText;
-                }
-
-                return `<a href="${this.escapeAttribute(href)}" class="${linkClass}" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
-            });
-
-            html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-            html = html.replace(/(?<!\\)\*([^*\n]+)\*/g, '<em>$1</em>');
-            html = html.replace(/^---$/gm, '<hr>');
-            html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-            html = html.replace(/^[\*\-] (.+)$/gm, '<li>$1</li>');
-            html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
-            html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
-            html = html.replace(/\n/g, '<br>');
-            html = html.replace(/<\/(h[1-6]|ul|ol|pre|blockquote|hr)><br>/g, '</$1>');
-            html = html.replace(/<br><(h[1-6]|ul|ol|pre|blockquote)/g, '<$1');
-            html = html.replace(/<br><br><br>/g, '<br><br>');
-            html = html.replace(/<\/li><br><li>/g, '</li><li>');
-            html = html.replace(/<ul><br>/g, '<ul>');
-            html = html.replace(/<br><\/ul>/g, '</ul>');
-
-            return html;
+            return window.ChatbotMarkdownRenderer?.parseLegacy
+                ? window.ChatbotMarkdownRenderer.parseLegacy(window.ChatbotMarkdownRenderer.normalizeText(text))
+                : this.escapeHtml(text);
         },
         
         scrollToBottom() {

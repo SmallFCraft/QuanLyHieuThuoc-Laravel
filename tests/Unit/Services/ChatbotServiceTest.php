@@ -327,29 +327,19 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_does_not_search_catalog_for_general_date_question(): void
     {
-        $aiAnswer = "H\u{00F4}m nay l\u{00E0} ng\u{00E0}y 06/07/2026.";
+        \Illuminate\Support\Carbon::setTestNow('2026-07-09 10:20:00');
 
-        $this->aiProviderService->expects($this->once())
-            ->method('chat')
-            ->with(
-                $this->anything(),
-                $this->callback(static fn (array $options): bool => $options === [])
-            )
-            ->willReturn([
-                'choices' => [
-                    [
-                        'message' => [
-                            'role' => 'assistant',
-                            'content' => $aiAnswer,
-                        ],
-                    ],
-                ],
-            ]);
+        $this->aiProviderService->expects($this->never())->method('chat');
 
-        $result = $this->chatbotService->processMessage("h\u{00F4}m nay l\u{00E0} ng\u{00E0}y g\u{00EC}?", 1, []);
+        try {
+            $result = $this->chatbotService->processMessage("nay l\u{00E0} ng\u{00E0}y g\u{00EC}?", 1, []);
+        } finally {
+            \Illuminate\Support\Carbon::setTestNow();
+        }
 
         $this->assertTrue($result['success']);
-        $this->assertSame($aiAnswer, $result['response']);
+        $this->assertStringContainsString("Th\u{1EE9} N\u{0103}m", $result['response']);
+        $this->assertStringContainsString('09/07/2026', $result['response']);
         $this->assertEmpty($result['products']);
         $this->assertEmpty($result['categories']);
         $this->assertFalse($result['show_disclaimer']);
@@ -902,6 +892,476 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('Isosorbide Dinitrate 5mg', $result['response']);
     }
 
+    public function test_process_message_keeps_greeting_only_provider_response_without_catalog_miss(): void
+    {
+        $category = Category::factory()->create(['name' => 'Vitamin']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Xin Chao Ban 500mg',
+            'usage' => 'San pham test khong duoc goi y cho loi chao.',
+            'stock_quantity' => 200,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $providerAnswer = "D\u{1EA1} em ch\u{00E0}o anh/ch\u{1ECB} \u{1EA1}. Anh/ch\u{1ECB} c\u{1EA7}n em h\u{1ED7} tr\u{1EE3} g\u{00EC} h\u{00F4}m nay?";
+
+        $this->aiProviderService->expects($this->once())
+            ->method('chat')
+            ->with(
+                $this->anything(),
+                $this->callback(static fn (array $options): bool => $options === [])
+            )
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => $providerAnswer,
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage("Xin ch\u{00E0}o b\u{1EA1}n", 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame($providerAnswer, $result['response']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertEmpty($result['explanations']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertNull($result['disclaimer']);
+        $this->assertSame('general', $result['response_type']);
+        $this->assertTrue($result['debug']['ai_provider_used'] ?? false);
+        $this->assertStringNotContainsString("ch\u{01B0}a th\u{1EA5}y s\u{1EA3}n ph\u{1EA9}m", mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString("t\u{1EEB} kh\u{00F3}a", mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('Xin Chao Ban 500mg', $result['response']);
+    }
+
+    public function test_process_message_treats_general_non_catalog_questions_as_provider_only_without_catalog_miss(): void
+    {
+        $category = Category::factory()->create(['name' => 'General noise']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Hello World 500mg',
+            'usage' => 'San pham test khong duoc goi y cho cau hoi chung.',
+            'stock_quantity' => 200,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $answer = 'Hello Huy! Em co the ho tro gi cho Huy hom nay a?';
+
+        $this->aiProviderService->expects($this->once())
+            ->method('chat')
+            ->with(
+                $this->callback(static function (array $messages): bool {
+                    foreach ($messages as $message) {
+                        if (($message['role'] ?? null) === 'system' && str_contains((string) ($message['content'] ?? ''), 'general non-catalog question')) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }),
+                $this->callback(static fn (array $options): bool => $options === [])
+            )
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => $answer,
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage('Hello world!', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame($answer, $result['response']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertEmpty($result['explanations']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertNull($result['disclaimer']);
+        $this->assertStringNotContainsString("ch\u{01B0}a th\u{1EA5}y s\u{1EA3}n ph\u{1EA9}m", mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString("t\u{1EEB} kh\u{00F3}a", mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('Hello World 500mg', $result['response']);
+    }
+
+    public function test_process_message_answers_simple_arithmetic_locally_without_provider_or_latex(): void
+    {
+        $category = Category::factory()->create(['name' => 'Math noise']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => '1 999 500mg',
+            'usage' => 'San pham test khong duoc goi y cho cau hoi tinh toan.',
+            'stock_quantity' => 200,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $messages = [
+            '1+1/999=?' => '1 + 1 / 999 = 1.001001001001',
+            "b\u{1EA1}n bi\u{1EBF}t 1 + 1 = m\u{1EA5}y ko?" => '1 + 1 = 2',
+        ];
+
+        foreach ($messages as $message => $expectedText) {
+            $result = $this->chatbotService->processMessage($message, 1, []);
+
+            $this->assertTrue($result['success'], $message);
+            $this->assertStringContainsString($expectedText, $result['response'], $message);
+            $this->assertEmpty($result['products'], $message);
+            $this->assertEmpty($result['categories'], $message);
+            $this->assertEmpty($result['explanations'], $message);
+            $this->assertFalse($result['show_disclaimer'], $message);
+            $this->assertNull($result['disclaimer'], $message);
+            $this->assertStringNotContainsString('\\frac', $result['response'], $message);
+            $this->assertStringNotContainsString('\\approx', $result['response'], $message);
+            $this->assertStringNotContainsString('\\ldots', $result['response'], $message);
+            $this->assertStringNotContainsString('\\(', $result['response'], $message);
+            $this->assertStringNotContainsString('\\)', $result['response'], $message);
+            $this->assertStringNotContainsString('1 999 500mg', $result['response'], $message);
+        }
+    }
+
+    public function test_process_message_blocks_unsupported_image_and_file_generation_without_provider(): void
+    {
+        $category = Category::factory()->create(['name' => 'Creative noise']);
+        foreach (['Tao Anh 500mg', 'Tao File Pdf 500mg'] as $name) {
+            Product::factory()->create([
+                'MaDM' => $category->MaDM,
+                'name' => $name,
+                'usage' => 'San pham test khong duoc goi y cho yeu cau tao artifact.',
+                'stock_quantity' => 200,
+                'expiration_date' => now()->addYear(),
+            ]);
+        }
+
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $cases = [
+            "t\u{1EA1}o \u{1EA3}nh con m\u{00E8}o" => "ch\u{01B0}a h\u{1ED7} tr\u{1EE3} t\u{1EA1}o \u{1EA3}nh",
+            "t\u{1EA1}o file pdf cho t\u{00F4}i" => "ch\u{01B0}a h\u{1ED7} tr\u{1EE3} t\u{1EA1}o file",
+        ];
+
+        foreach ($cases as $message => $expectedText) {
+            $result = $this->chatbotService->processMessage($message, 1, []);
+            $lowerResponse = mb_strtolower($result['response'], 'UTF-8');
+
+            $this->assertTrue($result['success'], $message);
+            $this->assertStringContainsString($expectedText, $lowerResponse, $message);
+            $this->assertEmpty($result['products'], $message);
+            $this->assertEmpty($result['categories'], $message);
+            $this->assertEmpty($result['explanations'], $message);
+            $this->assertFalse($result['show_disclaimer'], $message);
+            $this->assertNull($result['disclaimer'], $message);
+            $this->assertStringNotContainsString("ch\u{01B0}a th\u{1EA5}y s\u{1EA3}n ph\u{1EA9}m", $lowerResponse, $message);
+            $this->assertStringNotContainsString("t\u{1EEB} kh\u{00F3}a", $lowerResponse, $message);
+            $this->assertStringNotContainsString('Tao Anh 500mg', $result['response'], $message);
+            $this->assertStringNotContainsString('Tao File Pdf 500mg', $result['response'], $message);
+        }
+    }
+
+    public function test_process_message_sanitizes_provider_latex_math_for_plain_text_chat(): void
+    {
+        $this->aiProviderService->expects($this->once())
+            ->method('chat')
+            ->with(
+                $this->anything(),
+                $this->callback(static fn (array $options): bool => $options === [])
+            )
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Huy, \\(1 + \\frac{1}{999} = \\frac{1000}{999} \\approx 1.001001001\\ldots\\)',
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage('Hello world!', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertStringContainsString('1 + 1/999 = 1000/999 ~ 1.001001001...', $result['response']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertEmpty($result['explanations']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertNull($result['disclaimer']);
+        $this->assertStringNotContainsString('\\frac', $result['response']);
+        $this->assertStringNotContainsString('\\approx', $result['response']);
+        $this->assertStringNotContainsString('\\ldots', $result['response']);
+        $this->assertStringNotContainsString('\\(', $result['response']);
+        $this->assertStringNotContainsString('\\)', $result['response']);
+    }
+
+    public function test_process_message_answers_bot_name_question_locally_without_catalog_fallback(): void
+    {
+        $category = Category::factory()->create(['name' => 'Identity noise']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Ban Ten La Gi 500mg',
+            'usage' => 'San pham test khong duoc goi y cho cau hoi identity.',
+            'stock_quantity' => 200,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage("B\u{1EA1}n t\u{00EA}n l\u{00E0} g\u{00EC}?", 1, [
+            'previous_messages' => [
+                [
+                    'role' => 'user',
+                    'content' => "t\u{00F4}i t\u{00EA}n l\u{00E0} B\u{00F2} Heo",
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertEmpty($result['explanations']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertNull($result['disclaimer']);
+        $this->assertSame('general', $result['response_type']);
+        $this->assertStringContainsString('Medicare Pharmacy', $result['response']);
+        $this->assertStringNotContainsString("ch\u{01B0}a th\u{1EA5}y s\u{1EA3}n ph\u{1EA9}m", mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString("t\u{1EEB} kh\u{00F3}a", mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('Ban Ten La Gi 500mg', $result['response']);
+    }
+
+    public function test_process_message_answers_current_chat_session_id_locally_without_provider(): void
+    {
+        $category = Category::factory()->create(['name' => 'Session noise']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Phien Chat Ma Id 500mg',
+            'usage' => 'San pham test khong duoc goi y cho cau hoi session id.',
+            'stock_quantity' => 200,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $sessionId = '701c1cdf-61b8-473a-9ecd-99ebd80b9e94';
+
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage("\u{0111}\u{00E2}y l\u{00E0} phi\u{00EA}n chat m\u{00E3} id l\u{00E0} g\u{00EC}?", 1, [
+            'current_session_id' => $sessionId,
+        ]);
+
+        $lowerResponse = mb_strtolower($result['response'], 'UTF-8');
+
+        $this->assertTrue($result['success']);
+        $this->assertStringContainsString('CHAT-701C1CDF', $result['response']);
+        $this->assertStringContainsString($sessionId, $result['response']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertEmpty($result['explanations']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertNull($result['disclaimer']);
+        $this->assertSame('general', $result['response_type']);
+        $this->assertStringNotContainsString("kh\u{00F4}ng c\u{00F3} quy\u{1EC1}n", $lowerResponse);
+        $this->assertStringNotContainsString("ch\u{01B0}a th\u{1EA5}y s\u{1EA3}n ph\u{1EA9}m", $lowerResponse);
+        $this->assertStringNotContainsString('Phien Chat Ma Id 500mg', $result['response']);
+    }
+
+    public function test_process_message_treats_social_chitchat_as_non_catalog_without_symptom_or_disclaimer(): void
+    {
+        $category = Category::factory()->create(['name' => 'Social noise']);
+        foreach (['Cam On Ban 500mg', 'Shop Oi 250mg', 'Test Thoi 100mg'] as $name) {
+            Product::factory()->create([
+                'MaDM' => $category->MaDM,
+                'name' => $name,
+                'usage' => 'San pham test khong duoc goi y cho social chitchat.',
+                'stock_quantity' => 200,
+                'expiration_date' => now()->addYear(),
+            ]);
+        }
+
+        $messages = [
+            "c\u{1EA3}m \u{01A1}n b\u{1EA1}n",
+            "\u{1EEB} c\u{1EA3}m \u{01A1}n",
+            'thanks',
+            "ok b\u{1EA1}n",
+            "c\u{00F3} ai kh\u{00F4}ng",
+            "\u{1ED5}n ko",
+            "\u{1ED5}n k",
+            "shop \u{01A1}i",
+            "bot \u{01A1}i",
+            "t\u{1EA1}m bi\u{1EC7}t",
+            'bye',
+            "h\u{1ECF}i ch\u{00FA}t",
+            "test th\u{00F4}i",
+        ];
+        $providerAnswer = "D\u{1EA1}, em \u{0111}\u{00E2}y \u{1EA1}.";
+
+        $this->aiProviderService->expects($this->exactly(count($messages)))
+            ->method('chat')
+            ->with(
+                $this->anything(),
+                $this->callback(static fn (array $options): bool => $options === [])
+            )
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => $providerAnswer,
+                        ],
+                    ],
+                ],
+            ]);
+
+        foreach ($messages as $message) {
+            $result = $this->chatbotService->processMessage($message, 1, []);
+
+            $this->assertTrue($result['success'], $message);
+            $this->assertSame($providerAnswer, $result['response'], $message);
+            $this->assertEmpty($result['products'], $message);
+            $this->assertEmpty($result['categories'], $message);
+            $this->assertEmpty($result['explanations'], $message);
+            $this->assertFalse($result['show_disclaimer'], $message);
+            $this->assertNull($result['disclaimer'], $message);
+            $this->assertStringNotContainsString("tri\u{1EC7}u ch\u{1EE9}ng", mb_strtolower($result['response'], 'UTF-8'), $message);
+            $this->assertStringNotContainsString("ch\u{01B0}a th\u{1EA5}y s\u{1EA3}n ph\u{1EA9}m", mb_strtolower($result['response'], 'UTF-8'), $message);
+            $this->assertStringNotContainsString("t\u{1EEB} kh\u{00F3}a", mb_strtolower($result['response'], 'UTF-8'), $message);
+        }
+    }
+
+    public function test_process_message_replaces_off_topic_provider_reply_for_social_chitchat(): void
+    {
+        $this->aiProviderService->expects($this->once())
+            ->method('chat')
+            ->with(
+                $this->callback(static function (array $messages): bool {
+                    foreach ($messages as $message) {
+                        if (($message['role'] ?? null) === 'system' && str_contains((string) ($message['content'] ?? ''), 'social-only chitchat')) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }),
+                $this->callback(static fn (array $options): bool => $options === [])
+            )
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => "D\u{1EA1} em nghe anh/ch\u{1ECB} \u{1EA1}. Anh/ch\u{1ECB} c\u{1EA7}n t\u{00EC}m thu\u{1ED1}c/s\u{1EA3}n ph\u{1EA9}m g\u{00EC}, ho\u{1EB7}c \u{0111}ang c\u{00F3} tri\u{1EC7}u ch\u{1EE9}ng n\u{00E0}o c\u{1EA7}n em t\u{01B0} v\u{1EA5}n kh\u{00F4}ng?",
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage('alo shop', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame("D\u{1EA1}, em ch\u{00E0}o anh/ch\u{1ECB} \u{1EA1}.", $result['response']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertNull($result['disclaimer']);
+    }
+
+    public function test_process_message_replaces_off_topic_provider_reply_for_on_ko_chitchat(): void
+    {
+        $this->aiProviderService->expects($this->once())
+            ->method('chat')
+            ->with(
+                $this->callback(static function (array $messages): bool {
+                    foreach ($messages as $message) {
+                        if (($message['role'] ?? null) === 'system' && str_contains((string) ($message['content'] ?? ''), 'social-only chitchat')) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }),
+                $this->callback(static fn (array $options): bool => $options === [])
+            )
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => "D\u{1EA1} \u{1ED5}n anh/ch\u{1ECB} nh\u{00E9}. Anh/ch\u{1ECB} c\u{1EA7}n em t\u{00EC}m thu\u{1ED1}c hay t\u{01B0} v\u{1EA5}n s\u{1EA3}n ph\u{1EA9}m g\u{00EC} kh\u{00F4}ng?",
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage("\u{1ED5}n ko", 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame("D\u{1EA1}, em v\u{1EAB}n s\u{1EB5}n s\u{00E0}ng h\u{1ED7} tr\u{1EE3} \u{1EA1}.", $result['response']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertNull($result['disclaimer']);
+    }
+
+    public function test_process_message_preserves_cold_symptom_guidance_for_real_health_intent(): void
+    {
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage("t\u{00F4}i b\u{1ECB} c\u{1EA3}m", 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertTrue($result['show_disclaimer']);
+        $this->assertSame('health_consultation', $result['response_type']);
+        $this->assertStringContainsString("tri\u{1EC7}u ch\u{1EE9}ng", mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_process_message_preserves_cold_medicine_product_lookup_for_real_product_intent(): void
+    {
+        $category = Category::factory()->create(['name' => "C\u{1EA3}m c\u{00FA}m"]);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Coldcare',
+            'usage' => "H\u{1ED7} tr\u{1EE3} gi\u{1EA3}m tri\u{1EC7}u ch\u{1EE9}ng c\u{1EA3}m c\u{00FA}m.",
+            'stock_quantity' => 200,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->aiProviderService->expects($this->once())
+            ->method('chat')
+            ->with(
+                $this->anything(),
+                $this->callback(static fn (array $options): bool => !empty($options['functions']) && ($options['function_call'] ?? null) === 'auto')
+            )
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'function_call' => [
+                                'name' => 'search_products',
+                                'arguments' => json_encode([
+                                    'query' => 'Coldcare',
+                                    'symptoms' => ["c\u{1EA3}m"],
+                                ]),
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage("c\u{00F3} thu\u{1ED1}c c\u{1EA3}m kh\u{00F4}ng", 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertNotEmpty($result['products']);
+        $this->assertContains('Coldcare', array_column($result['products'], 'name'));
+        $this->assertTrue($result['show_disclaimer']);
+    }
+
     public function test_process_message_handles_self_introduction_without_catalog_fallback(): void
     {
         $category = Category::factory()->create(['name' => 'Thuốc tim mạch']);
@@ -1039,6 +1499,61 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('Vitamin C 1000mg', $result['response']);
         $this->assertStringNotContainsString('em chào Vitamin C', mb_strtolower($result['response'], 'UTF-8'));
         $this->assertStringNotContainsString('tra cứu Vitamin C', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_process_message_handles_name_intro_with_product_lookup_intent(): void
+    {
+        $category = Category::factory()->create(['name' => 'Vitamin']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Vitamin C 1000mg',
+            'ingredients' => 'Acid ascorbic 1000mg',
+            'usage' => 'Công dụng: Bổ sung vitamin C, tăng sức đề kháng. Liều lượng: uống 1 viên/ngày sau ăn.',
+            'stock_quantity' => 120,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage(
+            'mình tên là Huy, mình muốn tìm Vitamin C. hãy cho mình biết công dụng và liều lượng nhé.',
+            1,
+            []
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('product_search', $result['response_type']);
+        $this->assertNotEmpty($result['products']);
+        $this->assertContains('Vitamin C 1000mg', array_column($result['products'], 'name'));
+        $this->assertStringContainsString('Vitamin C 1000mg', $result['response']);
+        $this->assertStringContainsString('Công dụng', $result['response']);
+        $this->assertStringContainsString('Liều lượng', $result['response']);
+        $this->assertStringNotContainsString('Huy Muốn', $result['response']);
+        $this->assertStringNotContainsString('Muốn Tìm Vitamin', $result['response']);
+        $this->assertStringNotContainsString('Em có thể hỗ trợ Huy', $result['response']);
+    }
+
+    public function test_process_message_trims_name_from_mixed_intro_history(): void
+    {
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage('bạn có thể làm gì?', 1, [
+            'previous_messages' => [
+                [
+                    'role' => 'user',
+                    'content' => 'mình tên là Huy, mình muốn tìm Vitamin C. hãy cho mình biết công dụng và liều lượng nhé.',
+                ],
+                [
+                    'role' => 'assistant',
+                    'content' => 'Dạ, với từ khóa `vitamin c`, em tìm thấy sản phẩm Vitamin C 1000mg.',
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertStringContainsString('Huy', $result['response']);
+        $this->assertStringNotContainsString('Huy Muốn', $result['response']);
+        $this->assertStringNotContainsString('Muốn Tìm Vitamin', $result['response']);
     }
 
     public function test_process_message_does_not_append_catalog_miss_for_product_safety_follow_up(): void

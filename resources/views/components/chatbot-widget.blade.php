@@ -247,7 +247,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 17h.01"></path>
                                     </svg>
                                     <span>⚠️</span>
-                                    <span x-text="message.disclaimer || '{{ __('messages.chatbot.disclaimer_text') }}'"></span>
+                                    <span x-text="getInlineDisclaimerText(message) || '{{ __('messages.chatbot.disclaimer_text') }}'"></span>
                                 </div>
                             </template>
                         </div>
@@ -1348,7 +1348,6 @@
 
 
 
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+@include('components.chatbot-markdown-renderer')
 
 @include('components.chatbot-widget-script')

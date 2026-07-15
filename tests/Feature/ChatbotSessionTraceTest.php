@@ -36,6 +36,7 @@ class ChatbotSessionTraceTest extends TestCase
                     'products' => [],
                     'categories' => [],
                     'show_disclaimer' => false,
+                    'response_type' => 'health_consultation',
                     'debug' => [
                         'fallback_type' => 'provider_unavailable_no_catalog_match',
                         'provider_error_type' => 'capacity_or_rate_limit',
@@ -69,6 +70,63 @@ class ChatbotSessionTraceTest extends TestCase
             'provider_unavailable_no_catalog_match',
             $assistantMessage->metadata['debug']['fallback_type'] ?? null
         );
+        $this->assertSame(
+            'health_consultation',
+            $assistantMessage->metadata['response_type'] ?? null
+        );
+    }
+
+    public function test_chatbot_message_passes_current_session_id_to_service_context(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'User',
+            'status' => 'active',
+        ]);
+        $capturedSessionId = null;
+
+        $this->mock(ChatbotService::class, function (MockInterface $mock) use ($user, &$capturedSessionId) {
+            $mock->shouldReceive('processMessage')
+                ->once()
+                ->with(
+                    'đây là phiên chat mã id là gì?',
+                    \Mockery::on(static fn ($userId): bool => (int) $userId === (int) $user->getAuthIdentifier()),
+                    \Mockery::on(static function (array $context) use (&$capturedSessionId): bool {
+                        $capturedSessionId = (string) ($context['session_id'] ?? '');
+
+                        return $capturedSessionId !== ''
+                            && Str::isUuid($capturedSessionId)
+                            && ($context['current_session_id'] ?? null) === $capturedSessionId
+                            && array_key_exists('previous_messages', $context)
+                            && array_key_exists('name_memory_messages', $context)
+                            && array_key_exists('recent_image_products', $context);
+                    })
+                )
+                ->andReturn([
+                    'success' => true,
+                    'response' => 'Dạ, mã phiên chat hiện tại là CHAT-TEST. ID đầy đủ: test.',
+                    'products' => [],
+                    'categories' => [],
+                    'explanations' => [],
+                    'show_disclaimer' => false,
+                    'disclaimer' => null,
+                    'response_type' => 'general',
+                ]);
+        });
+
+        $response = $this->actingAs($user)->postJson('/api/chatbot/message', [
+            'message' => 'đây là phiên chat mã id là gì?',
+            'context' => [
+                'session_id' => 'client-spoofed-session-id',
+                'current_session_id' => 'client-spoofed-current-session-id',
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('session_id', $capturedSessionId);
+
+        $this->assertNotSame('client-spoofed-session-id', $capturedSessionId);
+        $this->assertTrue(Str::isUuid((string) $capturedSessionId));
     }
 
     public function test_chatbot_message_passes_declared_name_memory_beyond_recent_context(): void
@@ -612,6 +670,111 @@ class ChatbotSessionTraceTest extends TestCase
             ->get(route('admin.chatSessions.images.show', ['sessionId' => $sessionId, 'image' => $image->MaAnh]))
             ->assertOk()
             ->assertHeader('content-type', 'image/jpeg');
+    }
+
+    public function test_admin_chat_session_uses_shared_markdown_renderer_for_assistant_transcript(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'Administrator',
+            'status' => 'active',
+        ]);
+        $user = User::factory()->create([
+            'role' => 'User',
+            'status' => 'active',
+        ]);
+        $sessionId = (string) Str::uuid();
+
+        ChatMessage::create([
+            'MaKH' => $user->MaKH,
+            'session_id' => $sessionId,
+            'role' => 'user',
+            'content' => 'format test',
+        ]);
+
+        ChatMessage::create([
+            'MaKH' => $user->MaKH,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => "### Kết quả\n\n1. **Vitamin C**\n2. [Mở sản phẩm](/products/1)\n\nCông thức: \\(1 + \\frac{1}{999} \\approx 1.001\\ldots\\)",
+            'metadata' => [
+                'response_type' => 'general',
+            ],
+        ]);
+
+        $html = $this->actingAs($admin)
+            ->get(route('admin.chatSessions.show', $sessionId))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('window.ChatbotMarkdownRenderer', $html);
+        $this->assertStringContainsString('js-admin-chat-markdown', $html);
+        $this->assertStringContainsString('js-admin-chat-markdown-source', $html);
+        $this->assertStringContainsString('<strong>Vitamin C</strong>', $html);
+        $this->assertStringContainsString('1 + 1/999 ~ 1.001...', $html);
+    }
+
+    public function test_admin_chat_session_shows_disclaimer_once_like_chatbot_widget(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'Administrator',
+            'status' => 'active',
+        ]);
+        $user = User::factory()->create([
+            'role' => 'User',
+            'status' => 'active',
+        ]);
+        $sessionId = (string) Str::uuid();
+        $disclaimer = 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.';
+
+        ChatMessage::create([
+            'MaKH' => $user->MaKH,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => 'Tin tư vấn cũ.',
+            'metadata' => ['disclaimer' => $disclaimer],
+            'show_disclaimer' => true,
+            'created_at' => now()->subMinutes(3),
+            'updated_at' => now()->subMinutes(3),
+        ]);
+
+        ChatMessage::create([
+            'MaKH' => $user->MaKH,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => 'Tin tư vấn mới nhất.',
+            'metadata' => ['disclaimer' => $disclaimer],
+            'show_disclaimer' => true,
+            'created_at' => now()->subMinutes(2),
+            'updated_at' => now()->subMinutes(2),
+        ]);
+
+        ChatMessage::create([
+            'MaKH' => $user->MaKH,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => 'Tin không cần disclaimer.',
+            'show_disclaimer' => false,
+            'created_at' => now()->subMinute(),
+            'updated_at' => now()->subMinute(),
+        ]);
+
+        $html = $this->actingAs($admin)
+            ->get(route('admin.chatSessions.show', $sessionId))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertSame(1, substr_count($html, $disclaimer));
+        $this->assertSame(1, substr_count($html, 'admin-chat-inline-disclaimer'));
+        $this->assertStringNotContainsString('alert alert-warning', $html);
+
+        $latestContentPosition = strpos($html, 'Tin không cần disclaimer.');
+        $disclaimerPosition = strpos($html, $disclaimer);
+
+        $this->assertNotFalse($latestContentPosition);
+        $this->assertNotFalse($disclaimerPosition);
+        $this->assertGreaterThan($latestContentPosition, $disclaimerPosition);
+        $this->assertStringContainsString('Tin tư vấn cũ.', $html);
+        $this->assertStringContainsString('Tin tư vấn mới nhất.', $html);
     }
 
     public function test_non_admin_and_guest_cannot_access_chat_sessions_admin_pages(): void

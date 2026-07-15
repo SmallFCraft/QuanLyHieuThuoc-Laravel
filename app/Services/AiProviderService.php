@@ -15,6 +15,8 @@ class AiProviderService
     protected string $baseUrl;
     protected string $apiKey;
     protected string $model;
+    protected int $timeout;
+    protected int $connectTimeout;
 
     public function __construct()
     {
@@ -22,6 +24,8 @@ class AiProviderService
         $this->baseUrl = rtrim((string) config('chatbot.ai.base_url', ''), '/');
         $this->apiKey = (string) config('chatbot.ai.api_key', '');
         $this->model = (string) config('chatbot.ai.model', '');
+        $this->timeout = max(1, (int) config('chatbot.ai.timeout', 20));
+        $this->connectTimeout = max(1, (int) config('chatbot.ai.connect_timeout', 5));
 
         if ($this->baseUrl === '') {
             throw new RuntimeException('AI_BASE_URL is not configured');
@@ -194,7 +198,8 @@ class AiProviderService
         $response = Http::withToken($this->apiKey)
             ->acceptJson()
             ->asJson()
-            ->timeout(60)
+            ->connectTimeout($this->connectTimeout)
+            ->timeout($this->timeout)
             ->post($url, $payload);
 
         $duration = (microtime(true) - $startedAt) * 1000;

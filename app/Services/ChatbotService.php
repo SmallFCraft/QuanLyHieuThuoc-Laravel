@@ -80,6 +80,7 @@ PROMPT;
 
     protected const IDENTITY_KEYWORDS = [
         'ban la model gi', 'em la model gi', 'model gi', 'ai gi', 'la ai vay',
+        'ban ten la gi', 'em ten la gi', 'ten ban la gi', 'ten em la gi', 'ban ten gi', 'em ten gi',
         'do ai tao ra', 'duoc ai tao ra', 'duoc ai dao tao', 'vendor nao', 'provider nao',
         'nha cung cap nao', 'nen tang nao', 'tool nao', 'ban dung model nao',
         'ban dung chatgpt', 'ban dung claude', 'ban dung gpt', 'ban dung openai',
@@ -234,15 +235,6 @@ PROMPT;
             ];
         }
         
-        // Intercept common meaningless greetings to save API wrapper tokens
-        $meaninglessGreetings = ['hi', 'hello', 'alo', 'chào', 'xin chào', 'chao', 'xin chao', 'ê', 'hey', 'có ai không', 'bot'];
-        $cleanMessage = mb_strtolower(preg_replace('/[^\p{L}\p{N}\s]/u', '', $trimmed), 'UTF-8');
-        if (in_array(trim($cleanMessage), $meaninglessGreetings)) {
-            return [
-                'valid' => false,
-                'reason' => 'Xin chào! Tôi là trợ lý AI của Medicare Pharmacy, luôn sẵn sàng đồng hành cùng bạn trong việc chăm sóc sức khỏe mỗi ngày. Bạn đang cần tìm kiếm sản phẩm, tư vấn về thuốc, hay hỗ trợ giải đáp bất kỳ thắc mắc nào liên quan đến sức khỏe hôm nay? Hãy chia sẻ với tôi nhé!'               ];
-        }
-        
         return ['valid' => true];
     }
 
@@ -341,6 +333,8 @@ PROMPT;
         $healthContextMessage = $this->resolveHealthContextMessage($workingMessage, $context);
         $prependWebsiteIntro = $messageRouting['prepend_intro'];
         $userDisplayName = $this->resolveUserDisplayName($message, $context);
+        $isNonCatalogChitchatMessage = $this->isNonCatalogChitchatMessage($workingMessage);
+        $isProviderOnlyNonCatalogMessage = $this->isProviderOnlyNonCatalogMessage($workingMessage);
 
         try {
             if ($this->isUrgentMedicalMessage($healthContextMessage)) {
@@ -362,15 +356,13 @@ PROMPT;
                     true
                 );
 
-                unset($urgentResponse['response_type']);
-
                 return $urgentResponse;
             }
 
             $localResponse = $this->tryLocalResponse($healthContextMessage, $context);
             if ($localResponse !== null) {
                 $responseType = $localResponse['response_type'] ?? 'general';
-                unset($localResponse['response_type']);
+                $localResponse['response_type'] = $responseType;
 
                 if ($prependWebsiteIntro) {
                     $localResponse['response'] = $this->prependWebsiteIntroduction($localResponse['response']);
@@ -421,7 +413,13 @@ PROMPT;
                 : [];
 
             $messages = $this->buildConversationMessages($workingMessage, $context);
-            $chatOptions = $this->shouldDisableCatalogToolsForMessage($workingMessage)
+            if ($isNonCatalogChitchatMessage) {
+                $messages = $this->appendNonCatalogChitchatInstruction($messages);
+            } elseif ($isProviderOnlyNonCatalogMessage) {
+                $messages = $this->appendProviderOnlyNonCatalogInstruction($messages);
+            }
+
+            $chatOptions = $isProviderOnlyNonCatalogMessage
                 ? []
                 : [
                     'functions' => $this->getFunctionSchema(),
@@ -440,12 +438,16 @@ PROMPT;
             $normalizedCatalogMessage = $this->normalizeMessage($catalogLookupMessage);
             $isUrlOnlyMessage = $this->isLikelyUrlOnlyMessage($workingMessage);
             $isNearbyPharmacyIntent = $this->isNearbyPharmacyLocationIntent($workingMessage);
-            $defaultQuery = ($isUrlOnlyMessage || $isNearbyPharmacyIntent) ? '' : $this->resolveCatalogQuery($catalogLookupMessage);
-            $defaultDisclaimer = $this->isSymptomRelatedQuery($catalogLookupMessage)
+            $defaultQuery = ($isUrlOnlyMessage || $isNearbyPharmacyIntent || $isProviderOnlyNonCatalogMessage)
+                ? ''
+                : $this->resolveCatalogQuery($catalogLookupMessage);
+            $defaultDisclaimer = !$isProviderOnlyNonCatalogMessage && (
+                $this->isSymptomRelatedQuery($catalogLookupMessage)
                 || $this->requiresAiConsultation($normalizedCatalogMessage)
-                || $this->isProductUsageTimingFollowUpMessage($workingMessage);
+                || $this->isProductUsageTimingFollowUpMessage($workingMessage)
+            );
 
-            if (isset($response['choices'][0]['message']['function_call'])) {
+            if (!$isProviderOnlyNonCatalogMessage && isset($response['choices'][0]['message']['function_call'])) {
                 $functionCall = $response['choices'][0]['message']['function_call'];
                 $functionName = (string) ($functionCall['name'] ?? '');
                 $arguments = json_decode($functionCall['arguments'] ?? '{}', true) ?: [];
@@ -524,10 +526,18 @@ PROMPT;
                 $rawResponseText = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
                 $hadInternalToolNarration = $this->containsInternalToolNarration($rawResponseText);
                 $responseText = $this->sanitizeAssistantResponse($rawResponseText);
-                $showDisclaimer = $defaultDisclaimer || $this->containsMedicalAdvice($responseText);
+                if ($isNonCatalogChitchatMessage && $this->shouldReplaceNonCatalogChitchatResponse($responseText)) {
+                    $responseText = $this->buildNonCatalogChitchatResponse($workingMessage);
+                } elseif ($isProviderOnlyNonCatalogMessage && $this->shouldReplaceProviderOnlyNonCatalogResponse($responseText)) {
+                    $responseText = $this->buildProviderOnlyNonCatalogFallbackResponse($workingMessage);
+                }
+                $showDisclaimer = $isProviderOnlyNonCatalogMessage
+                    ? false
+                    : ($defaultDisclaimer || $this->containsMedicalAdvice($responseText));
 
                 $shouldEnrichCatalog = !$isUrlOnlyMessage
                     && !$isNearbyPharmacyIntent
+                    && !$isProviderOnlyNonCatalogMessage
                     && $this->shouldEnrichCatalogFromAssistantReply(
                         $workingMessage,
                         $catalogLookupMessage,
@@ -619,6 +629,48 @@ PROMPT;
             ]);
 
             $providerFallback = $this->buildProviderFallbackDebug($e);
+            if ($isNonCatalogChitchatMessage) {
+                return [
+                    'success' => true,
+                    'response' => $this->personalizeResponseText(
+                        $this->buildNonCatalogChitchatResponse($workingMessage),
+                        $userDisplayName
+                    ),
+                    'products' => [],
+                    'categories' => [],
+                    'explanations' => [],
+                    'show_disclaimer' => false,
+                    'disclaimer' => null,
+                    'response_type' => 'general',
+                    'debug' => array_merge($providerFallback, [
+                        'fallback_type' => 'provider_unavailable_chitchat',
+                        'used_product_suggestions' => false,
+                    ]),
+                    'error' => null,
+                ];
+            }
+
+            if ($isProviderOnlyNonCatalogMessage) {
+                return [
+                    'success' => true,
+                    'response' => $this->personalizeResponseText(
+                        $this->buildProviderOnlyNonCatalogFallbackResponse($workingMessage),
+                        $userDisplayName
+                    ),
+                    'products' => [],
+                    'categories' => [],
+                    'explanations' => [],
+                    'show_disclaimer' => false,
+                    'disclaimer' => null,
+                    'response_type' => 'general',
+                    'debug' => array_merge($providerFallback, [
+                        'fallback_type' => 'provider_unavailable_non_catalog',
+                        'used_product_suggestions' => false,
+                    ]),
+                    'error' => null,
+                ];
+            }
+
             $fallbackQuery = $this->shouldDisableCatalogToolsForMessage($workingMessage)
                 ? ''
                 : $this->resolveCatalogQuery($workingMessage);
@@ -812,8 +864,49 @@ PROMPT;
             $responseText = preg_replace($patterns, '', $responseText) ?? $responseText;
         }
 
+        $responseText = $this->sanitizeInlineMathForPlainText($responseText);
         $responseText = preg_replace("/[ \t]+\n/u", "\n", $responseText) ?? $responseText;
         $responseText = preg_replace("/\n{3,}/u", "\n\n", $responseText) ?? $responseText;
+
+        return trim($responseText);
+    }
+
+    protected function sanitizeInlineMathForPlainText(string $responseText): string
+    {
+        if (!str_contains($responseText, '\\') && !str_contains($responseText, '$')) {
+            return $responseText;
+        }
+
+        $responseText = preg_replace('/\\\\\\((.*?)\\\\\\)/us', '$1', $responseText) ?? $responseText;
+        $responseText = preg_replace('/\\\\\\[(.*?)\\\\\\]/us', '$1', $responseText) ?? $responseText;
+        $responseText = preg_replace('/\\$\\$(.*?)\\$\\$/us', '$1', $responseText) ?? $responseText;
+        $responseText = preg_replace('/\\$(.*?)\\$/us', '$1', $responseText) ?? $responseText;
+
+        for ($index = 0; $index < 5; $index++) {
+            $updated = preg_replace('/\\\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/u', '$1/$2', $responseText) ?? $responseText;
+            if ($updated === $responseText) {
+                break;
+            }
+
+            $responseText = $updated;
+        }
+
+        $replacements = [
+            '\\approx' => '~',
+            '\\simeq' => '~',
+            '\\ldots' => '...',
+            '\\cdots' => '...',
+            '\\times' => 'x',
+            '\\div' => '/',
+            '\\cdot' => '*',
+            '\\left' => '',
+            '\\right' => '',
+        ];
+
+        $responseText = str_replace(array_keys($replacements), array_values($replacements), $responseText);
+        $responseText = str_replace(['{', '}'], '', $responseText);
+        $responseText = preg_replace('/\\\\([a-zA-Z]+)/u', '$1', $responseText) ?? $responseText;
+        $responseText = preg_replace('/\s+([,.;:!?])/u', '$1', $responseText) ?? $responseText;
 
         return trim($responseText);
     }
@@ -927,6 +1020,32 @@ PROMPT;
             ];
         }
 
+        if ($this->isCurrentChatSessionIdIntent($message)) {
+            return [
+                'success' => true,
+                'response' => $this->buildCurrentChatSessionIdResponse($context),
+                'products' => [],
+                'categories' => [],
+                'explanations' => [],
+                'show_disclaimer' => false,
+                'disclaimer' => null,
+                'response_type' => 'general'
+            ];
+        }
+
+        if ($this->isGeneralDateTimeQuestion($message)) {
+            return [
+                'success' => true,
+                'response' => $this->buildCurrentDateTimeResponse($message),
+                'products' => [],
+                'categories' => [],
+                'explanations' => [],
+                'show_disclaimer' => false,
+                'disclaimer' => null,
+                'response_type' => 'general'
+            ];
+        }
+
         if ($this->isSelfIntroductionMessage($message)) {
             return [
                 'success' => true,
@@ -979,6 +1098,35 @@ PROMPT;
             ];
         }
 
+        if ($this->isUnsupportedCreativeGenerationIntent($message)) {
+            return [
+                'success' => true,
+                'response' => $this->buildUnsupportedCreativeGenerationResponse($message),
+                'products' => [],
+                'categories' => [],
+                'explanations' => [],
+                'show_disclaimer' => false,
+                'disclaimer' => null,
+                'response_type' => 'general'
+            ];
+        }
+
+        if ($this->isGeneralCalculationQuestion($message)) {
+            $calculationResponse = $this->tryBuildSimpleCalculationResponse($message);
+            if ($calculationResponse !== null) {
+                return [
+                    'success' => true,
+                    'response' => $calculationResponse,
+                    'products' => [],
+                    'categories' => [],
+                    'explanations' => [],
+                    'show_disclaimer' => false,
+                    'disclaimer' => null,
+                    'response_type' => 'general'
+                ];
+            }
+        }
+
         if ($this->isCapabilityIntent($normalizedMessage)) {
             return [
                 'success' => true,
@@ -1016,6 +1164,10 @@ PROMPT;
                 'disclaimer' => null,
                 'response_type' => 'general'
             ];
+        }
+
+        if ($this->isProviderOnlyNonCatalogMessage($message)) {
+            return null;
         }
 
         if ($this->isSymptomRelatedQuery($message) && !$this->wantsProductSuggestionForSymptom($message)) {
@@ -1825,12 +1977,61 @@ PROMPT;
             return false;
         }
 
-        return $defaultQuery !== '' && !$this->isSymptomRelatedQuery($catalogLookupMessage);
+        return $defaultQuery !== ''
+            && !$this->isSymptomRelatedQuery($catalogLookupMessage)
+            && $this->hasExplicitCatalogLookupIntent($workingMessage);
     }
 
     protected function shouldDisableCatalogToolsForMessage(string $message): bool
     {
-        return $this->isGeneralDateTimeQuestion($message);
+        return $this->isProviderOnlyNonCatalogMessage($message);
+    }
+
+    protected function hasExplicitCatalogLookupIntent(string $message): bool
+    {
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return false;
+        }
+
+        if ($this->extractExplicitProductQuery($message) !== '') {
+            return true;
+        }
+
+        if ($this->isCategoryIntent($normalized) || $this->wantsProductSuggestionForSymptom($message)) {
+            return true;
+        }
+
+        return $this->containsAnyKeyword($normalized, [
+            'thuoc',
+            'san pham',
+            'danh muc',
+            'hoat chat',
+            'cong dung',
+            'muon mua',
+            'can mua',
+            'mua thuoc',
+            'mua san pham',
+            'dat hang',
+            'gio hang',
+            'ton kho',
+            'con hang',
+            'gia thuoc',
+            'gia san pham',
+            'bao nhieu tien',
+            'co thuoc',
+            'co san pham',
+            'tim thuoc',
+            'tim san pham',
+            'tra cuu thuoc',
+            'tra cuu san pham',
+            'xem thuoc',
+            'xem san pham',
+            'loai nao tot',
+            'loai nao phu hop',
+            'uong gi',
+            'dung gi',
+        ]);
     }
 
     protected function isGeneralDateTimeQuestion(string $message): bool
@@ -2024,6 +2225,560 @@ PROMPT;
         return false;
     }
 
+    protected function appendNonCatalogChitchatInstruction(array $messages): array
+    {
+        $instruction = [
+            'role' => 'system',
+            'content' => 'The current user message is social-only chitchat. Reply briefly and naturally. Do not mention products, medicine, symptoms, catalog lookup, medical advice, or ask for health details unless the user explicitly asked for them.',
+        ];
+
+        $insertAt = max(0, count($messages) - 1);
+        array_splice($messages, $insertAt, 0, [$instruction]);
+
+        return $messages;
+    }
+
+    protected function appendProviderOnlyNonCatalogInstruction(array $messages): array
+    {
+        $instruction = [
+            'role' => 'system',
+            'content' => 'The current user message is a general non-catalog question. Answer it directly and briefly. Do not mention products, medicine, symptoms, catalog lookup, medical advice, or ask for health details unless the user explicitly asked for them.',
+        ];
+
+        $insertAt = max(0, count($messages) - 1);
+        array_splice($messages, $insertAt, 0, [$instruction]);
+
+        return $messages;
+    }
+
+    protected function isProviderOnlyNonCatalogMessage(string $message): bool
+    {
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return false;
+        }
+
+        $tokens = $this->tokenizeNormalizedIntentText($normalized);
+        if (empty($tokens)) {
+            return false;
+        }
+
+        if ($this->hasCatalogOrHealthIntentForChitchat($message, $normalized, $tokens)) {
+            return false;
+        }
+
+        return $this->isNonCatalogChitchatMessage($message)
+            || $this->isGeneralDateTimeQuestion($message)
+            || $this->isGeneralCalculationQuestion($message)
+            || $this->isGeneralNonCatalogTextMessage($message);
+    }
+
+    protected function isNonCatalogChitchatMessage(string $message): bool
+    {
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return false;
+        }
+
+        $tokens = $this->tokenizeNormalizedIntentText($normalized);
+        if (empty($tokens)) {
+            return false;
+        }
+
+        if ($this->hasCatalogOrHealthIntentForChitchat($message, $normalized, $tokens)) {
+            return false;
+        }
+
+        $greetingTokens = ['hi', 'hello', 'hey', 'alo', 'chao', 'xin'];
+        $thanksTokens = ['cam', 'on', 'thanks', 'thank', 'you', 'tks', 'thankyou'];
+        $ackTokens = ['ok', 'okay', 'oke', 'uh', 'u', 'um', 'vang', 'da', 'roi', 'duoc', 'yes', 'yep'];
+        $closingTokens = ['tam', 'biet', 'bye', 'goodbye', 'hen', 'gap', 'lai'];
+        $fillerTokens = [
+            'ban', 'anh', 'chi', 'em', 'shop', 'nha', 'nhe', 'a', 'oi', 'bot', 'admin',
+            'minh', 'nhe', 'nha', 'thoi', 'rat', 'nhieu', 'bac', 'si', 'duoc',
+        ];
+
+        if (
+            $this->containsAnyToken($tokens, $greetingTokens)
+            && $this->onlyContainsTokens($tokens, array_merge($greetingTokens, $fillerTokens))
+        ) {
+            return true;
+        }
+
+        if (
+            ($this->containsAnyKeyword($normalized, ['cam on', 'thank you']) || $this->containsAnyToken($tokens, $thanksTokens))
+            && $this->onlyContainsTokens($tokens, array_merge($thanksTokens, $ackTokens, $fillerTokens))
+        ) {
+            return true;
+        }
+
+        if (
+            $this->containsAnyToken($tokens, $ackTokens)
+            && $this->onlyContainsTokens($tokens, array_merge($ackTokens, $fillerTokens))
+        ) {
+            return true;
+        }
+
+        if (preg_match('/^on(?:\s+(?:khong|ko|hong|k|chu|nha|ban|a))*$/u', $normalized) === 1) {
+            return true;
+        }
+
+        if (
+            ($this->containsAnyKeyword($normalized, ['tam biet', 'goodbye', 'hen gap lai']) || $this->containsAnyToken($tokens, ['bye']))
+            && $this->onlyContainsTokens($tokens, array_merge($closingTokens, $fillerTokens))
+        ) {
+            return true;
+        }
+
+        if (preg_match('/^(?:shop|bot|admin|tu van vien|nhan vien|duoc si|bac si)\s+oi$/u', $normalized) === 1) {
+            return true;
+        }
+
+        if (preg_match('/^(?:co\s+)?(?:ai|tu van vien|nhan vien|duoc si|bac si)(?:\s+do)?(?:\s+tu van)?\s+(?:khong|ko|hong)$/u', $normalized) === 1) {
+            return true;
+        }
+
+        if (preg_match('/^(?:cho\s+)?(?:(?:toi|minh|em|anh|chi)\s+)?hoi\s+(?:chut|xiu|ti)(?:\s+(?:thoi|nhe|nha|a))?$/u', $normalized) === 1) {
+            return true;
+        }
+
+        return preg_match('/^test(?:\s+(?:thoi|nhe|nha|a))?$/u', $normalized) === 1;
+    }
+
+    protected function isGeneralCalculationQuestion(string $message): bool
+    {
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return false;
+        }
+
+        if (preg_match('/\d+(?:[\.,]\d+)?\s*(?:\+|-|\*|\/|x|X|×|÷)\s*\d+(?:[\.,]\d+)?/u', $message) === 1) {
+            return true;
+        }
+
+        if (
+            preg_match('/\b\d+(?:\s+\d+)+\b/u', $normalized) === 1
+            && $this->containsAnyKeyword($normalized, ['bang may', 'bang bao nhieu', 'la may', 'ra may', 'may ko', 'may khong', 'bao nhieu'])
+        ) {
+            return true;
+        }
+
+        return preg_match('/\d/u', $normalized) === 1
+            && $this->containsAnyKeyword($normalized, ['tinh', 'cong', 'tru', 'nhan', 'chia', 'bang may', 'bang bao nhieu', 'ket qua']);
+    }
+
+    protected function isGeneralNonCatalogTextMessage(string $message): bool
+    {
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return false;
+        }
+
+        return preg_match('/^(?:hello|hi|hey)\s+world$/u', $normalized) === 1;
+    }
+
+    protected function shouldReplaceNonCatalogChitchatResponse(string $responseText): bool
+    {
+        $normalized = $this->normalizeIntentText($responseText);
+        if ($normalized === '') {
+            return true;
+        }
+
+        return $this->containsAnyKeyword($normalized, [
+            'san pham',
+            'thuoc',
+            'danh muc',
+            'trieu chung',
+            'tu khoa',
+            'hoat chat',
+            'cong dung',
+            'bac si',
+            'duoc si',
+            'di kham',
+            'kham som',
+            'y te',
+            'lieu luong',
+            'search products',
+            'search categories',
+            'chua thay',
+        ]);
+    }
+
+    protected function buildNonCatalogChitchatResponse(string $message): string
+    {
+        $normalized = $this->normalizeIntentText($message);
+        $tokens = $this->tokenizeNormalizedIntentText($normalized);
+
+        if ($this->containsAnyKeyword($normalized, ['cam on', 'thank you']) || $this->containsAnyToken($tokens, ['thanks', 'tks', 'thankyou'])) {
+            return 'Dạ, không có gì ạ.';
+        }
+
+        if ($this->containsAnyKeyword($normalized, ['tam biet', 'goodbye', 'hen gap lai']) || $this->containsAnyToken($tokens, ['bye'])) {
+            return 'Dạ, hẹn gặp lại anh/chị ạ.';
+        }
+
+        if ($this->containsAnyToken($tokens, ['ok', 'okay', 'oke', 'uh', 'u', 'um', 'vang', 'da', 'roi', 'duoc', 'yes', 'yep'])) {
+            return 'Dạ, em ghi nhận ạ.';
+        }
+
+        if (preg_match('/^on(?:\s+(?:khong|ko|hong|k|chu|nha|ban|a))*$/u', $normalized) === 1) {
+            return 'Dạ, em vẫn sẵn sàng hỗ trợ ạ.';
+        }
+
+        if ($this->containsAnyToken($tokens, ['hi', 'hello', 'hey', 'alo', 'chao', 'xin'])) {
+            return 'Dạ, em chào anh/chị ạ.';
+        }
+
+        return 'Dạ, em đây ạ.';
+    }
+
+    protected function shouldReplaceProviderOnlyNonCatalogResponse(string $responseText): bool
+    {
+        return $this->shouldReplaceNonCatalogChitchatResponse($responseText);
+    }
+
+    protected function buildProviderOnlyNonCatalogFallbackResponse(string $message): string
+    {
+        $calculationResponse = $this->tryBuildSimpleCalculationResponse($message);
+        if ($calculationResponse !== null) {
+            return $calculationResponse;
+        }
+
+        return 'Dạ, em nghe anh/chị ạ.';
+    }
+
+    protected function tryBuildSimpleCalculationResponse(string $message): ?string
+    {
+        $expression = $this->extractSimpleArithmeticExpression($message);
+        if ($expression === null) {
+            return null;
+        }
+
+        $evaluation = $this->evaluateSimpleArithmeticExpression($expression);
+        if (!($evaluation['ok'] ?? false)) {
+            if (($evaluation['error'] ?? null) === 'division_by_zero') {
+                return 'Dạ, phép chia cho 0 không có kết quả hợp lệ ạ.';
+            }
+
+            return null;
+        }
+
+        $displayExpression = $this->formatArithmeticExpressionForDisplay($expression);
+        $formatted = $this->formatCalculationNumber((float) $evaluation['value']);
+
+        return 'Dạ, ' . $displayExpression . ' = ' . $formatted . ' ạ.';
+    }
+
+    protected function buildCurrentDateTimeResponse(string $message): string
+    {
+        $normalized = $this->normalizeIntentText($message);
+        $timezone = config('app.timezone', 'Asia/Ho_Chi_Minh');
+        $now = now($timezone);
+
+        $weekday = [
+            0 => 'Chủ nhật',
+            1 => 'Thứ Hai',
+            2 => 'Thứ Ba',
+            3 => 'Thứ Tư',
+            4 => 'Thứ Năm',
+            5 => 'Thứ Sáu',
+            6 => 'Thứ Bảy',
+        ][$now->dayOfWeek] ?? '';
+
+        $dateText = trim($weekday . ', ngày ' . $now->format('d/m/Y'));
+
+        if ($this->containsAnyKeyword($normalized, ['bay gio', 'may gio', 'gio nao', 'current time', 'time now'])) {
+            return 'Dạ, theo thời gian hệ thống, hiện tại là ' . $now->format('H:i') . ', ' . $dateText . '.';
+        }
+
+        return 'Dạ, theo thời gian hệ thống, hôm nay là ' . $dateText . '.';
+    }
+
+    protected function extractSimpleArithmeticExpression(string $message): ?string
+    {
+        $normalized = str_replace(['×', '÷'], ['*', '/'], $message);
+        $matchCount = preg_match_all('/[-+()0-9\.,\s*\/xX]+/u', $normalized, $matches);
+        if ($matchCount === false || $matchCount === 0) {
+            return null;
+        }
+
+        $candidates = array_values(array_filter(
+            array_map('trim', $matches[0] ?? []),
+            static fn (string $candidate): bool => $candidate !== ''
+        ));
+
+        usort($candidates, static fn (string $left, string $right): int => strlen($right) <=> strlen($left));
+
+        foreach ($candidates as $candidate) {
+            $expression = str_replace([' ', ','], ['', '.'], $candidate);
+            $expression = str_replace(['x', 'X'], '*', $expression);
+            $expression = trim($expression, "= \t\n\r\0\x0B");
+
+            if (
+                $expression === ''
+                || preg_match('/^\d+(?:\.\d+)?$/', $expression) === 1
+                || preg_match('/^\(?-?\d+(?:\.\d+)?(?:[+\-*\/]\(?-?\d+(?:\.\d+)?\)?)+\)?$/', $expression) !== 1
+            ) {
+                continue;
+            }
+
+            return $expression;
+        }
+
+        return null;
+    }
+
+    protected function evaluateSimpleArithmeticExpression(string $expression): array
+    {
+        $tokens = $this->tokenizeArithmeticExpression($expression);
+        if (empty($tokens)) {
+            return ['ok' => false, 'error' => 'invalid_expression'];
+        }
+
+        $output = [];
+        $operators = [];
+        $precedence = ['+' => 1, '-' => 1, '*' => 2, '/' => 2];
+        $previousType = null;
+
+        for ($index = 0, $count = count($tokens); $index < $count; $index++) {
+            $token = $tokens[$index];
+
+            if (is_float($token)) {
+                $output[] = $token;
+                $previousType = 'number';
+                continue;
+            }
+
+            if ($token === '(') {
+                $operators[] = $token;
+                $previousType = 'operator';
+                continue;
+            }
+
+            if ($token === ')') {
+                while (!empty($operators) && end($operators) !== '(') {
+                    $output[] = array_pop($operators);
+                }
+
+                if (empty($operators)) {
+                    return ['ok' => false, 'error' => 'invalid_expression'];
+                }
+
+                array_pop($operators);
+                $previousType = 'number';
+                continue;
+            }
+
+            if (($token === '-' || $token === '+') && ($previousType === null || $previousType === 'operator')) {
+                $next = $tokens[$index + 1] ?? null;
+                if (is_float($next)) {
+                    $output[] = $token === '-' ? -$next : $next;
+                    $index++;
+                    $previousType = 'number';
+                    continue;
+                }
+            }
+
+            if (!isset($precedence[$token])) {
+                continue;
+            }
+
+            while (
+                !empty($operators)
+                && end($operators) !== '('
+                && ($precedence[end($operators)] ?? 0) >= $precedence[$token]
+            ) {
+                $output[] = array_pop($operators);
+            }
+
+            $operators[] = $token;
+            $previousType = 'operator';
+        }
+
+        while (!empty($operators)) {
+            $operator = array_pop($operators);
+            if ($operator === '(' || $operator === ')') {
+                return ['ok' => false, 'error' => 'invalid_expression'];
+            }
+
+            $output[] = $operator;
+        }
+
+        return $this->evaluateReversePolishNotation($output);
+    }
+
+    protected function tokenizeArithmeticExpression(string $expression): array
+    {
+        $matchCount = preg_match_all('/\d+(?:\.\d+)?|[+\-*\/()]/', $expression, $matches);
+        if ($matchCount === false || $matchCount === 0) {
+            return [];
+        }
+
+        $tokens = $matches[0] ?? [];
+        if (implode('', $tokens) !== $expression) {
+            return [];
+        }
+
+        return array_map(
+            static fn (string $token): mixed => is_numeric($token) ? (float) $token : $token,
+            $tokens
+        );
+    }
+
+    protected function evaluateReversePolishNotation(array $tokens): array
+    {
+        $stack = [];
+
+        foreach ($tokens as $token) {
+            if ($token === null) {
+                continue;
+            }
+
+            if (is_float($token)) {
+                $stack[] = $token;
+                continue;
+            }
+
+            if (count($stack) < 2) {
+                return ['ok' => false, 'error' => 'invalid_expression'];
+            }
+
+            $right = array_pop($stack);
+            $left = array_pop($stack);
+
+            if ($token === '/' && abs($right) < 0.0000000001) {
+                return ['ok' => false, 'error' => 'division_by_zero'];
+            }
+
+            $stack[] = match ($token) {
+                '+' => $left + $right,
+                '-' => $left - $right,
+                '*' => $left * $right,
+                '/' => $left / $right,
+                default => null,
+            };
+        }
+
+        if (count($stack) !== 1 || $stack[0] === null) {
+            return ['ok' => false, 'error' => 'invalid_expression'];
+        }
+
+        return ['ok' => true, 'value' => (float) $stack[0]];
+    }
+
+    protected function formatArithmeticExpressionForDisplay(string $expression): string
+    {
+        $display = preg_replace('/\s*([+\-*\/()])\s*/', ' $1 ', $expression) ?? $expression;
+        $display = preg_replace('/\s+/u', ' ', $display) ?? $display;
+        $display = str_replace('( ', '(', $display);
+        $display = str_replace(' )', ')', $display);
+
+        return trim($display);
+    }
+
+    protected function formatCalculationNumber(float $value): string
+    {
+        $formatted = rtrim(rtrim(number_format($value, 12, '.', ''), '0'), '.');
+
+        return ($formatted === '' || $formatted === '-0') ? '0' : $formatted;
+    }
+
+    protected function hasCatalogOrHealthIntentForChitchat(string $message, string $normalized, array $tokens): bool
+    {
+        if ($this->extractExplicitProductQuery($message) !== '') {
+            return true;
+        }
+
+        if (
+            $this->isCategoryIntent($normalized)
+            || $this->isSupportIntent($normalized)
+            || $this->isCapabilityIntent($normalized)
+            || $this->isIdentityIntent($normalized)
+            || $this->isWebsiteInfoIntent($normalized)
+            || $this->isNearbyPharmacyLocationIntent($message)
+            || $this->requiresAiConsultation($normalized)
+            || $this->containsAnyKeyword($normalized, self::SYMPTOM_PRODUCT_INTENT_KEYWORDS)
+            || $this->containsAnyKeyword($normalized, [
+                'thuoc',
+                'san pham',
+                'danh muc',
+                'hoat chat',
+                'cong dung',
+                'gia',
+                'mua',
+                'dat hang',
+                'gio hang',
+                'trieu chung',
+                'benh',
+                'bi',
+                'mac',
+                'om',
+                'sot',
+                'dau',
+                'cum',
+                'cam cum',
+                'cam lanh',
+                'viem',
+                'nhiem',
+                'di ung',
+                'ngua',
+                'chong mat',
+                'buon non',
+                'tieu chay',
+                'ia chay',
+                'tao bon',
+                'met moi',
+                'kho tho',
+                'so mui',
+                'xuat huyet',
+                'dengue',
+                'mat nuoc',
+                'kho chiu',
+                'khong khoe',
+            ])
+        ) {
+            return true;
+        }
+
+        foreach ($tokens as $token) {
+            if ($token === 'ho') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function tokenizeNormalizedIntentText(string $normalized): array
+    {
+        return array_values(array_filter(
+            explode(' ', $normalized),
+            static fn (string $token): bool => $token !== ''
+        ));
+    }
+
+    protected function containsAnyToken(array $tokens, array $needles): bool
+    {
+        foreach ($needles as $needle) {
+            if (in_array($needle, $tokens, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function onlyContainsTokens(array $tokens, array $allowedTokens): bool
+    {
+        foreach ($tokens as $token) {
+            if (!in_array($token, $allowedTokens, true)) {
+                return false;
+            }
+        }
+
+        return !empty($tokens);
+    }
+
     protected function extractSearchQuery(string $message, array $extraStopWords = []): string
     {
         $query = $this->normalizeMessage($message);
@@ -2056,8 +2811,19 @@ PROMPT;
 
     protected function resolveCatalogQuery(string $message): string
     {
-        if ($this->isSelfIntroductionMessage($message)) {
+        $normalized = $this->normalizeIntentText($message);
+
+        if (
+            $this->isSelfIntroductionMessage($message)
+            || $this->isIdentityIntent($normalized)
+            || $this->isProviderOnlyNonCatalogMessage($message)
+        ) {
             return '';
+        }
+
+        $selfIntroCatalogQuery = $this->extractCatalogQueryFromSelfIntroductionRequest($message);
+        if ($selfIntroCatalogQuery !== '') {
+            return $selfIntroCatalogQuery;
         }
 
         $explicitProductQuery = $this->extractExplicitProductQuery($message);
@@ -2066,6 +2832,64 @@ PROMPT;
         }
 
         return $this->extractSearchQuery($message);
+    }
+
+    protected function extractCatalogQueryFromSelfIntroductionRequest(string $message): string
+    {
+        if ($this->extractUserNameFromSelfIntroduction($message) === '') {
+            return '';
+        }
+
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (!$this->containsAnyKeyword($normalized, [
+            'muon tim',
+            'can tim',
+            'muon mua',
+            'can mua',
+            'thuoc',
+            'san pham',
+            'vitamin',
+            'cong dung',
+            'tac dung',
+            'lieu luong',
+            'lieu dung',
+            'cach dung',
+            'cach su dung',
+        ])) {
+            return '';
+        }
+
+        $request = preg_replace(
+            '/^(?:toi|minh|em|anh|chi|tui|tao)\s+(?:ten\s+(?:la\s+)?|la\s+).+?\s+((?:(?:toi|minh|em|anh|chi|tui|tao)\s+)?(?:muon|can|hay|cho|tim|xem|thuoc|san\s+pham|vitamin|cong\s+dung|tac\s+dung|lieu|cach)\b.*)$/u',
+            '$1',
+            $normalized
+        ) ?? $normalized;
+
+        if ($request === $normalized) {
+            return '';
+        }
+
+        $request = preg_replace('/\b(?:san\s+pham|cong\s+dung|tac\s+dung|lieu\s+luong|lieu\s+dung|cach\s+dung|cach\s+su\s+dung|ho\s+tro)\b/u', ' ', $request) ?? $request;
+
+        $noiseTokens = [
+            'toi', 'minh', 'em', 'anh', 'chi', 'tui', 'tao',
+            'muon', 'can', 'tim', 'mua', 'xem', 'hay', 'cho', 'biet',
+            'thuoc', 'la', 'ten', 've', 'cua', 'va', 'nhe', 'nha', 'a',
+            'nhu', 'the', 'nao',
+        ];
+
+        foreach ($noiseTokens as $token) {
+            $request = preg_replace('/(^|\s)' . preg_quote($token, '/') . '(?=\s|$)/u', ' ', $request) ?? $request;
+        }
+
+        $request = preg_replace('/\s+/u', ' ', $request) ?? $request;
+        $request = trim($request);
+
+        return $this->isMeaningfulCatalogQuery($request) ? $request : '';
     }
 
     protected function sanitizeCatalogQuery(string $query): string
@@ -2290,6 +3114,72 @@ PROMPT;
         return $this->containsAnyKeyword($normalizedMessage, $questionSignals);
     }
 
+    protected function isUnsupportedCreativeGenerationIntent(string $message): bool
+    {
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return false;
+        }
+
+        if ($this->containsAnyKeyword($normalized, [
+            'tao don hang',
+            'dat hang',
+            'them vao gio hang',
+            'gio hang',
+            'mua thuoc',
+            'mua san pham',
+        ])) {
+            return false;
+        }
+
+        if ($this->containsAnyKeyword($normalized, [
+            'tao anh',
+            've anh',
+            'tao hinh',
+            've hinh',
+            'sinh anh',
+            'generate image',
+            'create image',
+            'image generation',
+            'tao logo',
+            've logo',
+            'tao tranh',
+            've tranh',
+            'tao poster',
+            'tao video',
+            'tao nhac',
+            'tao audio',
+            'tao file',
+            'xuat file',
+            'tao pdf',
+            'xuat pdf',
+            'tao word',
+            'tao docx',
+            'tao excel',
+            'tao xlsx',
+            'tao powerpoint',
+            'tao slide',
+        ])) {
+            return true;
+        }
+
+        return preg_match('/\b(?:tao|ve|generate|create)\b.*\b(?:anh|hinh|image|logo|poster|video|audio|nhac|file|pdf|docx|word|excel|xlsx|ppt|powerpoint|slide)\b/u', $normalized) === 1;
+    }
+
+    protected function buildUnsupportedCreativeGenerationResponse(string $message): string
+    {
+        $normalized = $this->normalizeIntentText($message);
+        $artifact = $this->containsAnyKeyword($normalized, ['file', 'pdf', 'word', 'docx', 'excel', 'xlsx', 'powerpoint', 'slide'])
+            ? 'file'
+            : 'anh';
+
+        if ($artifact === 'file') {
+            return 'Dạ, hiện website chưa hỗ trợ tạo file trực tiếp trong khung chat. Em có thể hỗ trợ soạn nội dung hoặc dàn ý văn bản để anh/chị dùng ở công cụ phù hợp.';
+        }
+
+        return 'Dạ, hiện website chưa hỗ trợ tạo ảnh trực tiếp trong khung chat. Em có thể hỗ trợ viết prompt hoặc mô tả ảnh để anh/chị dùng ở công cụ tạo ảnh phù hợp.';
+    }
+
     protected function isWebsiteInfoIntent(string $normalizedMessage): bool
     {
         $normalized = $this->normalizeIntentText($normalizedMessage);
@@ -2350,7 +3240,22 @@ PROMPT;
             return false;
         }
 
-        if ($this->extractExplicitProductQuery($message) !== '') {
+        if (
+            $this->extractExplicitProductQuery($message) !== ''
+            || $this->hasExplicitCatalogLookupIntent($message)
+            || $this->containsAnyKeyword($normalized, [
+                'muon tim',
+                'can tim',
+                'muon mua',
+                'can mua',
+                'cong dung',
+                'tac dung',
+                'lieu luong',
+                'lieu dung',
+                'cach dung',
+                'cach su dung',
+            ])
+        ) {
             return false;
         }
 
@@ -2366,6 +3271,77 @@ PROMPT;
 
         return preg_match('/\b(?:toi|minh|tui|tao|em|anh|chi)\s+(?:ten\s+(?:la\s+)?gi|la\s+ten\s+gi)\b/u', $normalized) === 1
             || preg_match('/\bten\s+(?:toi|minh|tui|tao|em|anh|chi)\s+(?:la\s+)?gi\b/u', $normalized) === 1;
+    }
+
+    protected function isCurrentChatSessionIdIntent(string $message): bool
+    {
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return false;
+        }
+
+        $sessionSignals = [
+            'phien chat',
+            'phien nay',
+            'phien hien tai',
+            'phien cua toi',
+            'cuoc tro chuyen',
+            'doan chat',
+            'hoi thoai',
+            'chat nay',
+            'session',
+            'chat session',
+        ];
+
+        $idSignals = [
+            'id',
+            'ma',
+            'ma id',
+            'ma phien',
+            'ma chat',
+            'session id',
+        ];
+
+        $questionSignals = [
+            'la gi',
+            'gi vay',
+            'bao nhieu',
+            'cho toi',
+            'cho minh',
+            'hien tai',
+            'nay',
+            'day',
+            'xem',
+            'lay',
+        ];
+
+        return $this->containsAnyKeyword($normalized, $sessionSignals)
+            && $this->containsAnyKeyword($normalized, $idSignals)
+            && $this->containsAnyKeyword($normalized, $questionSignals);
+    }
+
+    protected function buildCurrentChatSessionIdResponse(array $context): string
+    {
+        $sessionId = $this->resolveCurrentChatSessionId($context);
+        if ($sessionId === '') {
+            return 'Dạ, hiện em chưa xác định được mã ID phiên chat hiện tại trong ngữ cảnh này.';
+        }
+
+        $displayId = 'CHAT-' . strtoupper(substr($sessionId, 0, 8));
+
+        return 'Dạ, mã phiên chat hiện tại là ' . $displayId . '. ID đầy đủ: ' . $sessionId . '.';
+    }
+
+    protected function resolveCurrentChatSessionId(array $context): string
+    {
+        foreach (['current_session_id', 'session_id'] as $key) {
+            $sessionId = trim((string) ($context[$key] ?? ''));
+            if ($sessionId !== '') {
+                return preg_replace('/[\r\n\t]+/', '', $sessionId) ?? $sessionId;
+            }
+        }
+
+        return '';
     }
 
     protected function buildNameRecallResponse(string $message, array $context): string
@@ -2410,6 +3386,7 @@ PROMPT;
             $name = trim((string) ($matches[1] ?? ''));
             $name = preg_replace('/\s+/u', ' ', (string) $name);
             $name = trim((string) $name);
+            $name = $this->truncateSelfIntroductionNameCandidate($name);
             if ($name !== '') {
                 break;
             }
@@ -2443,6 +3420,67 @@ PROMPT;
         }
 
         return mb_convert_case(implode(' ', $cleanTokens), MB_CASE_TITLE, 'UTF-8');
+    }
+
+    protected function truncateSelfIntroductionNameCandidate(string $name): string
+    {
+        $name = trim($name);
+        if ($name === '') {
+            return '';
+        }
+
+        $originalTokens = preg_split('/\s+/u', $name) ?: [];
+        $normalizedTokens = preg_split('/\s+/', $this->normalizeIntentText($name)) ?: [];
+        $triggerSequences = [
+            ['toi', 'muon'],
+            ['minh', 'muon'],
+            ['em', 'muon'],
+            ['anh', 'muon'],
+            ['chi', 'muon'],
+            ['toi', 'can'],
+            ['minh', 'can'],
+            ['em', 'can'],
+            ['anh', 'can'],
+            ['chi', 'can'],
+            ['muon'],
+            ['can'],
+            ['hay'],
+            ['cho'],
+            ['tim'],
+            ['xem'],
+            ['thuoc'],
+            ['san', 'pham'],
+            ['danh', 'muc'],
+            ['hoat', 'chat'],
+            ['cong', 'dung'],
+            ['tac', 'dung'],
+            ['lieu', 'luong'],
+            ['lieu', 'dung'],
+            ['cach', 'dung'],
+            ['vitamin'],
+        ];
+
+        $cutIndex = null;
+        $tokenCount = count($normalizedTokens);
+
+        for ($index = 0; $index < $tokenCount; $index++) {
+            foreach ($triggerSequences as $sequence) {
+                $length = count($sequence);
+                if ($length === 0 || $index + $length > $tokenCount) {
+                    continue;
+                }
+
+                if (array_slice($normalizedTokens, $index, $length) === $sequence) {
+                    $cutIndex = $cutIndex === null ? $index : min($cutIndex, $index);
+                }
+            }
+        }
+
+        if ($cutIndex !== null) {
+            $originalTokens = array_slice($originalTokens, 0, $cutIndex);
+        }
+
+        return trim(implode(' ', $originalTokens));
     }
 
     protected function getIdentityPolicyText(): string

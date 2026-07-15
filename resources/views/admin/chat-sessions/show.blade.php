@@ -8,8 +8,66 @@
 @php
     $userMessages = $messages->where('role', 'user')->count();
     $assistantMessages = $messages->where('role', 'assistant')->count();
-    $formatChatMarkdown = function (?string $content): string {
-        $html = e((string) $content);
+    $latestAssistantMessageId = $messages
+        ->filter(fn ($message): bool => $message->role !== 'user')
+        ->last()?->MaTN;
+    $latestDisclaimerMessage = $messages
+        ->filter(fn ($message): bool => $message->role !== 'user' && (bool) $message->show_disclaimer)
+        ->last();
+    $inlineDisclaimerMessageId = $latestDisclaimerMessage ? $latestAssistantMessageId : null;
+    $inlineDisclaimerText = $latestDisclaimerMessage
+        ? (data_get($latestDisclaimerMessage->metadata, 'disclaimer') ?: __('messages.chatbot.disclaimer_text'))
+        : null;
+    $chatMarkdownJsonOptions = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE;
+    $sanitizeInlineMathForPlainText = function (string $content): string {
+        if (!str_contains($content, '\\') && !str_contains($content, '$')) {
+            return $content;
+        }
+
+        $content = preg_replace('/\\\\\\((.*?)\\\\\\)/us', '$1', $content) ?? $content;
+        $content = preg_replace('/\\\\\\[(.*?)\\\\\\]/us', '$1', $content) ?? $content;
+        $content = preg_replace('/\\$\\$(.*?)\\$\\$/us', '$1', $content) ?? $content;
+        $content = preg_replace('/\\$(.*?)\\$/us', '$1', $content) ?? $content;
+
+        for ($index = 0; $index < 5; $index++) {
+            $updated = preg_replace('/\\\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/u', '$1/$2', $content) ?? $content;
+            if ($updated === $content) {
+                break;
+            }
+
+            $content = $updated;
+        }
+
+        $content = str_replace([
+            '\\approx',
+            '\\simeq',
+            '\\ldots',
+            '\\cdots',
+            '\\times',
+            '\\div',
+            '\\cdot',
+            '\\left',
+            '\\right',
+        ], [
+            '~',
+            '~',
+            '...',
+            '...',
+            'x',
+            '/',
+            '*',
+            '',
+            '',
+        ], $content);
+
+        $content = str_replace(['{', '}'], '', $content);
+        $content = preg_replace('/\\\\([a-zA-Z]+)/u', '$1', $content) ?? $content;
+        $content = preg_replace('/\s+([,.;:!?])/u', '$1', $content) ?? $content;
+
+        return trim($content);
+    };
+    $formatChatMarkdown = function (?string $content) use ($sanitizeInlineMathForPlainText): string {
+        $html = e($sanitizeInlineMathForPlainText((string) $content));
         $html = preg_replace('/\*\*(.*?)\*\*/s', '<strong>$1</strong>', $html) ?? $html;
         $html = preg_replace('/`([^`]+)`/', '<code>$1</code>', $html) ?? $html;
         $paragraphs = preg_split("/\R{2,}/", trim($html), -1, PREG_SPLIT_NO_EMPTY) ?: [];
@@ -251,7 +309,18 @@
                                 @if($message->role === 'user')
                                     <div class="admin-chat-content">{{ $message->content }}</div>
                                 @else
-                                    <div class="admin-chat-content admin-chat-markdown">{!! $formatChatMarkdown($message->content) !!}</div>
+                                    <div class="admin-chat-content">
+                                        <div class="admin-chat-markdown js-admin-chat-markdown">
+                                            {!! $formatChatMarkdown($message->content) !!}
+                                            <script type="application/json" class="js-admin-chat-markdown-source">{!! json_encode((string) $message->content, $chatMarkdownJsonOptions) !!}</script>
+                                        </div>
+                                        @if($inlineDisclaimerMessageId && $message->MaTN === $inlineDisclaimerMessageId)
+                                            <div class="admin-chat-inline-disclaimer">
+                                                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                                                <span>{{ $inlineDisclaimerText }}</span>
+                                            </div>
+                                        @endif
+                                    </div>
                                 @endif
 
                                 @if($messageImage)
@@ -340,12 +409,6 @@
                                     </div>
                                 @endif
 
-                                @if($message->show_disclaimer)
-                                    <div class="alert alert-warning py-2 px-3 mt-3 mb-0 small">
-                                        <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
-                                        {{ $message->metadata['disclaimer'] ?? __('messages.chatbot.disclaimer_text') }}
-                                    </div>
-                                @endif
                             </div>
                         </article>
                     @endforeach
@@ -399,3 +462,28 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+@include('components.chatbot-markdown-renderer')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const renderer = window.ChatbotMarkdownRenderer;
+    if (!renderer || typeof renderer.parse !== 'function') {
+        return;
+    }
+
+    document.querySelectorAll('.js-admin-chat-markdown').forEach((container) => {
+        const source = container.querySelector('.js-admin-chat-markdown-source');
+        if (!source) {
+            return;
+        }
+
+        try {
+            container.innerHTML = renderer.parse(JSON.parse(source.textContent || '""'));
+        } catch (error) {
+            console.warn('Admin chat markdown render failed', error);
+        }
+    });
+});
+</script>
+@endpush
