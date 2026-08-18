@@ -389,6 +389,173 @@ class ChatbotSessionTraceTest extends TestCase
         $this->assertStringContainsString('Vitamin C 1000mg', $message->content);
     }
 
+    public function test_chatbot_image_upload_reports_unmatched_product_instead_of_guessing(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+
+        $user = User::factory()->create([
+            'role' => 'User',
+            'status' => 'active',
+        ]);
+        $category = Category::factory()->create(['name' => 'Vitamin và khoáng chất']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Zinc 50mg',
+            'ingredients' => 'Zinc sulfate 50mg',
+            'usage' => 'Bổ sung kẽm, tăng cường miễn dịch. Uống 1 viên/ngày',
+            'stock_quantity' => 320,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '{"description":"Hộp thuốc Vitamin A 5000 IU của Mekophar, chứa 10 viên nang cứng","products":[{"name":"Vitamin A 5000 IU","dosage":"5000 IU","quantity":1,"active_ingredients":["Retinol"],"category":"Vitamin và khoáng chất","uses":["Bổ sung vitamin A"],"health_goals":["immunity"],"visible_text":"Vitamin A 5000 IU Mekophar hộp 10 viên nang cứng","instructions":"Uống 1 viên mỗi ngày"}]}',
+                        ],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->postJson('/api/chatbot/upload-image', [
+                'type' => 'prescription',
+                'image' => UploadedFile::fake()->image('vitamin-a.jpg', 600, 600),
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('recognized_products.0.matched', false)
+            ->assertJsonPath('recognized_products.0.parsed_name', 'Vitamin A 5000 IU')
+            ->assertJsonPath('recognized_products.0.product', null);
+
+        $message = ChatMessage::where('MaKH', $user->MaKH)
+            ->where('role', 'assistant')
+            ->latest('MaTN')
+            ->first();
+
+        $this->assertNotNull($message);
+        $this->assertStringContainsString('Vitamin A 5000 IU', $message->content);
+        $this->assertStringNotContainsString('Zinc 50mg', $message->content);
+        $this->assertStringContainsString('chưa thấy sản phẩm nào khớp trong kho', $message->content);
+    }
+
+    public function test_chatbot_image_upload_answers_the_question_typed_with_the_image(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+        config()->set('chatbot.ai.image_answer', true);
+
+        $user = User::factory()->create([
+            'role' => 'User',
+            'status' => 'active',
+        ]);
+        $category = Category::factory()->create(['name' => 'Vitamin và khoáng chất']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Zinc 50mg',
+            'ingredients' => 'Zinc sulfate 50mg',
+            'usage' => 'Bổ sung kẽm',
+            'stock_quantity' => 320,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '{"description":"Hộp Vitamin A 5000 IU của Mekophar, 10 viên nang cứng","products":[{"name":"Vitamin A 5000 IU","dosage":"5000 IU","quantity":1,"active_ingredients":["Retinol"],"uses":["Bổ sung vitamin A"],"visible_text":"Vitamin A 5000 IU Mekophar"}]}',
+                        ],
+                    ]],
+                ])
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Dạ, ảnh anh/chị gửi là Vitamin A 5000 IU của Mekophar, thường dùng để bổ sung vitamin A. Hiện sản phẩm này chưa có trong kho của nhà thuốc ạ.',
+                        ],
+                    ]],
+                ]),
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->postJson('/api/chatbot/upload-image', [
+                'type' => 'prescription',
+                'message' => 'đây là thuốc gì?',
+                'image' => UploadedFile::fake()->image('vitamin-a.jpg', 600, 600),
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('show_disclaimer', true);
+
+        $this->assertStringContainsString('Vitamin A 5000 IU của Mekophar', $response->json('response'));
+
+        $message = ChatMessage::where('MaKH', $user->MaKH)
+            ->where('role', 'assistant')
+            ->latest('MaTN')
+            ->first();
+
+        $this->assertNotNull($message);
+        $this->assertStringContainsString('bổ sung vitamin A', $message->content);
+        $this->assertTrue((bool) $message->show_disclaimer);
+        $this->assertTrue((bool) ($message->metadata['debug']['image_answer_used_ai'] ?? false));
+    }
+
+    public function test_chatbot_image_upload_falls_back_to_summary_when_answer_step_fails(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+        config()->set('chatbot.ai.image_answer', true);
+
+        $user = User::factory()->create([
+            'role' => 'User',
+            'status' => 'active',
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '{"description":"Hộp Vitamin A 5000 IU","products":[{"name":"Vitamin A 5000 IU","dosage":"5000 IU","quantity":1}]}',
+                        ],
+                    ]],
+                ])
+                ->push(['error' => ['message' => 'upstream error']], 502),
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->postJson('/api/chatbot/upload-image', [
+                'type' => 'prescription',
+                'message' => 'đây là thuốc gì?',
+                'image' => UploadedFile::fake()->image('vitamin-a.jpg', 600, 600),
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('recognized_products.0.matched', false);
+
+        $this->assertStringContainsString('Vitamin A 5000 IU', $response->json('response'));
+        $this->assertStringContainsString('chưa thấy sản phẩm nào khớp trong kho', $response->json('response'));
+    }
+
     public function test_chatbot_image_upload_returns_clear_error_when_provider_model_does_not_support_vision(): void
     {
         config()->set('chatbot.ai.mode', 'chat_completions');

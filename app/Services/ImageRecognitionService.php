@@ -13,6 +13,27 @@ use Intervention\Image\ImageManager;
 
 class ImageRecognitionService
 {
+    /**
+     * Minimum identifying evidence before a catalog product may be reported as
+     * the product on the image.
+     */
+    protected const IDENTITY_MATCH_MIN_SCORE = 30;
+
+    /**
+     * Required score gap over the best differently-named rival, so a coin-flip
+     * between two products is reported as "not found" instead of a guess.
+     */
+    protected const IDENTITY_MATCH_MIN_MARGIN = 12;
+
+    /**
+     * Tokens that appear across most catalog rows, so they never identify a product.
+     */
+    protected const WEAK_IDENTITY_TOKENS = [
+        'vitamin', 'vitamins', 'thuoc', 'duoc', 'pham', 'san', 'hang', 'khoang', 'chat',
+        'bao', 'gia', 'cong', 'dung', 'lieu', 'nang', 'cung', 'mem', 'tablet', 'tablets',
+        'capsule', 'capsules', 'supplement', 'supplements', 'complex', 'extra', 'plus',
+    ];
+
     protected AuditLogService $auditLogService;
     protected AiProviderService $aiProviderService;
     protected const VISION_MAX_IMAGE_WIDTH = 1600;
@@ -79,6 +100,7 @@ class ImageRecognitionService
             return [
                 'success' => true,
                 'recognized_products' => $matched,
+                'parsed_products' => $analysisResult['products'],
                 'ocr_text' => $analysisResult['description'] ?? '',
                 'processing_time_ms' => $processingTime
             ];
@@ -169,6 +191,7 @@ class ImageRecognitionService
             return [
                 'success' => true,
                 'recognized_products' => $matched,
+                'parsed_products' => $analysisResult['products'],
                 'ocr_text' => $analysisResult['description'] ?? '',
                 'processing_time_ms' => $processingTime
             ];
@@ -237,7 +260,7 @@ class ImageRecognitionService
                 'type' => $type,
                 'response_length' => strlen($textContent),
                 'response_preview' => substr($textContent, 0, 200),
-                'ai_provider_mode' => config('chatbot.ai.mode', 'chat_completions'),
+                'ai_provider' => $this->aiProviderService->describeLastProvider(),
             ]);
 
             return $this->parseVisionProviderResponse($textContent);
@@ -511,13 +534,16 @@ PROMPT;
             return;
         }
 
+        $provider = $this->aiProviderService->describeLastProvider();
+
         $image->update([
             'analysis_result' => json_encode([
                 'description' => $analysisResult['description'] ?? '',
                 'debug' => [
                     'ai_provider_used' => true,
-                    'ai_provider_mode' => config('chatbot.ai.mode', 'chat_completions'),
-                    'ai_provider_model' => config('chatbot.ai.model'),
+                    'ai_provider_mode' => $provider['mode'] ?? config('chatbot.ai.mode', 'chat_completions'),
+                    'ai_provider_model' => $provider['model'] ?? config('chatbot.ai.model'),
+                    'ai_provider_index' => $provider['index'] ?? null,
                     'vision_supported' => true,
                 ],
             ], JSON_UNESCAPED_UNICODE),
@@ -619,8 +645,10 @@ PROMPT;
             })
             ->FEFO()
             ->first();
-            
-        if ($product) {
+
+        // "Vitamin A" must not settle for "Vitamin C 1000mg" just because the
+        // cleaned name is a substring of it.
+        if ($product && !$this->conflictsWithParsedProduct($parsedProduct, $product)) {
             return $product;
         }
 
@@ -654,15 +682,29 @@ PROMPT;
             });
         }
 
-        return $query->FEFO()->first();
+        $product = $query->FEFO()->first();
+
+        return $product && !$this->conflictsWithParsedProduct($parsedProduct, $product) ? $product : null;
+    }
+
+    /**
+     * True when the catalog row clearly is not what the image shows.
+     */
+    protected function conflictsWithParsedProduct(array $parsedProduct, Product $product): bool
+    {
+        return $this->hasVitaminLetterConflict(
+            $this->normalizeProductText($this->buildProviderIdentityText($parsedProduct)),
+            $this->normalizeProductText(implode(' ', array_filter([$product->name, $product->ingredients])))
+        );
     }
 
     protected function findProductByProviderContext(array $parsedProduct): ?Product
     {
-        $queryText = $this->buildProviderProductSearchText($parsedProduct);
-        $queryTokens = $this->extractMeaningfulProductTokens($queryText);
+        $identityTokens = $this->extractMeaningfulProductTokens(
+            $this->buildProviderIdentityText($parsedProduct)
+        );
 
-        if (count($queryTokens) < 2) {
+        if (empty($identityTokens)) {
             return null;
         }
 
@@ -671,32 +713,89 @@ PROMPT;
             ->where('stock_quantity', '>', 0)
             ->FEFO()
             ->get()
-            ->map(function (Product $product) use ($parsedProduct, $queryText, $queryTokens) {
+            ->map(function (Product $product) use ($parsedProduct, $identityTokens) {
                 return [
                     'product' => $product,
-                    'score' => $this->scoreProductCandidate($parsedProduct, $queryText, $queryTokens, $product),
+                    'score' => $this->scoreProductIdentity($parsedProduct, $identityTokens, $product),
                 ];
             })
-            ->filter(fn (array $candidate): bool => $candidate['score'] >= 45)
+            ->filter(fn (array $candidate): bool => $candidate['score'] >= self::IDENTITY_MATCH_MIN_SCORE)
             ->sortByDesc('score')
             ->values();
 
-        return $candidates->first()['product'] ?? null;
+        $best = $candidates->first();
+        if ($best === null) {
+            return null;
+        }
+
+        // A near-tie between two different products means the image data does not
+        // identify either of them. Reporting one as "found in stock" would be a
+        // guess, so leave it unmatched and let the caller offer suggestions.
+        // Same-name rows (different batches) are not rivals - FEFO already picked one.
+        $bestName = $this->normalizeProductText($best['product']->name);
+        $rival = $candidates
+            ->first(fn (array $candidate): bool => $this->normalizeProductText($candidate['product']->name) !== $bestName);
+
+        if ($rival !== null && ($best['score'] - $rival['score']) < self::IDENTITY_MATCH_MIN_MARGIN) {
+            Log::info('Vision product match rejected as ambiguous', [
+                'parsed_name' => $parsedProduct['name'] ?? null,
+                'best' => $best['product']->name,
+                'best_score' => $best['score'],
+                'rival' => $rival['product']->name,
+                'rival_score' => $rival['score'],
+            ]);
+
+            return null;
+        }
+
+        return $best['product'];
+    }
+
+    /**
+     * Fields that identify which product the image shows.
+     */
+    protected function buildProviderIdentityText(array $parsedProduct): string
+    {
+        return $this->joinParsedFields($parsedProduct, ['name', 'dosage'], ['active_ingredients', 'generic_names', 'aliases']);
+    }
+
+    /**
+     * Fields that only describe the product's purpose. Useful for suggestions,
+     * but far too generic to prove identity - every supplement in the catalog
+     * shares wording like "bo sung", "tang cuong mien dich" or "uong 1 vien moi ngay".
+     */
+    protected function buildProviderContextText(array $parsedProduct): string
+    {
+        return $this->joinParsedFields(
+            $parsedProduct,
+            ['instructions', 'category', 'visible_text', 'description'],
+            ['uses', 'health_goals']
+        );
     }
 
     protected function buildProviderProductSearchText(array $parsedProduct): string
     {
+        return trim(
+            $this->buildProviderIdentityText($parsedProduct)
+            . ' '
+            . $this->buildProviderContextText($parsedProduct)
+        );
+    }
+
+    protected function joinParsedFields(array $parsedProduct, array $scalarFields, array $listFields): string
+    {
         $parts = [];
 
-        foreach (['name', 'dosage', 'instructions', 'category', 'visible_text', 'description'] as $field) {
+        foreach ($scalarFields as $field) {
             $value = trim((string) ($parsedProduct[$field] ?? ''));
             if ($value !== '') {
                 $parts[] = $value;
             }
         }
 
-        foreach (['active_ingredients', 'generic_names', 'aliases', 'uses', 'health_goals'] as $field) {
+        foreach ($listFields as $field) {
             $value = $parsedProduct[$field] ?? [];
+
             if (is_string($value) && trim($value) !== '') {
                 $parts[] = $value;
                 continue;
@@ -714,22 +813,25 @@ PROMPT;
         return implode(' ', $parts);
     }
 
-    protected function scoreProductCandidate(array $parsedProduct, string $queryText, array $queryTokens, Product $product): int
+    /**
+     * Score a candidate on identifying evidence only. Returns 0 when the image
+     * and the product clearly describe different things.
+     */
+    protected function scoreProductIdentity(array $parsedProduct, array $identityTokens, Product $product): int
     {
         $parsedName = trim((string) ($parsedProduct['name'] ?? ''));
-        $cleanParsedName = $this->cleanProductName($parsedName);
-        $productText = implode(' ', array_filter([
+        $normalizedParsedName = $this->normalizeProductText($parsedName);
+        $normalizedCleanParsedName = $this->normalizeProductText($this->cleanProductName($parsedName));
+        $normalizedProductName = $this->normalizeProductText($product->name);
+        $normalizedProductText = $this->normalizeProductText(implode(' ', array_filter([
             $product->name,
             $product->ingredients,
-            $product->usage,
-            $product->category?->name,
-        ]));
+        ])));
 
-        $normalizedQuery = $this->normalizeProductText($queryText);
-        $normalizedProductText = $this->normalizeProductText($productText);
-        $normalizedProductName = $this->normalizeProductText($product->name);
-        $normalizedParsedName = $this->normalizeProductText($parsedName);
-        $normalizedCleanParsedName = $this->normalizeProductText($cleanParsedName);
+        $identityText = $this->normalizeProductText($this->buildProviderIdentityText($parsedProduct));
+        if ($this->hasVitaminLetterConflict($identityText, $normalizedProductText)) {
+            return 0;
+        }
 
         $score = 0;
 
@@ -745,34 +847,113 @@ PROMPT;
             $score += 55;
         }
 
-        foreach ($queryTokens as $token) {
+        foreach ($identityTokens as $token) {
             if (preg_match('/^\d+$/', $token) === 1) {
-                $score += preg_match('/\b' . preg_quote($token, '/') . '\s*(?:mg|g|ml|mcg|iu)?\b/u', $normalizedProductText) ? 20 : 0;
+                $score += preg_match('/\b' . preg_quote($token, '/') . '\s*(?:mg|g|ml|mcg|iu)?\b/u', $normalizedProductText) === 1 ? 20 : 0;
                 continue;
             }
 
-            if ($this->isVitaminLetterToken($token, $normalizedQuery)) {
-                $score += preg_match('/\b(?:vitamin\s*)?' . preg_quote($token, '/') . '\b/u', $normalizedProductText) ? 20 : 0;
+            if ($this->isVitaminLetterToken($token, $identityText)) {
+                $score += preg_match('/\b(?:vitamin\s*)?' . preg_quote($token, '/') . '\b/u', $normalizedProductText) === 1 ? 20 : 0;
                 continue;
             }
 
-            if (preg_match('/\b' . preg_quote($token, '/') . '\b/u', $normalizedProductText)) {
+            if (in_array($token, self::WEAK_IDENTITY_TOKENS, true)) {
+                continue;
+            }
+
+            if (preg_match('/\b' . preg_quote($token, '/') . '\b/u', $normalizedProductText) === 1) {
                 $score += 12;
             }
         }
 
-        $dosage = $this->normalizeProductText((string) ($parsedProduct['dosage'] ?? ''));
-        if ($dosage !== '' && str_contains($normalizedProductText, $dosage)) {
-            $score += 15;
+        return $score;
+    }
+
+    /**
+     * "Vitamin A" and "Vitamin C 1000mg" are different products; a shared word
+     * "vitamin" must never make them match.
+     */
+    protected function hasVitaminLetterConflict(string $normalizedIdentityText, string $normalizedProductText): bool
+    {
+        $parsedLetters = $this->extractVitaminLetters($normalizedIdentityText);
+        $productLetters = $this->extractVitaminLetters($normalizedProductText);
+
+        if (empty($parsedLetters) || empty($productLetters)) {
+            return false;
         }
 
-        return $score;
+        return empty(array_intersect($parsedLetters, $productLetters));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function extractVitaminLetters(string $normalizedText): array
+    {
+        preg_match_all('/\b(?:vitamin|bio)\s*([abcdek])\b/u', $normalizedText, $matches);
+
+        return array_values(array_unique($matches[1] ?? []));
+    }
+
+    /**
+     * Loose score used for "similar product" suggestions only. Identity evidence
+     * dominates, purpose/category overlap breaks ties, and products from the same
+     * family (e.g. another vitamin) outrank unrelated supplements.
+     */
+    protected function scoreProductCandidate(array $parsedProduct, string $queryText, array $queryTokens, Product $product): int
+    {
+        $identityTokens = $this->extractMeaningfulProductTokens(
+            $this->buildProviderIdentityText($parsedProduct)
+        );
+        $identityScore = $this->scoreProductIdentity($parsedProduct, $identityTokens, $product);
+
+        $productText = $this->normalizeProductText(implode(' ', array_filter([
+            $product->name,
+            $product->ingredients,
+            $product->usage,
+            $product->category?->name,
+        ])));
+
+        // Family affinity is judged on name/ingredients only: every supplement in
+        // the catalog shares the category name "Vitamin va khoang chat", so using
+        // the category here would give the bonus to all of them equally.
+        $productIdentityText = $this->normalizeProductText(implode(' ', array_filter([
+            $product->name,
+            $product->ingredients,
+        ])));
+
+        $contextTokens = array_values(array_diff(
+            $this->extractMeaningfulProductTokens($this->buildProviderContextText($parsedProduct)),
+            $identityTokens
+        ));
+
+        $contextScore = 0;
+        foreach ($contextTokens as $token) {
+            if (preg_match('/\b' . preg_quote($token, '/') . '\b/u', $productText) === 1) {
+                $contextScore += 3;
+            }
+        }
+
+        $familyScore = 0;
+        $parsedText = $this->normalizeProductText($queryText);
+        foreach (['vitamin', 'kem', 'zinc', 'calci', 'calcium', 'sat', 'iron', 'omega', 'probiotic', 'collagen'] as $family) {
+            if (str_contains($parsedText, $family) && str_contains($productIdentityText, $family)) {
+                $familyScore = 12;
+                break;
+            }
+        }
+
+        return $identityScore * 2 + min($contextScore, 15) + $familyScore;
     }
 
     protected function normalizeProductText(string $text): string
     {
         $text = mb_strtolower($text, 'UTF-8');
         $text = str_replace(['đ', 'Đ'], ['d', 'd'], $text);
+        // Fold diacritics so "Bổ sung kẽm" and "bo sung kem" compare equal on
+        // both the parsed and the catalog side.
+        $text = Str::ascii($text);
         $text = preg_replace('/(\d+)\s*(mg|g|ml|mcg|iu)\b/u', '$1 $2', $text) ?? $text;
         $text = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $text) ?? $text;
         $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
@@ -854,14 +1035,12 @@ PROMPT;
     {
         $parsedName = trim((string) ($parsedProduct['name'] ?? ''));
         $baseConfidence = $this->calculateMatchConfidence($parsedName, $product->name);
-        $contextScore = $this->scoreProductCandidate(
-            $parsedProduct,
-            $this->buildProviderProductSearchText($parsedProduct),
-            $this->extractMeaningfulProductTokens($this->buildProviderProductSearchText($parsedProduct)),
-            $product
+        $identityTokens = $this->extractMeaningfulProductTokens(
+            $this->buildProviderIdentityText($parsedProduct)
         );
+        $identityScore = $this->scoreProductIdentity($parsedProduct, $identityTokens, $product);
 
-        return max($baseConfidence, min(0.95, $contextScore / 100));
+        return max($baseConfidence, min(0.95, $identityScore / 100));
     }
 
     protected function calculateMatchConfidence(string $parsedName, string $actualName): float

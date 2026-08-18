@@ -237,6 +237,182 @@ class ChatbotServiceTest extends TestCase
         $this->assertArrayHasKey('symptoms', $schema[0]['parameters']['properties']);
     }
 
+    public function test_gateway_upstream_error_is_not_classified_as_auth_denied(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('classifyProviderError');
+        $method->setAccessible(true);
+
+        $upstreamError = new \RuntimeException(
+            'AI provider request failed with status 502: {"error":{"message":"Upstream access forbidden, please contact administrator","type":"upstream_error"}}'
+        );
+        $authError = new \RuntimeException(
+            'AI provider request failed with status 401: {"error":{"message":"invalid api key"}}'
+        );
+
+        $this->assertSame('provider_upstream_error', $method->invoke($this->chatbotService, $upstreamError));
+        $this->assertSame('auth_or_access_denied', $method->invoke($this->chatbotService, $authError));
+    }
+
+    public function test_competitor_pharmacy_question_is_answered_locally_without_nonsense_search(): void
+    {
+        Product::factory()->create([
+            'MaDM' => Category::factory()->create(['name' => 'Thuốc giảm đau'])->MaDM,
+            'name' => 'Paracetamol 500mg',
+            'ingredients' => 'Paracetamol 500mg',
+            'usage' => 'Giảm đau, hạ sốt',
+            'stock_quantity' => 100,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage(
+            'tìm thuốc nhà thuốc long châu tại đà nẵng',
+            1,
+            ['previous_messages' => []]
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertStringContainsString('Medicare Pharmacy', $result['response']);
+        $this->assertStringContainsString('Google Maps', $result['response']);
+        $this->assertStringNotContainsString('long châu', mb_strtolower($result['response'], 'UTF-8'));
+        // No catalog block: the old flow searched the whole sentence as a keyword.
+        $this->assertStringNotContainsString('chưa thấy sản phẩm khớp hoàn toàn', $result['response']);
+        $this->assertStringNotContainsString('em tìm thấy các sản phẩm sau', $result['response']);
+        $this->assertEmpty($result['products']);
+    }
+
+    public function test_competitor_pharmacy_question_still_searches_the_named_medicine(): void
+    {
+        Product::factory()->create([
+            'MaDM' => Category::factory()->create(['name' => 'Thuốc giảm đau'])->MaDM,
+            'name' => 'Paracetamol 500mg',
+            'ingredients' => 'Paracetamol 500mg',
+            'usage' => 'Giảm đau, hạ sốt',
+            'stock_quantity' => 100,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $result = $this->chatbotService->processMessage(
+            'nhà thuốc long châu có paracetamol không?',
+            1,
+            ['previous_messages' => []]
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertStringContainsString('Medicare Pharmacy', $result['response']);
+        $this->assertStringContainsString('`paracetamol`', $result['response']);
+        $this->assertNotEmpty($result['products']);
+        $this->assertSame('Paracetamol 500mg', $result['products'][0]['name']);
+    }
+
+    public function test_pharmacy_location_question_points_to_maps(): void
+    {
+        $result = $this->chatbotService->processMessage(
+            'nhà thuốc ở đà nẵng có địa chỉ nào không?',
+            1,
+            ['previous_messages' => []]
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertStringContainsString('Maps', $result['response']);
+    }
+
+    public function test_ambiguous_chain_name_alone_is_not_treated_as_a_competitor_question(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('isOtherPharmacyIntent');
+        $method->setAccessible(true);
+
+        // "an khang" is also an everyday phrase, so it needs a pharmacy word.
+        $this->assertFalse($method->invoke($this->chatbotService, 'an khang mua ở đâu?'));
+        $this->assertTrue($method->invoke($this->chatbotService, 'nhà thuốc an khang có thuốc này không?'));
+        $this->assertTrue($method->invoke($this->chatbotService, 'long châu bán bao nhiêu?'));
+    }
+
+    public function test_geo_restricted_provider_error_has_its_own_label(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $classify = $reflection->getMethod('classifyProviderError');
+        $classify->setAccessible(true);
+        $describe = $reflection->getMethod('buildProviderUnavailableResponse');
+        $describe->setAccessible(true);
+
+        $geoError = new \RuntimeException(
+            'AI provider request failed with status 400: {"error":{"message":"User location is not supported for the API use.","type":"upstream_error"}}'
+        );
+
+        $this->assertSame('provider_geo_restricted', $classify->invoke($this->chatbotService, $geoError));
+        $this->assertStringContainsString('khu vực', $describe->invoke($this->chatbotService, 'provider_geo_restricted'));
+    }
+
+    public function test_provider_unavailable_response_explains_upstream_failure(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('buildProviderUnavailableResponse');
+        $method->setAccessible(true);
+
+        $response = $method->invoke($this->chatbotService, 'provider_upstream_error');
+
+        $this->assertStringContainsString('upstream', $response);
+    }
+
+    public function test_symptom_detection_ignores_accent_free_homographs(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('isSymptomRelatedQuery');
+        $method->setAccessible(true);
+
+        $cases = [
+            // "đâu", "cảm ơn", "cam" and "họ" collapse onto đau/cảm/ho once diacritics are stripped.
+            ['Tôi muốn đi đà nẵng chơi thì nên đi ở đâu?', false],
+            ['toi muon di da nang choi thi nen di o dau', false],
+            ['Cảm ơn em nhiều nhé', false],
+            ['cam on em nhieu nhe', false],
+            ['Em có bán nước cam không?', false],
+            ['em co ban nuoc cam khong', false],
+            ['Họ nói shop bán hàng chính hãng đúng không?', false],
+            ['cho anh hoi ho tro dat hang the nao', false],
+            ['Bắt đầu dùng thuốc từ đầu tháng có sao không?', false],
+
+            ['Anh bị đau đầu 2 ngày rồi', true],
+            ['toi bi dau dau va sot', true],
+            ['Tôi bị ho khan về đêm', true],
+            ['toi bi ho khan ve dem', true],
+            ['Em bị cảm cúm mấy hôm nay', true],
+            ['em bi cam cum may hom nay', true],
+            ['Bé nhà em bị ốm, sốt nhẹ', true],
+            ['be nha em bi om sot nhe', true],
+            ['Anh đau bụng dưới từ sáng', true],
+        ];
+
+        foreach ($cases as [$message, $expected]) {
+            $this->assertSame(
+                $expected,
+                $method->invoke($this->chatbotService, $message),
+                "Symptom detection mismatch for: {$message}"
+            );
+        }
+    }
+
+    public function test_travel_question_gets_out_of_domain_answer_instead_of_symptom_guidance(): void
+    {
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage(
+            'Tôi muốn đi đà nẵng chơi thì nên đi ở đâu?',
+            1,
+            ['previous_messages' => []]
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertFalse($result['show_disclaimer']);
+        $this->assertStringContainsString('nhà thuốc', $result['response']);
+        $this->assertStringNotContainsString('triệu chứng anh/chị đang mô tả', $result['response']);
+        $this->assertStringNotContainsString('nghỉ ngơi, uống đủ nước', $result['response']);
+    }
+
     public function test_validate_message_does_not_block_cong_dung_as_bad_word(): void
     {
         $message = "v\u{1EAD}y c\u{00F2}n thu\u{1ED1}c n\u{00E0}o b\u{1ED5} m\u{1EAF}t kh\u{00F4}ng? n\u{1EBF}u c\u{00F3} cho v\u{00ED} d\u{1EE5}? h\u{00E3}y cho t\u{00F4}i th\u{00EA}m c\u{00F4}ng d\u{1EE5}ng";

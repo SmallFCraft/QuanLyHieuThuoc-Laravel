@@ -17,6 +17,7 @@ function chatbotWidget() {
         sessionId: null,
         sessionCopied: false,
         sessionCopyTimer: null,
+        lastUserMessage: '',
         maxMessages: 50,
         pasteListener: null,
         objectUrls: [],
@@ -332,6 +333,7 @@ function chatbotWidget() {
             } else {
                 // Text-only message
                 this.inputText = '';
+                this.lastUserMessage = userMessage;
                 this.$nextTick(() => {
                     this.resizeMessageInput();
                 });
@@ -408,9 +410,10 @@ function chatbotWidget() {
                             products: data.products || [],
                             categories: data.categories || [],
                             show_disclaimer: data.show_disclaimer || false,
-                            disclaimer: data.disclaimer
+                            disclaimer: data.disclaimer,
+                            showRetry: data.provider_unavailable === true
                         });
-                        
+
                     } else {
                         this.pushMessage({
                             role: 'assistant',
@@ -431,6 +434,20 @@ function chatbotWidget() {
             }
         },
         
+        async retryLastMessage() {
+            if (this.isLoading || !this.lastUserMessage) {
+                return;
+            }
+
+            // Only the newest failed reply should offer a retry affordance.
+            this.messages = this.messages.map((entry) => (
+                entry && entry.showRetry ? { ...entry, showRetry: false } : entry
+            ));
+
+            this.inputText = this.lastUserMessage;
+            await this.sendMessage();
+        },
+
         async sendImageWithText(text) {
             const formData = new FormData();
             formData.append('image', this.attachedImage);
@@ -465,14 +482,13 @@ function chatbotWidget() {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
+                    credentials: 'same-origin',
                     body: formData
                 });
-                
-                // Log response for debugging
-                console.log('Upload response status:', response.status);
-                
+
                 // Handle authentication required
                 if (response.status === 401) {
                     const errorData = await response.json();
@@ -506,8 +522,7 @@ function chatbotWidget() {
                 
                 // Handle bad request
                 if (response.status === 400) {
-                    const errorData = await response.json();
-                    console.error('400 Bad Request:', errorData);
+                    const errorData = await response.json().catch(() => ({}));
                     this.pushMessage({
                         role: 'assistant',
                         content: (errorData.error || errorData.message || 'Dạ, em gặp chút lỗi khi đọc ảnh. Anh/chị vui lòng thử lại sau nhé.')
@@ -525,20 +540,29 @@ function chatbotWidget() {
                 if (data.success && data.recognized_products && data.recognized_products.length > 0) {
                     const matchedCount = data.recognized_products.filter(p => p.matched).length;
                     const unmatchedCount = data.recognized_products.filter(p => !p.matched).length;
+                    const matchedProducts = data.recognized_products
+                        .filter(p => p.matched)
+                        .map(p => p.product);
+                    const serverAnswer = (data.response || '').trim();
 
-                    // Only show the summary bubble when there are matched products to display.
-                    // When everything is unmatched, the detail bubble below already conveys
-                    // the same information (avoids the redundant "✅ Đã nhận dạng / ⚠️ không tìm thấy" message).
-                    if (matchedCount > 0) {
+                    // The server answered the question typed with the image.
+                    if (serverAnswer !== '') {
+                        this.pushMessage({
+                            role: 'assistant',
+                            content: serverAnswer,
+                            products: matchedProducts,
+                            show_disclaimer: data.show_disclaimer || false,
+                            disclaimer: data.disclaimer
+                        });
+                    } else if (matchedCount > 0) {
+                        // Only show the summary bubble when there are matched products to display.
+                        // When everything is unmatched, the detail bubble below already conveys
+                        // the same information (avoids the redundant "✅ Đã nhận dạng / ⚠️ không tìm thấy" message).
                         let message = `✅ Đã nhận dạng được ${data.recognized_products.length} sản phẩm từ hình ảnh.\n\n`;
                         message += `📦 Tìm thấy ${matchedCount} sản phẩm trong kho.\n`;
                         if (unmatchedCount > 0) {
                             message += `⚠️ ${unmatchedCount} sản phẩm không tìm thấy trong hệ thống.\n`;
                         }
-
-                        const matchedProducts = data.recognized_products
-                            .filter(p => p.matched)
-                            .map(p => p.product);
 
                         this.pushMessage({
                             role: 'assistant',
@@ -547,32 +571,36 @@ function chatbotWidget() {
                         });
                     }
                     
-                    // Show unmatched products if any (with suggestions when available)
+                    // Show unmatched products if any (with suggestions when available).
+                    // When the server already answered the question, keep only the
+                    // concrete suggestion list so the two bubbles don't repeat each other.
                     if (unmatchedCount > 0) {
                         const unmatched = data.recognized_products.filter(p => !p.matched);
-
-                        const blocks = unmatched.map(p => {
-                            const suggestions = Array.isArray(p.suggestions) ? p.suggestions : [];
-                            if (suggestions.length === 0) {
-                                return `• ${p.parsed_name}`;
-                            }
-                            const suggestionLines = suggestions
-                                .map(s => `    - ${s.name} — ${this.formatCurrency(s.price)}`)
-                                .join('\n');
-                            return `• ${p.parsed_name}\n  Gợi ý sản phẩm tương tự:\n${suggestionLines}`;
-                        });
-
                         const hasAnySuggestion = unmatched.some(
                             p => Array.isArray(p.suggestions) && p.suggestions.length > 0
                         );
-                        const footer = hasAnySuggestion
-                            ? '\n\nAnh/chị có thể chọn một trong các sản phẩm gợi ý phía trên, hoặc liên hệ nhà thuốc nếu cần hỗ trợ thêm nhé.'
-                            : '\n\nVui lòng kiểm tra lại tên sản phẩm hoặc liên hệ nhà thuốc để được hỗ trợ.';
 
-                        this.pushMessage({
-                            role: 'assistant',
-                            content: `Các sản phẩm không tìm thấy:\n\n${blocks.join('\n\n')}${footer}`
-                        });
+                        if (serverAnswer === '' || hasAnySuggestion) {
+                            const blocks = unmatched.map(p => {
+                                const suggestions = Array.isArray(p.suggestions) ? p.suggestions : [];
+                                if (suggestions.length === 0) {
+                                    return `• ${p.parsed_name}`;
+                                }
+                                const suggestionLines = suggestions
+                                    .map(s => `    - ${s.name} — ${this.formatCurrency(s.price)}`)
+                                    .join('\n');
+                                return `• ${p.parsed_name}\n  Gợi ý sản phẩm tương tự:\n${suggestionLines}`;
+                            });
+
+                            const footer = hasAnySuggestion
+                                ? '\n\nAnh/chị có thể chọn một trong các sản phẩm gợi ý phía trên, hoặc liên hệ nhà thuốc nếu cần hỗ trợ thêm nhé.'
+                                : '\n\nVui lòng kiểm tra lại tên sản phẩm hoặc liên hệ nhà thuốc để được hỗ trợ.';
+
+                            this.pushMessage({
+                                role: 'assistant',
+                                content: `Các sản phẩm không tìm thấy:\n\n${blocks.join('\n\n')}${footer}`
+                            });
+                        }
                     }
                     
                     await this.loadCart();

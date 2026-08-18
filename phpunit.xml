@@ -31,5 +31,17 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <!-- Pin the chatbot AI provider so tests never depend on the local .env -->
+        <env name="AI_API_MODE" value="chat_completions"/>
+        <env name="AI_BASE_URL" value="http://localhost:55597/v1"/>
+        <env name="AI_API_KEY" value="agt_codex_test"/>
+        <env name="AI_MODEL" value="test-model"/>
+        <env name="AI_MAX_TOKENS" value="2048"/>
+        <env name="AI_FALLBACK_BASE_URL" value=""/>
+        <env name="AI_FALLBACK_API_KEY" value=""/>
+        <env name="AI_FALLBACK_MODEL" value=""/>
+        <!-- Off by default so image tests assert the deterministic summary; the
+             tests that cover the AI answer enable it explicitly. -->
+        <env name="AI_IMAGE_ANSWER" value="false"/>
     </php>
 </phpunit>

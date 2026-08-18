@@ -185,7 +185,23 @@
                                     </a>
                                 </div>
                             </template>
-                            
+
+                            <!-- Retry (AI provider temporarily unavailable) -->
+                            <template x-if="message.showRetry">
+                                <div class="mt-3">
+                                    <button type="button"
+                                            x-on:click="retryLastMessage()"
+                                            :disabled="isLoading"
+                                            class="btn fw-semibold d-flex align-items-center justify-content-center gap-2"
+                                            style="background: white; color: #059669; border: 2px solid #10b981; padding: 8px 16px; border-radius: 10px; transition: all 0.2s; font-size: 0.875rem;"
+                                            onmouseover="this.style.background='#f0fdf4'"
+                                            onmouseout="this.style.background='white'">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                        <span>Thử lại</span>
+                                    </button>
+                                </div>
+                            </template>
+
                             <!-- Products Display -->
                             <template x-if="message.products && message.products.length > 0">
                                 <div class="mt-3 space-y-2">

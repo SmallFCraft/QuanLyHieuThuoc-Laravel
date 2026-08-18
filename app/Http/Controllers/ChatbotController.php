@@ -303,8 +303,18 @@ class ChatbotController extends Controller
                 ],
             ]);
             
-            // Save assistant message to database
-            $messageContent = $this->buildImageRecognitionMessageContent($recognizedProducts);
+            // Answer the caption ("đây là thuốc gì?") from what the image says,
+            // falling back to the deterministic recognition summary.
+            $imageAnswer = $this->chatbotService->answerImageQuestion(
+                $imageMessage,
+                (string) ($result['ocr_text'] ?? ''),
+                $result['parsed_products'] ?? [],
+                $recognizedProducts
+            );
+            $messageContent = trim((string) ($imageAnswer['response'] ?? '')) !== ''
+                ? $imageAnswer['response']
+                : $this->buildImageRecognitionMessageContent($recognizedProducts);
+
             ChatMessage::create([
                 'MaKH' => $userId,
                 'session_id' => $sessionId,
@@ -313,13 +323,18 @@ class ChatbotController extends Controller
                 'products' => $recognizedProducts,
                 'metadata' => [
                     'draft_order' => $draftOrder,
-                    'ocr_text' => $result['ocr_text'] ?? null
+                    'ocr_text' => $result['ocr_text'] ?? null,
+                    'disclaimer' => $imageAnswer['disclaimer'] ?? null,
+                    'debug' => $imageAnswer['debug'] ?? null,
                 ],
-                'show_disclaimer' => false
+                'show_disclaimer' => (bool) ($imageAnswer['show_disclaimer'] ?? false)
             ]);
-            
+
             return response()->json([
                 'success' => true,
+                'response' => $messageContent,
+                'show_disclaimer' => (bool) ($imageAnswer['show_disclaimer'] ?? false),
+                'disclaimer' => $imageAnswer['disclaimer'] ?? null,
                 'recognized_products' => $recognizedProducts,
                 'draft_order' => $draftOrder,
                 'ocr_text' => $result['ocr_text'] ?? null,
@@ -906,11 +921,20 @@ class ChatbotController extends Controller
     {
         $count = count($recognizedProducts);
         $productNames = $this->extractProductNamesFromRecognitionPayload($recognizedProducts);
+        $matchedCount = count(array_filter(
+            $recognizedProducts,
+            fn ($item): bool => is_array($item) && ($item['matched'] ?? false) === true
+        ));
         $content = "Đã nhận dạng được {$count} sản phẩm từ hình ảnh.";
 
         if (!empty($productNames)) {
             $content .= "\nSản phẩm đã nhận dạng: " . implode(', ', $productNames) . '.';
+        }
+
+        if ($matchedCount > 0) {
             $content .= "\nNếu anh/chị hỏi \"thuốc đó\" hoặc \"sản phẩm đó\", em sẽ hiểu là đang hỏi về sản phẩm này.";
+        } elseif ($count > 0) {
+            $content .= "\nHiện em chưa thấy sản phẩm nào khớp trong kho, em chỉ có thể gợi ý sản phẩm tương tự để anh/chị tham khảo.";
         }
 
         return $content;

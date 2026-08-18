@@ -112,6 +112,43 @@ PROMPT;
     ];
 
     /**
+     * Competing pharmacy chains. Their stock is not visible to this assistant.
+     */
+    protected const OTHER_PHARMACY_KEYWORDS = [
+        'long chau', 'pharmacity', 'phano', 'eco pharma', 'nha thuoc viet',
+        'nha thuoc khac', 'hieu thuoc khac',
+    ];
+
+    /**
+     * Chain names that double as everyday Vietnamese words ("an khang thịnh
+     * vượng"), so they only count next to a pharmacy word.
+     */
+    protected const OTHER_PHARMACY_AMBIGUOUS_KEYWORDS = [
+        'an khang', 'trung son', 'guardian', 'my chau', 'vinh loi', 'phuc an khang',
+    ];
+
+    protected const PHARMACY_PLACE_KEYWORDS = [
+        'nha thuoc', 'tiem thuoc', 'pharmacy', 'drugstore', 'chuoi', 'chi nhanh', 'co so',
+    ];
+
+    /**
+     * Common Vietnamese place names, used to spot "nhà thuốc ... tại Đà Nẵng"
+     * style questions that are about a location rather than a product.
+     */
+    protected const VIETNAM_PLACE_KEYWORDS = [
+        'da nang', 'ha noi', 'sai gon', 'ho chi minh', 'tphcm', 'hcm', 'hue', 'hoi an',
+        'can tho', 'hai phong', 'nha trang', 'da lat', 'quy nhon', 'vinh', 'thanh hoa',
+        'nghe an', 'quang nam', 'quang ngai', 'binh dinh', 'khanh hoa', 'dong nai',
+        'binh duong', 'long an', 'tien giang', 'an giang', 'kien giang', 'ca mau',
+        'bac lieu', 'soc trang', 'tra vinh', 'ben tre', 'vinh long', 'dong thap',
+        'tay ninh', 'ba ria', 'vung tau', 'lam dong', 'gia lai', 'kon tum', 'dak lak',
+        'dak nong', 'phu yen', 'binh thuan', 'ninh thuan', 'quang tri', 'quang binh',
+        'ha tinh', 'ninh binh', 'nam dinh', 'thai binh', 'ha nam', 'hung yen',
+        'bac ninh', 'bac giang', 'thai nguyen', 'lang son', 'cao bang', 'tuyen quang',
+        'yen bai', 'lao cai', 'dien bien', 'son la', 'hoa binh', 'phu tho',
+    ];
+
+    /**
      * Function schema for AI provider tool calling.
      * Defines the search_products function for structured product queries.
      *
@@ -603,11 +640,9 @@ PROMPT;
                     ? 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.'
                     : null,
                 'response_type' => $responseType,
-                'debug' => [
+                'debug' => array_merge([
                     'ai_provider_used' => true,
-                    'ai_provider_mode' => config('chatbot.ai.mode', 'chat_completions'),
-                    'ai_provider_model' => config('chatbot.ai.model'),
-                ],
+                ], $this->describeAiProviderForDebug()),
             ];
 
             $this->logChatbotInteraction(
@@ -646,6 +681,7 @@ PROMPT;
                         'fallback_type' => 'provider_unavailable_chitchat',
                         'used_product_suggestions' => false,
                     ]),
+                    'provider_unavailable' => true,
                     'error' => null,
                 ];
             }
@@ -667,6 +703,7 @@ PROMPT;
                         'fallback_type' => 'provider_unavailable_non_catalog',
                         'used_product_suggestions' => false,
                     ]),
+                    'provider_unavailable' => true,
                     'error' => null,
                 ];
             }
@@ -753,6 +790,7 @@ PROMPT;
                     'fallback_type' => 'provider_unavailable_no_catalog_match',
                     'used_product_suggestions' => false,
                 ]),
+                'provider_unavailable' => true,
                 'error' => null
             ];
         }
@@ -767,9 +805,49 @@ PROMPT;
         ];
     }
 
+    /**
+     * Provider metadata of the provider that actually served the reply, so the
+     * admin trace stays accurate after a failover.
+     */
+    protected function describeAiProviderForDebug(): array
+    {
+        $provider = $this->aiService->describeLastProvider();
+
+        return [
+            'ai_provider_mode' => $provider['mode'] ?? config('chatbot.ai.mode', 'chat_completions'),
+            'ai_provider_model' => $provider['model'] ?? config('chatbot.ai.model'),
+            'ai_provider_index' => $provider['index'] ?? null,
+        ];
+    }
+
     protected function classifyProviderError(\Throwable $exception): string
     {
         $message = $this->normalizeIntentText($exception->getMessage());
+
+        // Gateway/upstream failures often contain the word "forbidden" in the body,
+        // so they must be matched before the auth keywords below.
+        if ($this->containsAnyKeyword($message, [
+            'user location is not supported',
+            'location is not supported',
+            'country not supported',
+            'unsupported region',
+        ])) {
+            return 'provider_geo_restricted';
+        }
+
+        if ($this->containsAnyKeyword($message, [
+            'upstream error',
+            'upstream access forbidden',
+            'upstream provider',
+            'contact administrator',
+            'bad gateway',
+            'gateway timeout',
+            '502',
+            '503',
+            '504',
+        ])) {
+            return 'provider_upstream_error';
+        }
 
         if ($this->containsAnyKeyword($message, [
             'denied access',
@@ -809,10 +887,13 @@ PROMPT;
     {
         $reasonText = match ($providerErrorType) {
             'auth_or_access_denied' => 'kết nối AI đang bị từ chối bởi nhà cung cấp',
+            'provider_geo_restricted' => 'nhà cung cấp AI đang chặn khu vực của máy chủ',
+            'provider_upstream_error' => 'nhà cung cấp AI chưa kết nối được tới model phía sau (lỗi upstream)',
             'capacity_or_rate_limit' => 'nhà cung cấp AI đang quá tải hoặc bị giới hạn lượt gọi',
             'network_or_timeout' => 'kết nối tới nhà cung cấp AI đang chậm hoặc timeout',
             default => 'dịch vụ AI đang gián đoạn',
         };
+
 
         return implode("\n", [
             "Dạ, hiện tại {$reasonText} nên em chưa thể xử lý phần tư vấn nâng cao ngay lúc này.",
@@ -1072,6 +1153,10 @@ PROMPT;
             ];
         }
 
+        if ($this->isOtherPharmacyIntent($message)) {
+            return $this->buildOtherPharmacyResponse($message);
+        }
+
         if ($this->isNearbyPharmacyLocationIntent($message)) {
             return [
                 'success' => true,
@@ -1153,7 +1238,7 @@ PROMPT;
             ];
         }
 
-        if ($this->isOutOfDomainQuery($normalizedMessage)) {
+        if ($this->isOutOfDomainQuery($normalizedMessage) || $this->isLeisureTravelIntent($message)) {
             return [
                 'success' => true,
                 'response' => 'Dạ, em đang tập trung hỗ trợ các nội dung liên quan đến nhà thuốc như sản phẩm, danh mục, sức khỏe và đặt hàng. Nếu anh/chị cần tìm thuốc hoặc muốn em gợi ý danh mục phù hợp, cứ nhắn trực tiếp để em hỗ trợ ngay.',
@@ -1505,6 +1590,176 @@ PROMPT;
         }
 
         return $fallbackResponse;
+    }
+
+    /**
+     * Answer the question that accompanied an uploaded image, grounded on what
+     * the vision step read plus the catalog lookup result. Returns an empty
+     * response when the AI provider is unavailable so the caller can fall back
+     * to its deterministic summary.
+     *
+     * @param string $question Caption typed with the image (may be empty)
+     * @param string $imageDescription Vision description of the image
+     * @param array $parsedProducts Raw products the vision step extracted
+     * @param array $recognizedProducts Catalog match result from ImageRecognitionService
+     */
+    public function answerImageQuestion(
+        string $question,
+        string $imageDescription,
+        array $parsedProducts,
+        array $recognizedProducts
+    ): array {
+        $empty = [
+            'response' => '',
+            'show_disclaimer' => false,
+            'disclaimer' => null,
+            'debug' => ['image_answer_used_ai' => false],
+        ];
+
+        if (!$this->shouldAnswerImageQuestions()) {
+            return $empty;
+        }
+
+        $imageData = $this->summarizeParsedImageProducts($parsedProducts, $imageDescription);
+        $catalogData = $this->summarizeRecognizedProductsForAnswer($recognizedProducts);
+
+        if (empty($imageData['products']) && trim($imageDescription) === '') {
+            return $empty;
+        }
+
+        $questionText = trim($question);
+
+        try {
+            $prompt = implode("\n", [
+                'Người dùng vừa gửi ảnh sản phẩm/đơn thuốc kèm câu hỏi:',
+                $questionText !== '' ? $questionText : '(không có câu hỏi, hãy mô tả ngắn sản phẩm trong ảnh)',
+                '',
+                'Dữ liệu hệ thống đọc được từ ảnh (JSON):',
+                json_encode($imageData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                '',
+                'Kết quả tra cứu trong kho nhà thuốc (JSON):',
+                json_encode($catalogData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                '',
+                'Yêu cầu:',
+                '- Trả lời trực tiếp câu hỏi của người dùng dựa trên dữ liệu ảnh ở trên.',
+                '- Được phép nêu ngắn gọn công dụng chung của thuốc/hoạt chất đọc được, nhưng phải nói rõ đây là thông tin tham khảo.',
+                '- Giá, tồn kho, link sản phẩm chỉ được lấy từ dữ liệu kho; nếu kho không có sản phẩm khớp thì nói rõ là hiện chưa có trong kho.',
+                '- Nếu có sản phẩm gợi ý tương tự trong dữ liệu kho, nêu tên ngắn gọn; không bịa thêm sản phẩm, giá hay liều dùng.',
+                '- Trả lời tiếng Việt, tối đa 6 câu, xưng "em" và gọi người dùng là "anh/chị".',
+            ]);
+
+            $response = $this->aiService->chat([
+                ['role' => 'system', 'content' => $this->getSystemPrompt()],
+                ['role' => 'user', 'content' => $prompt],
+            ]);
+
+            $responseText = $this->sanitizeAssistantResponse(
+                trim((string) ($response['choices'][0]['message']['content'] ?? ''))
+            );
+            $responseText = $this->enforceMetaResponsePolicy($questionText, $responseText);
+            $responseText = $this->formatFriendlyProductLinks($responseText, $catalogData['san_pham_trong_kho']);
+
+            if (trim($responseText) === '') {
+                return $empty;
+            }
+
+            return [
+                'response' => $responseText,
+                'show_disclaimer' => true,
+                'disclaimer' => 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.',
+                'debug' => array_merge(
+                    ['image_answer_used_ai' => true],
+                    $this->describeAiProviderForDebug()
+                ),
+            ];
+        } catch (\Throwable $exception) {
+            Log::warning('Image question answering failed', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return array_merge($empty, [
+                'debug' => array_merge(
+                    ['image_answer_used_ai' => false],
+                    $this->buildProviderFallbackDebug($exception)
+                ),
+            ]);
+        }
+    }
+
+    protected function shouldAnswerImageQuestions(): bool
+    {
+        return (bool) config('chatbot.ai.image_answer', true);
+    }
+
+    protected function summarizeParsedImageProducts(array $parsedProducts, string $imageDescription): array
+    {
+        $products = [];
+
+        foreach (array_slice($parsedProducts, 0, 5) as $parsed) {
+            if (!is_array($parsed)) {
+                continue;
+            }
+
+            $products[] = array_filter([
+                'ten_doc_duoc' => trim((string) ($parsed['name'] ?? '')),
+                'ham_luong' => trim((string) ($parsed['dosage'] ?? '')),
+                'hoat_chat' => array_values(array_filter((array) ($parsed['active_ingredients'] ?? []))),
+                'ten_chung' => array_values(array_filter((array) ($parsed['generic_names'] ?? []))),
+                'cong_dung_tren_nhan' => array_values(array_filter((array) ($parsed['uses'] ?? []))),
+                'huong_dan_tren_nhan' => trim((string) ($parsed['instructions'] ?? '')),
+                'chu_tren_bao_bi' => Str::limit(trim((string) ($parsed['visible_text'] ?? '')), 200),
+            ], fn ($value) => $value !== '' && $value !== []);
+        }
+
+        return [
+            'mo_ta_anh' => Str::limit(trim($imageDescription), 400),
+            'products' => $products,
+        ];
+    }
+
+    protected function summarizeRecognizedProductsForAnswer(array $recognizedProducts): array
+    {
+        $inStock = [];
+        $notInStock = [];
+        $suggestions = [];
+
+        foreach ($recognizedProducts as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            if (($item['matched'] ?? false) === true && is_array($item['product'] ?? null)) {
+                $inStock[] = [
+                    'name' => $item['product']['name'] ?? '',
+                    'price' => $item['product']['price'] ?? null,
+                    'stock_quantity' => $item['product']['stock_quantity'] ?? null,
+                    'url' => isset($item['product']['id'])
+                        ? route('products.show', $item['product']['id'])
+                        : null,
+                ];
+
+                continue;
+            }
+
+            $notInStock[] = trim((string) ($item['parsed_name'] ?? ''));
+
+            foreach (array_slice((array) ($item['suggestions'] ?? []), 0, 3) as $suggestion) {
+                if (!is_array($suggestion)) {
+                    continue;
+                }
+
+                $suggestions[] = [
+                    'name' => $suggestion['name'] ?? '',
+                    'price' => $suggestion['price'] ?? null,
+                ];
+            }
+        }
+
+        return [
+            'san_pham_trong_kho' => $inStock,
+            'san_pham_khong_co_trong_kho' => array_values(array_filter($notInStock)),
+            'san_pham_goi_y_tuong_tu' => $suggestions,
+        ];
     }
 
     protected function buildWebsiteIntroductionResponse(): array
@@ -3212,6 +3467,37 @@ PROMPT;
         return $this->containsAnyKeyword($normalizedMessage, self::OUT_OF_DOMAIN_KEYWORDS);
     }
 
+    /**
+     * Travel and leisure questions ("đi Đà Nẵng chơi thì nên đi đâu?") are out of
+     * scope; catching them locally avoids an AI round trip for an answer the
+     * assistant is not allowed to give anyway.
+     */
+    protected function isLeisureTravelIntent(string $message): bool
+    {
+        $normalized = $this->normalizeIntentText($message);
+        if ($normalized === '') {
+            return false;
+        }
+
+        if ($this->containsAnyKeyword($normalized, [
+            'du lich', 'tham quan', 'dia diem', 'khach san', 'quan an', 'nha hang',
+            've may bay', 'di choi', 'choi o dau', 'check in', 'song ao', 'vui choi',
+        ])) {
+            return true;
+        }
+
+        $tokens = preg_split('/\s+/', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        foreach ($tokens as $index => $token) {
+            // Bare "chơi" is leisure unless it is part of a product ("đồ chơi").
+            if ($token === 'choi' && !in_array($tokens[$index - 1] ?? '', ['do', 'dung', 'bo'], true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     protected function isNearbyPharmacyLocationIntent(string $message): bool
     {
         $normalized = $this->normalizeIntentText($message);
@@ -3223,14 +3509,182 @@ PROMPT;
             'nha thuoc', 'tiem thuoc', 'pharmacy', 'drugstore'
         ];
 
-        $locationSignals = [
+        $locationSignals = array_merge([
             'gan day', 'gan nhat', 'o dau', 'dia chi', 'vi tri', 'khu vuc',
             'quan', 'huyen', 'tinh', 'thanh pho', 'google maps', 'apple maps',
             'ban do', 'map', 'maps'
-        ];
+        ], self::VIETNAM_PLACE_KEYWORDS);
 
         return $this->containsAnyKeyword($normalized, $pharmacySignals)
             && $this->containsAnyKeyword($normalized, $locationSignals);
+    }
+
+    /**
+     * "tìm thuốc ở nhà thuốc Long Châu tại Đà Nẵng" - the assistant cannot look
+     * inside a competitor's catalog, and treating the whole sentence as a product
+     * keyword produced nonsense searches like `nhà long châu tại đà nẵng`.
+     */
+    protected function isOtherPharmacyIntent(string $message): bool
+    {
+        if ($this->containsAnyKeyword($message, self::OTHER_PHARMACY_KEYWORDS)) {
+            return true;
+        }
+
+        return $this->containsAnyKeyword($message, self::OTHER_PHARMACY_AMBIGUOUS_KEYWORDS)
+            && $this->containsAnyKeyword($message, self::PHARMACY_PLACE_KEYWORDS);
+    }
+
+    protected function buildOtherPharmacyResponse(string $message): array
+    {
+        $productQuery = $this->resolveOtherPharmacyProductQuery($message);
+        $catalogResponse = null;
+
+        if ($productQuery !== '') {
+            $catalogResponse = $this->buildCatalogLookupResponse($productQuery, $productQuery, false);
+            if (empty($catalogResponse['products']) && empty($catalogResponse['categories'])) {
+                $catalogResponse = null;
+            }
+        }
+
+        $lines = [
+            'Dạ, em là trợ lý của nhà thuốc Medicare Pharmacy nên em chỉ tra cứu được sản phẩm trong hệ thống của mình, chưa xem được hàng hay giá của nhà thuốc khác ạ.',
+        ];
+
+        if ($catalogResponse !== null) {
+            $lines[] = '';
+            $lines[] = $catalogResponse['response'];
+        } else {
+            $lines[] = 'Nếu anh/chị đang cần tìm một loại thuốc cụ thể, chỉ cần nhắn tên thuốc hoặc hoạt chất (ví dụ "paracetamol 500mg") là em tra ngay trong kho giúp anh/chị.';
+        }
+
+        $lines[] = '';
+        $lines[] = 'Còn nếu anh/chị muốn tìm nhà thuốc gần mình, anh/chị dùng Google Maps/Apple Maps với từ khóa "nhà thuốc gần đây" sẽ nhanh và chính xác hơn ạ.';
+
+        return [
+            'success' => true,
+            'response' => trim(implode("\n", $lines)),
+            'products' => $catalogResponse['products'] ?? [],
+            'categories' => $catalogResponse['categories'] ?? [],
+            'explanations' => $catalogResponse['explanations'] ?? [],
+            'show_disclaimer' => false,
+            'disclaimer' => null,
+            'response_type' => $catalogResponse !== null ? 'product_search' : 'general',
+        ];
+    }
+
+    /**
+     * Keep only the product part of a competitor question, so "tìm paracetamol ở
+     * nhà thuốc Long Châu Đà Nẵng" still searches for "paracetamol".
+     */
+    protected function resolveOtherPharmacyProductQuery(string $message): string
+    {
+        $cleanedMessage = $this->stripPharmacyLocationNoise($message);
+        if (trim($cleanedMessage) === '') {
+            return '';
+        }
+
+        $query = $this->stripPharmacyLocationNoise($this->resolveCatalogQuery($cleanedMessage));
+        $query = $this->trimQueryFillerWords($query);
+
+        if ($query === '' || $this->isGenericCatalogQuery($query) || !$this->isMeaningfulCatalogQuery($query)) {
+            return '';
+        }
+
+        return $query;
+    }
+
+    /**
+     * Drop filler words left at the edges of an extracted query so the reply
+     * shows `paracetamol` instead of `paracetamol ở`.
+     */
+    protected function trimQueryFillerWords(string $query): string
+    {
+        $fillerWords = [
+            'tim', 'tim kiem', 'co', 'khong', 'ko', 'a', 'nhe', 'nha', 'giup', 'cho',
+            'minh', 'em', 'anh', 'chi', 'vay', 'the', 'o', 'tai', 'gan', 'ben', 'ma',
+            'la', 'di', 'nay', 'do', 'voi', 'va', 'hay', 'can', 'muon', 'mua', 'xem',
+            'hoi', 'oi', 'ha', 'u',
+        ];
+
+        $tokens = array_values(array_filter(
+            preg_split('/\s+/u', trim($query), -1, PREG_SPLIT_NO_EMPTY) ?: [],
+            fn (string $token): bool => $token !== ''
+        ));
+
+        $isFiller = fn (string $token): bool => in_array($this->normalizeIntentText($token), $fillerWords, true);
+
+        while (!empty($tokens) && $isFiller($tokens[0])) {
+            array_shift($tokens);
+        }
+
+        while (!empty($tokens) && $isFiller($tokens[count($tokens) - 1])) {
+            array_pop($tokens);
+        }
+
+        return implode(' ', $tokens);
+    }
+
+    /**
+     * Remove competitor names, pharmacy words and place names while keeping the
+     * original accents, so the remaining text still reads like a product query.
+     */
+    protected function stripPharmacyLocationNoise(string $text): string
+    {
+        if (trim($text) === '') {
+            return '';
+        }
+
+        $noiseKeywords = array_merge(
+            self::OTHER_PHARMACY_KEYWORDS,
+            self::OTHER_PHARMACY_AMBIGUOUS_KEYWORDS,
+            self::VIETNAM_PLACE_KEYWORDS,
+            self::PHARMACY_PLACE_KEYWORDS
+        );
+
+        $words = preg_split('/(\s+)/u', $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) ?: [];
+        $tokens = [];
+        foreach ($words as $word) {
+            $tokens[] = [
+                'raw' => $word,
+                'ascii' => $this->normalizeIntentText($word),
+            ];
+        }
+
+        foreach ($noiseKeywords as $keyword) {
+            $keywordTokens = array_values(array_filter(explode(' ', $this->normalizeIntentText($keyword))));
+            $length = count($keywordTokens);
+            if ($length === 0) {
+                continue;
+            }
+
+            $meaningful = array_values(array_filter($tokens, fn (array $token): bool => $token['ascii'] !== ''));
+            $count = count($meaningful);
+
+            for ($index = 0; $index + $length <= $count; $index++) {
+                $window = array_slice($meaningful, $index, $length);
+                $windowAscii = array_map(fn (array $token): string => $token['ascii'], $window);
+
+                if ($windowAscii !== $keywordTokens) {
+                    continue;
+                }
+
+                foreach ($window as $token) {
+                    foreach ($tokens as $position => $candidate) {
+                        if ($candidate === $token) {
+                            $tokens[$position] = ['raw' => '', 'ascii' => ''];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        $remaining = implode(' ', array_map(
+            fn (array $token): string => $token['raw'],
+            array_filter($tokens, fn (array $token): bool => $token['ascii'] !== '')
+        ));
+
+        return trim(preg_replace('/\s+/u', ' ', $remaining) ?? $remaining);
     }
 
     protected function isSelfIntroductionMessage(string $message): bool
@@ -3842,26 +4296,88 @@ PROMPT;
         }
 
         $symptomKeywords = [
-            'dau', 'sot', 'cam', 'viem', 'nhiem', 'di ung', 'ngua',
+            'sot', 'viem', 'nhiem', 'di ung', 'ngua',
             'chong mat', 'buon non', 'tieu chay', 'ia chay', 'tao bon', 'met moi',
             'kho tho', 'dau dau', 'dau bung', 'dau da day', 'dau hong', 'so mui',
             'sot xuat huyet', 'xuat huyet', 'dengue', 'mat nuoc',
-            'trieu chung', 'benh', 'om', 'kho chiu', 'khong khoe'
+            'trieu chung', 'benh', 'kho chiu', 'khong khoe'
         ];
 
         if ($this->containsAnyKeyword($query, $symptomKeywords)) {
             return true;
         }
 
-        $tokens = array_values(array_filter(
-            explode(' ', $this->normalizeIntentText($query)),
-            static fn (string $token): bool => $token !== ''
-        ));
+        return $this->containsAmbiguousSymptomWord($query);
+    }
+
+    /**
+     * "đau", "cảm", "ốm" and "ho" collide with everyday words once diacritics are
+     * stripped ("ở đâu", "nước cam", "cảm ơn", "họ"), so they are matched here
+     * instead of through the accent-insensitive keyword list.
+     */
+    protected function containsAmbiguousSymptomWord(string $query): bool
+    {
+        $lower = mb_strtolower(trim($query), 'UTF-8');
+        if ($lower === '') {
+            return false;
+        }
+
+        // When the user typed diacritics, the accented spelling is authoritative.
+        if ($lower !== Str::lower(Str::ascii($lower))) {
+            return preg_match('/(?<!\p{L})(?:đau|ốm|ho)(?!\p{L})/u', $lower) === 1
+                || preg_match('/(?<!\p{L})cảm(?!\p{L})(?!\s+(?:ơn|thấy|nhận|giác|tình|xúc|ứng))/u', $lower) === 1;
+        }
+
+        return $this->containsUnaccentedSymptomWord($this->normalizeIntentText($query));
+    }
+
+    /**
+     * Accent-free typing keeps the ambiguity, so each candidate word is accepted
+     * only when its neighbours do not mark the non-symptom meaning.
+     */
+    protected function containsUnaccentedSymptomWord(string $normalizedMessage): bool
+    {
+        $guards = [
+            // "ở đâu", "bắt đầu", "đầu tiên", "đầu tháng"
+            'dau' => [
+                'before' => ['o', 've', 'tu', 'den', 'toi', 'noi', 'bat', 'khu'],
+                'after' => ['tien', 'nam', 'thang', 'tuan', 'ky', 'bep'],
+            ],
+            // "nước cam", "cảm ơn", "cảm thấy", "cảm ứng"
+            'cam' => [
+                'before' => ['nuoc', 'trai', 'qua', 'ly', 'coc', 'mui', 'vitamin'],
+                'after' => ['on', 'thay', 'nhan', 'giac', 'tinh', 'xuc', 'ung'],
+            ],
+            // "ôm nhau", "ôm chặt"
+            'om' => [
+                'before' => [],
+                'after' => ['nhau', 'chat', 'lay'],
+            ],
+            // "hỗ trợ", "họ tên", "họ nói", "hộ khẩu"
+            'ho' => [
+                'before' => ['nha', 'ma'],
+                'after' => ['tro', 'ten', 'hang', 'khau', 'so', 'noi', 'ay', 'do', 'nay', 'la', 'ngheo', 'gia'],
+            ],
+        ];
+
+        $tokens = preg_split('/\s+/', $normalizedMessage, -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
         foreach ($tokens as $index => $token) {
-            if ($token === 'ho' && ($tokens[$index + 1] ?? '') !== 'tro') {
-                return true;
+            if (!isset($guards[$token])) {
+                continue;
             }
+
+            $previousToken = $tokens[$index - 1] ?? '';
+            $nextToken = $tokens[$index + 1] ?? '';
+
+            if (
+                in_array($previousToken, $guards[$token]['before'], true)
+                || in_array($nextToken, $guards[$token]['after'], true)
+            ) {
+                continue;
+            }
+
+            return true;
         }
 
         return false;

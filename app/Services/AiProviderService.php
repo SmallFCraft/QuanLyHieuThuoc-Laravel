@@ -11,75 +11,280 @@ use RuntimeException;
 
 class AiProviderService
 {
-    protected string $mode;
-    protected string $baseUrl;
-    protected string $apiKey;
-    protected string $model;
+    /**
+     * Ordered provider list. Index 0 is the primary provider, index 1 the
+     * optional fallback used when the primary one fails.
+     *
+     * @var array<int, array{mode: string, base_url: string, api_key: string, model: string}>
+     */
+    protected array $providers = [];
+
+    protected ?int $lastProviderIndex = null;
     protected int $timeout;
     protected int $connectTimeout;
 
     public function __construct()
     {
-        $this->mode = $this->normalizeMode((string) config('chatbot.ai.mode', 'chat_completions'));
-        $this->baseUrl = rtrim((string) config('chatbot.ai.base_url', ''), '/');
-        $this->apiKey = (string) config('chatbot.ai.api_key', '');
-        $this->model = (string) config('chatbot.ai.model', '');
         $this->timeout = max(1, (int) config('chatbot.ai.timeout', 20));
         $this->connectTimeout = max(1, (int) config('chatbot.ai.connect_timeout', 5));
 
-        if ($this->baseUrl === '') {
+        $baseUrl = rtrim((string) config('chatbot.ai.base_url', ''), '/');
+        $apiKey = (string) config('chatbot.ai.api_key', '');
+        $model = (string) config('chatbot.ai.model', '');
+
+        if ($baseUrl === '') {
             throw new RuntimeException('AI_BASE_URL is not configured');
         }
 
-        if ($this->apiKey === '') {
+        if ($apiKey === '') {
             throw new RuntimeException('AI_API_KEY is not configured');
         }
 
-        if ($this->model === '') {
+        if ($model === '') {
             throw new RuntimeException('AI_MODEL is not configured');
+        }
+
+        $this->providers[] = [
+            'mode' => $this->normalizeMode((string) config('chatbot.ai.mode', 'chat_completions')),
+            'base_url' => $baseUrl,
+            'api_key' => $apiKey,
+            'model' => $model,
+            'timeout' => $this->timeout,
+        ];
+
+        $fallback = $this->resolveFallbackProvider();
+        if ($fallback !== null) {
+            $this->providers[] = $fallback;
         }
     }
 
     public function chat(array $messages, array $options = []): array
     {
-        return match ($this->mode) {
-            'responses' => $this->sendResponsesRequest($messages, $options),
-            default => $this->sendChatCompletionsRequest($messages, $options),
-        };
+        return $this->runWithFailover(
+            fn (array $provider): array => $this->dispatchChat($provider, $messages, $options),
+            'chat'
+        );
     }
 
     public function analyzeImage(string $prompt, string $base64Image, string $mimeType): string
     {
-        $dataUrl = "data:{$mimeType};base64,{$base64Image}";
+        return $this->runWithFailover(
+            function (array $provider) use ($prompt, $base64Image, $mimeType): string {
+                try {
+                    return $this->dispatchVision($provider, $prompt, $base64Image, $mimeType);
+                } catch (RuntimeException $e) {
+                    if ($this->isVisionUnsupportedError($e)) {
+                        throw new AiProviderVisionNotSupportedException(
+                            'AI provider model does not support image input',
+                            previous: $e
+                        );
+                    }
+
+                    throw $e;
+                }
+            },
+            'vision'
+        );
+    }
+
+    /**
+     * Provider metadata for the provider that served the last successful call.
+     *
+     * @return array{index: int, mode: string, model: string}|null
+     */
+    public function describeLastProvider(): ?array
+    {
+        if ($this->lastProviderIndex === null) {
+            return null;
+        }
+
+        $provider = $this->providers[$this->lastProviderIndex];
+
+        return [
+            'index' => $this->lastProviderIndex,
+            'mode' => $provider['mode'],
+            'model' => $provider['model'],
+        ];
+    }
+
+    /**
+     * Configured providers without secrets, for diagnostics.
+     *
+     * @return array<int, array{index: int, mode: string, base_url: string, model: string, has_key: bool}>
+     */
+    public function describeProviders(): array
+    {
+        $described = [];
+
+        foreach ($this->providers as $index => $provider) {
+            $described[] = [
+                'index' => $index,
+                'mode' => $provider['mode'],
+                'base_url' => $provider['base_url'],
+                'model' => $provider['model'],
+                'has_key' => $provider['api_key'] !== '',
+            ];
+        }
+
+        return $described;
+    }
+
+    /**
+     * Send one minimal request to a single provider without failover.
+     *
+     * @return array{ok: bool, duration_ms: float, error: string|null}
+     */
+    public function probeProvider(int $index, bool $withVision = false): array
+    {
+        $provider = $this->providers[$index] ?? null;
+        if ($provider === null) {
+            return ['ok' => false, 'duration_ms' => 0.0, 'error' => 'Provider index not configured'];
+        }
+
+        $startedAt = microtime(true);
 
         try {
-            return match ($this->mode) {
-                'responses' => $this->sendResponsesVisionRequest($prompt, $dataUrl),
-                default => $this->sendChatCompletionsVisionRequest($prompt, $dataUrl),
-            };
-        } catch (RuntimeException $e) {
-            if ($this->isVisionUnsupportedError($e)) {
-                throw new AiProviderVisionNotSupportedException(
-                    'AI provider model does not support image input',
-                    previous: $e
-                );
+            if ($withVision) {
+                [$probeImage, $probeMimeType] = $this->buildVisionProbeImage();
+                $this->dispatchVision($provider, 'Describe this image in one word.', $probeImage, $probeMimeType);
+            } else {
+                $this->dispatchChat($provider, [
+                    ['role' => 'user', 'content' => 'ping'],
+                ], []);
             }
 
-            throw $e;
+            return [
+                'ok' => true,
+                'duration_ms' => round((microtime(true) - $startedAt) * 1000, 1),
+                'error' => null,
+            ];
+        } catch (\Throwable $exception) {
+            return [
+                'ok' => false,
+                'duration_ms' => round((microtime(true) - $startedAt) * 1000, 1),
+                'error' => Str::limit($exception->getMessage(), 200),
+            ];
         }
+    }
+
+    /**
+     * A small but real image for vision probes; upstream providers reject 1x1
+     * placeholder pixels as an unsupported image format.
+     *
+     * @return array{0: string, 1: string} base64 payload and mime type
+     */
+    protected function buildVisionProbeImage(): array
+    {
+        if (function_exists('imagecreatetruecolor')) {
+            $image = imagecreatetruecolor(64, 64);
+            imagefilledrectangle($image, 0, 0, 63, 63, imagecolorallocate($image, 255, 255, 255));
+            imagefilledrectangle($image, 16, 16, 47, 47, imagecolorallocate($image, 16, 185, 129));
+
+            ob_start();
+            imagepng($image);
+            $bytes = (string) ob_get_clean();
+            imagedestroy($image);
+
+            return [base64_encode($bytes), 'image/png'];
+        }
+
+        return [
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+            'image/png',
+        ];
+    }
+
+    protected function dispatchChat(array $provider, array $messages, array $options): array
+    {
+        return match ($provider['mode']) {
+            'anthropic_messages' => $this->sendAnthropicMessagesRequest($provider, $messages, $options),
+            'responses' => $this->sendResponsesRequest($provider, $messages, $options),
+            default => $this->sendChatCompletionsRequest($provider, $messages, $options),
+        };
+    }
+
+    protected function dispatchVision(array $provider, string $prompt, string $base64Image, string $mimeType): string
+    {
+        $dataUrl = "data:{$mimeType};base64,{$base64Image}";
+
+        return match ($provider['mode']) {
+            'anthropic_messages' => $this->sendAnthropicVisionRequest($provider, $prompt, $base64Image, $mimeType),
+            'responses' => $this->sendResponsesVisionRequest($provider, $prompt, $dataUrl),
+            default => $this->sendChatCompletionsVisionRequest($provider, $prompt, $dataUrl),
+        };
+    }
+
+    /**
+     * Run a provider call, falling back to the next configured provider on failure.
+     * Connection errors are Exceptions rather than RuntimeExceptions, so any
+     * provider-side failure is caught here.
+     */
+    protected function runWithFailover(callable $callback, string $operation): mixed
+    {
+        $lastException = null;
+
+        foreach ($this->providers as $index => $provider) {
+            try {
+                $result = $callback($provider);
+                $this->lastProviderIndex = $index;
+
+                return $result;
+            } catch (\Exception $exception) {
+                $lastException = $exception;
+
+                $hasNextProvider = isset($this->providers[$index + 1]);
+                Log::warning('AI provider call failed', [
+                    'operation' => $operation,
+                    'provider_index' => $index,
+                    'mode' => $provider['mode'],
+                    'model' => $provider['model'],
+                    'failing_over' => $hasNextProvider,
+                    'error' => Str::limit($exception->getMessage(), 300),
+                ]);
+            }
+        }
+
+        throw $lastException ?? new RuntimeException('No AI provider is configured');
+    }
+
+    /**
+     * @return array{mode: string, base_url: string, api_key: string, model: string}|null
+     */
+    protected function resolveFallbackProvider(): ?array
+    {
+        $baseUrl = rtrim((string) config('chatbot.ai.fallback.base_url', ''), '/');
+        $apiKey = (string) config('chatbot.ai.fallback.api_key', '');
+        $model = (string) config('chatbot.ai.fallback.model', '');
+
+        if ($baseUrl === '' || $apiKey === '' || $model === '') {
+            return null;
+        }
+
+        return [
+            'mode' => $this->normalizeMode((string) config('chatbot.ai.fallback.mode', 'anthropic_messages')),
+            'base_url' => $baseUrl,
+            'api_key' => $apiKey,
+            'model' => $model,
+            // A fallback is often a slower/pricier model, so it gets its own budget.
+            'timeout' => max(1, (int) config('chatbot.ai.fallback.timeout', $this->timeout)),
+        ];
     }
 
     protected function normalizeMode(string $mode): string
     {
         $mode = Str::of($mode)->lower()->replace('-', '_')->trim()->toString();
 
-        return $mode === 'responses' ? 'responses' : 'chat_completions';
+        return match ($mode) {
+            'anthropic', 'anthropic_messages', 'messages' => 'anthropic_messages',
+            'responses' => 'responses',
+            default => 'chat_completions',
+        };
     }
 
-    protected function sendChatCompletionsRequest(array $messages, array $options): array
+    protected function sendChatCompletionsRequest(array $provider, array $messages, array $options): array
     {
         $payload = [
-            'model' => $this->model,
+            'model' => $provider['model'],
             'messages' => $this->normalizeMessages($messages),
         ];
 
@@ -88,20 +293,15 @@ class AiProviderService
             $payload['tool_choice'] = ($options['function_call'] ?? null) === 'auto' ? 'auto' : 'auto';
         }
 
-        $response = $this->post('/chat/completions', $payload);
-        $data = $response->json();
+        $response = $this->post($provider, '/chat/completions', $payload);
 
-        if (!is_array($data)) {
-            throw new RuntimeException('AI provider returned a non-JSON chat completion response');
-        }
-
-        return $this->normalizeChatCompletionsResponse($data);
+        return $this->normalizeChatCompletionsResponse($this->decodeJsonPayload($response, 'chat completion'));
     }
 
-    protected function sendChatCompletionsVisionRequest(string $prompt, string $dataUrl): string
+    protected function sendChatCompletionsVisionRequest(array $provider, string $prompt, string $dataUrl): string
     {
         $payload = [
-            'model' => $this->model,
+            'model' => $provider['model'],
             'messages' => [
                 [
                     'role' => 'user',
@@ -121,22 +321,18 @@ class AiProviderService
             ],
         ];
 
-        $response = $this->post('/chat/completions', $payload);
-        $data = $response->json();
-
-        if (!is_array($data)) {
-            throw new RuntimeException('AI provider returned a non-JSON vision chat completion response');
-        }
+        $response = $this->post($provider, '/chat/completions', $payload);
+        $data = $this->decodeJsonPayload($response, 'vision chat completion');
 
         return $this->normalizeChatCompletionsResponse($data)['choices'][0]['message']['content'] ?? '';
     }
 
-    protected function sendResponsesRequest(array $messages, array $options): array
+    protected function sendResponsesRequest(array $provider, array $messages, array $options): array
     {
         [$instructions, $input] = $this->splitResponsesInput($messages);
 
         $payload = [
-            'model' => $this->model,
+            'model' => $provider['model'],
             'input' => $input,
         ];
 
@@ -149,20 +345,15 @@ class AiProviderService
             $payload['tool_choice'] = 'auto';
         }
 
-        $response = $this->post('/responses', $payload);
-        $data = $response->json();
+        $response = $this->post($provider, '/responses', $payload);
 
-        if (!is_array($data)) {
-            throw new RuntimeException('AI provider returned a non-JSON responses response');
-        }
-
-        return $this->normalizeResponsesResponse($data);
+        return $this->normalizeResponsesResponse($this->decodeJsonPayload($response, 'responses'));
     }
 
-    protected function sendResponsesVisionRequest(string $prompt, string $dataUrl): string
+    protected function sendResponsesVisionRequest(array $provider, string $prompt, string $dataUrl): string
     {
         $payload = [
-            'model' => $this->model,
+            'model' => $provider['model'],
             'input' => [
                 [
                     'role' => 'user',
@@ -180,33 +371,256 @@ class AiProviderService
             ],
         ];
 
-        $response = $this->post('/responses', $payload);
-        $data = $response->json();
-
-        if (!is_array($data)) {
-            throw new RuntimeException('AI provider returned a non-JSON vision responses response');
-        }
+        $response = $this->post($provider, '/responses', $payload);
+        $data = $this->decodeJsonPayload($response, 'vision responses');
 
         return $this->normalizeResponsesResponse($data)['choices'][0]['message']['content'] ?? '';
     }
 
-    protected function post(string $path, array $payload): Response
+    protected function sendAnthropicMessagesRequest(array $provider, array $messages, array $options): array
     {
-        $url = $this->baseUrl . $path;
+        $payload = $this->buildAnthropicPayload(
+            $provider,
+            $this->buildAnthropicConversation($messages),
+            $this->collectSystemInstructions($messages)
+        );
+
+        if (!empty($options['functions'])) {
+            $payload['tools'] = $this->convertFunctionsToAnthropicTools($options['functions']);
+            $payload['tool_choice'] = ['type' => 'auto'];
+        }
+
+        $response = $this->post($provider, '/messages', $payload);
+
+        return $this->normalizeAnthropicResponse($this->decodeJsonPayload($response, 'anthropic messages'));
+    }
+
+    protected function sendAnthropicVisionRequest(
+        array $provider,
+        string $prompt,
+        string $base64Image,
+        string $mimeType
+    ): string {
+        $payload = $this->buildAnthropicPayload($provider, [
+            [
+                'role' => 'user',
+                'content' => [
+                    [
+                        'type' => 'image',
+                        'source' => [
+                            'type' => 'base64',
+                            'media_type' => $mimeType,
+                            'data' => $base64Image,
+                        ],
+                    ],
+                    [
+                        'type' => 'text',
+                        'text' => $prompt,
+                    ],
+                ],
+            ],
+        ], '');
+
+        $response = $this->post($provider, '/messages', $payload);
+        $data = $this->decodeJsonPayload($response, 'anthropic vision');
+
+        return $this->normalizeAnthropicResponse($data)['choices'][0]['message']['content'] ?? '';
+    }
+
+    protected function buildAnthropicPayload(array $provider, array $messages, string $system): array
+    {
+        $payload = [
+            'model' => $provider['model'],
+            'max_tokens' => max(256, (int) config('chatbot.ai.max_tokens', 2048)),
+            'messages' => $messages,
+        ];
+
+        if ($system !== '') {
+            $payload['system'] = $system;
+        }
+
+        // Adaptive thinking shares the max_tokens budget with the answer, so the
+        // chatbot keeps thinking off unless it is explicitly enabled.
+        if ($this->normalizeThinkingMode() === 'disabled') {
+            $payload['thinking'] = ['type' => 'disabled'];
+        }
+
+        return $payload;
+    }
+
+    protected function normalizeThinkingMode(): string
+    {
+        $thinking = Str::of((string) config('chatbot.ai.thinking', 'disabled'))->lower()->trim()->toString();
+
+        return $thinking === 'adaptive' ? 'adaptive' : 'disabled';
+    }
+
+    protected function collectSystemInstructions(array $messages): string
+    {
+        $instructions = [];
+
+        foreach ($this->normalizeMessages($messages) as $message) {
+            if ($message['role'] === 'system' && trim((string) $message['content']) !== '') {
+                $instructions[] = (string) $message['content'];
+            }
+        }
+
+        return trim(implode("\n\n", $instructions));
+    }
+
+    /**
+     * Anthropic keeps system prompts at the top level and requires the first
+     * turn to come from the user.
+     */
+    protected function buildAnthropicConversation(array $messages): array
+    {
+        $conversation = [];
+
+        foreach ($this->normalizeMessages($messages) as $message) {
+            if (!in_array($message['role'], ['user', 'assistant'], true)) {
+                continue;
+            }
+
+            $content = trim((string) $message['content']);
+            if ($content === '') {
+                continue;
+            }
+
+            if (empty($conversation) && $message['role'] !== 'user') {
+                continue;
+            }
+
+            $conversation[] = [
+                'role' => $message['role'],
+                'content' => $content,
+            ];
+        }
+
+        if (empty($conversation)) {
+            throw new RuntimeException('Anthropic messages request requires at least one user message');
+        }
+
+        return $conversation;
+    }
+
+    protected function convertFunctionsToAnthropicTools(array $functions): array
+    {
+        return array_values(array_map(function (array $function): array {
+            return [
+                'name' => $function['name'] ?? '',
+                'description' => $function['description'] ?? '',
+                'input_schema' => $function['parameters'] ?? ['type' => 'object', 'properties' => new \stdClass()],
+            ];
+        }, $functions));
+    }
+
+    protected function normalizeAnthropicResponse(array $data): array
+    {
+        $textSegments = [];
+        $functionCall = null;
+
+        foreach (($data['content'] ?? []) as $block) {
+            if (!is_array($block)) {
+                continue;
+            }
+
+            $type = $block['type'] ?? null;
+
+            if ($type === 'text' && isset($block['text'])) {
+                $textSegments[] = (string) $block['text'];
+                continue;
+            }
+
+            if ($type === 'tool_use' && $functionCall === null) {
+                $functionCall = [
+                    'name' => (string) ($block['name'] ?? ''),
+                    'arguments' => json_encode(
+                        is_array($block['input'] ?? null) ? $block['input'] : [],
+                        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+                    ),
+                ];
+            }
+        }
+
+        $message = [
+            'role' => 'assistant',
+            'content' => trim(implode("\n", array_filter($textSegments))),
+        ];
+
+        if ($functionCall !== null) {
+            $message['function_call'] = $functionCall;
+        }
+
+        return [
+            'choices' => [
+                [
+                    'message' => $message,
+                    'finish_reason' => $data['stop_reason'] ?? null,
+                ],
+            ],
+            'raw' => $data,
+        ];
+    }
+
+    /**
+     * Decode a provider response, surfacing enough detail to tell a wrong
+     * base URL (HTML error page) apart from a real provider failure.
+     */
+    protected function decodeJsonPayload(Response $response, string $context): array
+    {
+        $data = $response->json();
+
+        if (!is_array($data)) {
+            throw new RuntimeException(sprintf(
+                'AI provider returned a non-JSON %s response (status %d from %s): %s',
+                $context,
+                $response->status(),
+                (string) $response->effectiveUri(),
+                Str::limit(preg_replace('/\s+/', ' ', $response->body()) ?? '', 200)
+            ));
+        }
+
+        // Some gateways answer HTTP 200 with an error envelope instead of content.
+        if (isset($data['error']) && !isset($data['content']) && !isset($data['choices']) && !isset($data['output'])) {
+            $error = $data['error'];
+            $errorMessage = is_array($error)
+                ? (string) ($error['message'] ?? json_encode($error, JSON_UNESCAPED_UNICODE))
+                : (string) $error;
+
+            throw new RuntimeException(sprintf(
+                'AI provider returned an error in the %s response: %s',
+                $context,
+                Str::limit($errorMessage, 300)
+            ));
+        }
+
+        return $data;
+    }
+
+    protected function post(array $provider, string $path, array $payload): Response
+    {
+        $url = $provider['base_url'] . $path;
         $startedAt = microtime(true);
 
-        $response = Http::withToken($this->apiKey)
-            ->acceptJson()
+        $request = Http::acceptJson()
             ->asJson()
             ->connectTimeout($this->connectTimeout)
-            ->timeout($this->timeout)
-            ->post($url, $payload);
+            ->timeout($provider['timeout'] ?? $this->timeout);
+
+        $request = $provider['mode'] === 'anthropic_messages'
+            ? $request->withHeaders([
+                'x-api-key' => $provider['api_key'],
+                'anthropic-version' => (string) config('chatbot.ai.anthropic_version', '2023-06-01'),
+            ])
+            : $request->withToken($provider['api_key']);
+
+        $response = $request->post($url, $payload);
 
         $duration = (microtime(true) - $startedAt) * 1000;
 
         if ($response->failed()) {
             Log::warning('AI provider request failed', [
-                'mode' => $this->mode,
+                'mode' => $provider['mode'],
                 'url' => $url,
                 'status' => $response->status(),
                 'duration_ms' => $duration,
@@ -219,7 +633,7 @@ class AiProviderService
         }
 
         Log::info('AI provider request successful', [
-            'mode' => $this->mode,
+            'mode' => $provider['mode'],
             'url' => $url,
             'duration_ms' => $duration,
         ]);
@@ -415,6 +829,9 @@ class AiProviderService
             'invalid content type',
             'input_image is not supported',
             'image_url is not supported',
+            'image blocks are not supported',
+            'unsupported media type',
+            'media_type',
         ]);
     }
 }
