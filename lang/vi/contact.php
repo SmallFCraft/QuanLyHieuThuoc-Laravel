@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'success' => 'Thành công!',
+    'error_occurred' => 'Lỗi phát sinh',
     'contact_name' => 'Họ tên',
     'contact_email' => 'Email',
     'contact_phone' => 'Số điện thoại',

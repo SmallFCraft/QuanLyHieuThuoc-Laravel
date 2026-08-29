@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'role_administrator' => 'Quản trị viên',
+    'role_user' => 'Người dùng',
     'app_name' => 'Nhà Thuốc Sinh Thái',
     'app_name_short' => 'Nhà Thuốc ST',
     'slogan' => 'Đồng hành cùng sức khỏe cộng đồng. Sản phẩm dược phẩm chuẩn chất lượng với sự tư vấn tận tâm.',

@@ -50,6 +50,6 @@ class ContactController extends Controller
             'status' => 'new',
         ]);
 
-        return redirect()->back()->with('success', 'Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm nhất.');
+        return redirect()->back()->with('success', __('messages.contact_success'));
     }
 }

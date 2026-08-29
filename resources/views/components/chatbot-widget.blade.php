@@ -173,7 +173,7 @@
                                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(16, 185, 129, 0.3)'"
                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(16, 185, 129, 0.2)'">
                                         <span>🔑</span>
-                                        <span>Đăng nhập</span>
+                                        <span>{{ __('messages.chatbot.login') }}</span>
                                     </a>
                                     <a :href="message.registerUrl" 
                                        class="btn btn-outline-emerald fw-semibold d-flex align-items-center justify-content-center gap-2 text-decoration-none"
@@ -181,7 +181,7 @@
                                        onmouseover="this.style.background='#f0fdf4'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(16, 185, 129, 0.15)'"
                                        onmouseout="this.style.background='white'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
                                         <span>✨</span>
-                                        <span>Đăng ký</span>
+                                        <span>{{ __('messages.chatbot.register') }}</span>
                                     </a>
                                 </div>
                             </template>
@@ -202,6 +202,20 @@
                                 </div>
                             </template>
 
+                            <!-- Triage handoff (symptom screening happens on its own page) -->
+                            <template x-if="message.triage_handoff">
+                                <div class="mt-3">
+                                    <a :href="message.triage_handoff.url"
+                                       class="btn text-white fw-semibold d-flex align-items-center justify-content-center gap-2 text-decoration-none"
+                                       style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); min-height: 44px; padding: 10px 16px; border-radius: 10px; transition: all 0.2s; font-size: 0.875rem;"
+                                       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(16, 185, 129, 0.3)'"
+                                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                        <i class="bi bi-clipboard2-pulse"></i>
+                                        <span x-text="message.triage_handoff.label"></span>
+                                    </a>
+                                </div>
+                            </template>
+
                             <!-- Products Display -->
                             <template x-if="message.products && message.products.length > 0">
                                 <div class="mt-3 space-y-2">
@@ -218,13 +232,13 @@
                                             <div class="product-info">
                                                 <h4 class="product-name" x-text="product.name"></h4>
                                                 <p class="product-price" x-text="formatCurrency(product.price)"></p>
-                                                <p class="product-stock">Còn <span x-text="product.stock_quantity"></span> sản phẩm</p>
+                                                <p class="product-stock">{{ __('messages.chatbot.in_stock') }} <span x-text="product.stock_quantity"></span> {{ __('messages.chatbot.products') }}</p>
                                                 <template x-if="product.expiration_date">
-                                                    <p class="product-expiry" x-text="'HSD: ' + formatDate(product.expiration_date)"></p>
+                                                    <p class="product-expiry" x-text="'{{ __('messages.chatbot.expiry') }}' + formatDate(product.expiration_date)"></p>
                                                 </template>
                                                 <div class="flex items-center gap-2 mt-2">
                                                     <button @click="addToCart(product, 1)" class="btn-add-cart flex-1">
-                                                        Thêm vào giỏ
+                                                        {{ __('messages.chatbot.add_to_cart') }}
                                                     </button>
                                                 </div>
                                             </div>
@@ -241,7 +255,7 @@
                                                 <div>
                                                     <h4 class="category-card__title" x-text="category.name"></h4>
                                                     <p class="category-card__meta">
-                                                        <span x-text="(category.product_count || 0) + ' sản phẩm'"></span>
+                                                        <span x-text="(category.product_count || 0) + ' {{ __('messages.chatbot.products') }}'"></span>
                                                     </p>
                                                     <template x-if="category.description">
                                                         <p class="category-card__description" x-text="category.description"></p>
@@ -474,9 +488,32 @@
                     rows="1"
                 ></textarea>
 
-                <button @click="sendMessage()" :disabled="isLoading || (!inputText.trim() && !attachedImage)" class="btn-send">
+                <button
+                    x-show="!isLoading"
+                    @click="sendMessage()"
+                    :disabled="!inputText.trim() && !attachedImage"
+                    class="btn-send"
+                    type="button"
+                    aria-label="{{ __('messages.chatbot.send') }}"
+                    title="{{ __('messages.chatbot.send') }}"
+                >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                </button>
+
+                <!-- Same slot as send, so the escape route sits where the finger already is -->
+                <button
+                    x-show="isLoading"
+                    @click="stopRequest()"
+                    class="btn-stop"
+                    type="button"
+                    style="display: none;"
+                    aria-label="{{ __('messages.chatbot.stop') }}"
+                    title="{{ __('messages.chatbot.stop') }}"
+                >
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <rect x="7" y="7" width="10" height="10" rx="2"></rect>
                     </svg>
                 </button>
             </div>
@@ -858,7 +895,10 @@
     white-space: nowrap;
 }
 
-.product-image {
+/* Scoped to the widget: search-autocomplete.css owns the unprefixed
+   .product-image/.product-info/.product-name/.product-price used by the navbar
+   dropdown, and this <style> block loads after it. */
+.chatbot-widget-container .product-image {
     width: 64px;
     height: 64px;
     object-fit: cover;
@@ -867,7 +907,7 @@
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-.product-image-placeholder {
+.chatbot-widget-container .product-image-placeholder {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -875,11 +915,11 @@
     border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
-.product-info {
+.chatbot-widget-container .product-info {
     flex: 1;
 }
 
-.product-name {
+.chatbot-widget-container .product-name {
     font-weight: 600;
     font-size: 14px;
     color: #111827;
@@ -887,14 +927,15 @@
     line-height: 1.3;
 }
 
-.product-price {
+.chatbot-widget-container .product-price {
     color: #059669;
     font-weight: 700;
     font-size: 15px;
     margin-bottom: 4px;
 }
 
-.product-stock, .product-expiry {
+.chatbot-widget-container .product-stock,
+.chatbot-widget-container .product-expiry {
     font-size: 11px;
     color: #6b7280;
     margin-bottom: 2px;
@@ -1032,7 +1073,7 @@
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
-.btn-upload, .btn-send {
+.btn-upload, .btn-send, .btn-stop {
     width: 44px;
     height: 44px;
     border-radius: 50%;
@@ -1077,6 +1118,24 @@
     background: #9ca3af;
     box-shadow: none;
     transform: none;
+}
+
+/* Same slot as send: while a turn is in flight this is the only way out, so it gets
+   full contrast and an active state instead of looking disabled. */
+.btn-stop {
+    background: #111827;
+    color: white;
+    box-shadow: 0 4px 12px rgba(17, 24, 39, 0.25);
+}
+
+.btn-stop:hover {
+    background: #1f2937;
+    transform: scale(1.08);
+    box-shadow: 0 6px 16px rgba(17, 24, 39, 0.35);
+}
+
+.btn-stop:active {
+    transform: scale(0.95);
 }
 
 .checkout-submit-btn:hover:not(:disabled) {
@@ -1355,9 +1414,9 @@
         flex-direction: row; 
         align-items: stretch;
     }
-    .product-image { 
-        width: 80px; 
-        height: 80px; 
+    .chatbot-widget-container .product-image {
+        width: 80px;
+        height: 80px;
     }
 }
 </style>
