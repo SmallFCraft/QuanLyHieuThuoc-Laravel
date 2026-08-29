@@ -27,7 +27,6 @@ return [
     'js' => [
         'exceed_stock_title' => 'Vượt quá tồn kho',
         'exceed_stock_msg' => 'Chỉ còn :max sản phẩm trong kho',
-        'updated' => 'Đã cập nhật',
         'error_title' => 'Lỗi',
         'update_error' => 'Không thể cập nhật số lượng',
         'generic_error' => 'Có lỗi xảy ra, vui lòng thử lại',
@@ -35,7 +34,6 @@ return [
         'confirm_remove_msg' => 'Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?',
         'btn_remove' => 'Xóa',
         'btn_cancel' => 'Hủy',
-        'removed' => 'Đã xóa',
         'remove_error' => 'Không thể xóa sản phẩm',
     ],
 ];

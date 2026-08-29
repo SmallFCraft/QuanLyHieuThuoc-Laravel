@@ -12,7 +12,6 @@ return [
     'available_now' => 'Còn hàng',
     'unavailable_now' => 'Tạm hết hàng',
     'expires_on' => 'HSD',
-    'view_product' => 'Xem sản phẩm',
     'title' => 'Tài Khoản Của Tôi',
     'breadcrumb_account' => 'Tài khoản',
     'orders_count' => 'Đơn hàng',

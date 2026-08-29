@@ -149,7 +149,7 @@
                               id="address"
                               name="address"
                               rows="3"
-                              placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố">{{ old('address', $user->address) }}</textarea>
+                              placeholder="{{ __('messages.profile.address_placeholder') }}">{{ old('address', $user->address) }}</textarea>
                     @error('address')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
