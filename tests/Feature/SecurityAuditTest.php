@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\User;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SecurityAuditTest extends TestCase
@@ -274,15 +274,50 @@ class SecurityAuditTest extends TestCase
 
         // Attempt SQL injection through where clause
         $maliciousId = "1 OR 1=1";
-        
+
         try {
             $products = Product::where('MaSP', $maliciousId)->get();
-            
+
             // Should return empty or single result, not all products
             $this->assertLessThanOrEqual(1, $products->count());
         } catch (\Exception $e) {
             // Exception is acceptable - means injection was prevented
             $this->assertTrue(true);
         }
+    }
+
+    /**
+     * The `audit` middleware alias exists only if it is attached to something. It was
+     * registered in bootstrap/app.php but listed on no route, so every admin mutation
+     * went unrecorded at the HTTP level — including Category and User, which have no
+     * model-level Auditable trait.
+     */
+    public function test_admin_mutations_are_recorded_in_the_audit_log(): void
+    {
+        AuditLog::query()->delete();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.categories.store'), [
+                'name' => 'Danh mục kiểm toán',
+                'description' => 'Tạo để xác nhận audit log',
+            ])
+            ->assertRedirect();
+
+        $logged = AuditLog::where('action', 'POST admin/categories')->first();
+
+        $this->assertNotNull($logged, 'No HTTP audit row was written for an admin POST.');
+        $this->assertSame('HTTP:admin.categories.store', $logged->model_type);
+        $this->assertSame($this->admin->MaKH, $logged->MaKH);
+    }
+
+    public function test_admin_reads_are_not_audit_logged(): void
+    {
+        AuditLog::query()->delete();
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.categories.index'))
+            ->assertOk();
+
+        $this->assertSame(0, AuditLog::where('action', 'like', 'GET %')->count());
     }
 }

@@ -254,6 +254,21 @@ class ChatbotServiceTest extends TestCase
         $this->assertSame('auth_or_access_denied', $method->invoke($this->chatbotService, $authError));
     }
 
+    public function test_a_rate_limit_that_names_the_api_key_is_not_an_access_denial(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('classifyProviderError');
+        $method->setAccessible(true);
+
+        // The loose `api key` token used to win here, telling the customer their access
+        // was revoked when the provider was merely out of quota.
+        $rateLimited = new \RuntimeException(
+            'AI provider request failed with status 429: {"error":{"message":"Your api key has exceeded its quota, retry later"}}'
+        );
+
+        $this->assertSame('capacity_or_rate_limit', $method->invoke($this->chatbotService, $rateLimited));
+    }
+
     public function test_competitor_pharmacy_question_is_answered_locally_without_nonsense_search(): void
     {
         Product::factory()->create([
@@ -2072,5 +2087,509 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('gọi hàm', mb_strtolower($result['response'], 'UTF-8'));
         $this->assertStringNotContainsString('để giúp bạn tìm kiếm', mb_strtolower($result['response'], 'UTF-8'));
         $this->assertStringNotContainsString('trong lúc chờ đợi', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_catalog_lookup_falls_back_to_products_in_matched_category(): void
+    {
+        $category = Category::factory()->create([
+            'name' => 'Thuốc tiêu hóa',
+            'description' => 'Thuốc điều trị các bệnh về đường tiêu hóa',
+        ]);
+
+        $catalog = [
+            ['name' => 'Omeprazole 20mg', 'usage' => 'Điều trị loét dạ dày, trào ngược.'],
+            ['name' => 'Probiotics', 'usage' => 'Bổ sung men vi sinh đường ruột.'],
+            ['name' => 'Simethicone 80mg', 'usage' => 'Giảm đầy hơi, chướng bụng.'],
+        ];
+
+        foreach ($catalog as $item) {
+            Product::factory()->create([
+                'MaDM' => $category->MaDM,
+                'name' => $item['name'],
+                'usage' => $item['usage'],
+                'stock_quantity' => 50,
+                'expiration_date' => now()->addYear(),
+            ]);
+        }
+
+        // The matched category answers the question from stock, so no provider round trip.
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage('có thuốc gì hỗ trơ tiêu hóa nhanh không?', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertNotEmpty($result['products']);
+        $this->assertNotEmpty($result['categories']);
+        $this->assertSame('Thuốc tiêu hóa', $result['categories'][0]['name']);
+        $this->assertStringContainsString('Thuốc tiêu hóa', $result['response']);
+        $this->assertStringContainsString('Omeprazole 20mg', $result['response']);
+        $this->assertStringNotContainsString('chưa thấy sản phẩm', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('chưa tìm thấy sản phẩm', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_catalog_lookup_does_not_suggest_category_products_without_a_query(): void
+    {
+        $category = Category::factory()->create(['name' => 'Thuốc tiêu hóa']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Probiotics',
+            'stock_quantity' => 50,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('buildCatalogLookupResponse');
+        $method->setAccessible(true);
+
+        $result = $method->invoke($this->chatbotService, '', 'abc', false, []);
+
+        $this->assertEmpty($result['products']);
+    }
+
+    public function test_catalog_lookup_matches_category_from_multi_word_functional_query(): void
+    {
+        $digestive = Category::factory()->create([
+            'name' => 'Thuốc tiêu hóa',
+            'description' => 'Thuốc điều trị các bệnh về đường tiêu hóa',
+        ]);
+        Product::factory()->create([
+            'MaDM' => $digestive->MaDM,
+            'name' => 'Simethicone 80mg',
+            'usage' => 'Giảm đầy hơi, chướng bụng.',
+            'stock_quantity' => 40,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $painkillers = Category::factory()->create([
+            'name' => 'Thuốc giảm đau - Hạ sốt',
+            'description' => 'Các loại thuốc giảm đau, hạ sốt',
+        ]);
+        Product::factory()->create([
+            'MaDM' => $painkillers->MaDM,
+            'name' => 'Paracetamol 500mg',
+            'stock_quantity' => 90,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('buildCatalogLookupResponse');
+        $method->setAccessible(true);
+
+        $result = $method->invoke(
+            $this->chatbotService,
+            'hỗ trợ tiêu hóa nhanh',
+            'có thuốc gì hỗ trơ tiêu hóa nhanh không?',
+            false,
+            []
+        );
+
+        $this->assertCount(1, $result['categories']);
+        $this->assertSame('Thuốc tiêu hóa', $result['categories'][0]['name']);
+        $this->assertNotEmpty($result['products']);
+        $this->assertSame('Simethicone 80mg', $result['products'][0]['name']);
+        $this->assertStringNotContainsString('chưa thấy sản phẩm', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_catalog_lookup_ignores_generic_words_when_resolving_a_category(): void
+    {
+        foreach (['Thuốc tiêu hóa', 'Thuốc giảm đau - Hạ sốt', 'Thuốc tim mạch'] as $name) {
+            $category = Category::factory()->create(['name' => $name, 'description' => $name]);
+            Product::factory()->create([
+                'MaDM' => $category->MaDM,
+                'name' => 'San pham ' . $category->MaDM,
+                'stock_quantity' => 20,
+                'expiration_date' => now()->addYear(),
+            ]);
+        }
+
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('buildCatalogLookupResponse');
+        $method->setAccessible(true);
+
+        $result = $method->invoke($this->chatbotService, 'thuốc gì cũng được', 'thuốc gì cũng được', false, []);
+
+        $this->assertEmpty($result['products']);
+    }
+
+    public function test_ai_history_drops_provider_failure_turns_and_collapses_retries(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('sanitizeHistoryForAi');
+        $method->setAccessible(true);
+
+        $failureMetadata = [
+            'debug' => [
+                'fallback_type' => 'provider_unavailable_no_catalog_match',
+                'provider_error_type' => 'network_or_timeout',
+            ],
+        ];
+
+        $history = $method->invoke($this->chatbotService, [
+            ['role' => 'user', 'content' => 'có nên xài crack hay không'],
+            ['role' => 'assistant', 'content' => 'Dạ, hiện tại kết nối tới nhà cung cấp AI đang chậm hoặc timeout.', 'metadata' => $failureMetadata],
+            ['role' => 'user', 'content' => 'có nên xài crack hay không'],
+            ['role' => 'assistant', 'content' => 'Dạ, hiện tại kết nối tới nhà cung cấp AI đang chậm hoặc timeout.', 'metadata' => $failureMetadata],
+            ['role' => 'user', 'content' => 'có nên xài crack hay không'],
+            ['role' => 'assistant', 'content' => 'Dạ, hiện tại kết nối tới nhà cung cấp AI đang chậm hoặc timeout.', 'metadata' => $failureMetadata],
+            ['role' => 'user', 'content' => 'có nên xài crack hay không'],
+            ['role' => 'assistant', 'content' => 'Dạ, hiện tại em chưa thấy sản phẩm khớp hoàn toàn với từ khóa `crack`.'],
+            ['role' => 'user', 'content' => 'có thuốc gì hỗ trơ tiêu hóa nhanh không?'],
+            ['role' => 'assistant', 'content' => 'Dạ, trong danh mục Thuốc tiêu hóa em thấy các sản phẩm sau.'],
+        ]);
+
+        $this->assertCount(4, $history);
+
+        $crackTurns = array_values(array_filter(
+            $history,
+            static fn (array $message): bool => str_contains((string) $message['content'], 'xài crack')
+        ));
+
+        $this->assertCount(1, $crackTurns);
+
+        foreach ($history as $message) {
+            $this->assertStringNotContainsString('nhà cung cấp AI', (string) $message['content']);
+        }
+
+        $previousRole = null;
+        foreach ($history as $message) {
+            $this->assertNotSame($previousRole, $message['role']);
+            $previousRole = $message['role'];
+        }
+
+        $this->assertSame('user', $history[0]['role']);
+        $this->assertSame('assistant', $history[3]['role']);
+    }
+
+    public function test_ai_history_anchors_elliptical_follow_up_to_latest_topic(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('buildConversationMessages');
+        $method->setAccessible(true);
+
+        $messages = $method->invoke($this->chatbotService, 'có ổn không?', [
+            'previous_messages' => [
+                ['role' => 'user', 'content' => 'có nên xài crack hay không'],
+                ['role' => 'assistant', 'content' => 'Dạ, em không thể tư vấn về việc sử dụng ma túy.'],
+                ['role' => 'user', 'content' => 'có thuốc gì hỗ trơ tiêu hóa nhanh không?'],
+                ['role' => 'assistant', 'content' => 'Dạ, trong danh mục Thuốc tiêu hóa em thấy các sản phẩm sau.'],
+            ],
+        ]);
+
+        $anchor = $messages[count($messages) - 2] ?? [];
+        $current = $messages[count($messages) - 1] ?? [];
+
+        $this->assertSame('system', $anchor['role'] ?? null);
+        $this->assertStringContainsString('tiêu hóa', (string) ($anchor['content'] ?? ''));
+        $this->assertStringContainsString('rút gọn', (string) ($anchor['content'] ?? ''));
+        $this->assertStringNotContainsString('crack', (string) ($anchor['content'] ?? ''));
+
+        // The resolved reference also rides on the user turn, which the provider
+        // weighs more heavily than a system line.
+        $this->assertSame('user', $current['role'] ?? null);
+        $this->assertStringStartsWith('có ổn không?', (string) ($current['content'] ?? ''));
+        $this->assertStringContainsString('đang nói về: có thuốc gì hỗ trơ tiêu hóa nhanh không?', (string) ($current['content'] ?? ''));
+
+        // The older topic is withheld entirely, so it cannot be answered instead.
+        foreach ($messages as $message) {
+            $this->assertStringNotContainsString('crack', (string) ($message['content'] ?? ''));
+        }
+
+        $history = array_values(array_filter(
+            $messages,
+            static fn (array $message): bool => in_array($message['role'] ?? null, ['user', 'assistant'], true)
+        ));
+
+        $this->assertCount(3, $history);
+        $this->assertSame('có thuốc gì hỗ trơ tiêu hóa nhanh không?', $history[0]['content']);
+        $this->assertSame('assistant', $history[1]['role']);
+    }
+
+    public function test_ai_history_does_not_anchor_a_message_that_has_its_own_topic(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('buildConversationMessages');
+        $method->setAccessible(true);
+
+        $messages = $method->invoke($this->chatbotService, 'giá thuốc Paracetamol bao nhiêu?', [
+            'previous_messages' => [
+                ['role' => 'user', 'content' => 'có thuốc gì hỗ trơ tiêu hóa nhanh không?'],
+                ['role' => 'assistant', 'content' => 'Dạ, trong danh mục Thuốc tiêu hóa em thấy các sản phẩm sau.'],
+            ],
+        ]);
+
+        $current = $messages[count($messages) - 1] ?? [];
+
+        $this->assertSame('user', $current['role'] ?? null);
+        $this->assertSame('giá thuốc Paracetamol bao nhiêu?', $current['content'] ?? null);
+        $this->assertSame('assistant', $messages[count($messages) - 2]['role'] ?? null);
+    }
+
+    public function test_illicit_substance_question_returns_safety_guidance_without_catalog_search(): void
+    {
+        $category = Category::factory()->create(['name' => 'Thuốc giảm đau']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Paracetamol 500mg',
+            'stock_quantity' => 50,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->aiProviderService->expects($this->never())->method('chat');
+
+        $result = $this->chatbotService->processMessage('có nên xài crack hay không', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertEmpty($result['products']);
+        $this->assertEmpty($result['categories']);
+        $this->assertStringContainsString('115', $result['response']);
+        $this->assertStringContainsString('cơ sở y tế', $result['response']);
+        $this->assertStringNotContainsString('từ khóa', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('chưa thấy sản phẩm', mb_strtolower($result['response'], 'UTF-8'));
+    }
+
+    public function test_everyday_words_are_not_treated_as_illicit_substance_questions(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('isIllicitSubstanceIntent');
+        $method->setAccessible(true);
+
+        foreach ([
+            'có nước đá không',
+            'em bị đá bóng vào chân',
+            'thuốc cỏ mực có không',
+            'cho hỏi giá thuốc ke',
+            'có thuốc gì hỗ trợ tiêu hóa nhanh không?',
+        ] as $message) {
+            $this->assertFalse(
+                $method->invoke($this->chatbotService, $message),
+                "False positive on: {$message}"
+            );
+        }
+
+        foreach ([
+            'có nên xài crack hay không',
+            'bán ma túy không',
+            'tôi muốn mua cần sa',
+            'heroin giá bao nhiêu',
+        ] as $message) {
+            $this->assertTrue(
+                $method->invoke($this->chatbotService, $message),
+                "Missed detection on: {$message}"
+            );
+        }
+    }
+
+    public function test_assistant_response_drops_a_disclaimer_repeated_inside_the_text(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('sanitizeAssistantResponse');
+        $method->setAccessible(true);
+
+        $cases = [
+            "Hệ thống có **Simethicone 80mg** – 4.000đ/viên, giúp giảm đầy hơi.\n\n> ⚠️ Tham khảo ý kiến dược sĩ/bác sĩ trước khi dùng.",
+            'Hệ thống có **Simethicone 80mg** – 4.000đ/viên, giúp giảm đầy hơi. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.',
+            "Hệ thống có **Simethicone 80mg** – 4.000đ/viên, giúp giảm đầy hơi.\nNội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.",
+            "Hệ thống có **Simethicone 80mg** – 4.000đ/viên, giúp giảm đầy hơi.\nAnh/chị vui lòng đọc kỹ hướng dẫn sử dụng và tham khảo thêm ý kiến dược sĩ hoặc bác sĩ.",
+        ];
+
+        foreach ($cases as $case) {
+            $cleaned = $method->invoke($this->chatbotService, $case);
+
+            $this->assertStringContainsString('Simethicone 80mg', $cleaned, $case);
+            $this->assertStringNotContainsString('dược sĩ', $cleaned, $case);
+            $this->assertStringNotContainsString('bác sĩ', $cleaned, $case);
+            $this->assertStringNotContainsString('do AI tạo ra', $cleaned, $case);
+        }
+    }
+
+    public function test_assistant_response_keeps_pharmacist_advice_that_carries_content(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('sanitizeAssistantResponse');
+        $method->setAccessible(true);
+
+        $kept = [
+            'Dạ, các loại vitamin thường an toàn khi dùng đúng liều. Nếu anh/chị có bệnh nền, đang dùng thuốc khác hoặc muốn dùng liều cao thì nên hỏi dược sĩ/bác sĩ trước.',
+            'Dạ, em kiểm tra Paracetamol và thấy các lưu ý sau ạ. Trong đó có cảnh báo ở mức nghiêm trọng, anh/chị nên hỏi dược sĩ trước khi dùng thuốc này ạ.',
+            'Dạ, với các dấu hiệu này anh/chị nên đến gặp bác sĩ trong hôm nay để được khám trực tiếp.',
+        ];
+
+        foreach ($kept as $text) {
+            $this->assertSame($text, $method->invoke($this->chatbotService, $text));
+        }
+    }
+
+    public function test_product_search_narrows_a_multi_word_symptom_query(): void
+    {
+        $digestive = Category::factory()->create(['name' => 'Thuốc tiêu hóa']);
+        $painkillers = Category::factory()->create(['name' => 'Thuốc giảm đau - Hạ sốt']);
+
+        Product::factory()->create([
+            'MaDM' => $digestive->MaDM,
+            'name' => 'Omeprazole 20mg',
+            'usage' => 'Điều trị loét dạ dày, trào ngược. Uống 1 viên/ngày trước ăn',
+            'stock_quantity' => 100,
+            'expiration_date' => now()->addYear(),
+        ]);
+        Product::factory()->create([
+            'MaDM' => $digestive->MaDM,
+            'name' => 'Esomeprazole 40mg',
+            'usage' => 'Điều trị trào ngược dạ dày. Uống 1 viên/ngày',
+            'stock_quantity' => 80,
+            'expiration_date' => now()->addYear(),
+        ]);
+        Product::factory()->create([
+            'MaDM' => $painkillers->MaDM,
+            'name' => 'Paracetamol 500mg',
+            'usage' => 'Giảm đau, hạ sốt',
+            'stock_quantity' => 90,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $names = $this->chatbotService->searchProducts('đau dạ dày')->pluck('name')->all();
+
+        $this->assertNotEmpty($names);
+        $this->assertContains('Omeprazole 20mg', $names);
+        $this->assertContains('Esomeprazole 40mg', $names);
+        $this->assertNotContains('Paracetamol 500mg', $names);
+    }
+
+    public function test_product_search_resolves_a_stomach_query_before_a_painkiller_one(): void
+    {
+        $digestive = Category::factory()->create(['name' => 'Thuốc tiêu hóa']);
+        $painkillers = Category::factory()->create(['name' => 'Thuốc giảm đau - Hạ sốt']);
+
+        Product::factory()->create([
+            'MaDM' => $digestive->MaDM,
+            'name' => 'Omeprazole 20mg',
+            'usage' => 'Điều trị loét dạ dày, trào ngược',
+            'stock_quantity' => 100,
+            'expiration_date' => now()->addYear(),
+        ]);
+        Product::factory()->create([
+            'MaDM' => $painkillers->MaDM,
+            'name' => 'Diclofenac 50mg',
+            'usage' => 'Giảm đau, kháng viêm',
+            'stock_quantity' => 100,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        // NSAIDs make a stomach complaint worse, so "dạ dày" has to win over "giảm đau".
+        $names = $this->chatbotService->searchProducts('giảm đau dạ dày')->pluck('name')->all();
+
+        $this->assertContains('Omeprazole 20mg', $names);
+        $this->assertNotContains('Diclofenac 50mg', $names);
+    }
+
+    public function test_product_search_does_not_answer_from_a_single_stray_token(): void
+    {
+        $vitamins = Category::factory()->create(['name' => 'Vitamin và khoáng chất']);
+        Product::factory()->create([
+            'MaDM' => $vitamins->MaDM,
+            'name' => 'Vitamin E 400IU',
+            'usage' => 'Chống oxy hóa, bảo vệ tế bào',
+            'stock_quantity' => 100,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        // "tiêu hóa" narrowed to "hóa" used to match "chống oxy hóa". A miss here is
+        // correct: the category lookup answers this query from the digestive shelf.
+        $this->assertEmpty($this->chatbotService->searchProducts('tiêu hóa')->all());
+        $this->assertEmpty($this->chatbotService->searchProducts('hỗ trợ tiêu hóa nhanh')->all());
+    }
+
+    public function test_assistant_response_removes_foreign_script_words(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('sanitizeAssistantResponse');
+        $method->setAccessible(true);
+
+        $cleaned = $method->invoke(
+            $this->chatbotService,
+            'Anh/chị thử từ khóa cụ thể như: "omeprazole", "tha酸", "bảo vệ niêm mạc dạ dày" nhé.'
+        );
+
+        $this->assertStringNotContainsString('酸', $cleaned);
+        $this->assertStringNotContainsString('""', $cleaned);
+        $this->assertStringNotContainsString(', ,', $cleaned);
+        $this->assertStringContainsString('"omeprazole"', $cleaned);
+        $this->assertStringContainsString('"bảo vệ niêm mạc dạ dày"', $cleaned);
+
+        $this->assertSame(
+            'Thần kinh: co giật, tổn thương não vĩnh viễn.',
+            $method->invoke($this->chatbotService, 'Thần kinh: co giật, 중풍, tổn thương não vĩnh viễn.')
+        );
+
+        // Latin text with Vietnamese diacritics and units must survive untouched.
+        $intact = 'Uống 1 viên × 3 lần/ngày sau ăn – giá 4.000đ (µg/mL).';
+        $this->assertSame($intact, $method->invoke($this->chatbotService, $intact));
+    }
+
+    public function test_ai_answer_is_not_followed_by_a_no_match_catalog_block(): void
+    {
+        $this->aiProviderService->expects($this->once())
+            ->method('chat')
+            ->willReturn([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Em nói là tìm kiếm từ khóa chung không trả về kết quả, chứ không phải hệ thống không có thuốc.',
+                        ],
+                    ],
+                ],
+            ]);
+
+        $result = $this->chatbotService->processMessage('tôi bị đau dạ dày, có thuốc gì không?', 1, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertStringContainsString('Em nói là tìm kiếm từ khóa chung', $result['response']);
+        $this->assertStringNotContainsString('chưa thấy sản phẩm', mb_strtolower($result['response'], 'UTF-8'));
+        $this->assertStringNotContainsString('từ khóa `', $result['response']);
+    }
+
+    public function test_response_intro_does_not_echo_a_noisy_query(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('buildCategoryResponseText');
+        $method->setAccessible(true);
+
+        $categories = [[
+            'id' => 4,
+            'name' => 'Vitamin và khoáng chất',
+            'description' => 'Thực phẩm chức năng',
+            'product_count' => 11,
+            'url' => 'http://localhost/products?category=4',
+        ]];
+
+        $noisy = $method->invoke($this->chatbotService, $categories, [], 'hiên tai ở website trang danh muc không');
+        $this->assertStringNotContainsString('hiên tai', $noisy);
+        $this->assertStringNotContainsString('danh muc không', $noisy);
+        $this->assertStringContainsString('Vitamin và khoáng chất', $noisy);
+
+        // A real keyword is still worth showing back.
+        $clean = $method->invoke($this->chatbotService, $categories, [], 'vitamin');
+        $this->assertStringContainsString('`vitamin`', $clean);
+    }
+
+    public function test_grounded_response_drops_links_duplicating_a_category_card(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('stripDuplicateCategoryCardLinks');
+        $method->setAccessible(true);
+
+        $categoryUrl = 'http://localhost:8000/products?category=5';
+        $categories = [['id' => 5, 'name' => 'Thuốc tiêu hóa', 'url' => $categoryUrl]];
+
+        $text = "Danh mục **Thuốc tiêu hóa** đang có 10 sản phẩm:\n\n"
+            . "[Xem chi tiết danh mục Thuốc tiêu hóa]({$categoryUrl})\n\n"
+            . "Anh/chị có thể xem [Thuốc tiêu hóa]({$categoryUrl}) để lọc nhanh hơn.";
+
+        $cleaned = $method->invoke($this->chatbotService, $text, $categories);
+
+        $this->assertStringNotContainsString("]({$categoryUrl})", $cleaned);
+        $this->assertStringNotContainsString('Xem chi tiết danh mục', $cleaned);
+        $this->assertStringContainsString('Danh mục **Thuốc tiêu hóa** đang có 10 sản phẩm', $cleaned);
+        $this->assertStringContainsString('có thể xem Thuốc tiêu hóa để lọc nhanh hơn', $cleaned);
     }
 }

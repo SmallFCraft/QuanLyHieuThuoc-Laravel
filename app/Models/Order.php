@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\VietnameseHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\Auditable;
@@ -53,44 +54,13 @@ class Order extends Model
     }
 
     /**
-     * Calculate the total amount for the order.
-     * OPTIMIZED: Use database aggregation instead of loading all items into memory
-     *
-     * @return float
-     */
-    public function calculateTotal(): float
-    {
-        return (float) $this->items()
-            ->selectRaw('COALESCE(SUM(quantity * ROUND(unit_price, 0)), 0) as total')
-            ->value('total');
-    }
-
-    /**
-     * Check if the order can transition to a new status.
-     *
-     * @param string $newStatus
-     * @return bool
-     */
-    public function canTransitionTo(string $newStatus): bool
-    {
-        $validTransitions = [
-            'Pending' => ['Delivering', 'Cancelled'],
-            'Delivering' => ['Completed'],
-            'Completed' => [],
-            'Cancelled' => []
-        ];
-
-        return in_array($newStatus, $validTransitions[$this->status] ?? []);
-    }
-
-    /**
      * Get formatted total amount in Vietnamese currency format.
      *
      * @return string
      */
     public function getFormattedTotalAttribute(): string
     {
-        return number_format((int) round((float) $this->total_amount), 0, ',', '.') . ' ₫';
+        return VietnameseHelper::formatCurrency($this->total_amount);
     }
 
     /**

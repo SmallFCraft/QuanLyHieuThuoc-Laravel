@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\VietnameseHelper;
 use App\Support\ProductCodeGenerator;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -161,7 +162,7 @@ class Product extends Model
      */
     public function getFormattedPriceAttribute(): string
     {
-        return number_format($this->price_vnd, 0, ',', '.') . ' ₫';
+        return VietnameseHelper::formatCurrency($this->price_vnd);
     }
 
     /**
@@ -249,5 +250,46 @@ class Product extends Model
     public function scopeFEFO($query)
     {
         return $query->orderBy('expiration_date', 'asc');
+    }
+
+    /**
+     * The admin product search. Shared by the DataTables endpoint, the products
+     * export and the inventory screen/export so a searchable column added here
+     * cannot go missing from one of them.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeSearch($query, ?string $term)
+    {
+        $term = trim((string) $term);
+
+        if ($term === '') {
+            return $query;
+        }
+
+        return $query->where(function ($inner) use ($term) {
+            $inner->where('name', 'like', "%{$term}%")
+                ->orWhere('batch_number', 'like', "%{$term}%")
+                ->orWhere('product_code', 'like', "%{$term}%")
+                ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery->where('name', 'like', "%{$term}%"));
+        });
+    }
+
+    /**
+     * The inventory status filter, shared by the inventory screen and its export.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeInventoryStatus($query, ?string $status, int $days = 30)
+    {
+        return match ($status) {
+            'low_stock' => $query->lowStock(),
+            'expiring' => $query->expiringSoon($days),
+            'expired' => $query->where('expiration_date', '<', now()),
+            'out_of_stock' => $query->where('stock_quantity', 0),
+            default => $query,
+        };
     }
 }

@@ -87,12 +87,4 @@ trait Auditable
         
         return array_diff_key($attributes, array_flip($exclude));
     }
-    
-    /**
-     * Get audit logs for this model
-     */
-    public function auditLogs()
-    {
-        return $this->morphMany(AuditLog::class, 'model', 'model_type', 'MaDoiTuong');
-    }
 }

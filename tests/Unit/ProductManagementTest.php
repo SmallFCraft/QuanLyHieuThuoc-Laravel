@@ -6,7 +6,6 @@ use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\Category;
 use App\Models\User;
-use App\Models\AuditLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

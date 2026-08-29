@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\VietnameseHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -76,6 +77,6 @@ class OrderItem extends Model
      */
     public function getFormattedSubtotalAttribute(): string
     {
-        return number_format((int) $this->subtotal, 0, ',', '.') . ' ₫';
+        return VietnameseHelper::formatCurrency($this->subtotal);
     }
 }
