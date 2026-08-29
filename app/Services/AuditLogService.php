@@ -4,14 +4,19 @@ namespace App\Services;
 
 use App\Models\AuditLog;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
 
+/**
+ * Every method is an instance method on purpose: the service is injected into
+ * ChatbotService, AiJobService and the triage services, and a static method cannot
+ * be doubled by PHPUnit — a mocked static throws, the caller's catch swallows it,
+ * and the audit write ends up covered by no test at all.
+ */
 class AuditLogService
 {
     /**
      * Log an authentication attempt
      */
-    public static function logAuthAttempt(string $email, bool $success, ?string $reason = null)
+    public function logAuthAttempt(string $email, bool $success, ?string $reason = null)
     {
         AuditLog::create([
             'MaKH' => $success ? Auth::id() : null,
@@ -32,7 +37,7 @@ class AuditLogService
     /**
      * Log a logout event
      */
-    public static function logLogout()
+    public function logLogout()
     {
         AuditLog::create([
             'MaKH' => Auth::id(),
@@ -47,61 +52,23 @@ class AuditLogService
     }
 
     /**
-     * Log an inventory adjustment
-     */
-    public static function logInventoryAdjustment(
-        int $productId,
-        int $oldQuantity,
-        int $newQuantity,
-        string $reason
-    ) {
-        AuditLog::create([
-            'MaKH' => Auth::id(),
-            'action' => 'inventory_adjustment',
-            'model_type' => 'Product',
-            'MaDoiTuong' => $productId,
-            'old_values' => ['stock_quantity' => $oldQuantity],
-            'new_values' => [
-                'stock_quantity' => $newQuantity,
-                'reason' => $reason,
-            ],
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
-    }
-
-    /**
-     * Log an order status change
-     */
-    public static function logOrderStatusChange(
-        int $orderId,
-        string $oldStatus,
-        string $newStatus
-    ) {
-        AuditLog::create([
-            'MaKH' => Auth::id(),
-            'action' => 'order_status_change',
-            'model_type' => 'Order',
-            'MaDoiTuong' => $orderId,
-            'old_values' => ['status' => $oldStatus],
-            'new_values' => ['status' => $newStatus],
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
-    }
-
-    /**
      * Log a custom action
+     *
+     * @param int|null $userId Attribution for work that does not run in the customer's
+     *        request. Inside a queue worker there is no authenticated guard, so a
+     *        caller that already knows the owner must pass it or the row loses its
+     *        subject — this is a pharmacy audit trail, not a UX event log.
      */
-    public static function log(
+    public function log(
         string $action,
         ?string $modelType = null,
         ?int $modelId = null,
         ?array $oldValues = null,
-        ?array $newValues = null
+        ?array $newValues = null,
+        ?int $userId = null
     ) {
         AuditLog::create([
-            'MaKH' => Auth::id(),
+            'MaKH' => $userId ?? Auth::id(),
             'action' => $action,
             'model_type' => $modelType ?? 'System',
             'MaDoiTuong' => $modelId,
@@ -110,28 +77,5 @@ class AuditLogService
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
         ]);
-    }
-
-    /**
-     * Get audit logs for a specific model
-     */
-    public static function getLogsForModel(string $modelType, int $modelId)
-    {
-        return AuditLog::where('model_type', $modelType)
-            ->where('MaDoiTuong', $modelId)
-            ->with('user')
-            ->orderBy('created_at', 'desc')
-            ->get();
-    }
-
-    /**
-     * Get recent audit logs
-     */
-    public static function getRecentLogs(int $limit = 50)
-    {
-        return AuditLog::with('user')
-            ->orderBy('created_at', 'desc')
-            ->limit($limit)
-            ->get();
     }
 }
