@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Services\ChatbotService;
+use App\Services\AiJobService;
+use App\Services\DrugSafetyService;
 use App\Services\ImageRecognitionService;
 use App\Services\AuditLogService;
+use App\Models\AiJob;
 use App\Models\ChatbotImage;
 use App\Models\ChatMessage;
 use App\Models\Order;
+use App\Support\CartLine;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -33,12 +37,18 @@ class ChatbotController extends Controller
     }
 
     /**
-     * Send a message to the chatbot and receive AI response.
+     * Hand a chatbot turn to a queue worker and answer immediately.
      *
-     * @param Request $request
-     * @return JsonResponse
+     * The AI call used to run inline, holding a PHP process for up to AI_TIMEOUT
+     * plus the fallback provider. With a single-process dev server that blocks
+     * every other page, so one customer waiting on the bot froze the whole site.
+     *
+     * The response shape depends on the queue driver, deliberately:
+     *  - a worker is running  -> 202 with a job id to poll;
+     *  - the `sync` driver    -> the job already finished, so the full answer is
+     *                            returned here exactly as before.
      */
-    public function sendMessage(Request $request): JsonResponse
+    public function sendMessage(Request $request, AiJobService $aiJobs): JsonResponse
     {
         // Check authentication first
         if (!auth()->check()) {
@@ -49,7 +59,7 @@ class ChatbotController extends Controller
                 'login_url' => route('login')
             ], 401);
         }
-        
+
         $validator = Validator::make($request->all(), [
             'message' => 'required|string|min:2|max:1000',
             'context' => 'nullable|array'
@@ -69,138 +79,221 @@ class ChatbotController extends Controller
         }
 
         $validated = $validator->validated();
-        $sessionId = null;
+        $userId = (int) auth()->id();
+        $sessionId = $this->getSessionId();
 
-        try {
-            $userId = auth()->id();
-            $message = $validated['message'];
-            $context = $validated['context'] ?? [];
-            $userMessageSaved = false;
-            
-            // Get or create session ID
-            $sessionId = $this->getSessionId();
-            
-            // Load previous messages from database
-            $previousMessages = ChatMessage::where('MaKH', $userId)
-                ->where('session_id', $sessionId)
-                ->orderBy('created_at', 'desc')
-                ->orderBy('MaTN', 'desc')
-                ->limit(10)
-                ->get()
-                ->reverse()
-                ->map(function($msg) {
-                    return [
-                        'role' => $msg->role,
-                        'content' => $this->formatMessageContentForAiContext($msg),
-                        'products' => $msg->products,
-                        'metadata' => $msg->metadata,
-                    ];
-                })
-                ->toArray();
+        // The browser asks for this when polling showed no worker ever picked the
+        // previous job up. The stranded job is retired first so a late worker
+        // cannot post a second answer for the same question.
+        $sync = $request->boolean('sync');
 
-            $nameMemoryMessages = ChatMessage::where('MaKH', $userId)
-                ->where('session_id', $sessionId)
-                ->where('role', 'user')
-                ->orderBy('created_at', 'desc')
-                ->orderBy('MaTN', 'desc')
-                ->limit(100)
-                ->get()
-                ->reverse()
-                ->map(function($msg) {
-                    return [
-                        'role' => $msg->role,
-                        'content' => $msg->content
-                    ];
-                })
-                ->toArray();
-            
-            $context['previous_messages'] = $previousMessages;
-            $context['name_memory_messages'] = $nameMemoryMessages;
-            $context['recent_image_products'] = $this->extractRecentImageProducts($previousMessages);
-            $context['session_id'] = $sessionId;
-            $context['current_session_id'] = $sessionId;
-            
-            // Process message through ChatbotService
-            $response = $this->chatbotService->processMessage($message, $userId, $context);
-            
-            // Save messages to database if not a validation error
-            if (!isset($response['validation_error'])) {
-                // Save user message
-                ChatMessage::create([
-                    'MaKH' => $userId,
-                    'session_id' => $sessionId,
-                    'role' => 'user',
-                    'content' => $message,
-                    'products' => null,
-                    'metadata' => null,
-                    'show_disclaimer' => false
-                ]);
-                $userMessageSaved = true;
-                
-                // Save assistant response if successful
-                if ($response['success']) {
-                    ChatMessage::create([
-                        'MaKH' => $userId,
-                        'session_id' => $sessionId,
-                        'role' => 'assistant',
-                        'content' => $response['response'],
-                        'products' => $response['products'] ?? null,
-                        'metadata' => [
-                            'explanations' => $response['explanations'] ?? [],
-                            'categories' => $response['categories'] ?? [],
-                            'disclaimer' => $response['disclaimer'] ?? null,
-                            'response_type' => $response['response_type'] ?? null,
-                            'debug' => $response['debug'] ?? null,
-                        ],
-                        'show_disclaimer' => $response['show_disclaimer'] ?? false
-                    ]);
-                }
-            }
-            
-            return response()->json(array_merge($response, [
+        if ($sync) {
+            $this->abandonStrandedJob($request, $aiJobs, $userId);
+        }
+
+        $job = $aiJobs->dispatchChat(
+            $userId,
+            $validated['message'],
+            $this->buildContext($request, $userId, $sessionId),
+            $sessionId,
+            $sync
+        );
+
+        if ($job->status === 'done') {
+            return response()->json(array_merge((array) $job->result, [
                 'session_id' => $sessionId,
             ]));
-            
-        } catch (\Exception $e) {
-            if ($sessionId) {
-                if (! $userMessageSaved) {
-                    ChatMessage::create([
-                        'MaKH' => auth()->id(),
-                        'session_id' => $sessionId,
-                        'role' => 'user',
-                        'content' => $validated['message'],
-                        'products' => null,
-                        'metadata' => null,
-                        'show_disclaimer' => false,
-                    ]);
-                }
+        }
 
-                ChatMessage::create([
-                    'MaKH' => auth()->id(),
-                    'session_id' => $sessionId,
-                    'role' => 'system',
-                    'content' => 'Không thể xử lý tin nhắn do lỗi hệ thống.',
-                    'products' => null,
-                    'metadata' => [
-                        'error' => $e->getMessage(),
-                    ],
-                    'show_disclaimer' => false,
-                ]);
-            }
-
-            Log::error('Chatbot message processing failed', [
-                'MaKH' => auth()->id(),
-                'session_id' => $sessionId,
-                'message' => $validated['message'],
-                'error' => $e->getMessage()
-            ]);
-            
+        if ($job->status === 'failed') {
             return response()->json([
                 'success' => false,
                 'error' => 'Dạ, hiện tại em không thể xử lý tin nhắn này. Anh/chị vui lòng thử lại sau giây lát nhé.',
                 'session_id' => $sessionId,
-            ] + ($sessionId ? ['session_id' => $sessionId] : []), 500);
+            ], 500);
         }
+
+        return response()->json([
+            'success' => true,
+            'queued' => true,
+            'job_id' => $job->uuid,
+            'poll_url' => route('ai-jobs.poll', $job->uuid),
+            'session_id' => $sessionId,
+        ], 202);
+    }
+
+    /**
+     * Progress of any queued AI job — a chat turn or a triage advice rewrite.
+     *
+     * The uuid is a public identifier, not a capability token: AiJobService scopes
+     * every lookup to the signed-in customer, so another user's job is a 404.
+     */
+    public function pollJob(Request $request, AiJobService $aiJobs, string $uuid): JsonResponse
+    {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Vui lòng đăng nhập để sử dụng chatbot.',
+                'require_login' => true,
+                'login_url' => route('login'),
+            ], 401);
+        }
+
+        $state = $aiJobs->poll($uuid, (int) auth()->id());
+
+        if ($state === null) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Không tìm thấy yêu cầu này.',
+            ], 404);
+        }
+
+        if ($state['status'] === 'done') {
+            return response()->json(array_merge((array) $state['result'], [
+                'status' => 'done',
+                'session_id' => session('chat_session_id'),
+            ]));
+        }
+
+        if ($state['status'] === 'failed') {
+            return response()->json([
+                'success' => false,
+                'status' => 'failed',
+                'error' => 'Dạ, hiện tại em không thể xử lý tin nhắn này. Anh/chị vui lòng thử lại sau giây lát nhé.',
+            ]);
+        }
+
+        // The customer pressed stop. Not an error: the browser already removed the
+        // pending bubble, so it only needs to know it can stop polling.
+        if ($state['status'] === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'status' => 'cancelled',
+                'cancelled' => true,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'status' => $state['status'],
+            'stranded' => $state['stranded'],
+            'elapsed_ms' => $state['elapsed_ms'],
+        ]);
+    }
+
+    /**
+     * Stop a turn the customer no longer wants.
+     *
+     * Aborting the browser's fetch alone would leave the worker running and its answer
+     * landing in `chat_messages` — the customer would find a reply to a question they
+     * cancelled on their next reload. Retiring the row is what makes the stop real.
+     */
+    public function cancelJob(Request $request, AiJobService $aiJobs, string $uuid): JsonResponse
+    {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Vui lòng đăng nhập để sử dụng chatbot.',
+                'require_login' => true,
+                'login_url' => route('login'),
+            ], 401);
+        }
+
+        // Scoped to the signed-in customer: the uuid is a public identifier, so without
+        // this check anyone could kill another customer's turn.
+        $job = AiJob::where('uuid', $uuid)->where('MaKH', (int) auth()->id())->first();
+
+        if ($job === null) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Không tìm thấy yêu cầu này.',
+            ], 404);
+        }
+
+        $aiJobs->cancel($job);
+
+        return response()->json([
+            'success' => true,
+            'status' => $job->refresh()->status,
+        ]);
+    }
+
+    protected function abandonStrandedJob(Request $request, AiJobService $aiJobs, int $userId): void
+    {
+        $uuid = trim((string) $request->input('abandon_job_id'));
+
+        if ($uuid === '') {
+            return;
+        }
+
+        $stranded = AiJob::where('uuid', $uuid)->where('MaKH', $userId)->first();
+
+        if ($stranded !== null) {
+            $aiJobs->abandon($stranded, 'no worker picked the job up, ran synchronously');
+        }
+    }
+
+    /**
+     * Conversation context for the AI turn.
+     *
+     * Session id and history come from the server, never from the request body:
+     * a client-supplied session id would let one customer read another's thread.
+     *
+     * Both lists must stay sequential lists in chronological order. reverse() alone
+     * keeps the descending keys, which json_encode turns into an object, and the
+     * `ai_jobs.payload` json column returns object keys sorted ascending - the queue
+     * worker then handed the model the whole conversation newest-first, so a short
+     * follow-up ("có ổn không?") was answered against the oldest message in the
+     * window instead of the newest.
+     *
+     * @return array<string, mixed>
+     */
+    protected function buildContext(Request $request, int $userId, string $sessionId): array
+    {
+        $context = (array) $request->input('context', []);
+
+        $previousMessages = ChatMessage::where('MaKH', $userId)
+            ->where('session_id', $sessionId)
+            ->orderBy('created_at', 'desc')
+            ->orderBy('MaTN', 'desc')
+            ->limit(10)
+            ->get()
+            ->reverse()
+            ->values()
+            ->map(function ($msg) {
+                return [
+                    'role' => $msg->role,
+                    'content' => $this->formatMessageContentForAiContext($msg),
+                    'products' => $msg->products,
+                    'metadata' => $msg->metadata,
+                ];
+            })
+            ->toArray();
+
+        $nameMemoryMessages = ChatMessage::where('MaKH', $userId)
+            ->where('session_id', $sessionId)
+            ->where('role', 'user')
+            ->orderBy('created_at', 'desc')
+            ->orderBy('MaTN', 'desc')
+            ->limit(100)
+            ->get()
+            ->reverse()
+            ->values()
+            ->map(function ($msg) {
+                return [
+                    'role' => $msg->role,
+                    'content' => $msg->content,
+                ];
+            })
+            ->toArray();
+
+        $context['previous_messages'] = $previousMessages;
+        $context['name_memory_messages'] = $nameMemoryMessages;
+        $context['recent_image_products'] = $this->extractRecentImageProducts($previousMessages);
+        $context['session_id'] = $sessionId;
+        $context['current_session_id'] = $sessionId;
+
+        return $context;
     }
 
     /**
@@ -221,15 +314,18 @@ class ChatbotController extends Controller
             ], 401);
         }
         
+        $maxSizeKb = (int) config('chatbot.images.max_size', 5120);
+        $allowedTypes = implode(',', (array) config('chatbot.images.allowed_types', ['jpeg', 'jpg', 'png']));
+
         $validated = $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg|max:5120', // 5MB
+            'image' => "required|image|mimes:{$allowedTypes}|max:{$maxSizeKb}",
             'type' => 'nullable|in:prescription,receipt',
             'message' => 'nullable|string|max:1000'
         ], [
             'image.required' => 'Vui lòng chọn hình ảnh',
             'image.image' => 'File phải là hình ảnh',
             'image.mimes' => 'Chỉ hỗ trợ định dạng JPEG, PNG, JPG',
-            'image.max' => 'Kích thước file không được vượt quá 5MB'
+            'image.max' => 'Kích thước file không được vượt quá ' . round($maxSizeKb / 1024, 1) . 'MB'
         ]);
 
         $sessionId = null;
@@ -409,6 +505,7 @@ class ChatbotController extends Controller
                         'content' => $msg->content,
                         'products' => $msg->products,
                         'categories' => $msg->metadata['categories'] ?? [],
+                        'triage_handoff' => $msg->metadata['triage_handoff'] ?? null,
                         'show_disclaimer' => $msg->show_disclaimer,
                         'disclaimer' => $msg->metadata['disclaimer'] ?? null,
                         'created_at' => $msg->created_at->format('Y-m-d H:i:s')
@@ -502,11 +599,12 @@ class ChatbotController extends Controller
      * @param Request $request
      * @return JsonResponse
      */
-    public function addToCart(Request $request): JsonResponse
+    public function addToCart(Request $request, DrugSafetyService $drugSafety): JsonResponse
     {
         $validated = $request->validate([
             'MaSP' => 'required|integer|exists:products,MaSP',
-            'quantity' => 'nullable|integer|min:1|max:99'
+            'quantity' => 'nullable|integer|min:1|max:99',
+            'confirm_warning' => 'nullable|boolean',
         ], [
             'MaSP.required' => 'Vui lòng chọn sản phẩm.',
             'MaSP.exists' => 'Sản phẩm không tồn tại.',
@@ -545,8 +643,28 @@ class ChatbotController extends Controller
                 ], 422);
             }
 
+            // Same drug-safety gate as CartController::add. This endpoint writes the
+            // same session cart, so skipping the check here would make the block
+            // bypassable through the chat widget.
+            $userId = (int) auth()->id();
+            $confirmed = $request->boolean('confirm_warning');
+            $safety = $drugSafety->checkAddition($product, CartLine::rowsFrom($cart), $userId);
+
+            if ($safety['blocking'] && ! $confirmed) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.drug_safety.blocked_message'),
+                    'requires_confirmation' => true,
+                    'drug_warnings' => $safety['warnings'],
+                ], 409);
+            }
+
             $cart[$product->MaSP] = $newQty;
             session()->put('cart', $cart);
+
+            if ($safety['blocking'] && $confirmed) {
+                $drugSafety->logOverride($userId, $product, $safety['warnings']);
+            }
 
             // Build cart summary for response
             $cartSummary = $this->getCartSummary();
@@ -554,7 +672,9 @@ class ChatbotController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "Đã thêm {$quantity} x {$product->name} vào giỏ hàng.",
-                'cart' => $cartSummary
+                'cart' => $cartSummary,
+                'requires_confirmation' => false,
+                'drug_warnings' => $safety['warnings'],
             ]);
 
         } catch (\Exception $e) {
@@ -713,7 +833,7 @@ class ChatbotController extends Controller
                 // Use existing CheckoutService for transaction-safe order creation
                 $checkoutService = app(\App\Services\CheckoutService::class);
                 $order = $checkoutService->processCheckout(
-                    $this->normalizeCartItems($cart),
+                    CartLine::rowsFrom($cart),
                     $userId,
                     [
                         'address' => $validated['shipping_address'],
@@ -728,7 +848,7 @@ class ChatbotController extends Controller
                 session()->forget('cart');
 
                 // Log audit
-                AuditLogService::log(
+                app(AuditLogService::class)->log(
                     action: 'chatbot_order_placed',
                     modelType: Order::class,
                     modelId: $order->MaDH,
@@ -828,20 +948,6 @@ class ChatbotController extends Controller
         return hash('sha256', json_encode($cart));
     }
 
-    private function normalizeCartItems(array $cart): array
-    {
-        $cartItems = [];
-
-        foreach ($cart as $productId => $quantity) {
-            $cartItems[] = [
-                'MaSP' => (int) $productId,
-                'quantity' => (int) $quantity
-            ];
-        }
-
-        return $cartItems;
-    }
-
     private function formatOrderPayload(Order $order): array
     {
         return [
@@ -851,25 +957,7 @@ class ChatbotController extends Controller
             'created_at' => $order->created_at->format('d/m/Y H:i')
         ];
     }
-    
-    /**
-     * Add message to session storage.
-     *
-     * @param array $message
-     * @return void
-     */
-    protected function addMessageToSession(array $message): void
-    {
-        $messages = session('chatbot.messages', []);
-        $messages[] = $message;
-        
-        if (count($messages) > self::MAX_HISTORY_MESSAGES) {
-            $messages = array_slice($messages, -self::MAX_HISTORY_MESSAGES);
-        }
-        
-        session(['chatbot.messages' => $messages]);
-    }
-    
+
     /**
      * Get or create session ID for current user.
      *
