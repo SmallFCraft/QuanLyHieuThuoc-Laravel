@@ -146,43 +146,5 @@ class CheckoutService
             throw new \Exception('Không thể hoàn tất đơn hàng. Vui lòng thử lại.');
         }
     }
-
-    /**
-     * Validate cart items.
-     * DEPRECATED: Validation now done in processCheckout()
-     *
-     * @param array $cartItems
-     * @return array Array of error messages
-     */
-    public function validateCart(array $cartItems): array
-    {
-        // This method kept for backward compatibility
-        // Real validation happens in processCheckout() with locks
-        return [];
-    }
-
-    /**
-     * Calculate total amount for cart items.
-     * DEPRECATED: Calculation now done in processCheckout()
-     *
-     * @param array $cartItems
-     * @return float
-     */
-    public function calculateTotal(array $cartItems): float
-    {
-        // This method kept for backward compatibility
-        // Real calculation happens in processCheckout()
-        $productIds = array_column($cartItems, 'MaSP');
-        $products = Product::whereIn('MaSP', $productIds)->get()->keyBy('MaSP');
-        
-        $total = 0;
-        foreach ($cartItems as $item) {
-            if (isset($products[$item['MaSP']])) {
-                $total += $products[$item['MaSP']]->price_vnd * $item['quantity'];
-            }
-        }
-        
-        return $total;
-    }
 }
 

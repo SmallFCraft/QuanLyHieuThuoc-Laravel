@@ -94,7 +94,8 @@ class ImageRecognitionService
                     'image_type' => 'prescription',
                     'products_recognized' => count($matched),
                     'processing_time_ms' => $processingTime
-                ]
+                ],
+                userId: $userId
             );
             
             return [
@@ -185,7 +186,8 @@ class ImageRecognitionService
                     'image_type' => 'receipt',
                     'products_recognized' => count($matched),
                     'processing_time_ms' => $processingTime
-                ]
+                ],
+                userId: $userId
             );
             
             return [
@@ -464,8 +466,10 @@ PROMPT;
      */
     protected function storeImage(UploadedFile $image, int $userId, string $type): string
     {
+        $storagePath = (string) config('chatbot.images.storage_path', 'chatbot-uploads');
+
         // Ensure upload directory exists (local disk root is storage/app/private/)
-        $uploadDir = storage_path('app/private/chatbot-uploads');
+        $uploadDir = storage_path('app/private/' . $storagePath);
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
@@ -477,7 +481,7 @@ PROMPT;
         }
 
         $filename = Str::uuid() . '.' . $image->extension();
-        $path = $image->storeAs('chatbot-uploads', $filename, 'local');
+        $path = $image->storeAs($storagePath, $filename, 'local');
         
         ChatbotImage::create([
             'MaKH' => $userId,
@@ -1109,53 +1113,5 @@ PROMPT;
                 'stock_quantity' => $product->stock_quantity
             ];
         })->toArray();
-    }
-
-    protected function findSimilarProducts(string $name): array
-    {
-        // Use cleaned name so brand/dosage/separators don't dilute the search.
-        $cleanName = $this->cleanProductName($name);
-        $words = array_values(array_filter(
-            explode(' ', $cleanName),
-            fn ($w) => mb_strlen($w, 'UTF-8') > 2
-        ));
-
-        if (empty($words)) {
-            return [];
-        }
-
-        $products = Product::notExpired()
-            ->where('stock_quantity', '>', 0)
-            ->where(function($query) use ($words) {
-                foreach ($words as $word) {
-                    $query->orWhere('name', 'LIKE', "%{$word}%")
-                          ->orWhere('ingredients', 'LIKE', "%{$word}%");
-                }
-            })
-            ->FEFO()
-            ->limit(3)
-            ->get();
-            
-        return $products->map(function($product) {
-            return [
-                'id' => $product->MaSP,
-                'name' => $product->name,
-                'price' => $product->price_vnd,
-                'stock_quantity' => $product->stock_quantity
-            ];
-        })->toArray();
-    }
-
-    /**
-     * Cleanup temporary image file.
-     *
-     * @param string $imagePath
-     * @return void
-     */
-    public function cleanupImage(string $imagePath): void
-    {
-        if (file_exists($imagePath)) {
-            @unlink($imagePath);
-        }
     }
 }

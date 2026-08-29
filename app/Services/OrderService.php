@@ -39,6 +39,12 @@ class OrderService
                 'MaKH' => $userId
             ]);
 
+            // Idempotent (updateOrCreate on MaDH + MaSP), so a replayed status
+            // change cannot duplicate a patient's medication schedule.
+            if ($newStatus === 'Completed' && $oldStatus !== 'Completed') {
+                app(MedicationReminderService::class)->createFromOrder($order);
+            }
+
             return $order;
         });
     }
@@ -135,20 +141,6 @@ class OrderService
             
             throw new \Exception('Không thể hủy đơn hàng. Vui lòng thử lại.');
         }
-    }
-
-    /**
-     * Get orders by status.
-     *
-     * @param string $status
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    public function getOrdersByStatus(string $status)
-    {
-        return Order::with(['user', 'items.product'])
-            ->where('status', $status)
-            ->orderBy('created_at', 'desc')
-            ->get();
     }
 
     /**
