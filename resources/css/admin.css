@@ -87,7 +87,8 @@ body.admin-body {
 
 .admin-nav__label {
     padding: 14px 12px 8px;
-    color: rgba(255, 255, 255, 0.52);
+    /* 0.52 alpha measured 4.41:1 on the sidebar — just under the threshold. */
+    color: rgba(255, 255, 255, 0.62);
     font-size: 0.7rem;
     font-weight: 750;
     text-transform: uppercase;
@@ -322,6 +323,14 @@ body.admin-body {
     overflow-x: auto;
 }
 
+/* Keyboard-scrollable wide tables get tabindex="0"; without this rule the focus
+   ring would be suppressed and there'd be no sign the region is focused. */
+.admin-table-wrap:focus-visible {
+    outline: 3px solid #047857;
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
 .table {
     color: var(--admin-text);
     --bs-table-hover-bg: #f0fdf4;
@@ -412,17 +421,13 @@ body.admin-body {
     box-shadow: var(--admin-shadow-soft);
 }
 
-.dt-buttons .btn,
-.dataTables_wrapper .dt-buttons .btn {
+.dt-buttons .btn {
     margin-bottom: 8px;
 }
 
 .dt-buttons .btn,
 .dt-buttons .dt-button,
-.dt-buttons .btn-secondary,
-.dataTables_wrapper .dt-buttons .btn,
-.dataTables_wrapper .dt-buttons .dt-button,
-.dataTables_wrapper .dt-buttons .btn-secondary {
+.dt-buttons .btn-secondary {
     --bs-btn-color: #15803d;
     --bs-btn-bg: #ffffff;
     --bs-btn-border-color: #16a34a;
@@ -449,13 +454,7 @@ body.admin-body {
 .dt-buttons .btn-secondary:hover,
 .dt-buttons .btn:focus,
 .dt-buttons .dt-button:focus,
-.dt-buttons .btn-secondary:focus,
-.dataTables_wrapper .dt-buttons .btn:hover,
-.dataTables_wrapper .dt-buttons .dt-button:hover,
-.dataTables_wrapper .dt-buttons .btn-secondary:hover,
-.dataTables_wrapper .dt-buttons .btn:focus,
-.dataTables_wrapper .dt-buttons .dt-button:focus,
-.dataTables_wrapper .dt-buttons .btn-secondary:focus {
+.dt-buttons .btn-secondary:focus {
     border-color: #15803d !important;
     background: #15803d !important;
     background-color: #15803d !important;
@@ -463,18 +462,7 @@ body.admin-body {
     box-shadow: 0 10px 22px rgba(21, 128, 61, 0.18) !important;
 }
 
-.dataTables_wrapper .dataTables_filter input,
-.dataTables_wrapper .dataTables_length select {
-    border: 1px solid var(--admin-border);
-    border-radius: var(--admin-radius);
-    min-height: 38px;
-}
-
 .admin-mobile-list {
-    display: none;
-}
-
-.admin-mobile-pagination {
     display: none;
 }
 
@@ -552,31 +540,6 @@ body.admin-body {
     color: var(--admin-primary-strong);
     font-weight: 650;
     text-decoration: none;
-}
-
-.select2-container--default .select2-selection--single {
-    min-height: 42px;
-    border-color: var(--admin-border);
-    border-radius: var(--admin-radius);
-}
-
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 40px;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    min-height: 40px;
-}
-
-.note-editor.note-frame {
-    border-color: var(--admin-border);
-    border-radius: var(--admin-radius);
-    box-shadow: none;
-}
-
-.note-toolbar {
-    background: var(--admin-surface-muted);
-    border-color: var(--admin-border);
 }
 
 .card.hover-lift,
@@ -1233,14 +1196,6 @@ button:focus-visible,
     .admin-mobile-list {
         display: grid;
         gap: 12px;
-    }
-
-    .admin-mobile-pagination {
-        display: block;
-    }
-
-    .dataTables_wrapper .row {
-        row-gap: 10px;
     }
 }
 

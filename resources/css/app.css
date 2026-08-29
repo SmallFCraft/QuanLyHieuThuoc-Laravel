@@ -10,26 +10,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Responsive Utilities */
-@media (max-width: 767px) {
-    .mobile-only {
-        display: block !important;
-    }
-    .desktop-only {
-        display: none !important;
-    }
-}
-
-@media (min-width: 768px) {
-    .mobile-only {
-        display: none !important;
-    }
-    .desktop-only {
-        display: block !important;
-    }
-}
-
-/* 
+/*
  * FORCE CUSTOM SCROLLBAR (EMERALD THEME) 
  * High specificity targeting to ensure application 
  */
@@ -104,3 +85,68 @@ html, body, * {
     box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.18);
     outline: 0;
 }
+
+/* Drug safety warnings.
+   Global rather than scoped to the <x-drug-warnings> component: the add-to-cart
+   confirmation dialog reuses these classes and can open on any page, including
+   ones where the component itself never rendered.
+   Colour is always paired with an icon and a text label, so severity stays
+   readable for colour-blind users and in greyscale output. */
+.drug-warnings {
+    --dw-major: #B91C1C;
+    --dw-major-bg: #FEF2F2;
+    --dw-major-border: #FECACA;
+    --dw-moderate: #B45309;
+    --dw-moderate-bg: #FFFBEB;
+    --dw-moderate-border: #FDE68A;
+    --dw-minor: #0E7490;
+    --dw-minor-bg: #ECFEFF;
+    --dw-minor-border: #A5F3FC;
+}
+
+.drug-warnings__heading { font-size: 1.0625rem; font-weight: 700; color: #1F2937; }
+.drug-warnings__intro { color: #4B5563; font-size: 0.9375rem; }
+
+.drug-warning {
+    border-radius: 14px;
+    border: 1.5px solid transparent;
+    padding: 14px 16px;
+    /* Repeated so a .drug-warning outside .drug-warnings still has its palette. */
+    --dw-major: #B91C1C;
+    --dw-major-bg: #FEF2F2;
+    --dw-major-border: #FECACA;
+    --dw-moderate: #B45309;
+    --dw-moderate-bg: #FFFBEB;
+    --dw-moderate-border: #FDE68A;
+    --dw-minor: #0E7490;
+    --dw-minor-bg: #ECFEFF;
+    --dw-minor-border: #A5F3FC;
+}
+
+.drug-warning--major { background: var(--dw-major-bg); border-color: var(--dw-major-border); }
+.drug-warning--moderate { background: var(--dw-moderate-bg); border-color: var(--dw-moderate-border); }
+.drug-warning--minor { background: var(--dw-minor-bg); border-color: var(--dw-minor-border); }
+
+.drug-warning__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.drug-warning--major .drug-warning__badge { color: var(--dw-major); }
+.drug-warning--moderate .drug-warning__badge { color: var(--dw-moderate); }
+.drug-warning--minor .drug-warning__badge { color: var(--dw-minor); }
+
+/* #1F2937 on every one of the three tinted backgrounds clears 4.5:1. */
+.drug-warning__title { font-weight: 600; color: #1F2937; font-size: 0.9375rem; }
+.drug-warning__message { color: #374151; font-size: 0.9375rem; }
+.drug-warning__action { color: #1F2937; font-size: 0.9375rem; }
+
+.drug-warnings__disclaimer { color: #6B7280; font-size: 0.8125rem; }
+
+.drug-warnings--compact .drug-warning { padding: 10px 12px; border-radius: 12px; }
+.drug-warnings--compact .drug-warning__message,
+.drug-warnings--compact .drug-warning__action { font-size: 0.875rem; }
