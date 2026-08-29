@@ -69,6 +69,16 @@ class User extends Authenticatable
     {
         return $this->role === 'Administrator';
     }
+
+    /**
+     * Check if user is a pharmacist (handles the triage review queue)
+     *
+     * @return bool
+     */
+    public function isPharmacist(): bool
+    {
+        return $this->role === 'Pharmacist';
+    }
     
     /**
      * Check if user account is active
@@ -89,26 +99,19 @@ class User extends Authenticatable
     }
     
     /**
-     * Get audit logs for this user
+     * Get the health profile for this user
      */
-    public function auditLogs()
+    public function healthProfile()
     {
-        return $this->hasMany(AuditLog::class, 'MaKH', 'MaKH');
+        return $this->hasOne(UserHealthProfile::class, 'MaKH', 'MaKH');
     }
-    
+
     /**
-     * Get chat messages for this user
+     * Age in whole years, or null when birth_date was never filled in.
+     * Triage rules treat a null age as unknown, not as an adult.
      */
-    public function chatMessages()
+    public function ageInYears(): ?int
     {
-        return $this->hasMany(ChatMessage::class, 'MaKH', 'MaKH');
-    }
-    
-    /**
-     * Get chatbot images for this user
-     */
-    public function chatbotImages()
-    {
-        return $this->hasMany(ChatbotImage::class, 'MaKH', 'MaKH');
+        return $this->birth_date?->age;
     }
 }

@@ -247,6 +247,30 @@ class AiProviderServiceTest extends TestCase
         (new AiProviderService())->analyzeImage('Read this image', base64_encode('image-bytes'), 'image/jpeg');
     }
 
+    public function test_a_mislabelled_image_is_not_reported_as_a_model_without_vision(): void
+    {
+        $this->configureProvider('anthropic_messages');
+
+        Http::fake([
+            'http://localhost:55597/v1/messages' => Http::response([
+                'error' => [
+                    'message' => 'Image does not match the provided media_type image/png',
+                ],
+            ], 400),
+        ]);
+
+        // A bad upload, not a text-only model: telling the customer to switch models
+        // sends them after the wrong fix.
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('media_type');
+
+        try {
+            (new AiProviderService())->analyzeImage('Read this image', base64_encode('image-bytes'), 'image/png');
+        } catch (AiProviderVisionNotSupportedException $exception) {
+            $this->fail('A mislabelled image must not be classified as unsupported vision.');
+        }
+    }
+
     public function test_anthropic_messages_mode_posts_messages_payload(): void
     {
         $this->configureProvider('anthropic_messages');
@@ -388,6 +412,33 @@ class AiProviderServiceTest extends TestCase
             $service->describeLastProvider()
         );
         Http::assertSentCount(2);
+    }
+
+    public function test_a_fallback_that_repeats_the_primary_endpoint_is_ignored(): void
+    {
+        $this->configureProvider('chat_completions');
+        // Same host, same model, only the mode differs — the shape that costs the
+        // customer AI_TIMEOUT twice for a single failure and gains nothing.
+        config()->set('chatbot.ai.fallback.mode', 'anthropic_messages');
+        config()->set('chatbot.ai.fallback.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.fallback.api_key', 'agt_codex_fallback');
+        config()->set('chatbot.ai.fallback.model', 'test-model');
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response(['error' => 'down'], 502),
+            'http://localhost:55597/v1/messages' => Http::response(['error' => 'down'], 502),
+        ]);
+
+        $service = new AiProviderService();
+
+        $this->assertCount(1, $service->describeProviders());
+
+        try {
+            $service->chat([['role' => 'user', 'content' => 'Xin chao']]);
+            $this->fail('The primary failure should have been rethrown.');
+        } catch (\RuntimeException) {
+            Http::assertSentCount(1);
+        }
     }
 
     public function test_chat_throws_when_every_provider_fails(): void

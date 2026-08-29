@@ -243,6 +243,77 @@ class ChatbotSessionTraceTest extends TestCase
         $this->assertStringContainsString('Vitamin E 400IU', $capturedContext['previous_messages'][0]['content'] ?? '');
     }
 
+    public function test_chatbot_message_passes_history_in_chronological_order(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'User',
+            'status' => 'active',
+        ]);
+        $sessionId = (string) Str::uuid();
+        $baseTime = now()->subMinutes(10);
+
+        $turns = [
+            ['role' => 'user', 'content' => 'có nên xài crack hay không'],
+            ['role' => 'assistant', 'content' => 'Dạ, em không thể tư vấn về việc sử dụng ma túy.'],
+            ['role' => 'user', 'content' => 'có thuốc gì hỗ trơ tiêu hóa nhanh không?'],
+            ['role' => 'assistant', 'content' => 'Dạ, danh mục Thuốc tiêu hóa có các sản phẩm sau.'],
+        ];
+
+        foreach ($turns as $index => $turn) {
+            ChatMessage::create([
+                'MaKH' => $user->MaKH,
+                'session_id' => $sessionId,
+                'role' => $turn['role'],
+                'content' => $turn['content'],
+                'created_at' => $baseTime->copy()->addSeconds($index),
+                'updated_at' => $baseTime->copy()->addSeconds($index),
+            ]);
+        }
+
+        $capturedContext = null;
+
+        $this->mock(ChatbotService::class, function (MockInterface $mock) use (&$capturedContext) {
+            $mock->shouldReceive('processMessage')
+                ->once()
+                ->andReturnUsing(function (string $message, int $userId, array $context) use (&$capturedContext): array {
+                    $capturedContext = $context;
+
+                    return [
+                        'success' => true,
+                        'response' => 'Dạ, em đã ghi nhận.',
+                        'products' => [],
+                        'categories' => [],
+                        'show_disclaimer' => false,
+                    ];
+                });
+        });
+
+        $this
+            ->actingAs($user)
+            ->withSession(['chat_session_id' => $sessionId])
+            ->postJson('/api/chatbot/message', [
+                'message' => 'có ổn không?',
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        // Sequential keys matter beyond ordering: a key-preserving reverse() encodes
+        // as a JSON object, and the MySQL json column returns object keys sorted, so
+        // the whole conversation reached the model newest-first.
+        $this->assertTrue(array_is_list($capturedContext['previous_messages'] ?? []));
+        $this->assertTrue(array_is_list($capturedContext['name_memory_messages'] ?? []));
+
+        $this->assertSame(
+            array_column($turns, 'content'),
+            array_column($capturedContext['previous_messages'] ?? [], 'content')
+        );
+
+        $this->assertSame(
+            ['có nên xài crack hay không', 'có thuốc gì hỗ trơ tiêu hóa nhanh không?'],
+            array_column($capturedContext['name_memory_messages'] ?? [], 'content')
+        );
+    }
+
     public function test_chatbot_history_returns_current_session_id(): void
     {
         $user = User::factory()->create([
