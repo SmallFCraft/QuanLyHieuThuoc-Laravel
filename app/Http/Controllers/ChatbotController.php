@@ -627,7 +627,7 @@ class ChatbotController extends Controller
             if ($product->stock_quantity < $quantity) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Không đủ hàng. Chỉ còn {$product->stock_quantity} sản phẩm."
+                    'message' => __('messages.cart.stock_remaining', ['count' => $product->stock_quantity])
                 ], 422);
             }
 
@@ -750,7 +750,7 @@ class ChatbotController extends Controller
             if ($product->stock_quantity < $quantity) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Không đủ hàng. Chỉ còn {$product->stock_quantity} sản phẩm."
+                    'message' => __('messages.cart.stock_remaining', ['count' => $product->stock_quantity])
                 ], 422);
             }
             
