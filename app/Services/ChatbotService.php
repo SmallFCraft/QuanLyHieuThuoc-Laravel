@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\VietnameseHelper;
 use App\Models\Category;
 use App\Models\MedicalRedFlag;
 use App\Models\MedicalSymptom;
@@ -2619,7 +2620,7 @@ PROMPT;
         foreach ($products as $index => $product) {
             $lines[] = ($index + 1) . '. **' . $product['name'] . '**';
             $lines[] = '- Danh mục: ' . ($product['category'] ?? 'Chưa phân loại');
-            $lines[] = '- Giá tham khảo: ' . $this->formatCurrencyValue($product['price']);
+            $lines[] = '- Giá tham khảo: ' . VietnameseHelper::formatCurrency($product['price']);
             $lines[] = '- Tồn kho hiện tại: ' . $product['stock_quantity'] . ' sản phẩm';
 
             if (!empty($product['usage'])) {
@@ -2702,7 +2703,7 @@ PROMPT;
             $lines[] = 'Một vài sản phẩm tiêu biểu trong danh mục phù hợp:';
 
             foreach ($products as $product) {
-                $lines[] = '- **' . $product['name'] . '** - ' . $this->formatCurrencyValue($product['price']) . ' - [Xem chi tiết](' . $product['url'] . ')';
+                $lines[] = '- **' . $product['name'] . '** - ' . VietnameseHelper::formatCurrency($product['price']) . ' - [Xem chi tiết](' . $product['url'] . ')';
             }
         }
 
@@ -4803,11 +4804,6 @@ PROMPT;
         }
 
         return rtrim(mb_substr($text, 0, $limit, 'UTF-8')) . '...';
-    }
-
-    protected function formatCurrencyValue($amount): string
-    {
-        return \App\Helpers\VietnameseHelper::formatCurrency($amount);
     }
 
     protected function resolveHealthContextMessage(string $message, array $context): string

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\CheckoutService;
+use App\Services\DrugSafetyService;
 use App\Models\Product;
+use App\Support\CartLine;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -20,10 +22,10 @@ class CheckoutController extends Controller
     /**
      * Display the checkout page.
      */
-    public function index()
+    public function index(DrugSafetyService $drugSafety)
     {
         $cart = session()->get('cart', []);
-        
+
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Giỏ hàng trống.');
         }
@@ -52,7 +54,14 @@ class CheckoutController extends Controller
             }
         }
 
-        return view('checkout.index', compact('cartItems', 'total'));
+        // Informational only: the customer already confirmed any blocking warning when
+        // the item was added, so checkout is never blocked here.
+        $drugWarnings = $drugSafety->checkCart(
+            CartLine::rowsFrom($cart),
+            (int) auth()->id()
+        )['warnings'];
+
+        return view('checkout.index', compact('cartItems', 'total', 'drugWarnings'));
     }
 
     /**
@@ -96,7 +105,7 @@ class CheckoutController extends Controller
                         ->with('success', 'Đơn hàng đã được xử lý.');
                 }
 
-                $cartItems = $this->normalizeCartItems($cart);
+                $cartItems = CartLine::rowsFrom($cart);
 
                 $order = $this->checkoutService->processCheckout(
                     $cartItems,
@@ -150,19 +159,5 @@ class CheckoutController extends Controller
         ksort($cart);
 
         return hash('sha256', json_encode($cart));
-    }
-
-    private function normalizeCartItems(array $cart): array
-    {
-        $cartItems = [];
-
-        foreach ($cart as $productId => $quantity) {
-            $cartItems[] = [
-                'MaSP' => (int) $productId,
-                'quantity' => (int) $quantity
-            ];
-        }
-
-        return $cartItems;
     }
 }
