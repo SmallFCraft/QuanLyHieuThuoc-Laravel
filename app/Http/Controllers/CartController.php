@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Services\DrugSafetyService;
+use App\Support\CartLine;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
@@ -47,11 +49,12 @@ class CartController extends Controller
     /**
      * Add a product to the cart.
      */
-    public function add(Request $request)
+    public function add(Request $request, DrugSafetyService $drugSafety)
     {
         $request->validate([
             'MaSP' => 'required|exists:products,MaSP',
-            'quantity' => 'required|integer|min:1|max:999'
+            'quantity' => 'required|integer|min:1|max:999',
+            'confirm_warning' => 'nullable|boolean',
         ]);
 
         $cart = session()->get('cart', []);
@@ -92,12 +95,40 @@ class CartController extends Controller
 
         // Validate stock availability
         if ($product->stock_quantity < $request->quantity) {
-            $message = 'Sản phẩm không đủ số lượng trong kho.';
+            $message = __('messages.cart.stock_insufficient');
             if ($wantsJson) {
                 return response()->json(['success' => false, 'message' => $message], 422);
             }
 
             return back()->with('error', $message);
+        }
+
+        // Drug safety runs before the cart is touched: a blocked item must never land
+        // in the session, even for one request.
+        $userId = (int) auth()->id();
+        $confirmed = $request->boolean('confirm_warning');
+        $safety = $drugSafety->checkAddition($product, CartLine::rowsFrom($cart), $userId);
+        $warnings = $safety['warnings'];
+
+        if ($safety['blocking'] && ! $confirmed) {
+            $message = __('messages.drug_safety.blocked_message');
+
+            if ($wantsJson) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'requires_confirmation' => true,
+                    'drug_warnings' => $warnings,
+                ], 409);
+            }
+
+            // Redirect to the cart, not back(): the confirmation block lives there, and a
+            // product page cannot render it.
+            return redirect()->route('cart.index')
+                ->with('error', $message)
+                ->with('drug_warnings', $warnings)
+                ->with('drug_warning_product', $product->MaSP)
+                ->with('drug_warning_quantity', (int) $request->quantity);
         }
 
         // If product already in cart, update quantity
@@ -106,7 +137,7 @@ class CartController extends Controller
 
             // Check if new quantity exceeds stock
             if ($newQuantity > $product->stock_quantity) {
-                $message = 'Số lượng vượt quá tồn kho.';
+                $message = __('messages.cart.stock_exceeded');
                 if ($wantsJson) {
                     return response()->json(['success' => false, 'message' => $message], 422);
                 }
@@ -121,6 +152,10 @@ class CartController extends Controller
 
         session()->put('cart', $cart);
 
+        if ($safety['blocking'] && $confirmed) {
+            $drugSafety->logOverride($userId, $product, $warnings);
+        }
+
         $successMessage = 'Đã thêm sản phẩm vào giỏ hàng.';
 
         if ($wantsJson) {
@@ -128,10 +163,18 @@ class CartController extends Controller
                 'success' => true,
                 'message' => $successMessage,
                 'cart_count' => count($cart),
+                'requires_confirmation' => false,
+                'drug_warnings' => $warnings,
             ]);
         }
 
-        return back()->with('success', $successMessage);
+        $redirect = back()->with('success', $successMessage);
+
+        if ($warnings !== []) {
+            $redirect->with('drug_warnings', $warnings);
+        }
+
+        return $redirect;
     }
 
     /**
@@ -150,10 +193,10 @@ class CartController extends Controller
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Số lượng vượt quá tồn kho.'
+                    'message' => __('messages.cart.stock_exceeded')
                 ], 400);
             }
-            return back()->with('error', 'Số lượng vượt quá tồn kho.');
+            return back()->with('error', __('messages.cart.stock_exceeded'));
         }
 
         $cart = session()->get('cart', []);
@@ -175,10 +218,10 @@ class CartController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Sản phẩm không có trong giỏ hàng.'
+                'message' => __('messages.cart.not_in_cart')
             ], 404);
         }
-        return back()->with('error', 'Sản phẩm không có trong giỏ hàng.');
+        return back()->with('error', __('messages.cart.not_in_cart'));
     }
 
     /**
@@ -205,9 +248,9 @@ class CartController extends Controller
         if (request()->expectsJson()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Sản phẩm không có trong giỏ hàng.'
+                'message' => __('messages.cart.not_in_cart')
             ], 404);
         }
-        return back()->with('error', 'Sản phẩm không có trong giỏ hàng.');
+        return back()->with('error', __('messages.cart.not_in_cart'));
     }
 }

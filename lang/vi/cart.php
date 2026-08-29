@@ -7,6 +7,7 @@ return [
     'start_shopping' => 'Bắt đầu mua sắm',
     'items_count' => 'Sản phẩm trong giỏ',
     'per_item' => 'sản phẩm',
+    'quantity' => 'Số lượng',
     'remove' => 'Xóa',
     'continue_shopping' => 'Tiếp tục mua sắm',
     'order_summary' => 'Tóm tắt đơn hàng',
@@ -19,6 +20,10 @@ return [
     'safe' => 'An toàn',
     'secure' => 'Bảo mật',
     'fast' => 'Nhanh chóng',
+    'stock_insufficient' => 'Sản phẩm không đủ số lượng trong kho.',
+    'stock_exceeded' => 'Số lượng vượt quá tồn kho.',
+    'stock_remaining' => 'Không đủ hàng. Chỉ còn :count sản phẩm.',
+    'not_in_cart' => 'Sản phẩm không có trong giỏ hàng.',
     'js' => [
         'exceed_stock_title' => 'Vượt quá tồn kho',
         'exceed_stock_msg' => 'Chỉ còn :max sản phẩm trong kho',
