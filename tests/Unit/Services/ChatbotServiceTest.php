@@ -2592,4 +2592,38 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('Danh mục **Thuốc tiêu hóa** đang có 10 sản phẩm', $cleaned);
         $this->assertStringContainsString('có thể xem Thuốc tiêu hóa để lọc nhanh hơn', $cleaned);
     }
+
+    /**
+     * The repair has to fire on a URL the model wrapped in plain parens — the shape that
+     * shipped raw to the widget — without double-linking one that is already markdown.
+     * The label must be the exact string the widget promotes to a button.
+     */
+    public function test_raw_product_urls_become_the_product_button_in_every_written_shape(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('formatFriendlyProductLinks');
+        $method->setAccessible(true);
+
+        $url = 'http://localhost/products/15';
+        $products = [['name' => 'Ciprofloxacin 500mg', 'url' => $url]];
+        $button = "[Mở sản phẩm]({$url})";
+
+        $cases = [
+            // Observed in a real session: the model printed the URL in plain parens.
+            "còn 200 ({$url})." => "còn 200 {$button}.",
+            "Xem tại {$url} nhé." => "Xem tại {$button} nhé.",
+            // Already correct - must not be wrapped twice.
+            "- Xem chi tiết: {$button}" => "- Xem chi tiết: {$button}",
+            // Another label already links it; leave the author's wording alone.
+            "- [Chi tiết]({$url})" => "- [Chi tiết]({$url})",
+        ];
+
+        foreach ($cases as $input => $expected) {
+            $this->assertSame(
+                $expected,
+                $method->invoke($this->chatbotService, $input, $products),
+                'Failed for input: ' . $input
+            );
+        }
+    }
 }

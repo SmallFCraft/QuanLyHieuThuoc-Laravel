@@ -7,6 +7,7 @@ use App\Models\ChatbotImage;
 use App\Models\Product;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
@@ -36,6 +37,27 @@ class ImageRecognitionService
 
     protected AuditLogService $auditLogService;
     protected AiProviderService $aiProviderService;
+
+    /**
+     * MaAnh of the row storeImage() just wrote, so the caller can link the chat turn
+     * to the bytes on disk. Chat history needs that link to re-render the upload after
+     * a reload — the live bubble uses a blob: URL that dies with the page.
+     */
+    protected ?int $lastStoredImageId = null;
+
+    /**
+     * MaAnh of the row storeImage() just wrote, so the caller can link the chat turn
+     * to the bytes on disk. Chat history needs that link to re-render the upload after
+     * a reload — the live bubble uses a blob: URL that dies with the page.
+     *
+     * Read it after ANY outcome: the file is stored before analysis runs, so a rejected
+     * or unreadable image still has something to show.
+     */
+    public function lastStoredImageId(): ?int
+    {
+        return $this->lastStoredImageId;
+    }
+
     protected const VISION_MAX_IMAGE_WIDTH = 1600;
     protected const VISION_MAX_IMAGE_HEIGHT = 1600;
     protected const VISION_JPEG_QUALITY = 75;
@@ -103,7 +125,8 @@ class ImageRecognitionService
                 'recognized_products' => $matched,
                 'parsed_products' => $analysisResult['products'],
                 'ocr_text' => $analysisResult['description'] ?? '',
-                'processing_time_ms' => $processingTime
+                'processing_time_ms' => $processingTime,
+                'image_id' => $this->lastStoredImageId,
             ];
         } catch (\Exception $e) {
             Log::error('Prescription processing failed', [
@@ -195,7 +218,8 @@ class ImageRecognitionService
                 'recognized_products' => $matched,
                 'parsed_products' => $analysisResult['products'],
                 'ocr_text' => $analysisResult['description'] ?? '',
-                'processing_time_ms' => $processingTime
+                'processing_time_ms' => $processingTime,
+                'image_id' => $this->lastStoredImageId,
             ];
         } catch (\Exception $e) {
             Log::error('Receipt processing failed', [
@@ -468,12 +492,6 @@ PROMPT;
     {
         $storagePath = (string) config('chatbot.images.storage_path', 'chatbot-uploads');
 
-        // Ensure upload directory exists (local disk root is storage/app/private/)
-        $uploadDir = storage_path('app/private/' . $storagePath);
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
-
         $sessionId = session('chat_session_id');
         if (!$sessionId) {
             $sessionId = Str::uuid()->toString();
@@ -482,8 +500,10 @@ PROMPT;
 
         $filename = Str::uuid() . '.' . $image->extension();
         $path = $image->storeAs($storagePath, $filename, 'local');
-        
-        ChatbotImage::create([
+
+        $this->lastStoredImageId = null;
+
+        $stored = ChatbotImage::create([
             'MaKH' => $userId,
             'session_id' => $sessionId,
             'filename' => $filename,
@@ -494,8 +514,13 @@ PROMPT;
             'mime_type' => $image->getMimeType(),
             'image_type' => $type
         ]);
-        
-        return storage_path('app/private/' . $path);
+
+        $this->lastStoredImageId = (int) $stored->MaAnh;
+
+        // Resolve through the disk rather than storage_path(): the hardcoded root
+        // duplicated filesystems.local and made Storage::fake() unusable, so every
+        // upload test wrote into the real storage directory.
+        return Storage::disk('local')->path($path);
     }
 
     protected function markLatestImageAnalysisDebug(int $userId, string $type, array $debug): void

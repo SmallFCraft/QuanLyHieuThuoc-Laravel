@@ -345,11 +345,18 @@
                                     </div>
                                 @endif
 
-                                @if(!empty($message->products))
+                                @php
+                                    // Prefer the recognition wrapper: it carries parsed_name,
+                                    // confidence and the unmatched entries, none of which are in
+                                    // the flat rows the widget renders.
+                                    $relatedProducts = data_get($message->metadata, 'image_recognition')
+                                        ?: $message->products;
+                                @endphp
+                                @if(!empty($relatedProducts))
                                     <div class="admin-chat-related mt-3">
                                         <div class="small fw-semibold mb-2">Sản phẩm liên quan</div>
                                         <div class="d-flex flex-column gap-2">
-                                            @foreach($message->products as $product)
+                                            @foreach($relatedProducts as $product)
                                                 @php
                                                     $matchedProduct = data_get($product, 'product');
                                                     $productPayload = is_array($matchedProduct) ? $matchedProduct : $product;

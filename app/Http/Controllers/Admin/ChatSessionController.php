@@ -167,6 +167,10 @@ class ChatSessionController extends Controller
             return true;
         }
 
+        if (!empty(data_get($message->metadata, 'image_recognition'))) {
+            return true;
+        }
+
         $responseType = (string) data_get($message->metadata, 'response_type', '');
         if (in_array($responseType, ['image_product_follow_up', 'image_recognition'], true)) {
             return true;

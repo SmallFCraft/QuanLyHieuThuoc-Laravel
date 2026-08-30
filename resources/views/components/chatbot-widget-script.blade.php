@@ -1,5 +1,13 @@
 <script>
 function chatbotWidget() {
+    // Deliberately outside the returned state: Alpine wraps that object in a reactive
+    // Proxy, so a turn read back from `this` is never identical to the one created here
+    // — the identity check in finishRequest() always failed and left isLoading stuck on
+    // after the answer had already been rendered. An AbortController reached through the
+    // Proxy is also the wrong receiver for abort().
+    let activeTurn = null;
+    let turnSeq = 0;
+
     return {
         isOpen: false,
         messages: [],
@@ -11,6 +19,14 @@ function chatbotWidget() {
         showCartDetail: false,
         showCheckout: false,
         isPlacingOrder: false,
+        currentTurnId: null,
+        pendingJobId: null,
+        /**
+         * Deadline for one whole turn, sync fallback included: the primary and fallback
+         * providers get AI_TIMEOUT each, and the browser spends ~12s proving no worker
+         * exists before it retries inline. Past this the wait is a hang, not a slow model.
+         */
+        requestTimeoutMs: 90000,
         attachedImage: null,
         imagePreviewUrl: null,
         isAuthenticated: false,
@@ -112,6 +128,12 @@ function chatbotWidget() {
             if (this.pasteListener) {
                 document.removeEventListener('paste', this.pasteListener);
                 this.pasteListener = null;
+            }
+
+            if (this.currentTurn) {
+                window.clearTimeout(this.currentTurn.timeoutId);
+                this.currentTurn.controller.abort();
+                this.currentTurn = null;
             }
 
             if (this.copyFeedbackTimer) {
@@ -217,7 +239,12 @@ function chatbotWidget() {
         revokeObjectUrl(url) {
             if (!url) return;
 
-            URL.revokeObjectURL(url);
+            // History supplies an http(s) URL for past uploads; only the live turn's
+            // preview is a blob that has to be released.
+            if (String(url).startsWith('blob:')) {
+                URL.revokeObjectURL(url);
+            }
+
             this.objectUrls = this.objectUrls.filter((item) => item !== url);
         },
 
@@ -310,10 +337,10 @@ function chatbotWidget() {
         
         async sendMessage() {
             if ((!this.inputText.trim() && !this.attachedImage) || this.isLoading) return;
-            
+
             const userMessage = this.inputText.trim();
             const hasImage = !!this.attachedImage;
-            
+
             // Client-side validation for text-only messages
             if (!hasImage && userMessage.length < 2) {
                 this.pushMessage({
@@ -324,12 +351,12 @@ function chatbotWidget() {
                 this.scrollToBottom();
                 return;
             }
-            
-            this.isLoading = true;
-            
+
+            const turn = this.beginRequest();
+
             // If there's an image, send it with optional text
             if (hasImage) {
-                await this.sendImageWithText(userMessage);
+                await this.sendImageWithText(userMessage, turn);
             } else {
                 // Text-only message
                 this.inputText = '';
@@ -337,14 +364,14 @@ function chatbotWidget() {
                 this.$nextTick(() => {
                     this.resizeMessageInput();
                 });
-                
+
                 this.pushMessage({
                     role: 'user',
                     content: userMessage
                 });
-                
+
                 this.scrollToBottom();
-                
+
                 try {
                     const response = await fetch('/api/chatbot/message', {
                         method: 'POST',
@@ -355,17 +382,18 @@ function chatbotWidget() {
                             'X-Requested-With': 'XMLHttpRequest'
                         },
                         credentials: 'same-origin',
+                        signal: turn.controller.signal,
                         body: JSON.stringify({
                             message: userMessage,
                             context: this.getContext()
                         })
                     });
 
-                    const data = await response.json().catch(() => ({}));
+                    let data = await response.json().catch(() => ({}));
                     if (Object.prototype.hasOwnProperty.call(data, 'session_id')) {
                         this.setSessionId(data.session_id);
                     }
-                    
+
                     // Handle authentication required
                     if (response.status === 401 && data.require_login) {
                         this.pushMessage({
@@ -376,8 +404,7 @@ function chatbotWidget() {
                             loginUrl: data.login_url,
                             registerUrl: '/register'
                         });
-                        
-                        this.isLoading = false;
+
                         this.scrollToBottom();
                         return;
                     }
@@ -398,11 +425,24 @@ function chatbotWidget() {
                         return;
                     }
 
-                    if (!response.ok) {
+                    // A worker took the turn: the answer arrives by polling instead of
+                    // in this response, which is what keeps the rest of the site usable
+                    // while the model is thinking.
+                    if (response.status === 202 && data.queued && data.job_id) {
+                        this.pendingJobId = data.job_id;
+                        data = await this.awaitJobResult(data.job_id, userMessage, turn);
+                    }
+
+                    // Nothing to render: stopRequest() already closed the turn.
+                    if (turn.stopped || data?.cancelled) {
+                        return;
+                    }
+
+                    if (!response.ok && response.status !== 202) {
                         const serverError = data.error || data.message || `HTTP error! status: ${response.status}`;
                         throw new Error(serverError);
                     }
-                    
+
                     if (data.success) {
                         this.pushMessage({
                             role: 'assistant',
@@ -411,6 +451,7 @@ function chatbotWidget() {
                             categories: data.categories || [],
                             show_disclaimer: data.show_disclaimer || false,
                             disclaimer: data.disclaimer,
+                            triage_handoff: data.triage_handoff || null,
                             showRetry: data.provider_unavailable === true
                         });
 
@@ -418,22 +459,250 @@ function chatbotWidget() {
                         this.pushMessage({
                             role: 'assistant',
                             content: data.response || data.error || 'Dạ, em gặp chút lỗi khi xử lý. Anh/chị thử lại giúp em nhé.',
-                            validation_error: data.validation_error || false
+                            validation_error: data.validation_error || false,
+                            // A rejected message is the customer's to fix; anything else
+                            // failed on our side, so offer the retry that already exists.
+                            showRetry: !data.validation_error
                         });
                     }
                 } catch (error) {
+                    // The customer's own stop is not a failure, and it has already put
+                    // its own note in the thread.
+                    if (turn.stopped) {
+                        return;
+                    }
+
+                    if (turn.timedOut) {
+                        this.pushMessage({
+                            role: 'assistant',
+                            content: 'Dạ, em chờ phản hồi quá lâu nên đã dừng yêu cầu này. Anh/chị thử lại giúp em nhé.',
+                            showRetry: true
+                        });
+                        return;
+                    }
+
                     console.error('Error:', error);
                     this.pushMessage({
                         role: 'assistant',
-                        content: 'Dạ, em đang không kết nối được với cửa hàng. Anh/chị vui lòng kiểm tra mạng và thử lại sau nhé.'
+                        content: 'Dạ, em đang không kết nối được với cửa hàng. Anh/chị vui lòng kiểm tra mạng và thử lại sau nhé.',
+                        showRetry: true
                     });
                 } finally {
-                    this.isLoading = false;
+                    this.finishRequest(turn);
                     this.scrollToBottom();
                 }
             }
         },
+
+        /**
+         * A turn is in flight from here until finishRequest().
+         *
+         * The turn lives in a closure variable, not in Alpine state: reactive state is
+         * Proxy-wrapped, so `this.currentTurn !== turn` was always true and the widget
+         * never left the loading state. `currentTurnId` is the only part exposed to the
+         * template, and it is a plain number, which survives the Proxy unchanged.
+         *
+         * The AbortController is what the stop button and the watchdog both pull on: a
+         * hung provider used to leave the widget spinning with no way out, because the
+         * fetch had no signal and no deadline of its own.
+         */
+        beginRequest() {
+            const turn = {
+                id: ++turnSeq,
+                controller: new AbortController(),
+                stopped: false,
+                timedOut: false,
+                timeoutId: null
+            };
+
+            turn.timeoutId = window.setTimeout(() => {
+                turn.timedOut = true;
+
+                // The worker keeps going after the browser gives up, and its answer would
+                // land in `chat_messages` — a reply to a question the customer was already
+                // told had failed. Retiring the job first is what prevents that.
+                if (this.pendingJobId) {
+                    this.cancelPendingJob(this.pendingJobId);
+                }
+
+                turn.controller.abort();
+            }, this.requestTimeoutMs);
+
+            activeTurn = turn;
+            this.currentTurnId = turn.id;
+            this.pendingJobId = null;
+            this.isLoading = true;
+
+            return turn;
+        },
+
+        finishRequest(turn) {
+            if (turn?.timeoutId) {
+                window.clearTimeout(turn.timeoutId);
+                turn.timeoutId = null;
+            }
+
+            // A newer turn already owns the widget; leave its state alone.
+            if (activeTurn !== turn) {
+                return;
+            }
+
+            activeTurn = null;
+            this.currentTurnId = null;
+            this.pendingJobId = null;
+            this.isLoading = false;
+        },
+
+        /**
+         * Withdraw the turn the customer is waiting on.
+         *
+         * Aborting the fetch only stops the browser listening; the worker would still
+         * finish and write its answer to `chat_messages`, so the reply would reappear on
+         * the next reload. Retiring the job server-side is what makes the stop stick.
+         */
+        stopRequest() {
+            const turn = activeTurn;
+
+            if (!this.isLoading || turn === null) {
+                return;
+            }
+
+            turn.stopped = true;
+
+            const jobId = this.pendingJobId;
+            turn.controller.abort();
+
+            if (jobId) {
+                this.cancelPendingJob(jobId);
+            }
+
+            this.pushMessage({
+                role: 'assistant',
+                content: 'Đã dừng yêu cầu. Anh/chị có thể gửi câu hỏi khác ạ.',
+                isSystemMessage: true
+            });
+
+            this.finishRequest(turn);
+            this.scrollToBottom();
+        },
+
+        async cancelPendingJob(jobId) {
+            try {
+                await fetch(`/api/ai-jobs/${jobId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                });
+            } catch (error) {
+                // The abort already ended the wait for the customer. A failed cancel only
+                // means the worker's answer lands in history, so it must not raise here.
+                console.error('Cancel job error:', error);
+            }
+        },
         
+        /**
+         * Wait for a queued turn by polling, and fall back to a synchronous request
+         * when no worker ever picks it up.
+         *
+         * Backoff keeps the poll cheap for a slow model (a 45s answer costs ~20
+         * requests, not 45). The stranded check is the difference between "nobody
+         * started queue:work" and "the model is slow": only the former is retried
+         * inline, so a slow answer is never sent to the provider twice.
+         */
+        async awaitJobResult(jobId, userMessage, turn) {
+            const delays = [700, 1000, 1500, 2000, 2500];
+            let attempt = 0;
+            const signal = turn.controller.signal;
+
+            while (attempt < 180) {
+                await new Promise((resolve) => setTimeout(resolve, delays[Math.min(attempt, delays.length - 1)]));
+                attempt++;
+
+                if (signal.aborted) {
+                    return this.haltedResult(turn);
+                }
+
+                let pollResponse;
+                try {
+                    pollResponse = await fetch(`/api/ai-jobs/${jobId}`, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin',
+                        signal
+                    });
+                } catch (error) {
+                    // A dropped poll is retried; an abort is not — otherwise the loop
+                    // would spin at full speed on a signal that never clears.
+                    if (signal.aborted) {
+                        return this.haltedResult(turn);
+                    }
+
+                    continue;
+                }
+
+                const state = await pollResponse.json().catch(() => ({}));
+
+                if (pollResponse.status === 404) {
+                    return { success: false, error: 'Dạ, yêu cầu này không còn hiệu lực. Anh/chị gửi lại giúp em nhé.' };
+                }
+
+                if (state.status === 'done' || state.status === 'failed') {
+                    return state;
+                }
+
+                // Stopped from another tab, or our own DELETE landed first.
+                if (state.status === 'cancelled') {
+                    return { success: false, cancelled: true };
+                }
+
+                if (state.stranded) {
+                    return await this.sendMessageSynchronously(userMessage, jobId, signal);
+                }
+            }
+
+            return { success: false, error: 'Dạ, em xử lý lâu hơn dự kiến. Anh/chị thử gửi lại giúp em nhé.' };
+        },
+
+        /**
+         * Why the wait ended. A watchdog timeout is a failure the customer must see;
+         * their own stop already has its note in the thread.
+         */
+        haltedResult(turn) {
+            if (turn.timedOut) {
+                throw new Error('Chatbot request timed out');
+            }
+
+            return { success: false, cancelled: true };
+        },
+
+        async sendMessageSynchronously(userMessage, abandonJobId, signal) {
+            const response = await fetch('/api/chatbot/message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
+                signal,
+                body: JSON.stringify({
+                    message: userMessage,
+                    context: this.getContext(),
+                    sync: true,
+                    abandon_job_id: abandonJobId
+                })
+            });
+
+            return await response.json().catch(() => ({
+                success: false,
+                error: 'Dạ, em đang không kết nối được với cửa hàng. Anh/chị thử lại sau nhé.'
+            }));
+        },
+
         async retryLastMessage() {
             if (this.isLoading || !this.lastUserMessage) {
                 return;
@@ -448,7 +717,7 @@ function chatbotWidget() {
             await this.sendMessage();
         },
 
-        async sendImageWithText(text) {
+        async sendImageWithText(text, turn) {
             const formData = new FormData();
             formData.append('image', this.attachedImage);
             formData.append('type', 'prescription');
@@ -486,6 +755,7 @@ function chatbotWidget() {
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     credentials: 'same-origin',
+                    signal: turn.controller.signal,
                     body: formData
                 });
 
@@ -501,13 +771,12 @@ function chatbotWidget() {
                             loginUrl: errorData.login_url,
                             registerUrl: '/register'
                         });
-                        
-                        this.isLoading = false;
+
                         this.scrollToBottom();
                         return;
                     }
                 }
-                
+
                 // Handle rate limit error
                 if (response.status === 429) {
                     const retryAfter = response.headers.get('Retry-After') || '60';
@@ -515,11 +784,10 @@ function chatbotWidget() {
                         role: 'assistant',
                         content: `⏱️ Dạ, hiện tại em đang tiếp nhận hơi nhiều thông tin một lúc. Anh/chị vui lòng đợi khoảng ${retryAfter} giây rồi gửi lại giúp em nhé.\n\n💡 Trong lúc chờ, anh/chị có thể nhập tên thuốc trực tiếp để em hỗ trợ ngay ạ.`
                     });
-                    this.isLoading = false;
                     this.scrollToBottom();
                     return;
                 }
-                
+
                 // Handle bad request
                 if (response.status === 400) {
                     const errorData = await response.json().catch(() => ({}));
@@ -527,7 +795,6 @@ function chatbotWidget() {
                         role: 'assistant',
                         content: (errorData.error || errorData.message || 'Dạ, em gặp chút lỗi khi đọc ảnh. Anh/chị vui lòng thử lại sau nhé.')
                     });
-                    this.isLoading = false;
                     this.scrollToBottom();
                     return;
                 }
@@ -622,6 +889,18 @@ function chatbotWidget() {
                     }
                 }
             } catch (error) {
+                if (turn.stopped) {
+                    return;
+                }
+
+                if (turn.timedOut) {
+                    this.pushMessage({
+                        role: 'assistant',
+                        content: 'Dạ, em chờ phản hồi quá lâu nên đã dừng việc đọc ảnh này. Anh/chị thử lại giúp em nhé.'
+                    });
+                    return;
+                }
+
                 console.error('Error:', error);
                 this.pushMessage({
                     role: 'assistant',
@@ -630,7 +909,7 @@ function chatbotWidget() {
             } finally {
                 this.scheduleObjectUrlCleanup(stableImageUrl);
 
-                this.isLoading = false;
+                this.finishRequest(turn);
                 this.scrollToBottom();
             }
         },

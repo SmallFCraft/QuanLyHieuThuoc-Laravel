@@ -21,6 +21,13 @@ class ChatbotService
     protected AuditLogService $auditLogService;
 
     /**
+     * The widget turns a markdown link into a button only on an exact label match —
+     * see detailLinkPattern in components/chatbot-markdown-renderer.blade.php. Every
+     * product link must use this string verbatim or it renders as plain inline text.
+     */
+    protected const PRODUCT_LINK_LABEL = 'Mở sản phẩm';
+
+    /**
      * Medical knowledge is read from the database once per request.
      */
     protected ?array $urgentKeywordsCache = null;
@@ -1145,6 +1152,40 @@ PROMPT;
         ]);
     }
 
+    /**
+     * Rewrite product URLs the model printed as prose, leaving markdown links alone.
+     *
+     * Two alternatives, because a model asked for a link writes both `(url)` and a bare
+     * `url`, and neither may touch an existing `[label](url)`:
+     *   1. `(url)` whose opening paren is not the `](` of a markdown link
+     *   2. a bare url not preceded by `](`
+     *
+     * The previous version anchored on `(?!\))` alone, so a paren-wrapped URL — the
+     * common case — was skipped entirely and shipped to the widget raw.
+     *
+     * @param array<int, string> $urls
+     */
+    protected function replaceRawProductUrls(string $responseText, array $urls, string $replacement): string
+    {
+        foreach ($urls as $url) {
+            $url = trim($url);
+            if ($url === '' || !Str::startsWith($url, ['http://', 'https://', '/'])) {
+                continue;
+            }
+
+            $quoted = preg_quote($url, '/');
+            $pattern = '/(?<!\])\(' . $quoted . '\)|(?<!\]\()' . $quoted . '/u';
+
+            $responseText = preg_replace($pattern, $replacement, $responseText) ?? $responseText;
+        }
+
+        // Tidy the punctuation a stripped URL leaves behind: " , còn 300 ." and doubled spaces.
+        $responseText = preg_replace('/[ \t]+([,;.])/u', '$1', $responseText) ?? $responseText;
+        $responseText = preg_replace('/[ \t]{2,}/u', ' ', $responseText) ?? $responseText;
+
+        return trim($responseText);
+    }
+
     protected function formatFriendlyProductLinks(string $responseText, array $products): string
     {
         $responseText = trim($responseText);
@@ -1154,16 +1195,18 @@ PROMPT;
 
         foreach ($products as $product) {
             $url = trim((string) ($product['url'] ?? ''));
-            if ($url === '' || !Str::startsWith($url, ['http://', 'https://', '/'])) {
+            if ($url === '') {
                 continue;
             }
 
-            $name = trim((string) ($product['name'] ?? 'sản phẩm'));
-            $label = 'Xem chi tiết ' . $name;
-
-            // Replace only raw URL occurrences, skip URLs already in markdown links.
-            $pattern = '/(?<!\\]\\()' . preg_quote($url, '/') . '(?!\\))/u';
-            $responseText = preg_replace($pattern, '[' . $label . '](' . $url . ')', $responseText) ?? $responseText;
+            // self::PRODUCT_LINK_LABEL, not the product name: the widget promotes a link
+            // to a button on an exact label match, so "Xem chi tiết Smecta" stayed a
+            // plain inline link.
+            $responseText = $this->replaceRawProductUrls(
+                $responseText,
+                [$url],
+                '[' . self::PRODUCT_LINK_LABEL . '](' . $url . ')'
+            );
         }
 
         return $responseText;
@@ -2088,7 +2131,8 @@ PROMPT;
                 'Yêu cầu:',
                 '- Trả lời trực tiếp câu hỏi của người dùng dựa trên dữ liệu ảnh ở trên.',
                 '- Được phép nêu ngắn gọn công dụng chung của thuốc/hoạt chất đọc được, nhưng phải nói rõ đây là thông tin tham khảo.',
-                '- Giá, tồn kho, link sản phẩm chỉ được lấy từ dữ liệu kho; nếu kho không có sản phẩm khớp thì nói rõ là hiện chưa có trong kho.',
+                '- Giá và tồn kho chỉ được lấy từ dữ liệu kho; nếu kho không có sản phẩm khớp thì nói rõ là hiện chưa có trong kho.',
+                '- KHÔNG chèn link hay URL nào. Hệ thống sẽ tự hiển thị thẻ sản phẩm kèm nút xem chi tiết ngay dưới câu trả lời.',
                 '- Nếu có sản phẩm gợi ý tương tự trong dữ liệu kho, nêu tên ngắn gọn; không bịa thêm sản phẩm, giá hay liều dùng.',
                 '- Trả lời tiếng Việt, tối đa 6 câu, xưng "em" và gọi người dùng là "anh/chị".',
             ]);
@@ -2102,10 +2146,25 @@ PROMPT;
                 trim((string) ($response['choices'][0]['message']['content'] ?? ''))
             );
             $responseText = $this->enforceMetaResponsePolicy($questionText, $responseText);
-            $responseText = $this->formatFriendlyProductLinks($responseText, $catalogData['san_pham_trong_kho']);
 
             if (trim($responseText) === '') {
                 return $empty;
+            }
+
+            // Same block the text path renders, appended rather than asked for: the model
+            // used to be handed product URLs and format them itself, which produced raw
+            // links no repair regex could reliably turn back into a button.
+            $productBlock = $this->renderRecognizedProductBlock($recognizedProducts);
+            if ($productBlock !== '') {
+                // The prompt forbids links, but a model that ignores that must not leak a
+                // bare URL past the block that already carries the button.
+                $responseText = $this->replaceRawProductUrls(
+                    $responseText,
+                    $this->recognizedProductUrls($recognizedProducts),
+                    ''
+                );
+
+                $responseText = trim($responseText) . "\n\n" . $productBlock;
             }
 
             return [
@@ -2174,13 +2233,12 @@ PROMPT;
             }
 
             if (($item['matched'] ?? false) === true && is_array($item['product'] ?? null)) {
+                // Deliberately no url: the model cannot mis-format a link it never
+                // receives, and renderProductDetailLines() appends the real one.
                 $inStock[] = [
                     'name' => $item['product']['name'] ?? '',
                     'price' => $item['product']['price'] ?? null,
                     'stock_quantity' => $item['product']['stock_quantity'] ?? null,
-                    'url' => isset($item['product']['id'])
-                        ? route('products.show', $item['product']['id'])
-                        : null,
                 ];
 
                 continue;
@@ -2205,6 +2263,75 @@ PROMPT;
             'san_pham_khong_co_trong_kho' => array_values(array_filter($notInStock)),
             'san_pham_goi_y_tuong_tu' => $suggestions,
         ];
+    }
+
+    /**
+     * Product URLs for the rows the image matched, so a model that ignored the
+     * "no links" rule can have them stripped before the shared block is appended.
+     *
+     * @param array<int, mixed> $recognizedProducts matchProducts() output
+     * @return array<int, string>
+     */
+    protected function recognizedProductUrls(array $recognizedProducts): array
+    {
+        $urls = [];
+
+        foreach ($recognizedProducts as $item) {
+            if (!is_array($item) || ($item['matched'] ?? false) !== true) {
+                continue;
+            }
+
+            $id = (int) data_get($item, 'product.id', 0);
+            if ($id > 0) {
+                $urls[] = route('products.show', $id);
+            }
+        }
+
+        return array_values(array_unique($urls));
+    }
+
+    /**
+     * The catalog block for products the image matched, rendered by the same method the
+     * text path uses so both replies carry an identical "Mở sản phẩm" button.
+     *
+     * Empty string when the image matched nothing in stock.
+     *
+     * @param array<int, mixed> $recognizedProducts matchProducts() output
+     */
+    protected function renderRecognizedProductBlock(array $recognizedProducts): string
+    {
+        $ids = [];
+
+        foreach ($recognizedProducts as $item) {
+            if (!is_array($item) || ($item['matched'] ?? false) !== true) {
+                continue;
+            }
+
+            $id = (int) data_get($item, 'product.id', 0);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+
+        $ids = array_values(array_unique($ids));
+        if ($ids === []) {
+            return '';
+        }
+
+        // Re-read the rows: category and usage drive two lines of the shared block and
+        // are not part of the recognition payload.
+        $products = Product::with('category')
+            ->whereIn('MaSP', $ids)
+            ->FEFO()
+            ->get();
+
+        if ($products->isEmpty()) {
+            return '';
+        }
+
+        $lines = $this->renderProductDetailLines($this->formatProductsPayload($products), []);
+
+        return trim(implode("\n", $lines));
     }
 
     protected function buildWebsiteIntroductionResponse(): array
@@ -2631,7 +2758,7 @@ PROMPT;
                 $lines[] = '- Phù hợp vì: ' . $explanations[$product['id']];
             }
 
-            $lines[] = '- Xem chi tiết: [Mở sản phẩm](' . $product['url'] . ')';
+            $lines[] = '- Xem chi tiết: [' . self::PRODUCT_LINK_LABEL . '](' . $product['url'] . ')';
             $lines[] = '';
         }
 
