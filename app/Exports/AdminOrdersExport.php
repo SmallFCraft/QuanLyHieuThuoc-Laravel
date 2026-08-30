@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Helpers\VietnameseHelper;
 use App\Models\Order;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -52,19 +53,8 @@ class AdminOrdersExport implements FromCollection, WithHeadings, WithMapping, Sh
             '#' . $order->MaDH,
             $order->user->name ?? 'Khách hàng không tồn tại',
             (int) round((float) $order->total_amount),
-            $this->statusLabel($order->status),
+            VietnameseHelper::getOrderStatusText($order->status),
             optional($order->created_at)->format('d/m/Y H:i'),
         ];
-    }
-
-    private function statusLabel(string $status): string
-    {
-        return match ($status) {
-            'Pending' => 'Chờ xử lý',
-            'Delivering' => 'Đang giao',
-            'Completed' => 'Hoàn thành',
-            'Cancelled' => 'Đã hủy',
-            default => $status,
-        };
     }
 }

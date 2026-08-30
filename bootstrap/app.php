@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Register middleware aliases
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'pharmacist' => \App\Http\Middleware\PharmacistMiddleware::class,
             'audit' => \App\Http\Middleware\AuditLogMiddleware::class,
         ]);
         

@@ -22,20 +22,8 @@ class AdminInventoryExport implements FromCollection, WithHeadings, WithMapping,
     {
         return Product::query()
             ->with('category')
-            ->when($this->status === 'low_stock', fn ($query) => $query->lowStock())
-            ->when($this->status === 'expiring', fn ($query) => $query->expiringSoon($this->days))
-            ->when($this->status === 'expired', fn ($query) => $query->where('expiration_date', '<', now()))
-            ->when($this->status === 'out_of_stock', fn ($query) => $query->where('stock_quantity', 0))
-            ->when($this->search, function ($query) {
-                $search = $this->search;
-
-                $query->where(function ($inner) use ($search) {
-                    $inner->where('name', 'like', "%{$search}%")
-                        ->orWhere('batch_number', 'like', "%{$search}%")
-                        ->orWhere('product_code', 'like', "%{$search}%")
-                        ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery->where('name', 'like', "%{$search}%"));
-                });
-            })
+            ->inventoryStatus($this->status, $this->days)
+            ->search($this->search)
             ->FEFO()
             ->get();
     }

@@ -1,66 +1,216 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Quản Lý Hiệu Thuốc (Pharmacy Management System)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A pharmacy management web application built with Laravel, featuring an online storefront, an AI-powered chatbot assistant, a medication health-triage wizard with pharmacist review, and full admin back-office tooling. The application is entirely in Vietnamese (`APP_LOCALE=vi`).
 
-## About Laravel
+**Repository:** https://github.com/SmallFCraft/QuanLyHieuThuoc-Laravel
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Key Features
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Storefront
+- Product catalog with categories, search, and live search suggestions (`ProductCatalogController`)
+- Shopping cart with session-based storage and AJAX add-to-cart
+- Checkout and order placement for authenticated customers
+- Product favorites (toggle, sync, per-user lists)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Drug Safety Engine (`DrugSafetyService`)
+- Ingredient extraction and drug–drug interaction checks (`DrugInteraction` model)
+- Contraindication checks against the customer's health profile (`DrugContraindication`)
+- Cart-wide safety screening before checkout, with logged overrides (`AuditLog`)
 
-## Learning Laravel
+### AI Chatbot (`ChatbotService` + `AiProviderService`)
+- Generic OpenAI-compatible AI provider with three API modes: `chat_completions`, `responses`, and `anthropic_messages`
+- Automatic failover to an optional secondary provider on auth, upstream, rate-limit, or timeout errors
+- Prescription / receipt image upload read by the AI provider's vision endpoint (`ImageRecognitionService`), answers grounded on what the model read plus catalog lookup
+- Chat-embedded cart operations and order placement (`routes/api.php`)
+- Queued processing: messages return a job id in ~200 ms and the browser polls, so long AI calls never block a web request (`ProcessChatbotMessage`, `AiJob`)
+- Rate limiting, session history limits, and automatic image cleanup
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Health Triage Wizard ("Sàng lọc") (`MedicalTriageService`)
+- Symptom and red-flag detection from free text, backed by database-driven medical knowledge (`MedicalSymptom`, `MedicalRedFlag`, `MedicalTriageRule`)
+- Multi-step wizard with AI-assisted fact extraction, clarification rounds, advice rewriting, and pharmacist drafts — each AI seam degrades to the deterministic rule-engine result when the provider is unavailable (kill switches: `AI_TRIAGE_*` env flags)
+- Emergency red flags route straight to emergency guidance
+- Opt-in handoff to a **pharmacist review queue** (`Pharmacist\TriageQueueController`) with claim / reply / AI draft / escalate actions
+- AI-generated result-page briefing, processed in a background worker (`ProcessTriageBriefing`)
+- Signed follow-up emails asking self-care patients whether symptoms improved (`TriageFollowUpMail`)
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### Medication Reminders (`MedicationReminderService`)
+- Per-user medication reminder schedules with due-date dispatch and email notifications (`MedicationReminderMail`)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Admin Back Office (`/admin`)
+- Dashboard with revenue, order-status, and top-product charts (Chart.js)
+- Products, categories, orders, inventory (batch/low-stock/expiry tracking), and user management
+- Excel exports for products, orders, inventory, users, and triage reports (`maatwebsite/excel`)
+- Chat session inspector and triage report dashboard with outcome/trend charts
+- Full audit logging via `AuditLogMiddleware`
 
-## Laravel Sponsors
+### Roles & Security
+- Three roles: `Administrator`, `Pharmacist`, `User` (`AdminMiddleware`, `PharmacistMiddleware`)
+- Global security headers middleware, throttled sensitive endpoints, encrypted chat sessions
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Tech Stack
 
-### Premium Partners
+| Layer | Technology |
+|---|---|
+| Backend | PHP ^8.2, Laravel ^13.0 |
+| Database | SQLite (default; MySQL supported via `DB_*` env vars) |
+| Queue & cache | Database-backed queue and cache (`QUEUE_CONNECTION=database`, `CACHE_STORE=database`) |
+| Frontend | Vite, Tailwind CSS, Alpine.js, Bootstrap 5, DataTables, Chart.js, SweetAlert2 |
+| AI | OpenAI-compatible `/v1` providers (chat completions, responses, Anthropic messages modes) |
+| Image reading | AI provider vision (no separate OCR engine) |
+| Images | Intervention Image |
+| Exports | Maatwebsite Excel |
+| Testing | PHPUnit ^12.0 |
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## Requirements
 
-## Contributing
+- PHP >= 8.2 with `pdo_sqlite`, `gd`/`imagick` (image processing), and `fileinfo`
+- Composer
+- Node.js (Vite asset build)
+- An OpenAI-compatible AI provider with vision support (chatbot, triage, image reading)
+- A queue worker (required for AI features — see below)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Installation
 
-## Code of Conduct
+```bash
+git clone https://github.com/SmallFCraft/QuanLyHieuThuoc-Laravel.git
+cd QuanLyHieuThuoc-Laravel
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite
+php artisan migrate --seed
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Seeding creates the medical knowledge base, sample categories/products/orders, and demo accounts (Administrator, Pharmacist, and regular Users — see `database/seeders/UserSeeder.php` for the development credentials).
 
-## Security Vulnerabilities
+### Environment Configuration
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Copy `.env.example` to `.env` and adjust. The notable variables:
 
-## License
+**Application**
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Variable | Default | Purpose |
+|---|---|---|
+| `APP_TIMEZONE` | `Asia/Ho_Chi_Minh` | Application timezone |
+| `APP_LOCALE` | `vi` | UI language (Vietnamese) |
+
+**Database** — SQLite is the default (`DB_CONNECTION=sqlite`). Uncomment the `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` block to use MySQL.
+
+**AI provider (chatbot & triage)**
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `AI_API_MODE` | `chat_completions` | `chat_completions` \| `responses` \| `anthropic_messages` |
+| `AI_BASE_URL` | — | Provider base URL (OpenAI-compatible `/v1`) |
+| `AI_API_KEY` | — | Provider API key |
+| `AI_MODEL` | — | Model name |
+| `AI_MAX_TOKENS` | `4096` | Answer-length ceiling (required by Anthropic messages mode) |
+| `AI_TIMEOUT` / `AI_CONNECT_TIMEOUT` | `20` / `5` | Request budgets |
+
+**Optional fallback provider** — `AI_FALLBACK_API_MODE`, `AI_FALLBACK_BASE_URL`, `AI_FALLBACK_API_KEY`, `AI_FALLBACK_MODEL`, `AI_FALLBACK_TIMEOUT`. Used when the primary provider fails.
+
+**Triage AI seams (kill switches)** — all default `true`; each degrades to the rule-engine result when the provider is down:
+
+| Variable | Purpose |
+|---|---|
+| `AI_TRIAGE_FACTS` | AI fact extraction |
+| `AI_TRIAGE_CLARIFY` | AI clarification questions |
+| `AI_TRIAGE_ADVICE` | AI advice rewrite (queued, `AI_TRIAGE_ADVICE_TIMEOUT=45`) |
+| `AI_TRIAGE_DRAFT` | AI pharmacist draft |
+| `AI_TRIAGE_BRIEFING` | AI result-page briefing (queued, `AI_TRIAGE_BRIEFING_TIMEOUT=90`) |
+| `AI_TRIAGE_TIMEOUT` | Fail-fast budget for in-request seams (default `30`) |
+
+**Other**
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `AI_IMAGE_ANSWER` | `true` | AI answers questions about uploaded images |
+| `AI_ANTHROPIC_VERSION` | `2023-06-01` | API version header, `anthropic_messages` mode only |
+| `AI_THINKING` | `disabled` | Extended-thinking toggle for providers that support it |
+
+## Running the Development Server
+
+The fastest way to run everything:
+
+```bash
+composer dev
+```
+
+That starts four processes concurrently: the dev server, a **queue worker**, the log tailer (Pail), and Vite.
+
+**The queue worker is not optional.** AI calls (chatbot replies, triage advice rewriting, triage briefings) run as queued jobs so they never hold a web request — a single AI call can take 15+ seconds, and `php artisan serve` handles one request at a time. With the worker running, `POST /api/chatbot/message` returns in ~200 ms with a job id the browser polls. Without a worker the browser retries synchronously after ~12 seconds, so the chatbot still answers — just slowly, and the site is blocked while it does.
+
+To run the two processes by hand:
+
+```bash
+php artisan serve
+```
+
+```bash
+php artisan queue:work --tries=1 --timeout=120
+```
+
+Note: `PHP_CLI_SERVER_WORKERS` has no effect on Windows (`pcntl_fork` is unavailable), so the dev server stays single-process there. For real request concurrency use Apache/nginx + PHP-FPM or Laravel Octane.
+
+## Scheduled Tasks
+
+The scheduler in [routes/console.php](routes/console.php) requires a cron entry (or a background scheduler process):
+
+```bash
+php artisan schedule:work
+```
+
+| Schedule | Command | Purpose |
+|---|---|---|
+| Every 15 min | `reminders:dispatch` | Send due medication-reminder emails |
+| Daily 02:00 | `audit:cleanup {--days=365}` | Prune audit logs |
+| Daily 03:00 | `chat:cleanup` | Delete chat messages older than 30 days |
+| Daily 09:00 | `triage:follow-up` | Follow-up emails after self-care advice |
+| Hourly | `chatbot:cleanup-images` | Delete chatbot uploads older than 24 h |
+| Hourly | `ai-jobs:cleanup` | Close dead AI jobs, drop stored payloads |
+| Weekly (Sun 03:00) | `images:cleanup {--days=30}` | Remove images of soft-deleted products |
+
+Reminder and follow-up dispatches use `withoutOverlapping` so a slow batch cannot mail a patient twice.
+
+### Diagnostic Command
+
+```bash
+php artisan chatbot:ai-check {--vision}
+```
+
+Sends a live request to every configured provider (primary and fallback); `--vision` also sends an image request. Use it to verify provider configuration.
+
+## Running the Tests
+
+The PHPUnit configuration ([phpunit.xml](phpunit.xml)) uses an in-memory SQLite database, the `array` queue/session/cache/mail drivers, and pins the AI provider env so tests never depend on your local `.env`.
+
+```bash
+php artisan test
+```
+
+or directly:
+
+```bash
+vendor/bin/phpunit
+```
+
+Suites: `tests/Unit` (services, helpers, inventory) and `tests/Feature` (triage flows, chatbot queueing, drug safety, checkout, pharmacist queue, admin reports, auth, security).
+
+## Project Structure Highlights
+
+```
+app/
+├── Console/Commands/        # Cleanup, reminder, and AI diagnostics commands
+├── Exports/                 # Maatwebsite Excel exports (admin)
+├── Http/Controllers/        # Storefront, Admin/, Auth/, Pharmacist/
+├── Http/Middleware/         # AdminMiddleware, PharmacistMiddleware, AuditLogMiddleware, SecurityHeaders
+├── Jobs/                    # Queued chatbot message, triage evaluation/advice/briefing
+├── Models/                  # 20 Eloquent models (products, orders, triage, medical knowledge…)
+└── Services/                # Business logic: ChatbotService, MedicalTriageService, DrugSafetyService, …
+resources/views/             # Blade templates (storefront, admin, chatbot widget)
+routes/                      # web.php, api.php, console.php
+database/                    # 17 migrations, seeders incl. MedicalKnowledgeSeeder
+lang/vi/                     # Vietnamese translations
+Diagram/                     # BFD / DFD / ERD diagrams (draw.io, PNG)
+```

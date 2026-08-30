@@ -196,6 +196,12 @@ class AiProviderService
 
     protected function dispatchChat(array $provider, array $messages, array $options): array
     {
+        // A caller inside a synchronous request (triage) needs to fail fast rather
+        // than inherit the chatbot's generous AI_TIMEOUT.
+        if (isset($options['timeout'])) {
+            $provider['timeout'] = max(1, (int) $options['timeout']);
+        }
+
         return match ($provider['mode']) {
             'anthropic_messages' => $this->sendAnthropicMessagesRequest($provider, $messages, $options),
             'responses' => $this->sendResponsesRequest($provider, $messages, $options),
@@ -205,12 +211,12 @@ class AiProviderService
 
     protected function dispatchVision(array $provider, string $prompt, string $base64Image, string $mimeType): string
     {
-        $dataUrl = "data:{$mimeType};base64,{$base64Image}";
-
+        // The data URL is built per branch: an upload may be several MB of base64, and
+        // the anthropic mode sends the raw payload instead.
         return match ($provider['mode']) {
             'anthropic_messages' => $this->sendAnthropicVisionRequest($provider, $prompt, $base64Image, $mimeType),
-            'responses' => $this->sendResponsesVisionRequest($provider, $prompt, $dataUrl),
-            default => $this->sendChatCompletionsVisionRequest($provider, $prompt, $dataUrl),
+            'responses' => $this->sendResponsesVisionRequest($provider, $prompt, "data:{$mimeType};base64,{$base64Image}"),
+            default => $this->sendChatCompletionsVisionRequest($provider, $prompt, "data:{$mimeType};base64,{$base64Image}"),
         };
     }
 
@@ -239,7 +245,9 @@ class AiProviderService
                     'mode' => $provider['mode'],
                     'model' => $provider['model'],
                     'failing_over' => $hasNextProvider,
-                    'error' => Str::limit($exception->getMessage(), 300),
+                    // post() already logged the status and the response body for HTTP
+                    // failures, so this line stays short on purpose.
+                    'error' => Str::limit($exception->getMessage(), 120),
                 ]);
             }
         }
@@ -257,6 +265,20 @@ class AiProviderService
         $model = (string) config('chatbot.ai.fallback.model', '');
 
         if ($baseUrl === '' || $apiKey === '' || $model === '') {
+            return null;
+        }
+
+        // Same host and same model is not redundancy: whatever killed the primary
+        // (timeout, rate limit, dead upstream) kills this too, and the customer pays
+        // for it twice — AI_TIMEOUT again before the error finally surfaces. A
+        // different `mode` alone does not make it a second provider.
+        $primary = $this->providers[0];
+        if ($baseUrl === $primary['base_url'] && $model === $primary['model']) {
+            Log::warning('AI fallback provider ignored: same base_url and model as the primary', [
+                'base_url' => $baseUrl,
+                'model' => $model,
+            ]);
+
             return null;
         }
 
@@ -290,7 +312,7 @@ class AiProviderService
 
         if (!empty($options['functions'])) {
             $payload['tools'] = $this->convertFunctionsToChatCompletionTools($options['functions']);
-            $payload['tool_choice'] = ($options['function_call'] ?? null) === 'auto' ? 'auto' : 'auto';
+            $payload['tool_choice'] = 'auto';
         }
 
         $response = $this->post($provider, '/chat/completions', $payload);
@@ -831,7 +853,11 @@ class AiProviderService
             'image_url is not supported',
             'image blocks are not supported',
             'unsupported media type',
-            'media_type',
+            // Deliberately phrase-scoped: a bare "media_type" also appears in
+            // "image does not match the provided media_type", which is a bad upload,
+            // not a model without vision.
+            'unsupported media_type',
+            'media_type is not supported',
         ]);
     }
 }

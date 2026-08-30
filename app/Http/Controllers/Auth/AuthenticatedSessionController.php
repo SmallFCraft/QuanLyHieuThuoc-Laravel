@@ -28,7 +28,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
         
-        \App\Services\AuditLogService::logAuthAttempt($request->email, true);
+        app(\App\Services\AuditLogService::class)->logAuthAttempt($request->email, true);
 
         return redirect()->intended(route('home', absolute: false));
     }
@@ -38,7 +38,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        \App\Services\AuditLogService::logLogout();
+        app(\App\Services\AuditLogService::class)->logLogout();
 
         Auth::guard('web')->logout();
 

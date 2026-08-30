@@ -26,23 +26,21 @@ class InventoryController extends Controller
     {
         $status = $request->query('status');
         $days = min(max($request->integer('days', 30), 1), 365);
-        $query = Product::with('category');
+        $search = $request->filled('q') ? $request->string('q')->trim()->toString() : null;
 
-        match ($status) {
-            'low_stock' => $query->lowStock(),
-            'expiring' => $query->expiringSoon($days),
-            'expired' => $query->where('expiration_date', '<', now()),
-            'out_of_stock' => $query->where('stock_quantity', 0),
-            default => null,
-        };
-
-        $products = $query->FEFO()
+        // Searching and filtering both run in SQL over the whole table, so the export
+        // (which does the same) returns exactly the rows the screen shows. A
+        // client-side DataTables search would only ever see the current page.
+        $products = Product::with('category')
+            ->inventoryStatus($status, $days)
+            ->search($search)
+            ->FEFO()
             ->paginate(20)
             ->withQueryString();
-        
+
         $summary = $this->inventoryService->getInventorySummary();
-        
-        return view('admin.inventory.index', compact('products', 'summary', 'status', 'days'));
+
+        return view('admin.inventory.index', compact('products', 'summary', 'status', 'days', 'search'));
     }
 
     /**

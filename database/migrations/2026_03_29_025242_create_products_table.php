@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id('MaSP');
+            $table->string('product_code', 16)->nullable();
             $table->foreignId('MaDM')->constrained('categories', 'MaDM')->onDelete('restrict');
             $table->string('name');
             $table->text('ingredients')->nullable();
@@ -35,6 +36,7 @@ return new class extends Migration
             $table->index(['MaDM', 'expiration_date'], 'products_madm_expiration_idx');
             $table->index(['stock_quantity', 'reorder_point'], 'products_stock_reorder_idx');
             $table->unique(['name', 'batch_number'], 'unique_batch_per_product');
+            $table->unique('product_code', 'products_product_code_unique');
         });
     }
 

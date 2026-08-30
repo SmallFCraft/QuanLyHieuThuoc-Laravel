@@ -54,7 +54,11 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', env('LOG_STACK', 'single')),
+            // `daily` rather than `single`: this app logs an INFO line per AI provider
+            // call, so an unrotated file only grows — and on Windows it cannot be
+            // truncated while a queue worker holds it open. `?:` because Laravel casts
+            // a literal `LOG_STACK=null` to PHP null, which explode() rejects.
+            'channels' => explode(',', env('LOG_STACK') ?: 'daily'),
             'ignore_exceptions' => false,
         ],
 

@@ -162,15 +162,7 @@ class ProductController extends Controller
 
         // Search
         if ($request->has('search') && $request->search['value']) {
-            $search = $request->search['value'];
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('batch_number', 'like', "%{$search}%")
-                  ->orWhere('product_code', 'like', "%{$search}%")
-                  ->orWhereHas('category', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
-                  });
-            });
+            $query->search($request->search['value']);
         }
         
         // Filtered records count

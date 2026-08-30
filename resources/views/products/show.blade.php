@@ -161,7 +161,7 @@
 
                                 <div class="product-quantity-row">
                                     <div>
-                                        <label for="qty-input">{{ __('messages.cart_quantity') }}</label>
+                                        <label for="qty-input">{{ __('messages.cart.quantity') }}</label>
                                         <span>{!! __('messages.products_left', ['count' => '<strong>' . $product->stock_quantity . '</strong>']) !!}</span>
                                     </div>
                                     <div class="product-qty-control">

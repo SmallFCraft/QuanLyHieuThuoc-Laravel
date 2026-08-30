@@ -83,7 +83,7 @@
                     @endif
                 </p>
             </div>
-            @if($activeStatus)
+            @if($activeStatus || ($search ?? '') !== '')
                 <a href="{{ route('admin.inventory.index') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Xóa lọc
                 </a>
@@ -96,9 +96,23 @@
                 <a href="{{ route('admin.inventory.index', ['status' => 'expiring', 'days' => 30]) }}" class="btn btn-outline-warning {{ $activeStatus === 'expiring' ? 'active' : '' }}">Sắp hết hạn</a>
                 <a href="{{ route('admin.inventory.index', ['status' => 'out_of_stock']) }}" class="btn btn-outline-secondary {{ $activeStatus === 'out_of_stock' ? 'active' : '' }}">Hết hàng</a>
             </div>
-            <a href="{{ route('admin.products.create') }}" class="btn btn-success">
-                <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Thêm sản phẩm
-            </a>
+            <div class="d-flex flex-wrap gap-2">
+                <form method="GET" action="{{ route('admin.inventory.index') }}" class="d-flex gap-2" role="search">
+                    @if($activeStatus)
+                        <input type="hidden" name="status" value="{{ $activeStatus }}">
+                    @endif
+                    <input type="hidden" name="days" value="{{ $days ?? 30 }}">
+                    <label class="visually-hidden" for="inventorySearch">Tìm sản phẩm</label>
+                    <input type="search" class="form-control" id="inventorySearch" name="q"
+                        value="{{ $search ?? '' }}" placeholder="Tên, số lô, mã, danh mục">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Tìm</span>
+                    </button>
+                </form>
+                <a href="{{ route('admin.products.create') }}" class="btn btn-success">
+                    <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Thêm sản phẩm
+                </a>
+            </div>
         </div>
 
         <div class="admin-table-wrap admin-desktop-table">
@@ -180,7 +194,9 @@
             @endforelse
         </div>
 
-        <div class="admin-mobile-pagination mt-3">
+        {{-- Paging is server-side now, and DataTables' own pager is off, so these
+             links have to render on desktop too — not just in the mobile list. --}}
+        <div class="mt-3">
             {{ $products->links() }}
         </div>
     </section>
@@ -228,19 +244,24 @@
 @push('scripts')
 <script type="module">
 document.addEventListener('DOMContentLoaded', function() {
+    // Searching and paging are server-side (see InventoryController::index), so
+    // DataTables only sorts the current page here. Leaving its own search box on
+    // would filter 20 rows while the Excel button exports the whole filtered set.
     $('#inventoryTable').DataTable({
         language: window.AdminUI.dtLanguage,
         order: [[6, 'asc']],
-        pageLength: 20,
+        searching: false,
+        paging: false,
+        info: false,
         responsive: true,
-        dom: '<"row align-items-center mb-3 g-2"<"col-md-4"l><"col-md-4"B><"col-md-4"f>>rt<"row align-items-center mt-3 g-2"<"col-md-6"i><"col-md-6"p>>',
+        dom: '<"row align-items-center mb-3 g-2"<"col-12"B>>rt',
         buttons: [
             window.AdminUI.excelButton({
                 url: '{{ route('admin.inventory.export') }}',
-                params: (dt) => ({
+                params: () => ({
                     status: @json($activeStatus),
                     days: @json($days ?? 30),
-                    q: dt.search(),
+                    q: @json($search ?? ''),
                 }),
             })
         ]

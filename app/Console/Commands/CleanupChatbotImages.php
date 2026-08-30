@@ -14,21 +14,28 @@ class CleanupChatbotImages extends Command
      *
      * @var string
      */
-    protected $signature = 'chatbot:cleanup-images {--hours=24 : Age in hours for images to be deleted}';
+    protected $signature = 'chatbot:cleanup-images {--hours= : Age in hours for images to be deleted (default: chatbot.images.cleanup_after)}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Delete chatbot images older than specified hours (default: 24)';
+    protected $description = 'Delete chatbot images older than specified hours (default: chatbot.images.cleanup_after)';
 
     /**
      * Execute the console command.
      */
     public function handle(): int
     {
-        $hours = (int) $this->option('hours');
+        $hours = (int) ($this->option('hours') ?? config('chatbot.images.cleanup_after', 24));
+
+        if ($hours < 1) {
+            $this->error('--hours must be at least 1.');
+
+            return Command::FAILURE;
+        }
+
         $cutoffTime = now()->subHours($hours);
         $disk = Storage::disk('local');
         

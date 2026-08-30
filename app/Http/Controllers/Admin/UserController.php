@@ -40,7 +40,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => ['required', 'in:Administrator,User'],
+            'role' => ['required', 'in:Administrator,Pharmacist,User'],
         ], [
             'name.required' => 'Tên là bắt buộc',
             'email.required' => 'Email là bắt buộc',
@@ -73,7 +73,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $MaKH . ',MaKH'],
-            'role' => ['required', 'in:Administrator,User'],
+            'role' => ['required', 'in:Administrator,Pharmacist,User'],
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
         ], [
             'name.required' => 'Tên là bắt buộc',

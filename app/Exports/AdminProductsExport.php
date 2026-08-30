@@ -22,16 +22,7 @@ class AdminProductsExport implements FromCollection, WithHeadings, WithMapping, 
         return Product::query()
             ->with('category')
             ->when($this->categoryId, fn ($query) => $query->where('MaDM', $this->categoryId))
-            ->when($this->search, function ($query) {
-                $search = $this->search;
-
-                $query->where(function ($inner) use ($search) {
-                    $inner->where('name', 'like', "%{$search}%")
-                        ->orWhere('batch_number', 'like', "%{$search}%")
-                        ->orWhere('product_code', 'like', "%{$search}%")
-                        ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery->where('name', 'like', "%{$search}%"));
-                });
-            })
+            ->search($this->search)
             ->orderByDesc('MaSP')
             ->get();
     }
