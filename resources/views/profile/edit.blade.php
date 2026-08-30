@@ -79,6 +79,9 @@
                         <a href="#security" class="nav-link profile-nav-link rounded-3 px-3 py-2" data-bs-toggle="pill">
                             <i class="bi bi-shield-lock me-2"></i>{{ __('messages.profile.nav_security') }}
                         </a>
+                        <a href="#health-profile" class="nav-link profile-nav-link rounded-3 px-3 py-2" data-bs-toggle="pill">
+                            <i class="bi bi-heart-pulse me-2"></i>{{ __('messages.health_profile.nav') }}
+                        </a>
                         <a href="#settings" class="nav-link profile-nav-link rounded-3 px-3 py-2" data-bs-toggle="pill">
                             <i class="bi bi-gear me-2"></i>{{ __('messages.profile.nav_settings') }}
                         </a>
@@ -113,6 +116,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link rounded-3 py-2" data-bs-toggle="pill" href="#health-profile">
+                                <i class="bi bi-heart-pulse d-block fs-5"></i>
+                                <small class="d-none d-sm-inline">{{ __('messages.health_profile.mobile_nav') }}</small>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link rounded-3 py-2" data-bs-toggle="pill" href="#settings">
                                 <i class="bi bi-gear d-block fs-5"></i>
                                 <small class="d-none d-sm-inline">{{ __('messages.profile.mobile_settings') }}</small>
@@ -143,6 +152,11 @@
                     <!-- Security Tab -->
                     <div class="tab-pane fade" id="security">
                         @include('profile.partials.security-settings')
+                    </div>
+
+                    <!-- Health Profile Tab -->
+                    <div class="tab-pane fade" id="health-profile">
+                        @include('profile.partials.health-profile')
                     </div>
 
                     <!-- Settings Tab -->

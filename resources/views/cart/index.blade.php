@@ -43,6 +43,31 @@
 
 <section class="py-5">
     <div class="container">
+        @if(session('drug_warnings'))
+            <div class="glass-card rounded-4 border-0 p-3 p-md-4 mb-4">
+                <x-drug-warnings :warnings="session('drug_warnings')">
+                    @if(session('drug_warning_product'))
+                        {{-- Same request as before plus confirm_warning=1, so the override is
+                             an explicit act by the customer, not a retry side effect. --}}
+                        <form action="{{ route('cart.add') }}" method="POST" class="d-flex flex-wrap gap-2 mt-3">
+                            @csrf
+                            <input type="hidden" name="MaSP" value="{{ session('drug_warning_product') }}">
+                            <input type="hidden" name="quantity" value="{{ session('drug_warning_quantity', 1) }}">
+                            <input type="hidden" name="confirm_warning" value="1">
+                            <button type="submit" class="btn text-white fw-semibold rounded-pill px-4"
+                                    style="min-height:44px; background:#B91C1C;">
+                                <i class="bi bi-check2-circle me-2" aria-hidden="true"></i>{{ __('messages.drug_safety.confirm_button') }}
+                            </button>
+                            <a href="{{ route('products.index') }}" class="btn btn-outline-secondary fw-semibold rounded-pill px-4 d-inline-flex align-items-center"
+                               style="min-height:44px;">
+                                {{ __('messages.drug_safety.cancel_button') }}
+                            </a>
+                        </form>
+                    @endif
+                </x-drug-warnings>
+            </div>
+        @endif
+
         @if(empty($cartItems))
             <!-- Empty Cart -->
             <div class="glass-card rounded-4 border-0 text-center py-5 px-4">

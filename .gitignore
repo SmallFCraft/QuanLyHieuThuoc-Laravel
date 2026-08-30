@@ -16,7 +16,6 @@ Homestead.json
 Homestead.yaml
 npm-debug.log
 yarn-error.log
-composer.lock
 /auth.json
 /.fleet
 /.idea
@@ -27,11 +26,12 @@ composer.lock
 /.cursor
 /.agent
 *.zip
-.playwright-mcp/
 /MonHoc/
+Diagram/
 AGENTS.md
 CLAUDE.md
 .claude/
 .agents/
 .codex/
 .playwright*/
+.gitnexus/

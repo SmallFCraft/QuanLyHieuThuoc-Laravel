@@ -204,6 +204,22 @@
                 destroyUrlTemplate: @json(route('favorites.destroy', ['product' => '__PRODUCT_ID__'])),
                 loginUrl: @json(route('login')),
             };
+
+            // Single source of truth for warning copy: the SweetAlert confirmation and
+            // the drug-warnings component must not drift apart on a label edit.
+            // (Do not write the component tag here — Blade compiles tags inside comments.)
+            window.PharmacyDrugSafety = {
+                severityLabels: {
+                    major: @json(__('messages.drug_safety.severity_major')),
+                    moderate: @json(__('messages.drug_safety.severity_moderate')),
+                    minor: @json(__('messages.drug_safety.severity_minor')),
+                },
+                actionLabel: @json(__('messages.drug_safety.action_label')),
+                blockTitle: @json(__('messages.drug_safety.block_title')),
+                confirmButton: @json(__('messages.drug_safety.confirm_button')),
+                cancelButton: @json(__('messages.drug_safety.cancel_button')),
+                softMessage: @json(__('messages.drug_safety.soft_message')),
+            };
         </script>
 
         <!-- Scripts & Styles -->
@@ -668,6 +684,13 @@
                             </ul>
                         </li>
 
+                        <!-- Health Triage Link -->
+                        <li class="nav-item">
+                            <a class="nav-link text-gray-700 {{ request()->routeIs('health.*') ? 'active' : '' }}" href="{{ route('health.check') }}">
+                                <i class="bi bi-clipboard2-pulse me-1" aria-hidden="true"></i>{{ __('messages.health.nav') }}
+                            </a>
+                        </li>
+
                         <!-- Support Link -->
                         <li class="nav-item">
                             <a class="nav-link text-gray-700 {{ request()->routeIs('contact') ? 'active' : '' }}" href="{{ route('contact') }}">
@@ -774,6 +797,17 @@
 
         <!-- Page Content -->
         <main class="w-100" style="padding-top: 86px; min-height: calc(100vh - 250px);">
+            {{-- Flashed drug warnings render wherever the user was sent back to. Scoping
+                 this to the cart page meant a warning raised from a product listing was
+                 flashed, consumed and never shown. --}}
+            @if(session('drug_warnings') && !request()->routeIs('cart.index', 'checkout.index'))
+                <div class="container pt-3">
+                    <div class="glass-card rounded-4 border-0 p-3 p-md-4">
+                        <x-drug-warnings :warnings="session('drug_warnings')" compact />
+                    </div>
+                </div>
+            @endif
+
             @yield('content')
             {{ $slot ?? '' }}
         </main>
@@ -949,8 +983,7 @@
             </div>
         </footer>
         
-        <!-- SweetAlert2 -->
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <!-- SweetAlert2 comes from the Vite bundle (resources/js/app.js sets window.Swal) -->
         <style>
             /* Position toast below navbar */
             .swal2-container.swal2-top-end {

@@ -14,11 +14,13 @@ return new class extends Migration
         Schema::create('categories', function (Blueprint $table) {
             $table->id('MaDM');
             $table->string('name')->unique();
+            $table->string('code', 10)->nullable();
             $table->string('icon', 50)->nullable();
             $table->text('description')->nullable();
             $table->timestamps();
-            
+
             $table->index('name');
+            $table->unique('code', 'categories_code_unique');
         });
     }
 

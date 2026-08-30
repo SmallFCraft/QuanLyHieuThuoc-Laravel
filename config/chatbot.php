@@ -29,7 +29,35 @@ return [
         // vision step read plus the catalog lookup).
         'image_answer' => env('AI_IMAGE_ANSWER', true),
 
-        // Required by the Anthropic messages API, ignored by the other modes.
+        // Health triage ("Sàng lọc"). On by default: AI is the primary layer of the
+        // feature. The rule engine still decides every outcome, and each seam
+        // degrades to the deterministic result when the provider is unavailable, so
+        // "on" is safe. Env vars exist only as a kill switch.
+        // `timeout` is deliberately far below AI_TIMEOUT — a triage call sits in a
+        // synchronous form POST, so it must fail fast rather than stall the wizard.
+        'triage' => [
+            'fact_extraction' => env('AI_TRIAGE_FACTS', true),
+            'clarify_round' => env('AI_TRIAGE_CLARIFY', true),
+            'advice_rewrite' => env('AI_TRIAGE_ADVICE', true),
+            'pharmacist_draft' => env('AI_TRIAGE_DRAFT', true),
+            // Detailed result-page briefing. Runs in a worker after the outcome is
+            // final, so it gets a real budget instead of the wizard's fail-fast one:
+            // it asks for six sections plus a product pick in one call.
+            'briefing' => env('AI_TRIAGE_BRIEFING', true),
+            'briefing_timeout' => env('AI_TRIAGE_BRIEFING_TIMEOUT', 90),
+            // Fact extraction and the pharmacist draft may run inside the wizard's form
+            // POST, so they keep the fail-fast budget.
+            'timeout' => env('AI_TRIAGE_TIMEOUT', 30),
+            // The advice rewrite only ever runs from ProcessTriageAdviceRewrite, so it
+            // does not need to fail fast. Measured 2026-08-28: the same provider answered
+            // in 2s, 7s, 33s and 62s on comparable prompts, and a budget sized for the
+            // fast case discards the answer in the slow one.
+            'advice_timeout' => env('AI_TRIAGE_ADVICE_TIMEOUT', 45),
+        ],
+
+        // A ceiling on ANSWER length, not the context window — the two are unrelated,
+        // and a "generous" value here is simply rejected as out of range. Required by
+        // the Anthropic messages API, ignored by the other modes.
         'max_tokens' => env('AI_MAX_TOKENS', 2048),
         'anthropic_version' => env('AI_ANTHROPIC_VERSION', '2023-06-01'),
         'thinking' => env('AI_THINKING', 'disabled'),
@@ -45,39 +73,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | OCR Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Configuration for Tesseract OCR service used for prescription and
-    | receipt image recognition.
-    |
-    */
-
-    'ocr' => [
-        'tesseract_path' => env('TESSERACT_PATH', '/usr/bin/tesseract'),
-        'languages' => ['vie', 'eng'],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Session Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Configuration for chat session management and history storage.
-    |
-    */
-
-    'session' => [
-        'max_messages' => 50,
-        'encryption' => true,
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Image Upload Configuration
     |--------------------------------------------------------------------------
     |
-    | Configuration for prescription and receipt image uploads.
+    | Prescription and receipt uploads. Read by ChatbotController (validation),
+    | ImageRecognitionService (storage) and chatbot:cleanup-images (retention).
+    |
+    | Not configured here: rate limits, which are route middleware — see the
+    | `throttle:` calls in routes/api.php. Chat history is capped by the
+    | chat:cleanup command, not by a session setting.
     |
     */
 
@@ -86,20 +90,6 @@ return [
         'allowed_types' => ['jpeg', 'jpg', 'png'],
         'storage_path' => 'chatbot-uploads',
         'cleanup_after' => 24, // hours
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Rate Limiting Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Rate limits for chatbot operations to prevent abuse.
-    |
-    */
-
-    'rate_limits' => [
-        'messages_per_minute' => 20,
-        'images_per_hour' => 10,
     ],
 
 ];

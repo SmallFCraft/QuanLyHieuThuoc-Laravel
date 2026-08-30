@@ -36,7 +36,7 @@
                         <td><span class="fw-semibold">#{{ $user->MaKH }}</span></td>
                         <td>{{ $user->name }}</td>
                         <td>{{ $user->email }}</td>
-                        <td><span class="badge {{ $user->role === 'Administrator' ? 'text-bg-danger' : 'text-bg-primary' }}">{{ $user->role }}</span></td>
+                        <td><span class="badge {{ $user->role === 'Administrator' ? 'text-bg-danger' : ($user->role === 'Pharmacist' ? 'text-bg-info' : 'text-bg-primary') }}">{{ \App\Helpers\VietnameseHelper::getRoleText($user->role) }}</span></td>
                         <td><span class="badge {{ $user->status === 'active' ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $user->status === 'active' ? 'Hoạt động' : 'Vô hiệu hóa' }}</span></td>
                         <td>{{ $user->created_at->format('d/m/Y H:i') }}</td>
                         <td>
@@ -63,7 +63,7 @@
                             <strong>{{ $user->name }}</strong>
                             <div class="small text-secondary">{{ $user->email }}</div>
                             <div class="d-flex flex-wrap gap-2 mt-2">
-                                <span class="badge {{ $user->role === 'Administrator' ? 'text-bg-danger' : 'text-bg-primary' }}">{{ $user->role }}</span>
+                                <span class="badge {{ $user->role === 'Administrator' ? 'text-bg-danger' : ($user->role === 'Pharmacist' ? 'text-bg-info' : 'text-bg-primary') }}">{{ \App\Helpers\VietnameseHelper::getRoleText($user->role) }}</span>
                                 <span class="badge {{ $user->status === 'active' ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $user->status === 'active' ? 'Hoạt động' : 'Vô hiệu hóa' }}</span>
                             </div>
                         </div>
@@ -120,6 +120,7 @@
                         <label class="form-label" for="create_role">Vai trò <span class="text-danger">*</span></label>
                         <select name="role" id="create_role" class="form-select" required>
                             <option value="User">User</option>
+                            <option value="Pharmacist">Pharmacist</option>
                             <option value="Administrator">Administrator</option>
                         </select>
                     </div>
@@ -165,6 +166,7 @@
                         <label class="form-label" for="edit_role">Vai trò <span class="text-danger">*</span></label>
                         <select name="role" id="edit_role" class="form-select" required>
                             <option value="User">User</option>
+                            <option value="Pharmacist">Pharmacist</option>
                             <option value="Administrator">Administrator</option>
                         </select>
                     </div>

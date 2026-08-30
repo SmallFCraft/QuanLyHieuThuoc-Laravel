@@ -45,7 +45,7 @@ class AuditLogMiddleware
             }
         }
         
-        AuditLogService::log(
+        app(AuditLogService::class)->log(
             $action,
             $modelType,
             null,

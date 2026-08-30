@@ -106,6 +106,14 @@
 
 <section class="py-4 py-md-5">
     <div class="container">
+        @if(!empty($drugWarnings))
+            <div class="glass-card rounded-4 border-0 p-3 p-md-4 mb-3 mb-md-4">
+                <x-drug-warnings
+                    :warnings="$drugWarnings"
+                    :title="__('messages.drug_safety.checkout_title')"
+                    :intro="__('messages.drug_safety.checkout_intro')" />
+            </div>
+        @endif
         <div class="row g-3 g-md-4">
             <!-- Shipping Information Form -->
             <div class="col-lg-7">

@@ -74,6 +74,12 @@
                     </a>
                 </li>
                 <li>
+                    <a href="{{ route('admin.triageReports.index') }}" class="admin-nav__link {{ request()->routeIs('admin.triageReports.*') ? 'active' : '' }}" @if(request()->routeIs('admin.triageReports.*')) aria-current="page" @endif>
+                        <i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i>
+                        <span>Báo cáo sàng lọc</span>
+                    </a>
+                </li>
+                <li>
                     <a href="{{ route('home') }}" class="admin-nav__link">
                         <i class="bi bi-house-door" aria-hidden="true"></i>
                         <span>Về trang chủ</span>

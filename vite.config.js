@@ -14,15 +14,9 @@ export default defineConfig({
         }),
     ],
     build: {
+        // No manualChunks: forcing all of node_modules into one shared chunk made the
+        // storefront download admin-only libraries (jQuery, DataTables, Chart.js).
+        // Rollup's per-entry splitting keeps each bundle to what it actually imports.
         chunkSizeWarningLimit: 1000,
-        rollupOptions: {
-            output: {
-                manualChunks(id) {
-                    if (id.includes('node_modules')) {
-                        return 'vendor';
-                    }
-                }
-            }
-        }
-    }
+    },
 });

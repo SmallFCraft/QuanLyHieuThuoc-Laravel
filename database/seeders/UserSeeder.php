@@ -28,6 +28,22 @@ class UserSeeder extends Seeder
             ]
         );
 
+        // Dược sĩ phụ trách hàng đợi sàng lọc (đăng nhập: duocsi@load99 / Gunny123456@)
+        User::updateOrCreate(
+            ['email' => 'duocsi@load99'],
+            [
+                'name' => 'Dược sĩ Nguyễn Thị Hạnh',
+                'password' => 'Gunny123456@',
+                'birth_date' => '1990-04-22',
+                'gender' => 'female',
+                'address' => '123 Đường Y Dược, Phường 1, Quận 1, TP. Đà Nẵng',
+                'phone' => '0909887766',
+                'role' => 'Pharmacist',
+                'status' => 'active',
+                'email_verified_at' => now(),
+            ]
+        );
+
         $users = [
             [
                 'name' => 'Nguyễn Văn An',
