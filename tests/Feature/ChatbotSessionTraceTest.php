@@ -1031,4 +1031,386 @@ class ChatbotSessionTraceTest extends TestCase
         $this->get(route('admin.chatSessions.index'))
             ->assertRedirect(route('login'));
     }
+
+    /**
+     * Reload path. The widget renders `message.products[].name/price/image_url`, so the
+     * stored shape has to be the same flat one the live turn builds by unwrapping
+     * matchProducts(). Storing the wrapper made every card read undefined and render
+     * "0 đ" with a placeholder icon after a refresh.
+     */
+    public function test_image_upload_history_returns_products_in_the_shape_the_widget_renders(): void
+    {
+        Storage::fake('local');
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+
+        $user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $category = Category::factory()->create(['name' => 'Tiêu hóa']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Smecta',
+            'price' => 8000,
+            'stock_quantity' => 300,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '{"description":"Hop thuoc Smecta","products":[{"name":"Smecta","quantity":1}]}',
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $upload = $this->actingAs($user)->postJson('/api/chatbot/upload-image', [
+            'type' => 'prescription',
+            'image' => UploadedFile::fake()->image('smecta.jpg', 600, 400),
+        ]);
+
+        $upload->assertOk()->assertJsonPath('recognized_products.0.matched', true);
+
+        $history = $this->actingAs($user)->getJson('/api/chatbot/history');
+
+        $history->assertOk()->assertJsonPath('success', true);
+
+        $assistant = collect($history->json('messages'))
+            ->last(fn (array $message): bool => $message['role'] === 'assistant' && !empty($message['products']));
+
+        $this->assertNotNull($assistant, 'History has no assistant turn carrying products.');
+
+        $product = $assistant['products'][0];
+
+        $this->assertSame('Smecta', $product['name'] ?? null);
+        $this->assertSame(8000, $product['price'] ?? null);
+        $this->assertSame(300, $product['stock_quantity'] ?? null);
+        $this->assertArrayHasKey('image_url', $product);
+        $this->assertArrayHasKey('id', $product);
+
+        // The wrapper keys must not leak: their presence is what broke the cards.
+        $this->assertArrayNotHasKey('parsed_name', $product);
+        $this->assertArrayNotHasKey('matched', $product);
+        $this->assertArrayNotHasKey('product', $product);
+    }
+
+    /**
+     * The live turn shows the upload from a blob: URL that is revoked seconds later and
+     * cannot survive a reload, so history has to point at the stored bytes instead.
+     */
+    public function test_image_upload_history_restores_the_user_image_and_only_for_its_owner(): void
+    {
+        Storage::fake('local');
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+
+        $user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $category = Category::factory()->create(['name' => 'Tiêu hóa']);
+        Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Smecta',
+            'stock_quantity' => 300,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '{"description":"Hop thuoc Smecta","products":[{"name":"Smecta","quantity":1}]}',
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $this->actingAs($user)
+            ->postJson('/api/chatbot/upload-image', [
+                'type' => 'prescription',
+                'message' => 'Thuốc này là gì?',
+                'image' => UploadedFile::fake()->image('smecta.jpg', 600, 400),
+            ])
+            ->assertOk();
+
+        $history = $this->actingAs($user)->getJson('/api/chatbot/history');
+
+        $userTurn = collect($history->json('messages'))
+            ->last(fn (array $message): bool => $message['role'] === 'user');
+
+        $this->assertNotNull($userTurn);
+        $this->assertTrue($userTurn['hasImage'] ?? false, 'User turn lost its image after reload.');
+        $this->assertNotEmpty($userTurn['imageUrl'] ?? null);
+
+        $stored = ChatbotImage::where('MaKH', $user->MaKH)->latest('MaAnh')->firstOrFail();
+
+        $this->actingAs($user)->get($userTurn['imageUrl'])->assertOk();
+
+        $intruder = User::factory()->create(['role' => 'User', 'status' => 'active']);
+
+        $this->actingAs($intruder)
+            ->get(route('chatbot.images.show', ['image' => $stored->MaAnh]))
+            ->assertNotFound();
+
+        auth()->logout();
+
+        $this->get(route('chatbot.images.show', ['image' => $stored->MaAnh]))
+            ->assertRedirect(route('login'));
+    }
+
+    /**
+     * Retention is 24h, so an old session must degrade to a text-only bubble rather
+     * than emit a URL that 404s into a broken-image icon.
+     */
+    public function test_history_omits_the_image_url_once_the_stored_image_is_gone(): void
+    {
+        $user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $sessionId = (string) Str::uuid();
+
+        ChatMessage::create([
+            'MaKH' => $user->MaKH,
+            'session_id' => $sessionId,
+            'role' => 'user',
+            'content' => 'Thuốc này là gì?',
+            'metadata' => [
+                'image_upload' => [
+                    'type' => 'prescription',
+                    'status' => 'processed',
+                    // Points at a row the retention command already deleted.
+                    'image_id' => 999999,
+                ],
+            ],
+        ]);
+
+        $history = $this->actingAs($user)
+            ->withSession(['chat_session_id' => $sessionId])
+            ->getJson('/api/chatbot/history');
+
+        $userTurn = collect($history->json('messages'))
+            ->last(fn (array $message): bool => $message['role'] === 'user');
+
+        $this->assertFalse($userTurn['hasImage'] ?? false);
+        $this->assertNull($userTurn['imageUrl'] ?? null);
+        $this->assertSame('Thuốc này là gì?', $userTurn['content']);
+    }
+
+    /**
+     * Sessions written before the shape was fixed still hold matchProducts()'s wrapper,
+     * so history has to unwrap on read too — otherwise every pre-existing conversation
+     * keeps rendering "0 đ" with a placeholder icon forever.
+     */
+    public function test_history_normalises_legacy_wrapped_products_from_older_sessions(): void
+    {
+        $user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $sessionId = (string) Str::uuid();
+
+        ChatMessage::create([
+            'MaKH' => $user->MaKH,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => 'Kho em có sẵn: Smecta.',
+            'products' => [
+                [
+                    'parsed_name' => 'Smecta',
+                    'matched' => true,
+                    'product' => [
+                        'id' => 42,
+                        'name' => 'Smecta',
+                        'price' => 8000,
+                        'stock_quantity' => 300,
+                        'image_url' => 'http://localhost/images/smecta.jpg',
+                    ],
+                    'confidence' => 0.9,
+                ],
+                [
+                    'parsed_name' => 'Không Tồn Tại',
+                    'matched' => false,
+                    'product' => null,
+                    'suggestions' => [],
+                ],
+            ],
+        ]);
+
+        $history = $this->actingAs($user)
+            ->withSession(['chat_session_id' => $sessionId])
+            ->getJson('/api/chatbot/history');
+
+        $products = collect($history->json('messages'))
+            ->last(fn (array $message): bool => $message['role'] === 'assistant')['products'];
+
+        // Only the matched row survives, flattened, exactly as the widget expects.
+        $this->assertCount(1, $products);
+        $this->assertSame('Smecta', $products[0]['name']);
+        $this->assertSame(8000, $products[0]['price']);
+        $this->assertSame(300, $products[0]['stock_quantity']);
+        $this->assertArrayNotHasKey('parsed_name', $products[0]);
+    }
+
+    /**
+     * The text path already stores flat rows and they carry no `matched` key, so the
+     * normaliser must pass them through untouched rather than filter them all out.
+     */
+    public function test_history_leaves_text_path_products_untouched(): void
+    {
+        $user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $sessionId = (string) Str::uuid();
+
+        ChatMessage::create([
+            'MaKH' => $user->MaKH,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => 'Danh mục tiêu hóa có các sản phẩm sau.',
+            'products' => [
+                [
+                    'id' => 7,
+                    'name' => 'Smecta',
+                    'price' => 8000,
+                    'stock_quantity' => 300,
+                    'image_url' => null,
+                    'url' => 'http://localhost/products/7',
+                ],
+            ],
+        ]);
+
+        $products = collect(
+            $this->actingAs($user)
+                ->withSession(['chat_session_id' => $sessionId])
+                ->getJson('/api/chatbot/history')
+                ->json('messages')
+        )->last(fn (array $message): bool => $message['role'] === 'assistant')['products'];
+
+        $this->assertCount(1, $products);
+        $this->assertSame('Smecta', $products[0]['name']);
+        $this->assertSame('http://localhost/products/7', $products[0]['url']);
+    }
+
+    /**
+     * The image reply must carry the same product block the text path renders, so a
+     * "Mở sản phẩm" button appears instead of a raw URL.
+     *
+     * Two stacked defects produced the raw link: the repair regex skipped URLs the model
+     * had wrapped in plain parens — `(?!\))` cannot tell `(url)` from `[x](url)` — and
+     * even when it did fire it emitted the label "Xem chi tiết <name>", which the
+     * renderer's exact-match button test never recognises.
+     */
+    public function test_image_reply_renders_the_shared_product_block_instead_of_a_raw_url(): void
+    {
+        Storage::fake('local');
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+        config()->set('chatbot.ai.image_answer', true);
+
+        $user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $category = Category::factory()->create(['name' => 'Thuốc tiêu hóa']);
+        $product = Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Smecta',
+            'usage' => 'Điều trị tiêu chảy.',
+            'stock_quantity' => 300,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::sequence()
+                ->push(['choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '{"description":"Don thuoc co Smecta","products":[{"name":"Smecta","quantity":1}]}',
+                    ],
+                ]]])
+                // Verbatim shape of the real failure: the model wrapped the URL in plain
+                // parens, which the old repair regex could not touch.
+                ->push(['choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => 'Kho em hiện có: Smecta – 8.000đ, còn 300 (http://localhost/products/'
+                            . $product->MaSP . ').',
+                    ],
+                ]]]),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/api/chatbot/upload-image', [
+            'type' => 'prescription',
+            'message' => 'đây là thuốc gì?',
+            'image' => UploadedFile::fake()->image('don-thuoc.jpg', 600, 600),
+        ]);
+
+        $response->assertOk()->assertJsonPath('success', true);
+
+        $reply = $response->json('response');
+        $url = route('products.show', $product->MaSP);
+
+        // Exactly the label the renderer promotes to a button.
+        $this->assertStringContainsString('[Mở sản phẩm](' . $url . ')', $reply);
+        $this->assertStringContainsString('- Tồn kho hiện tại: 300 sản phẩm', $reply);
+        $this->assertStringContainsString('- Giá tham khảo:', $reply);
+
+        // No URL may survive outside a markdown link.
+        $this->assertSame(
+            0,
+            preg_match('/(?<!\]\()' . preg_quote($url, '/') . '/', $reply),
+            'The reply still contains a raw product URL: ' . $reply
+        );
+    }
+
+    /**
+     * Root cause of the raw link: the model was handed product URLs in its prompt. It
+     * cannot format a link it never receives, so the JSON must carry no url field.
+     */
+    public function test_the_image_answer_prompt_never_exposes_product_urls_to_the_model(): void
+    {
+        Storage::fake('local');
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+        config()->set('chatbot.ai.image_answer', true);
+
+        $user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $category = Category::factory()->create(['name' => 'Thuốc tiêu hóa']);
+        $product = Product::factory()->create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Smecta',
+            'stock_quantity' => 300,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::sequence()
+                ->push(['choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '{"description":"Don thuoc co Smecta","products":[{"name":"Smecta","quantity":1}]}',
+                    ],
+                ]]])
+                ->push(['choices' => [[
+                    'message' => ['role' => 'assistant', 'content' => 'Dạ, đây là Smecta ạ.'],
+                ]]]),
+        ]);
+
+        $this->actingAs($user)->postJson('/api/chatbot/upload-image', [
+            'type' => 'prescription',
+            'message' => 'đây là thuốc gì?',
+            'image' => UploadedFile::fake()->image('don-thuoc.jpg', 600, 600),
+        ])->assertOk();
+
+        $productPath = '/products/' . $product->MaSP;
+
+        // Read decoded data, not the raw body: the JSON payload escapes Vietnamese text
+        // as \uXXXX, so a literal substring search over the body never matches.
+        $answerPrompts = collect(Http::recorded())
+            ->map(fn (array $pair) => $pair[0]->data()['messages'][1]['content'] ?? null)
+            // The vision call sends an array of content parts; the answer call a string.
+            ->filter(fn ($content) => is_string($content) && str_contains($content, 'Kết quả tra cứu'))
+            ->values();
+
+        $this->assertCount(1, $answerPrompts, 'The image answer prompt was never sent.');
+        $this->assertStringNotContainsString($productPath, $answerPrompts[0]);
+    }
 }

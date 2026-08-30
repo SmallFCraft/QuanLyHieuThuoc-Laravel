@@ -367,6 +367,9 @@ class ChatbotController extends Controller
                             'type' => $type,
                             'status' => 'failed',
                             'error' => $result['error'] ?? null,
+                            // The file was stored before analysis ran, so a rejected image
+                            // still has bytes to show after a reload.
+                            'image_id' => $this->imageRecognitionService->lastStoredImageId(),
                         ],
                     ],
                 ]);
@@ -395,10 +398,13 @@ class ChatbotController extends Controller
                         'status' => 'processed',
                         'recognized_count' => count($recognizedProducts),
                         'ocr_text' => $result['ocr_text'] ?? null,
+                        // Lets chat history re-render the upload after a reload. The live
+                        // bubble shows a blob: URL, which dies with the page.
+                        'image_id' => $result['image_id'] ?? $this->imageRecognitionService->lastStoredImageId(),
                     ],
                 ],
             ]);
-            
+
             // Answer the caption ("đây là thuốc gì?") from what the image says,
             // falling back to the deterministic recognition summary.
             $imageAnswer = $this->chatbotService->answerImageQuestion(
@@ -416,12 +422,18 @@ class ChatbotController extends Controller
                 'session_id' => $sessionId,
                 'role' => 'assistant',
                 'content' => $messageContent,
-                'products' => $recognizedProducts,
+                // Flat catalog rows, the same shape the text path stores and the widget
+                // renders. Storing matchProducts()'s wrapper here made every product card
+                // read undefined after a reload and show "0 đ" with a placeholder icon.
+                'products' => $this->normalizeProductsForWidget($recognizedProducts),
                 'metadata' => [
                     'draft_order' => $draftOrder,
                     'ocr_text' => $result['ocr_text'] ?? null,
                     'disclaimer' => $imageAnswer['disclaimer'] ?? null,
                     'debug' => $imageAnswer['debug'] ?? null,
+                    // Parsed names, confidence and the unmatched entries with their
+                    // suggestions: diagnostics for the admin session trace, not render data.
+                    'image_recognition' => $recognizedProducts,
                 ],
                 'show_disclaimer' => (bool) ($imageAnswer['show_disclaimer'] ?? false)
             ]);
@@ -451,6 +463,7 @@ class ChatbotController extends Controller
                             'type' => $validated['type'] ?? 'prescription',
                             'status' => 'failed',
                             'error' => $e->getMessage(),
+                            'image_id' => $this->imageRecognitionService->lastStoredImageId(),
                         ],
                     ],
                 ]);
@@ -498,16 +511,29 @@ class ChatbotController extends Controller
                     'created_at',
                 ])
                 ->reverse()
-                ->values()
-                ->map(function($msg) {
+                ->values();
+
+            $imageUrls = $this->resolveHistoryImageUrls($messages, (int) $userId);
+
+            $messages = $messages
+                ->map(function ($msg) use ($imageUrls) {
+                    $imageId = data_get($msg->metadata, 'image_upload.image_id');
+                    $imageUrl = $imageId === null ? null : ($imageUrls[(int) $imageId] ?? null);
+
                     return [
                         'role' => $msg->role,
                         'content' => $msg->content,
-                        'products' => $msg->products,
+                        // Normalised on read too: sessions written before the shape was
+                        // fixed still hold matchProducts()'s wrapper.
+                        'products' => $this->normalizeProductsForWidget($msg->products),
                         'categories' => $msg->metadata['categories'] ?? [],
                         'triage_handoff' => $msg->metadata['triage_handoff'] ?? null,
                         'show_disclaimer' => $msg->show_disclaimer,
                         'disclaimer' => $msg->metadata['disclaimer'] ?? null,
+                        // Absent when retention already removed the file, so the bubble
+                        // degrades to text instead of a broken-image icon.
+                        'hasImage' => $imageUrl !== null,
+                        'imageUrl' => $imageUrl,
                         'created_at' => $msg->created_at->format('Y-m-d H:i:s')
                     ];
                 })
@@ -536,11 +562,62 @@ class ChatbotController extends Controller
     }
 
     /**
-     * Clear chat history for current session.
+     * Signed-free URLs for the uploads referenced by this page of history, keyed by
+     * MaAnh. One query for the whole page, and only rows that still have their file:
+     * retention deletes images after chatbot.images.cleanup_after hours.
      *
-     * @param Request $request
-     * @return JsonResponse
+     * @param \Illuminate\Support\Collection<int, ChatMessage> $messages
+     * @return array<int, string>
      */
+    protected function resolveHistoryImageUrls($messages, int $userId): array
+    {
+        $ids = $messages
+            ->map(fn ($msg) => data_get($msg->metadata, 'image_upload.image_id'))
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return [];
+        }
+
+        return ChatbotImage::whereIn('MaAnh', $ids)
+            ->where('MaKH', $userId)
+            ->get(['MaAnh'])
+            ->mapWithKeys(fn (ChatbotImage $image) => [
+                (int) $image->MaAnh => route('chatbot.images.show', ['image' => $image->MaAnh]),
+            ])
+            ->all();
+    }
+
+    /**
+     * Serve one of the customer's own chatbot uploads.
+     *
+     * Scoped to the owner, not the session: history survives a new chat session, and a
+     * sequential MaAnh would otherwise let any signed-in user page through every
+     * prescription image on the system.
+     */
+    public function image(ChatbotImage $image)
+    {
+        abort_if((int) $image->MaKH !== (int) auth()->id(), 404);
+
+        $path = $image->file_path ?: $image->image_path;
+        abort_if(!$path || !Storage::disk('local')->exists($path), 404);
+
+        $response = response()->file(Storage::disk('local')->path($path), [
+            'Content-Type' => $image->mime_type ?: 'image/jpeg',
+        ]);
+
+        // setPrivate() rather than a Cache-Control header: BinaryFileResponse recomputes
+        // the directive and turns a plain max-age into `public`, which would let a shared
+        // proxy cache someone's prescription photo.
+        $response->setPrivate();
+        $response->setMaxAge(300);
+
+        return $response;
+    }
+
     /**
      * Clear chat history for current session.
      *
@@ -996,6 +1073,13 @@ class ChatbotController extends Controller
                 continue;
             }
 
+            // The recognition wrapper, not the rendered rows: the follow-up path needs
+            // parsed_name and the unmatched entries, which flattening drops.
+            $recognition = $message['metadata']['image_recognition'] ?? [];
+            if (is_array($recognition) && !empty($recognition)) {
+                return $recognition;
+            }
+
             $products = $message['products'] ?? [];
             if (is_array($products) && !empty($products)) {
                 return $products;
@@ -1003,6 +1087,53 @@ class ChatbotController extends Controller
         }
 
         return [];
+    }
+
+    /**
+     * The flat catalog rows the widget renders (`product.name`, `product.price`,
+     * `product.image_url`), from either shape ever stored on a message.
+     *
+     * matchProducts() returns a wrapper — `{parsed_name, matched, product:{...}}` — while
+     * the text path stores the rows directly. Storing the wrapper for image turns made
+     * every card read undefined and render "0 đ" with a placeholder icon, so this runs on
+     * write AND on read: sessions from before the fix still hold the wrapper.
+     *
+     * @param mixed $products
+     * @return array<int, array<string, mixed>>
+     */
+    protected function normalizeProductsForWidget($products): array
+    {
+        if (!is_array($products)) {
+            return [];
+        }
+
+        $rows = [];
+
+        foreach ($products as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $isWrapper = array_key_exists('product', $item) || array_key_exists('matched', $item);
+
+            if (!$isWrapper) {
+                $rows[] = $item;
+                continue;
+            }
+
+            // Unmatched entries have no catalog row to render; their parsed names and
+            // suggestions are already in the reply text.
+            if (($item['matched'] ?? false) !== true) {
+                continue;
+            }
+
+            $product = $item['product'] ?? null;
+            if (is_array($product) && !empty($product)) {
+                $rows[] = $product;
+            }
+        }
+
+        return $rows;
     }
 
     protected function buildImageRecognitionMessageContent(array $recognizedProducts): string
