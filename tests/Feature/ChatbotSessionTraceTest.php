@@ -20,6 +20,18 @@ class ChatbotSessionTraceTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Every upload in this class goes through ImageRecognitionService::storeImage(), so
+     * the disk is faked once here rather than per test. Without it the suite writes real
+     * files into storage/app/private/chatbot-uploads and never cleans them up.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Storage::fake('local');
+    }
+
     public function test_chatbot_message_response_includes_session_id(): void
     {
         $user = User::factory()->create([
@@ -770,7 +782,6 @@ class ChatbotSessionTraceTest extends TestCase
 
     public function test_admin_can_find_and_read_chat_session(): void
     {
-        Storage::fake('local');
         config()->set('chatbot.ai.model', 'vision-model');
 
         $admin = User::factory()->create([
@@ -1040,7 +1051,6 @@ class ChatbotSessionTraceTest extends TestCase
      */
     public function test_image_upload_history_returns_products_in_the_shape_the_widget_renders(): void
     {
-        Storage::fake('local');
         config()->set('chatbot.ai.mode', 'chat_completions');
         config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
         config()->set('chatbot.ai.api_key', 'agt_codex_test');
@@ -1103,7 +1113,6 @@ class ChatbotSessionTraceTest extends TestCase
      */
     public function test_image_upload_history_restores_the_user_image_and_only_for_its_owner(): void
     {
-        Storage::fake('local');
         config()->set('chatbot.ai.mode', 'chat_completions');
         config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
         config()->set('chatbot.ai.api_key', 'agt_codex_test');
@@ -1299,7 +1308,6 @@ class ChatbotSessionTraceTest extends TestCase
      */
     public function test_image_reply_renders_the_shared_product_block_instead_of_a_raw_url(): void
     {
-        Storage::fake('local');
         config()->set('chatbot.ai.mode', 'chat_completions');
         config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
         config()->set('chatbot.ai.api_key', 'agt_codex_test');
@@ -1365,7 +1373,6 @@ class ChatbotSessionTraceTest extends TestCase
      */
     public function test_the_image_answer_prompt_never_exposes_product_urls_to_the_model(): void
     {
-        Storage::fake('local');
         config()->set('chatbot.ai.mode', 'chat_completions');
         config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
         config()->set('chatbot.ai.api_key', 'agt_codex_test');
