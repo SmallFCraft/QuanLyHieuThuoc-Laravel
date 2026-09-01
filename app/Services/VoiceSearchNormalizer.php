@@ -32,6 +32,31 @@ class VoiceSearchNormalizer
     /** Cửa sổ dài nhất xét tới: tên thuốc trong catalog hầu hết 1-3 âm tiết. */
     private const MAX_WINDOW_WORDS = 3;
 
+    /** Cụm mở đầu dài nhất trong LEAD_PHRASES ("tôi muốn tìm" — ba từ). */
+    private const MAX_LEAD_WORDS = 3;
+
+    /**
+     * Cụm mở đầu mang ý định, không mang từ khoá. Viết có dấu cho người đọc;
+     * leadPhrases() fold lại trước khi so.
+     *
+     * Cố ý KHÔNG có "có", "còn", "bạn có". Chúng là một âm tiết ngắn và fold() gộp
+     * chúng với những từ mang nghĩa: fold("còn") = fold("con") = "con", fold("có") =
+     * fold("cơ") = fold("cỏ") = "co". Đo được khi thử: "con tôi bị sốt" mất chủ ngữ
+     * thành "tôi bị sốt", và tệ hơn, "côn la gien" (collagen đọc rời âm) thành
+     * "La gien" — cắt đứt chính tên thuốc. Một cụm mệnh lệnh chỉ đáng bỏ khi nó
+     * không thể là một phần của tên hàng.
+     */
+    private const LEAD_PHRASES = [
+        'tìm', 'tìm kiếm', 'tìm giúp tôi', 'tìm cho tôi', 'tìm cho mình',
+        'cho tôi', 'cho tôi xem', 'cho mình', 'cho mình xem', 'cho em', 'cho em hỏi',
+        'tôi muốn', 'tôi muốn tìm', 'tôi muốn mua', 'tôi muốn xem',
+        'tôi cần', 'tôi cần tìm', 'tôi cần mua',
+        'mua', 'kiếm', 'tra cứu',
+    ];
+
+    /** @var array<string, true>|null */
+    private static ?array $leadPhrases = null;
+
     /** Điểm cộng theo nguồn của cụm, để tên sản phẩm thắng một token trùng. */
     private const KIND_BONUS = ['product' => 20, 'category' => 10, 'token' => 0];
 
@@ -47,11 +72,14 @@ class VoiceSearchNormalizer
      */
     public function normalize(array $alternatives): array
     {
+        // heard là chuỗi khách nói y nguyên — nút "Hoàn tác" trả lại đúng chữ đó, kể
+        // cả dấu câu Chrome tự thêm và cụm mệnh lệnh. Chỉ chuỗi đi vào các tầng so
+        // khớp mới được làm sạch.
+        $heard = trim((string) ($alternatives[0] ?? ''));
         $alternatives = $this->clean($alternatives);
-        $heard = $alternatives[0] ?? '';
 
         if ($alternatives === []) {
-            return $this->result('', '', self::SOURCE_RAW, false);
+            return $this->result('', $heard, self::SOURCE_RAW, false);
         }
 
         foreach ($alternatives as $alternative) {
@@ -72,7 +100,7 @@ class VoiceSearchNormalizer
             return $this->result($ai, $heard, self::SOURCE_AI, false);
         }
 
-        return $this->result($heard, $heard, self::SOURCE_RAW, false);
+        return $this->result($alternatives[0], $heard, self::SOURCE_RAW, false);
     }
 
     /**
@@ -82,9 +110,67 @@ class VoiceSearchNormalizer
     private function clean(array $alternatives): array
     {
         return array_values(array_filter(array_map(
-            fn ($value) => trim((string) $value),
+            fn ($value) => $this->stripLeadPhrase($this->trimPunctuation((string) $value)),
             $alternatives
         ), fn (string $value) => $value !== ''));
+    }
+
+    /**
+     * Dấu câu ở hai đầu bị cắt; dấu câu giữa câu thì không — "omega-3" và
+     * "vitamin B6" là tên hàng, không phải câu có dấu.
+     *
+     * Chrome vi-VN LUÔN chấm hết câu, nên không cắt là để dấu chấm đi vào ô tìm kiếm,
+     * vào `?q=` và vào nhãn "Xem tất cả kết quả cho …". fold() bỏ dấu câu lúc so khớp
+     * nhưng chuỗi trả về cho khách thì không đi qua fold().
+     */
+    private function trimPunctuation(string $value): string
+    {
+        return preg_replace('/^[\p{P}\s]+|[\p{P}\s]+$/u', '', $value) ?? trim($value);
+    }
+
+    /**
+     * Bỏ cụm mở đầu mang ý định chứ không mang từ khoá.
+     *
+     * Đo trên catalog: từ `tim` khớp 81 sản phẩm (tim là cơ quan), `cho` khớp 639,
+     * `toi` khớp 87. Nên "Tìm giúp tôi men vi sinh" được T0 tuyên bố exact nhờ chính
+     * từ mệnh lệnh rồi dừng — tầng phiên âm không bao giờ chạy để sửa phần khách hỏi.
+     *
+     * So trên chuỗi đã fold vì khách nói có dấu, và dài trước ngắn sau vì nếu không
+     * thì `tim` ăn trước `tim kiem`. Chỉ bỏ khi phần còn lại vẫn là một truy vấn:
+     * khách nói đúng một từ "Tìm" thì đó là tất cả những gì ta có.
+     */
+    private function stripLeadPhrase(string $value): string
+    {
+        $words = preg_split('/\s+/', $value, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $phrases = self::leadPhrases();
+
+        // Fold từng từ riêng, không fold cả câu: fold() tách "omega-3" thành hai từ,
+        // và một chỉ số lệch thì cắt mất phần khách thật sự hỏi.
+        $folded = array_map(fn (string $word) => VietnameseText::fold($word), $words);
+
+        for ($take = min(count($words) - 1, self::MAX_LEAD_WORDS); $take >= 1; $take--) {
+            $prefix = trim(implode(' ', array_slice($folded, 0, $take)));
+
+            if (isset($phrases[$prefix])) {
+                return implode(' ', array_slice($words, $take));
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * Khoá là dạng đã fold, nên bảng bên dưới viết có dấu cho người đọc: thêm một cụm
+     * mới không cần biết fold() trả ra gì.
+     *
+     * @return array<string, true>
+     */
+    private static function leadPhrases(): array
+    {
+        return self::$leadPhrases ??= array_fill_keys(array_map(
+            fn (string $phrase) => VietnameseText::fold($phrase),
+            self::LEAD_PHRASES
+        ), true);
     }
 
     /**

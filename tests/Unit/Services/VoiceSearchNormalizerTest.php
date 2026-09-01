@@ -8,6 +8,7 @@ use App\Models\VoicePhonetic;
 use App\Services\VoiceSearchNormalizer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -212,5 +213,80 @@ class VoiceSearchNormalizerTest extends TestCase
 
         $this->assertSame(VoiceSearchNormalizer::SOURCE_RAW, $result['source']);
         Http::assertNothingSent();
+    }
+
+    /**
+     * Chrome vi-VN LUÔN chấm hết câu: nói "thuốc đau đầu" trả về "Tìm thúc đau đầu.".
+     * fold() bỏ dấu câu khi so khớp nhưng chuỗi TRẢ VỀ thì không, nên dấu chấm đi vào
+     * ô tìm kiếm, vào `?q=` và vào nhãn "Xem tất cả kết quả cho …" (US-11).
+     *
+     * Cụm mệnh lệnh là nhiễu đo được trên catalog: `tim` khớp 81 sản phẩm (tim là cơ
+     * quan), `cho` khớp 639, `toi` khớp 87. Nên "Tìm giúp tôi men vi sinh" được T0
+     * tuyên bố exact nhờ CHÍNH từ mệnh lệnh rồi dừng — tầng phiên âm không bao giờ
+     * chạy để sửa phần khách thật sự hỏi (US-12).
+     *
+     * @return array<string, array{0: string, 1: array<int, string>}>
+     */
+    public static function noisyUtterances(): array
+    {
+        return [
+            'dấu chấm cuối câu' => ['thuốc hạ sốt.', ['.']],
+            'dấu hỏi cuối câu' => ['Có thuốc ho không?', ['?']],
+            'dấu phẩy cuối câu' => ['vitamin C,', [',']],
+            'cụm mệnh lệnh ba từ' => ['Tìm giúp tôi men vi sinh', ['Tìm giúp tôi']],
+            'cụm mệnh lệnh + dấu câu' => ['Cho tôi men tiêu hoá.', ['Cho tôi', '.']],
+            'câu đầy đủ chủ ngữ' => ['Tôi muốn mua khẩu trang y tế', ['Tôi muốn mua']],
+        ];
+    }
+
+    /**
+     * @param array<int, string> $absent
+     */
+    #[DataProvider('noisyUtterances')]
+    public function test_punctuation_and_command_phrases_never_reach_the_query(string $said, array $absent): void
+    {
+        $result = $this->normalizer()->normalize([$said]);
+
+        foreach ($absent as $noise) {
+            $this->assertStringNotContainsString($noise, $result['text']);
+        }
+
+        // Nút "Hoàn tác" trả lại đúng chữ khách nói, nên heard phải còn nguyên nhiễu.
+        $this->assertSame($said, $result['heard']);
+        $this->assertNotSame('', $result['text']);
+    }
+
+    /**
+     * Làm sạch không được ăn vào phần mang thông tin: dấu câu GIỮA câu là một phần của
+     * tên hàng ("omega-3", "vitamin B6"), và một cụm mệnh lệnh chỉ bị bỏ khi phần còn
+     * lại vẫn là một truy vấn — khách nói đúng một từ "Tìm" thì đó là tất cả những gì
+     * ta có, trả chuỗi rỗng còn tệ hơn trả nhiễu.
+     *
+     * @return array<string, array{0: string}>
+     */
+    public static function utterancesKeptWholeProvider(): array
+    {
+        return [
+            'chỉ có cụm mệnh lệnh' => ['Tìm'],
+            'gạch nối giữa câu' => ['omega-3'],
+            'chữ số dính tên vitamin' => ['vitamin B6'],
+        ];
+    }
+
+    #[DataProvider('utterancesKeptWholeProvider')]
+    public function test_cleaning_keeps_an_utterance_that_carries_no_noise(string $said): void
+    {
+        $result = $this->normalizer()->normalize([$said]);
+
+        $this->assertSame($said, $result['text']);
+        $this->assertSame($said, $result['heard']);
+    }
+
+    /** Cụm dài phải được thử trước cụm ngắn, không thì `tim` ăn trước `tim kiem`. */
+    public function test_the_longest_command_phrase_wins(): void
+    {
+        $result = $this->normalizer()->normalize(['Tìm kiếm men vi sinh']);
+
+        $this->assertSame('men vi sinh', $result['text']);
     }
 }
