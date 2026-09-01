@@ -7,6 +7,9 @@ use App\Models\VoicePhonetic;
 use App\Support\VietnameseText;
 use App\Support\VoicePhonetics;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Chuẩn hoá chuỗi Web Speech nghe được thành một từ khoá tìm kiếm dùng được.
@@ -32,6 +35,12 @@ class VoiceSearchNormalizer
     /** Điểm cộng theo nguồn của cụm, để tên sản phẩm thắng một token trùng. */
     private const KIND_BONUS = ['product' => 20, 'category' => 10, 'token' => 0];
 
+    /** Số cụm ứng viên đưa vào prompt. Nhiều hơn là trả tiền token cho nhiễu. */
+    private const AI_CANDIDATES = 40;
+
+    /** Giá trị cache cho một câu mà AI cũng không giúp được. */
+    private const AI_NO_HELP = "\0no-help";
+
     /**
      * @param array<int, string> $alternatives Web Speech trả tối đa 3, tốt nhất trước.
      * @return array{text: string, heard: string, source: string, confident: bool}
@@ -55,6 +64,12 @@ class VoiceSearchNormalizer
 
         if ($phonetic !== null) {
             return $this->result($phonetic, $heard, self::SOURCE_PHONETIC, true);
+        }
+
+        $ai = $this->askAi($alternatives);
+
+        if ($ai !== null) {
+            return $this->result($ai, $heard, self::SOURCE_AI, false);
         }
 
         return $this->result($heard, $heard, self::SOURCE_RAW, false);
@@ -217,6 +232,165 @@ class VoiceSearchNormalizer
         // trong câu gốc ("sốc" vs "sốt"). Không thay được thì dùng cụm trong catalog:
         // nó là phần mang thông tin, phần còn lại chỉ là bối cảnh.
         return $count > 0 ? $replaced : $term;
+    }
+
+    /**
+     * Tầng cuối trước khi trả nguyên văn: nhờ AI chọn từ khoá từ danh sách ứng viên.
+     *
+     * Bốn van chặn, mỗi van có test riêng: chỉ chạy khi hai tầng đầu trượt, cache
+     * 24h, một khoá lock cho mỗi câu, và một circuit breaker. Không có chúng thì
+     * 1.000 lượt/phút là 1.000 lời gọi/phút vào một provider đo được mất 18-26s.
+     */
+    private function askAi(array $alternatives): ?string
+    {
+        if (! (bool) config('search.voice.ai', true) || $this->breakerIsOpen()) {
+            return null;
+        }
+
+        $cacheKey = 'voice:norm:' . sha1(VietnameseText::fold($alternatives[0]));
+        $cached = Cache::get($cacheKey);
+
+        if ($cached !== null) {
+            return $cached === self::AI_NO_HELP ? null : $cached;
+        }
+
+        // block(3): 100 người nói cùng một câu thì một người gọi, 99 người còn lại
+        // chờ rồi đọc cache. Bảng cache_locks đã tồn tại nên đây là khoá thật.
+        $lock = Cache::lock($cacheKey . ':lock', 10);
+
+        try {
+            $lock->block(3);
+        } catch (Throwable) {
+            // Không lấy được khoá trong 3s: trả nguyên văn thay vì xếp hàng thêm.
+            return null;
+        }
+
+        try {
+            $fresh = Cache::get($cacheKey);
+
+            if ($fresh !== null) {
+                return $fresh === self::AI_NO_HELP ? null : $fresh;
+            }
+
+            $answer = $this->verifyAgainstCatalog($this->callAi($alternatives));
+
+            Cache::put(
+                $cacheKey,
+                $answer ?? self::AI_NO_HELP,
+                (int) config('search.voice.cache_ttl', 86400)
+            );
+
+            return $answer;
+        } catch (Throwable $exception) {
+            $this->recordFailure();
+
+            Log::warning('Voice search AI normalisation failed', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function callAi(array $alternatives): string
+    {
+        $response = app(AiProviderService::class)->chat([
+            ['role' => 'system', 'content' => $this->systemPrompt()],
+            ['role' => 'user', 'content' => $this->userPrompt($alternatives)],
+        ], ['timeout' => (int) config('search.voice.ai_timeout', 8)]);
+
+        return trim((string) ($response['choices'][0]['message']['content'] ?? ''));
+    }
+
+    private function systemPrompt(): string
+    {
+        return implode("\n", [
+            'Bạn sửa lỗi nhận diện giọng nói cho ô tìm kiếm của một nhà thuốc Việt Nam.',
+            'Khách nói tiếng Việt với giọng Bắc, Trung hoặc Nam nên máy có thể nghe lệch.',
+            'Chỉ được chọn hoặc ghép từ danh sách cụm có sẵn, hoặc trả lại nguyên văn.',
+            'TUYỆT ĐỐI KHÔNG tự nghĩ ra tên thuốc, hoạt chất hay thương hiệu nào.',
+            'Trả về ĐÚNG MỘT DÒNG là từ khoá tìm kiếm, không giải thích, không markdown.',
+        ]);
+    }
+
+    private function userPrompt(array $alternatives): string
+    {
+        $candidates = $this->candidatesForPrompt($alternatives);
+
+        return implode("\n", array_filter([
+            'Máy nghe được (tốt nhất trước):',
+            ...array_map(fn (string $value) => '- ' . $value, $alternatives),
+            '',
+            $candidates === [] ? null : 'Cụm có trong catalog gần giống nhất:',
+            ...array_map(fn (string $value) => '- ' . $value, $candidates),
+        ]));
+    }
+
+    /**
+     * Ứng viên cho prompt là chính những dòng within() đã LOẠI ở T1 — chúng gần về
+     * phiên âm nhưng chưa đủ gần để nhận tự động. Nhờ vậy một truy vấn phục vụ cả
+     * hai tầng.
+     *
+     * @return array<int, string>
+     */
+    private function candidatesForPrompt(array $alternatives): array
+    {
+        $windows = $this->windows($alternatives);
+
+        if ($windows === []) {
+            return [];
+        }
+
+        return $this->lookup($windows)
+            ->sortByDesc(fn (VoicePhonetic $row) => (self::KIND_BONUS[$row->kind] ?? 0) + min((int) $row->weight, 20))
+            ->pluck('term')
+            ->unique()
+            ->take(self::AI_CANDIDATES)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Luật §2.2 của spec: chuỗi AI trả về chỉ được dùng nếu nó thật sự tìm ra thứ
+     * gì trong catalog. Đo được provider trả "parasitome" cho "paracetamol" — trong
+     * app nhà thuốc, một tên thuốc bịa không được đi tới ô tìm kiếm.
+     */
+    private function verifyAgainstCatalog(string $answer): ?string
+    {
+        $answer = trim(preg_replace('/\s+/', ' ', strip_tags($answer)) ?? '');
+
+        if ($answer === '' || mb_strlen($answer) > 200) {
+            return null;
+        }
+
+        if ($this->catalogHas($answer)) {
+            return $answer;
+        }
+
+        $key = VoicePhonetics::key($answer);
+
+        return $key !== '' && VoicePhonetic::where('phonetic_key', $key)->exists() ? $answer : null;
+    }
+
+    private function breakerIsOpen(): bool
+    {
+        return (int) Cache::get('voice:norm:ai_failures', 0)
+            >= max(1, (int) config('search.voice.breaker_failures', 5));
+    }
+
+    /**
+     * Bộ đếm tự hết hạn theo cửa sổ, nên breaker tự đóng lại mà không cần job nào.
+     */
+    private function recordFailure(): void
+    {
+        $window = (int) config('search.voice.breaker_window', 300);
+
+        // add() trước rồi increment(): increment() trên khoá chưa tồn tại không đặt
+        // được TTL, và một bộ đếm không TTL là một breaker mở vĩnh viễn.
+        Cache::add('voice:norm:ai_failures', 0, $window);
+        Cache::increment('voice:norm:ai_failures');
     }
 
     /**

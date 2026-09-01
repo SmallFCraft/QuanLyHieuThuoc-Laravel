@@ -108,4 +108,109 @@ class VoiceSearchNormalizerTest extends TestCase
         $this->assertSame('', $result['heard']);
         $this->assertSame(VoiceSearchNormalizer::SOURCE_RAW, $result['source']);
     }
+
+    /** Bật tầng AI và giả lập một câu trả lời. */
+    private function fakeAi(string $answer): void
+    {
+        config(['search.voice.ai' => true]);
+
+        Http::fake(['*' => Http::response([
+            'choices' => [['message' => ['content' => $answer]]],
+        ])]);
+    }
+
+    public function test_ai_tier_runs_only_when_the_cheap_tiers_miss(): void
+    {
+        $this->fakeAi('thuốc hạ sốt');
+
+        $result = $this->normalizer()->normalize(['bơ bơ rin gì đó']);
+
+        $this->assertSame(VoiceSearchNormalizer::SOURCE_AI, $result['source']);
+        $this->assertSame('thuốc hạ sốt', $result['text']);
+        // Khách nên xem lại trước khi bấm Enter: đây là suy đoán, không phải khớp.
+        $this->assertFalse($result['confident']);
+        Http::assertSentCount(1);
+    }
+
+    public function test_exact_and_phonetic_hits_never_call_the_ai(): void
+    {
+        $this->fakeAi('không được gọi');
+
+        $this->normalizer()->normalize(['Thuốc hạ sốt Hapacol 500']);
+        $this->normalizer()->normalize(['thuấc hạ sốc']);
+
+        Http::assertNothingSent();
+    }
+
+    /**
+     * Luật an toàn: đo được provider trả "parasitome" cho audio nói
+     * "paracetamol". Một lớp AI tự đặt tên thuốc là lỗi an toàn, nên chuỗi nào
+     * không khớp lại được catalog thì bị bỏ.
+     */
+    public function test_an_invented_drug_name_is_discarded(): void
+    {
+        $this->fakeAi('parasitome non-transmembrane');
+
+        $result = $this->normalizer()->normalize(['pa ra xi tôm gì đó']);
+
+        $this->assertSame(VoiceSearchNormalizer::SOURCE_RAW, $result['source']);
+        $this->assertSame('pa ra xi tôm gì đó', $result['text']);
+    }
+
+    public function test_the_same_utterance_calls_the_ai_once(): void
+    {
+        $this->fakeAi('thuốc hạ sốt');
+
+        $this->normalizer()->normalize(['bơ bơ rin gì đó']);
+        $this->normalizer()->normalize(['bơ bơ rin gì đó']);
+
+        Http::assertSentCount(1);
+    }
+
+    /** Kết quả bị bỏ cũng được cache: hỏi lại cùng câu không đáng một call nữa. */
+    public function test_a_discarded_answer_is_cached_too(): void
+    {
+        $this->fakeAi('parasitome');
+
+        $this->normalizer()->normalize(['pa ra xi tôm gì đó']);
+        $this->normalizer()->normalize(['pa ra xi tôm gì đó']);
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_the_breaker_opens_after_repeated_failures(): void
+    {
+        config(['search.voice.ai' => true, 'search.voice.breaker_failures' => 2]);
+        Http::fake(['*' => Http::response('gateway down', 502)]);
+
+        // Câu khác nhau nên cache không che được: mỗi lượt là một call thật.
+        $this->normalizer()->normalize(['câu lạ một']);
+        $this->normalizer()->normalize(['câu lạ hai']);
+        $result = $this->normalizer()->normalize(['câu lạ ba']);
+
+        $this->assertSame(VoiceSearchNormalizer::SOURCE_RAW, $result['source']);
+        $this->assertSame('câu lạ ba', $result['text']);
+        Http::assertSentCount(2);
+    }
+
+    public function test_ai_failure_still_returns_what_the_customer_said(): void
+    {
+        config(['search.voice.ai' => true]);
+        Http::fake(['*' => Http::response('gateway down', 502)]);
+
+        $result = $this->normalizer()->normalize(['câu lạ nào đó']);
+
+        $this->assertSame('câu lạ nào đó', $result['text']);
+        $this->assertSame(VoiceSearchNormalizer::SOURCE_RAW, $result['source']);
+    }
+
+    public function test_the_ai_tier_can_be_switched_off(): void
+    {
+        config(['search.voice.ai' => false]);
+
+        $result = $this->normalizer()->normalize(['bơ bơ rin gì đó']);
+
+        $this->assertSame(VoiceSearchNormalizer::SOURCE_RAW, $result['source']);
+        Http::assertNothingSent();
+    }
 }
