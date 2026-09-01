@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ProductCatalogController;
+use App\Http\Controllers\VoiceSearchController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\FavoriteController;
@@ -35,7 +36,19 @@ Route::get('/products', [ProductCatalogController::class, 'index'])->name('produ
 Route::get('/products/{MaSP}', [ProductCatalogController::class, 'show'])->name('products.show');
 Route::get('/products/category/{MaDM}', [ProductCatalogController::class, 'byCategory'])->name('products.category');
 Route::get('/search', [ProductCatalogController::class, 'search'])->name('products.search');
-Route::get('/api/search/suggestions', [ProductCatalogController::class, 'suggestions'])->name('products.suggestions');
+// Own bucket keyed on the route: the autocomplete fires on every keystroke past a
+// 300ms debounce, so it needs a ceiling that browsing the catalog does not share.
+Route::get('/api/search/suggestions', [ProductCatalogController::class, 'suggestions'])
+    ->middleware('throttle:60,1,search-suggestions:')
+    ->name('products.suggestions');
+
+// Chuẩn hoá chuỗi Web Speech nghe được. POST vì nó nhận một mảng alternative, và
+// nằm trong nhóm `web` để dùng session/CSRF như phần còn lại của storefront.
+// Bucket throttle riêng: một lượt nói mất ít nhất 2 giây nên 30/phút là dư cho
+// người thật, mà voice không ăn vào hạn mức của autocomplete.
+Route::post('/api/voice/normalize', [VoiceSearchController::class, 'normalize'])
+    ->middleware('throttle:30,1,voice-normalize:')
+    ->name('voice.normalize');
 
 // Shopping cart routes
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -113,6 +126,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // throttle: mỗi lượt tải ảnh là một lần giải mã ảnh trên CPU, nên giới hạn nhịp.
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])
+        ->middleware('throttle:12,1')
+        ->name('profile.avatar.update');
+    Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar'])->name('profile.avatar.destroy');
 
     Route::put('/profile/health', [HealthProfileController::class, 'update'])->name('profile.health.update');
     Route::delete('/profile/health', [HealthProfileController::class, 'destroy'])->name('profile.health.destroy');
