@@ -153,6 +153,55 @@ class VoicePhoneticsTest extends TestCase
         $this->assertStringContainsString('U', VoicePhonetics::key('thuoc'));
     }
 
+    /**
+     * Bảng §4.1 xếp `oi`, `uôi` → `O`, nhưng luật `uo` → `U` chạy trước nên nó
+     * ăn hết "uoi" và luật `uoi` không bao giờ tới lượt. Đo trên bản trước bản
+     * sửa: `key('muoi')` = 'mUi' trong khi `key('mói')` = 'mO', nên "nước mói
+     * sinh lý" (giọng lệch) không khớp "nước muối sinh lý". Cùng họ lỗi mà
+     * docblock của `syllable()` đã cảnh báo cho âm cuối, chỉ là chưa áp cho
+     * chính các luật rime.
+     */
+    public function test_uoi_rime_wins_over_uo(): void
+    {
+        $this->assertSame('mO', VoicePhonetics::key('muoi'));
+        $this->assertSame('mO', VoicePhonetics::key('muối'));
+        $this->assertSame('mO', VoicePhonetics::key('mói'));
+
+        // `uo` phải còn nguyên tác dụng khi không có `i` theo sau.
+        $this->assertSame('thUT', VoicePhonetics::key('thuoc'));
+
+        $this->assertTrue(
+            VoicePhonetics::within(
+                VoicePhonetics::key('nuoc muoi sinh ly'),
+                VoicePhonetics::key('nước mói sinh lý')
+            ),
+            '"nước mói sinh lý" phải khớp "nước muối sinh lý"'
+        );
+    }
+
+    /**
+     * `block_key` là bộ lọc thô chạy trong SQL, `within()` mới là bộ lọc chính
+     * xác chạy trong PHP — bỏ hoa/thường ở tầng thô chỉ nới rộng tập ứng viên.
+     * Đo trên bản trước bản sửa: `key('tiu')` = 'tiu' cho block 'ti' còn
+     * `key('tiêu')` = 'tIu' cho block 'tI', nên `orWhereIn('block_key', …)`
+     * không bao giờ nạp ra ứng viên mà `within()` sẽ nhận ("thuốc tiu hóa").
+     *
+     * Chiều gộp được chốt về chữ thường: cột `block_key` dùng collation
+     * `utf8mb4_bin`, nên bên ghi index và bên truy vấn phải cho cùng một chuỗi
+     * byte. `phonetic_key` thì vẫn phân biệt hoa/thường — xem
+     * test_case_carries_meaning.
+     */
+    public function test_block_key_ignores_case(): void
+    {
+        $this->assertSame('ti', VoicePhonetics::blockKey(VoicePhonetics::key('tiu')));
+        $this->assertSame('ti', VoicePhonetics::blockKey(VoicePhonetics::key('tiêu')));
+
+        $this->assertTrue(
+            VoicePhonetics::within(VoicePhonetics::key('tiu'), VoicePhonetics::key('tiêu')),
+            'within() nhận cặp này, nên tầng thô không được loại nó trước'
+        );
+    }
+
     public function test_block_key_groups_regional_variants(): void
     {
         foreach (self::regionalPairs() as $label => [$catalog, $spoken]) {
@@ -190,6 +239,54 @@ class VoicePhoneticsTest extends TestCase
     {
         $this->assertFalse(
             VoicePhonetics::within(VoicePhonetics::key('berberin'), VoicePhonetics::key('bơ bơ rin'))
+        );
+    }
+
+    /**
+     * Tên thương hiệu đọc rời từng âm: `syllable()` chỉ áp bảng §4.1 ở đầu từ,
+     * nên bên đọc rời thu được luật một lần mỗi âm tiết còn bên catalog nối liền
+     * chỉ thu một lần. Đo được: `key('pa na đôn')` = 'pa La DoN' so với
+     * 'panadol', lev 3 trên ngân sách 2 — trượt vì cách mã hoá, không vì hai
+     * cách đọc thật sự xa nhau.
+     */
+    public static function spelledOutBrands(): array
+    {
+        return [
+            'panadol' => ['panadol', 'pa na đôn'],
+            'salonpas' => ['salonpas', 'sa lon pát'],
+            'nizoral' => ['nizoral', 'ni giô ran'],
+            'collagen' => ['collagen', 'côn la gien'],
+        ];
+    }
+
+    #[DataProvider('spelledOutBrands')]
+    public function test_spelled_out_brand_name_is_accepted(string $catalog, string $spoken): void
+    {
+        $this->assertTrue(
+            VoicePhonetics::within(VoicePhonetics::key($catalog), VoicePhonetics::key($spoken)),
+            "\"{$spoken}\" phải khớp \"{$catalog}\""
+        );
+    }
+
+    /**
+     * Bước thô của nhánh "khác số âm tiết" không được mua thêm recall bằng an
+     * toàn. Cặp gần nhất phải giữ khoảng cách là "vitamin e" / "betadine": lev 4
+     * trên 8 ký tự, đúng tỉ lệ của những cách đọc thương hiệu ở trên — nên
+     * không ngưỡng nào tách được hai nhóm, và đây là lý do bước thô đổi *dạng*
+     * so sánh chứ không nới ngân sách.
+     */
+    public function test_coarse_pass_keeps_distinct_products_apart(): void
+    {
+        $this->assertFalse(
+            VoicePhonetics::within(VoicePhonetics::key('vitamin e'), VoicePhonetics::key('betadine'))
+        );
+        $this->assertFalse(
+            VoicePhonetics::within(VoicePhonetics::key('panadol'), VoicePhonetics::key('pa ra xe ta mon')),
+            '"pa ra xe ta mon" là paracetamol, không phải panadol'
+        );
+        $this->assertFalse(
+            VoicePhonetics::within(VoicePhonetics::key('povidine'), VoicePhonetics::key('bê tha đin')),
+            '"bê tha đin" là betadine, không phải povidine'
         );
     }
 }
