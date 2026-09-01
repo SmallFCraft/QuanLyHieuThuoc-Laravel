@@ -134,6 +134,14 @@ final class VoicePhonetics
                     return false;
                 }
 
+                // A digit is a quantity, not a pronunciation — no accent reads
+                // 500 as 50. Measured: "500mg" vs "50mg" is lev 1 against a
+                // budget of max(1, 5/4) = 1, so the two doses merged. The unit
+                // leaks the same way: "500mg" vs "500ml" is also lev 1.
+                if (self::digits($syllable) !== '' || self::digits($other) !== '') {
+                    return false;
+                }
+
                 $distance += levenshtein($syllable, $other);
             }
 
@@ -144,12 +152,28 @@ final class VoicePhonetics
         // ("pa ra xe ta mon"), so only the flattened key is comparable.
         $flatA = self::flatten($a);
 
+        // Splitting a syllable still may not cross doses: "500mg" read as
+        // "50 mg" is lev 1 on the flat key. Only enforced when both sides carry
+        // digits — "omega 3" vs "ô mê ga ba" spells the digit out as a word,
+        // and that pair has to keep matching.
+        $digitsA = self::digits($a);
+        $digitsB = self::digits($b);
+
+        if ($digitsA !== '' && $digitsB !== '' && $digitsA !== $digitsB) {
+            return false;
+        }
+
         return levenshtein($flatA, self::flatten($b)) <= max(1, intdiv(strlen($flatA), 3));
     }
 
     public static function distance(string $a, string $b): int
     {
         return levenshtein(self::flatten($a), self::flatten($b));
+    }
+
+    private static function digits(string $value): string
+    {
+        return preg_replace('/[^0-9]/', '', $value) ?? '';
     }
 
     private static function flatten(string $key): string

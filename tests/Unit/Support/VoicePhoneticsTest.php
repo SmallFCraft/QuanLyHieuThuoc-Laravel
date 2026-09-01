@@ -74,6 +74,60 @@ class VoicePhoneticsTest extends TestCase
     }
 
     /**
+     * Hàm lượng là dữ liệu định lượng, không phải cách phát âm — không giọng
+     * miền nào đọc 500 thành 50.
+     */
+    public static function dosagePairs(): array
+    {
+        return [
+            '500mg vs 50mg' => ['500mg', '50mg', false],
+            '50mg vs 500mg (đối xứng)' => ['50mg', '500mg', false],
+            '5ml vs 50ml' => ['5ml', '50ml', false],
+            'siro 5ml vs siro 50ml' => ['siro ho 5ml', 'siro ho 50ml', false],
+            'canxi 500mg vs canxi 50mg' => ['canxi 500mg', 'canxi 50mg', false],
+            'vitamin b1 vs vitamin b6' => ['vitamin b1', 'vitamin b6', false],
+            '10 vien vs 100 vien' => ['10 vien', '100 vien', false],
+            '500mg khít' => ['500mg', '500mg', true],
+            'paracetamol 500mg khít' => ['paracetamol 500mg', 'paracetamol 500mg', true],
+        ];
+    }
+
+    /**
+     * Đo trên bản trước bản sửa: `within(key('500mg'), key('50mg'))` trả TRUE.
+     * Hai khoá lệch đúng 1 ký tự, mà nhánh "cùng số âm tiết" cấp ngân sách
+     * `max(1, intdiv(5, 4)) = 1`, tức luôn ≥1 — nên 500mg gộp với 50mg, sai
+     * liều 10 lần. `canxi 500mg` / `canxi 50mg` và `siro ho 5ml` /
+     * `siro ho 50ml` cũng vậy (lev 1, ngưỡng 2). Cùng họ lỗi với
+     * `vitamin c` ≡ `vitamin d` mà §4.3 đã chặn: chỗ phân biệt sản phẩm không
+     * được cấp ngân sách lệch nào.
+     */
+    #[DataProvider('dosagePairs')]
+    public function test_dosage_digits_must_match_exactly(string $left, string $right, bool $accepted): void
+    {
+        $result = VoicePhonetics::within(VoicePhonetics::key($left), VoicePhonetics::key($right));
+
+        if ($accepted) {
+            $this->assertTrue($result, "\"{$left}\" và \"{$right}\" cùng hàm lượng, phải nhận");
+        } else {
+            $this->assertFalse($result, "\"{$left}\" và \"{$right}\" khác hàm lượng, không được gộp");
+        }
+    }
+
+    /**
+     * Ranh giới giữa "chữ số phải khít" và "chữ số đọc thành chữ": ở đây một
+     * bên có chữ số, bên kia không, vì người nói đọc "3" thành "ba". Cặp này
+     * đi qua nhánh "khác số âm tiết" (2 âm tiết vs 4), nơi chỉ khoá phẳng so
+     * được — luật chữ số không được với tới nó, nếu không §4.2 mất một cặp.
+     */
+    public function test_digit_spoken_as_a_word_is_still_accepted(): void
+    {
+        $this->assertTrue(
+            VoicePhonetics::within(VoicePhonetics::key('omega 3'), VoicePhonetics::key('ô mê ga ba')),
+            '"ô mê ga ba" phải khớp "omega 3"'
+        );
+    }
+
+    /**
      * levenshtein() của PHP đếm byte. Khoá chỉ chứa ASCII nên byte ≡ ký tự;
      * một ký tự đa byte lọt vào khoá sẽ làm mọi ngưỡng lệch âm thầm.
      */
