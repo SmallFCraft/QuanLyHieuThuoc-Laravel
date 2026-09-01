@@ -1,0 +1,159 @@
+<?php
+
+namespace App\Support;
+
+/**
+ * Phonetic keys for Vietnamese voice search.
+ *
+ * Region-collapsing on purpose: a Southern speaker's "thuấc hạ sốc" and the
+ * catalog's "thuốc hạ sốt" have to produce the same key, or voice search only
+ * works for the accent the browser's recogniser happened to be tuned on.
+ */
+final class VoicePhonetics
+{
+    /** Flat keys longer than this never take part in near-matching. */
+    private const MAX_BLOCK_LENGTH = 24;
+
+    private const BLOCK_LENGTH = 2;
+
+    /**
+     * A syllable this short carries the whole distinguishing sense of a phrase.
+     * Measured: any tolerance that lets one of them drift merges "vitamin C"
+     * with "vitamin D".
+     */
+    private const ATOMIC_SYLLABLE = 2;
+
+    /**
+     * Onsets, longest alternative first. Each anchors at the start and replaces
+     * once, so an uppercase marker already written blocks the later patterns.
+     */
+    private const ONSETS = [
+        '/^(?:tr|ch)/' => 'C',
+        '/^(?:s|x)/' => 'S',
+        '/^(?:gi|d|v|r)/' => 'D',
+        '/^(?:n|l)/' => 'L',
+        '/^(?:qu|q|k|c)/' => 'K',
+        '/^(?:ph|f)/' => 'F',
+    ];
+
+    /** Diphthongs. Must run before the codas — see syllable(). */
+    private const RIMES = [
+        '/iee|ie|ye|ia/' => 'I',
+        '/uoo|uo|ua/' => 'U',
+        '/uoi|oi/' => 'O',
+    ];
+
+    private const CODAS = [
+        '/(?:nh|ng|n|m)$/' => 'N',
+        '/(?:ch|c|t|k|p)$/' => 'T',
+    ];
+
+    private const VOWELS = [
+        'au' => 'o', 'oo' => 'o', 'ee' => 'e', 'uu' => 'u', 'aa' => 'a', 'y' => 'i',
+    ];
+
+    public static function key(string $text): string
+    {
+        $words = preg_split('/\s+/', VietnameseText::fold($text), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return implode(' ', array_map([self::class, 'syllable'], $words));
+    }
+
+    public static function syllable(string $foldedWord): string
+    {
+        $syllable = $foldedWord;
+
+        foreach (self::ONSETS as $pattern => $marker) {
+            $syllable = preg_replace($pattern, $marker, $syllable, 1) ?? $syllable;
+        }
+
+        // Mid-word x reads as s: "canxi" and "can si" are one word spoken two ways.
+        $syllable = str_replace('x', 'S', $syllable);
+
+        foreach (self::RIMES as $pattern => $marker) {
+            $syllable = preg_replace($pattern, $marker, $syllable) ?? $syllable;
+        }
+
+        // After the rimes, never before: `t$ => T` would otherwise eat the final
+        // consonant of "uot", leaving "uo" unable to match its own rime.
+        foreach (self::CODAS as $pattern => $marker) {
+            $syllable = preg_replace($pattern, $marker, $syllable) ?? $syllable;
+        }
+
+        $syllable = strtr($syllable, self::VOWELS);
+
+        // Letters only: a doubled letter is one sound ("oo" -> "o"), but a doubled
+        // digit is a dose. Collapsing digits made "500" and "50" the same key, and
+        // both are short enough that within() then accepts them as one product.
+        return preg_replace('/([^0-9])\1+/', '$1', $syllable) ?? $syllable;
+    }
+
+    public static function blockKey(string $key): ?string
+    {
+        $flat = self::flatten($key);
+
+        if ($flat === '' || strlen($flat) > self::MAX_BLOCK_LENGTH) {
+            return null;
+        }
+
+        return substr($flat, 0, self::BLOCK_LENGTH);
+    }
+
+    /**
+     * Two keys describe the same spoken phrase.
+     *
+     * Compared syllable by syllable rather than as one string: a single distance
+     * budget over the whole key merged "vitamin C" with "vitamin D" at every
+     * threshold measured, and in a pharmacy that is the wrong way to be wrong.
+     */
+    public static function within(string $a, string $b): bool
+    {
+        if ($a === $b) {
+            return $a !== '';
+        }
+
+        if ($a === '' || $b === '') {
+            return false;
+        }
+
+        $left = explode(' ', $a);
+        $right = explode(' ', $b);
+
+        if (count($left) === count($right)) {
+            $distance = 0;
+
+            foreach ($left as $i => $syllable) {
+                $other = $right[$i];
+
+                if ($syllable === $other) {
+                    continue;
+                }
+
+                if (strlen($syllable) <= self::ATOMIC_SYLLABLE
+                    || strlen($other) <= self::ATOMIC_SYLLABLE) {
+                    return false;
+                }
+
+                $distance += levenshtein($syllable, $other);
+            }
+
+            return $distance <= max(1, intdiv(strlen(self::flatten($a)), 4));
+        }
+
+        // Different syllable counts: the speaker broke one word into several
+        // ("pa ra xe ta mon"), so only the flattened key is comparable.
+        $flatA = self::flatten($a);
+
+        return levenshtein($flatA, self::flatten($b)) <= max(1, intdiv(strlen($flatA), 3));
+    }
+
+    public static function distance(string $a, string $b): int
+    {
+        return levenshtein(self::flatten($a), self::flatten($b));
+    }
+
+    private static function flatten(string $key): string
+    {
+        return str_replace(' ', '', $key);
+    }
+}
