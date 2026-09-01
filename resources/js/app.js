@@ -1,6 +1,12 @@
 import './cart-add';
+import './catalog-async';
+import './catalog-filter';
 import './favorites';
+import './header-scroll';
+import './profile';
 import './search-autocomplete';
+import './search-placeholder';
+import './voice-search';
 import './triage';
 
 import Alpine from 'alpinejs';

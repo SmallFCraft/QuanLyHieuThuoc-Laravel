@@ -1,7 +1,19 @@
 /**
  * Search Autocomplete Component
  * Provides real-time search suggestions for product search
+ *
+ * Hai trạng thái, một panel: chưa gõ đủ 2 ký tự thì hiện xu hướng / lịch sử / danh
+ * mục / sản phẩm xem nhiều (nguồn là <template id="search-panel-data"> nhúng sẵn
+ * trong trang), gõ rồi thì hiện gợi ý từ /api/search/suggestions. Cùng một container
+ * cho cả hai, vì hai overlay tranh nhau một ô input sẽ đè lên nhau.
  */
+
+import { readHistory, pushHistory, removeHistory, clearHistory, initSearchHistoryCapture, MAX_VISIBLE } from './search-history';
+
+/** Chuỗi giao diện đến từ Blade, không hardcode trong JS. */
+function lang(key, fallback = '') {
+    return window.PharmacySearchLang?.[key] ?? fallback;
+}
 
 class SearchAutocomplete {
     constructor(inputElement, options = {}) {
@@ -23,6 +35,7 @@ class SearchAutocomplete {
         this.handleKeydownBound = (event) => this.handleKeydown(event);
         this.handleFocusBound = (event) => this.handleFocus(event);
         this.handleDocumentClickBound = (event) => this.handleDocumentClick(event);
+        this.handlePanelClickBound = (event) => this.handlePanelClick(event);
         this.positionSuggestionsBound = () => this.positionSuggestions();
 
         this.init();
@@ -54,8 +67,15 @@ class SearchAutocomplete {
         document.body.appendChild(this.suggestionsContainer);
         this.positionSuggestions();
 
+        // Nút xoá lịch sử nằm trong panel do JS dựng lại mỗi lần mở, nên bắt sự kiện
+        // ở container thay vì gắn listener cho từng nút.
+        this.suggestionsContainer.addEventListener('click', this.handlePanelClickBound);
+
         window.addEventListener('scroll', this.positionSuggestionsBound, { passive: true });
         window.addEventListener('resize', this.positionSuggestionsBound, { passive: true });
+        // Header thu lại khi cuộn quá 64px (header-scroll.js), làm form.bottom dịch lên
+        // ~4px — panel đang mở phải được đặt lại chứ không lơ lửng lệch chỗ.
+        document.addEventListener('pharmacy:header-state', this.positionSuggestionsBound);
     }
 
     positionSuggestions() {
@@ -71,9 +91,24 @@ class SearchAutocomplete {
 
         const formRect = form.getBoundingClientRect();
 
-        this.suggestionsContainer.style.top = `${formRect.bottom + 8}px`;
-        this.suggestionsContainer.style.left = `${formRect.left}px`;
-        this.suggestionsContainer.style.width = `${formRect.width}px`;
+        // Rộng theo ô tìm kiếm, nhưng không hẹp hơn 320px và không tràn viewport: ô nằm
+        // trên hàng header nên ở 375px nó chỉ còn 194px — vừa cho một dòng chữ, không
+        // vừa cho tên thuốc hay hai hàng pill. GUTTER giữ panel không dán vào mép.
+        const GUTTER = 12;
+        const MIN_WIDTH = 320;
+        const available = window.innerWidth - GUTTER * 2;
+        const width = Math.min(Math.max(formRect.width, MIN_WIDTH), available);
+        // Neo mép phải của ô rồi kẹp lại: panel mở rộng về bên trái, phía có chỗ.
+        const left = Math.min(Math.max(GUTTER, formRect.right - width), window.innerWidth - GUTTER - width);
+
+        // Dải "nghe được" của voice search chiếm ~40px ngay dưới form khi nó đang
+        // hiện, nên panel phải xuống dưới nó thay vì đè lên.
+        const status = document.querySelector('.voice-status[data-visible]');
+        const offset = status ? status.getBoundingClientRect().height + 12 : 0;
+
+        this.suggestionsContainer.style.top = `${formRect.bottom + 8 + offset}px`;
+        this.suggestionsContainer.style.left = `${left}px`;
+        this.suggestionsContainer.style.width = `${width}px`;
     }
 
     handleInput(event) {
@@ -82,8 +117,8 @@ class SearchAutocomplete {
         clearTimeout(this.debounceTimer);
 
         if (query.length < this.options.minChars) {
-            this.hideSuggestions();
             this.abortController?.abort();
+            this.renderPanel();
             return;
         }
 
@@ -118,7 +153,10 @@ class SearchAutocomplete {
 
         if (query.length >= this.options.minChars) {
             this.fetchSuggestions(query);
+            return;
         }
+
+        this.renderPanel();
     }
 
     handleDocumentClick(event) {
@@ -129,6 +167,113 @@ class SearchAutocomplete {
         if (!this.input.contains(event.target) && !this.suggestionsContainer.contains(event.target)) {
             this.hideSuggestions();
         }
+    }
+
+    /**
+     * Xoá một mục hoặc cả lịch sử. Chỉ khối lịch sử được vẽ lại — vẽ lại cả panel sẽ
+     * làm mất vị trí cuộn và nhấp nháy phần xu hướng đứng yên.
+     */
+    handlePanelClick(event) {
+        const clear = event.target.closest('[data-history-clear]');
+
+        if (clear) {
+            event.preventDefault();
+            clearHistory();
+            this.renderPanel();
+            return;
+        }
+
+        const remove = event.target.closest('[data-history-remove]');
+
+        if (remove) {
+            // Nút X nằm trong pill là <a>: không chặn thì trang điều hướng luôn.
+            event.preventDefault();
+            event.stopPropagation();
+            removeHistory(remove.dataset.historyRemove);
+            this.renderPanel();
+            return;
+        }
+
+        // Bấm một pill xu hướng là điều hướng bằng link, không phải submit form, nên
+        // listener submit ở search-history.js không thấy — ghi lịch sử tại đây.
+        const trending = event.target.closest('[data-search-term]');
+
+        if (trending) {
+            pushHistory(trending.dataset.searchTerm);
+        }
+    }
+
+    /**
+     * Panel lúc ô còn trống: lịch sử của khách trước, rồi xu hướng / danh mục / sản
+     * phẩm xem nhiều nhúng sẵn trong trang.
+     */
+    renderPanel() {
+        const template = document.getElementById('search-panel-data');
+        const history = readHistory();
+
+        if (!template && history.length === 0) {
+            this.hideSuggestions();
+            return;
+        }
+
+        this.suggestionsContainer.innerHTML = '';
+
+        if (history.length > 0) {
+            this.suggestionsContainer.appendChild(this.buildHistorySection(history));
+        }
+
+        if (template) {
+            // cloneNode: template dùng lại cho mọi ô tìm kiếm trên trang, nên không
+            // được rút node gốc ra.
+            this.suggestionsContainer.appendChild(template.content.cloneNode(true));
+        }
+
+        this.showSuggestions();
+        this.currentFocus = -1;
+    }
+
+    buildHistorySection(history) {
+        const section = document.createElement('section');
+        section.className = 'search-panel-section';
+
+        const head = document.createElement('div');
+        head.className = 'search-panel-head';
+
+        const heading = document.createElement('h3');
+        heading.className = 'search-panel-heading';
+        heading.innerHTML = `<i class="bi bi-clock-history text-secondary" aria-hidden="true"></i>${this.escapeHtml(lang('history', 'Tìm kiếm gần đây'))}`;
+
+        const clear = document.createElement('button');
+        clear.type = 'button';
+        clear.className = 'search-panel-clear';
+        clear.dataset.historyClear = 'true';
+        clear.textContent = lang('historyClear', 'Xoá tất cả');
+
+        head.append(heading, clear);
+
+        const pills = document.createElement('div');
+        pills.className = 'search-panel-pills';
+
+        history.slice(0, MAX_VISIBLE).forEach((term) => {
+            const pill = document.createElement('a');
+            pill.className = 'search-panel-pill search-panel-pill--history';
+            pill.href = `/search?q=${encodeURIComponent(term)}`;
+            pill.textContent = term;
+
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'search-panel-pill__remove';
+            remove.dataset.historyRemove = term;
+            remove.setAttribute('aria-label', `${lang('historyRemove', 'Xoá từ khoá này')}: ${term}`);
+            remove.innerHTML = '<i class="bi bi-x" aria-hidden="true"></i>';
+
+            pill.appendChild(remove);
+            pills.appendChild(pill);
+        });
+
+        section.append(head, pills);
+
+        return section;
     }
 
     setActive(items) {
@@ -191,7 +336,7 @@ class SearchAutocomplete {
 
         if (categories.length > 0) {
             html += '<div class="suggestion-section">';
-            html += '<div class="suggestion-header">Danh mục</div>';
+            html += `<div class="suggestion-header">${this.escapeHtml(lang('suggestionCategories', 'Danh mục'))}</div>`;
             categories.forEach((category) => {
                 html += `
                     <a href="${this.escapeAttribute(category.url)}" class="suggestion-item category-item">
@@ -205,7 +350,7 @@ class SearchAutocomplete {
 
         if (products.length > 0) {
             html += '<div class="suggestion-section">';
-            html += '<div class="suggestion-header">Sản phẩm</div>';
+            html += `<div class="suggestion-header">${this.escapeHtml(lang('suggestionProducts', 'Sản phẩm'))}</div>`;
             products.forEach((product) => {
                 html += `
                     <a href="${this.escapeAttribute(product.url)}" class="suggestion-item product-item">
@@ -232,7 +377,7 @@ class SearchAutocomplete {
         html += `
             <div class="suggestion-footer">
                 <a href="/search?q=${encodeURIComponent(query)}" class="view-all-link">
-                    Xem tất cả kết quả cho "${this.escapeHtml(query)}" <i class="bi bi-arrow-right"></i>
+                    ${this.escapeHtml(lang('viewAll', 'Xem tất cả kết quả cho ":term"').replace(':term', query))} <i class="bi bi-arrow-right"></i>
                 </a>
             </div>
         `;
@@ -242,14 +387,29 @@ class SearchAutocomplete {
         this.currentFocus = -1;
     }
 
+    /**
+     * Không có kết quả: nêu rõ từ khoá nào không tìm thấy, rồi hiện lại xu hướng để
+     * khách có đường đi tiếp thay vì một ngõ cụt.
+     */
     renderEmpty(query) {
+        const template = document.getElementById('search-panel-data');
+
         this.suggestionsContainer.innerHTML = `
             <div class="suggestion-empty">
                 <i class="bi bi-search text-gray-300"></i>
-                <p>Không tìm thấy kết quả cho "${this.escapeHtml(query)}"</p>
+                <p>${this.escapeHtml(lang('noResults', 'Không tìm thấy kết quả cho ":term"').replace(':term', query))}</p>
+                <span class="suggestion-empty__hint">${this.escapeHtml(lang('noResultsHint', ''))}</span>
             </div>
         `;
+
+        const trending = template?.content.querySelector('[data-panel-trending]');
+
+        if (trending) {
+            this.suggestionsContainer.appendChild(trending.cloneNode(true));
+        }
+
         this.showSuggestions();
+        this.currentFocus = -1;
     }
 
     highlightMatch(text, query) {
@@ -313,6 +473,8 @@ class SearchAutocomplete {
         document.removeEventListener('click', this.handleDocumentClickBound);
         window.removeEventListener('scroll', this.positionSuggestionsBound);
         window.removeEventListener('resize', this.positionSuggestionsBound);
+        document.removeEventListener('pharmacy:header-state', this.positionSuggestionsBound);
+        this.suggestionsContainer?.removeEventListener('click', this.handlePanelClickBound);
 
         if (this.suggestionsContainer?.parentNode) {
             this.suggestionsContainer.parentNode.removeChild(this.suggestionsContainer);
@@ -327,8 +489,12 @@ class SearchAutocomplete {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    initSearchHistoryCapture();
+
     const instances = [];
-    const searchInputs = document.querySelectorAll('input[name="q"][type="text"]');
+    // Both input types: the storefront boxes are type="search" (native clear button,
+    // Enter handling), while other search boxes are still type="text".
+    const searchInputs = document.querySelectorAll('input[name="q"][type="search"], input[name="q"][type="text"]');
 
     searchInputs.forEach((input) => {
         if (input.__searchAutocomplete instanceof SearchAutocomplete) {

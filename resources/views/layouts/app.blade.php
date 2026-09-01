@@ -119,7 +119,9 @@
                     'name' => $product->name,
                     'description' => $metaDescription,
                     'image' => [$metaImage],
-                    'sku' => $product->batch_number ?: (string) $product->MaSP,
+                    // product_code, not batch_number: the batch is an internal
+                    // inventory record and search engines index this markup.
+                    'sku' => $product->product_code ?: (string) $product->MaSP,
                     'category' => $product->category->name ?? null,
                     'brand' => [
                         '@type' => 'Brand',
@@ -255,8 +257,8 @@
                 to { opacity: 1; transform: translateY(0); }
             }
             .nav-categories-menu {
-                width: min(320px, calc(100vw - 32px));
-                min-width: 320px;
+                width: min(360px, calc(100vw - 32px));
+                min-width: min(360px, calc(100vw - 32px));
                 max-width: calc(100vw - 32px);
                 padding: 0.85rem;
                 border: 1px solid rgba(16, 185, 129, 0.16);
@@ -266,96 +268,190 @@
                 box-sizing: border-box;
                 overflow-x: hidden;
             }
-            .nav-categories-list {
+            .nav-categories-head {
                 display: flex;
-                flex-direction: column;
-                gap: 0.45rem;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 0.75rem;
+                padding: 0 0.4rem 0.5rem;
             }
             .nav-categories-label {
-                display: block;
-                padding: 0 0.4rem 0.5rem;
                 font-size: 0.72rem;
                 font-weight: 700;
                 letter-spacing: 0.08em;
                 text-transform: uppercase;
                 color: #059669;
             }
+            .nav-categories-total {
+                flex-shrink: 0;
+                font-size: 0.72rem;
+                font-weight: 700;
+                color: #9ca3af;
+            }
+            .nav-categories-search {
+                position: relative;
+                margin-bottom: 0.5rem;
+            }
+            .nav-categories-search i {
+                position: absolute;
+                top: 50%;
+                left: 0.7rem;
+                transform: translateY(-50%);
+                color: #059669;
+                font-size: 0.85rem;
+                pointer-events: none;
+            }
+            .nav-categories-search input {
+                width: 100%;
+                min-height: 40px;
+                padding: 0.4rem 0.65rem 0.4rem 2.1rem;
+                border-radius: 0.65rem;
+                border: 1px solid rgba(21, 128, 61, 0.16);
+                background: rgba(255, 255, 255, 0.96);
+                font-size: 0.87rem;
+                color: #1f2937;
+            }
+            .nav-categories-search input:focus {
+                outline: none;
+                border-color: rgba(16, 185, 129, 0.5);
+                box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
+            }
+            /* The crawled catalog carries 51 categories, so only the list scrolls —
+               the label and the filter box stay put while it does. */
+            .nav-categories-list {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.15rem 0.4rem;
+                max-height: min(58vh, 420px);
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(16, 185, 129, 0.34) transparent;
+                margin-right: -0.3rem;
+                padding-right: 0.3rem;
+            }
+            .nav-categories-list::-webkit-scrollbar {
+                width: 6px;
+            }
+            .nav-categories-list::-webkit-scrollbar-thumb {
+                border-radius: 999px;
+                background: rgba(16, 185, 129, 0.34);
+            }
+            .nav-categories-empty {
+                display: none;
+                grid-column: 1 / -1;
+                margin: 0;
+                padding: 0.8rem 0.5rem;
+                font-size: 0.84rem;
+                color: #6b7280;
+            }
+            .nav-categories-list.is-empty .nav-categories-empty {
+                display: block;
+            }
+/* NAV-CHUNK-3 */
+            /* Same stock-depth bar as the catalog sidebar: drawn as the row's own
+               background, so it costs no height. Replaces 36px icon tiles that all
+               showed the same fallback glyph — no crawled category carries an icon. */
             .nav-category-link {
+                position: relative;
+                isolation: isolate;
                 display: flex;
                 align-items: center;
-                gap: 0.75rem;
-                min-height: 50px;
-                padding: 0.7rem 0.8rem;
-                border-radius: 1rem;
+                gap: 0.4rem;
+                min-height: 34px;
+                padding: 0.35rem 0.5rem;
+                border-radius: 0.5rem;
                 border: 1px solid transparent;
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(240, 253, 244, 0.92) 100%);
                 color: #111827;
                 text-decoration: none;
+                white-space: normal;
+            }
+            .nav-category-link::before {
+                content: '';
+                position: absolute;
+                inset: 1px;
+                z-index: -1;
+                width: var(--depth, 0%);
+                border-radius: 0.45rem;
+                background: linear-gradient(90deg, rgba(16, 185, 129, 0.19), rgba(16, 185, 129, 0.07));
+                transition: opacity 0.16s ease;
             }
             .nav-category-link:hover,
-            .nav-category-link:focus {
-                background: linear-gradient(135deg, rgba(236, 253, 245, 1) 0%, rgba(209, 250, 229, 0.85) 100%);
+            .nav-category-link:focus-visible {
+                background: rgba(236, 253, 245, 0.9);
                 border-color: rgba(16, 185, 129, 0.22);
                 color: #047857;
-                transform: translateX(4px);
             }
             .nav-category-link.is-active {
-                border-color: rgba(16, 185, 129, 0.24);
-                background: linear-gradient(135deg, rgba(209, 250, 229, 0.95) 0%, rgba(236, 253, 245, 1) 100%);
-                color: #047857;
-                box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.08);
+                border-color: transparent;
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: #ffffff;
             }
-            .nav-category-icon {
-                width: 36px;
-                height: 36px;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-                border-radius: 12px;
-                background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(16, 185, 129, 0.08) 100%);
-                color: #059669;
-                box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.08);
+            .nav-category-link.is-active::before {
+                opacity: 0;
             }
-            .nav-category-icon i {
-                font-size: 0.92rem;
-            }
-            .nav-category-copy {
-                display: flex;
-                flex-direction: column;
-                min-width: 0;
-                gap: 0.15rem;
-                flex: 1;
+            .nav-category-link[hidden] {
+                display: none;
             }
             .nav-category-title {
-                font-size: 0.9rem;
+                flex: 1;
+                min-width: 0;
+                font-size: 0.82rem;
                 font-weight: 600;
-                color: inherit;
                 line-height: 1.25;
+                color: inherit;
             }
-            .nav-category-meta {
-                font-size: 0.74rem;
-                line-height: 1.2;
+            .nav-category-count {
+                flex-shrink: 0;
+                font-size: 0.72rem;
+                font-weight: 700;
+                font-variant-numeric: tabular-nums;
                 color: #6b7280;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
             }
-            .nav-category-link:hover .nav-category-meta,
-            .nav-category-link:focus .nav-category-meta,
-            .nav-category-link.is-active .nav-category-meta {
+            .nav-category-link:hover .nav-category-count,
+            .nav-category-link:focus-visible .nav-category-count {
                 color: #047857;
             }
-            .nav-category-chevron {
-                color: #9ca3af;
-                font-size: 0.85rem;
-                transition: transform 0.2s ease, color 0.2s ease;
+            .nav-category-link.is-active .nav-category-count {
+                color: rgba(255, 255, 255, 0.92);
             }
-            .nav-category-link:hover .nav-category-chevron,
-            .nav-category-link:focus .nav-category-chevron,
-            .nav-category-link.is-active .nav-category-chevron {
-                color: #059669;
-                transform: translateX(2px);
+            .nav-categories-cta-count {
+                flex-shrink: 0;
+                font-size: 0.8rem;
+                font-weight: 700;
+                font-variant-numeric: tabular-nums;
+                color: #6b7280;
+            }
+            .nav-categories-cta:hover .nav-categories-cta-count,
+            .nav-categories-cta:focus .nav-categories-cta-count {
+                color: #047857;
+            }
+            /* The nav rows are their own hover treatment; the generic dropdown-item
+               slide would fight the depth bar underneath them. */
+            .nav-category-link:hover,
+            .nav-category-link:focus {
+                transform: none;
+            }
+            @media (max-width: 991px) {
+                /* Inside the collapsed burger menu the dropdown is in flow, so it gets
+                   a tighter cap and stays single-column at the narrowest widths. */
+                .nav-categories-menu {
+                    padding: 0.7rem;
+                }
+                .nav-categories-list {
+                    max-height: min(46vh, 320px);
+                }
+            }
+            @media (max-width: 400px) {
+                .nav-categories-list {
+                    grid-template-columns: minmax(0, 1fr);
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .nav-category-link,
+                .nav-category-link::before {
+                    transition: none;
+                }
             }
             .nav-categories-divider {
                 margin: 0.75rem 0 0.35rem;
@@ -402,12 +498,103 @@
             /* Fix Tailwind and Bootstrap .collapse conflict */
             .navbar-collapse.collapse.show { visibility: visible !important; display: block; }
             .navbar-collapse.collapsing { visibility: visible !important; }
-            
+
+            /* Ô tìm kiếm duy nhất của app, nằm giữa logo và burger ở mọi khổ. Không giới
+               hạn trên: dưới lg nó lấy hết chỗ còn lại, trên lg dừng ở 500px để nav link
+               còn chỗ. */
+            .header-search { min-width: 0; }
+            .header-search input {
+                height: 42px;
+                background: rgba(16, 185, 129, 0.08);
+                transition: background 0.3s ease, box-shadow 0.2s ease;
+            }
+            .header-search input:focus {
+                background: #fff;
+                box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+            }
+
+            /* Thanh header. Trước đây là inline style; chuyển ra class vì inline thắng
+               stylesheet, nên không thể override theo trạng thái cuộn. */
+            .site-header {
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                border-bottom: 1px solid rgba(16, 185, 129, 0.15);
+                box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
+                z-index: 1050;
+                transition: box-shadow 0.26s ease-out, background-color 0.26s ease-out,
+                            padding-top 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                            padding-bottom 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            /* Cuộn quá 64px thì thanh nổi rõ hơn khỏi nội dung phía sau.
+               resources/js/header-scroll.js đặt data-header-scrolled trên <html>; ở đây
+               chỉ có CSS, không JS nào chạy theo từng frame cuộn.
+
+               Hai khai báo này chỉ paint, không layout, nên áp cho mọi khổ. Phần nhường
+               chỗ ngang thì chỉ dưới lg — xem khối media dưới. */
+            :root[data-header-scrolled] .site-header {
+                background: rgba(255, 255, 255, 0.98);
+                backdrop-filter: blur(22px);
+                -webkit-backdrop-filter: blur(22px);
+                box-shadow: 0 6px 28px rgba(0, 0, 0, 0.1);
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                /* Trạng thái vẫn đổi, chỉ bỏ phần chuyển động. */
+                .site-header,
+                .navbar-brand,
+                .header-search,
+                .header-search input {
+                    transition: none;
+                }
+            }
+
             /* Mobile Styles (< 992px) */
             @media (max-width: 991px) {
                 .navbar { min-height: 56px; }
                 .navbar-brand { font-size: 1.1rem; }
                 .navbar-brand img { height: 36px !important; }
+
+                /* Cuộn quá 64px: logo nhường hết chỗ ngang cho ô tìm kiếm và thanh gọn
+                   lại. Chỉ dưới lg — trên desktop ô đã dừng ở 500px và còn nav link bên
+                   phải, nên bỏ logo ở đó là mất thương hiệu mà không đổi được gì.
+
+                   Nav là position: fixed nên đổi padding của nó không đẩy nội dung
+                   trang: main giữ nguyên padding-top: 86px. Reflow gói trong ba phần tử
+                   của thanh, một lần mỗi lần vượt ngưỡng — không phải mỗi frame cuộn. */
+                .site-header {
+                    transition: box-shadow 0.26s ease-out, background-color 0.26s ease-out,
+                                padding-top 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                                padding-bottom 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                :root[data-header-scrolled] .site-header {
+                    padding-top: 0.35rem;
+                    padding-bottom: 0.35rem;
+                }
+
+                /* max-width, không phải display: none — 0 là trạng thái animate được,
+                   còn display thì nhảy. visibility: hidden để logo rời tab order và a11y
+                   tree, chứ không thành một link vô hình vẫn bấm được. */
+                .navbar-brand {
+                    max-width: 120px;
+                    transition: max-width 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                                opacity 0.18s ease-out,
+                                margin-right 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                                visibility 0.26s;
+                }
+                :root[data-header-scrolled] .navbar-brand {
+                    max-width: 0;
+                    margin-right: 0 !important;
+                    opacity: 0;
+                    visibility: hidden;
+                }
+                .header-search {
+                    transition: margin-left 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                :root[data-header-scrolled] .header-search {
+                    margin-left: 0 !important;
+                }
                 
                 /* Beautiful Hamburger Toggle */
                 .navbar-toggler { 
@@ -465,25 +652,7 @@
                     align-items: center;
                 }
                 .navbar-nav .nav-link i { margin-right: 12px; font-size: 1.25rem; width: 24px; text-align: center; }
-                
-                .mobile-search { 
-                    margin-bottom: 1rem;
-                    width: 100%;
-                }
-                .mobile-search input {
-                    width: 100%;
-                    height: 50px;
-                    border-radius: 16px;
-                    background: rgba(16, 185, 129, 0.06);
-                    border: 1px solid rgba(16, 185, 129, 0.1);
-                    font-size: 1rem;
-                }
-                .mobile-search input:focus {
-                    background: #fff;
-                    border-color: #10b981;
-                    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
-                }
-                
+
                 /* Adjust dropdown in mobile */
                 .dropdown-menu {
                     position: static !important;
@@ -538,8 +707,8 @@
                     visibility: visible !important;
                 }
                 .navbar-brand img { height: 44px !important; }
-                .desktop-search { max-width: 500px; }
-                .desktop-search input { height: 44px; }
+                .header-search { max-width: 500px; }
+                .header-search input { height: 44px; }
                 .navbar-nav { gap: 0.25rem; }
                 .navbar-nav .nav-link { font-size: 0.95rem; }
             }
@@ -582,39 +751,55 @@
         @stack('styles')
     </head>
     <body class="bg-gray-50 text-gray-800">
+        {{-- Mốc đo cho resources/js/header-scroll.js: khi khối này trôi hết lên trên
+             viewport thì scrollY đã vượt 64px và header chuyển sang trạng thái gọn.
+             absolute + aria-hidden nên nó không chiếm chỗ và không có gì để đọc.
+             Cao 64px chứ không phải 1px: IntersectionObserver lấy mẫu theo frame nên
+             một phần tử 1px bị bỏ lỡ ở fractional pixel (zoom, DPR lẻ). --}}
+        <div data-header-sentinel aria-hidden="true" style="position: absolute; top: 0; left: 0; width: 1px; height: 64px; pointer-events: none;"></div>
+
         <!-- Navigation -->
-        <nav class="navbar navbar-expand-lg fixed-top" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(16, 185, 129, 0.15); box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05); z-index: 1050;">
+        <nav class="navbar navbar-expand-lg fixed-top site-header">
             <div class="container-fluid px-3 px-lg-4 d-flex flex-nowrap align-items-center justify-content-between">
                 <!-- Branding -->
-                <a class="navbar-brand d-flex align-items-center overflow-hidden" href="{{ route('home') }}" style="max-width: 70vw; white-space: nowrap;">
-                    <img src="{{ asset('images/logo.png') }}" alt="Logo" class="me-2 shadow-sm flex-shrink-0" style="height: 40px; width: auto; object-fit: contain; transition: transform 0.3s ease;">
-                    <span class="text-emerald-700 text-truncate d-none d-sm-inline fw-bold" style="font-size: 1.15rem;">{{ __('messages.app_name') }}</span>
-                    <span class="text-emerald-700 text-truncate d-inline d-sm-none fw-bold" style="font-size: 1.1rem;">{{ __('messages.app_name_short') }}</span>
+                <a class="navbar-brand d-flex align-items-center overflow-hidden flex-shrink-0" href="{{ route('home') }}" style="white-space: nowrap;">
+                    {{-- logo-nav.png, not logo.png: the source file is 2816x1536 (1,516 KB)
+                         and rendered 115x63 here, which was 51% of the page's bytes. --}}
+                    <img src="{{ asset('images/logo-nav.png') }}" alt="Logo" class="me-2 shadow-sm flex-shrink-0" width="176" height="96" style="height: 40px; width: auto; object-fit: contain; transition: transform 0.3s ease;">
+                    {{-- Dưới lg chỉ còn logo: dải 320-991px phải nhường hết chỗ ngang cho ô
+                         tìm kiếm, vốn là lối vào chính của cả trang. --}}
+                    <span class="text-emerald-700 text-truncate d-none d-lg-inline fw-bold" style="font-size: 1.15rem;">{{ __('messages.app_name') }}</span>
                 </a>
-                
-                <!-- Desktop Search -->
-                <div class="d-none d-lg-flex flex-grow-1 mx-4 desktop-search">
-                    <form action="{{ route('products.search') }}" method="GET" class="w-100 position-relative">
-                        <input type="text" name="q" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="{{ __('messages.search_placeholder') }}" autocomplete="off" style="background: rgba(16, 185, 129, 0.08); transition: all 0.3s ease;" onfocus="this.style.background='rgba(16, 185, 129, 0.12)'">
-                        <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-emerald-600"></i>
+
+                {{-- Ô tìm kiếm duy nhất của cả app, ngay trên hàng header ở mọi khổ màn hình.
+                     Trước đây có ba ô — header, trang chủ, trang catalog — cùng post một `q`,
+                     phải có JS ẩn bớt cho khỏi hiện hai ô một lúc. --}}
+                <div class="header-search flex-grow-1 mx-2 mx-lg-4">
+                    <form action="{{ route('products.search') }}" method="GET" class="w-100 position-relative" role="search" aria-label="{{ __('messages.search_placeholder') }}">
+                        <label for="header-search" class="visually-hidden">{{ __('messages.search_placeholder') }}</label>
+                        <input type="search" id="header-search" name="q" value="{{ request('q') }}" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="{{ __('messages.search_mobile_placeholder') }}" autocomplete="off">
+                        {{-- Icon kính lúp và nút micro dùng CHUNG ô 48px của `pe-5`, chỉ một
+                             cái hiện. voice-search.js đặt data-voice-ready trên <html> khi
+                             browser có SpeechRecognition; CSS đổi chỗ theo đó. Nhờ vậy lòng
+                             trong ô không đổi một pixel — search-placeholder.js đo chỗ đó để
+                             chọn bộ chuỗi, và ở 375px nó chỉ còn ~122px. --}}
+                        <i class="bi bi-search header-search-icon text-emerald-600" aria-hidden="true"></i>
+                        @if(config('search.voice.enabled', true))
+                            <button type="button" class="header-search-mic" data-voice-search
+                                    aria-label="{{ __('messages.voice_start') }}">
+                                <i class="bi bi-mic" aria-hidden="true"></i>
+                            </button>
+                        @endif
                     </form>
                 </div>
-                
+
                 <!-- Mobile Toggle Button -->
-                <button class="navbar-toggler rounded-3 flex-shrink-0 ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation" style="border-width: 1.5px;">
+                <button class="navbar-toggler rounded-3 flex-shrink-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation" style="border-width: 1.5px;">
                     <i class="bi bi-list fs-4 text-emerald-600" style="font-weight: bold;"></i>
                 </button>
-                
+
                 <!-- Navbar Menu -->
                 <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                    <!-- Mobile Search -->
-                    <div class="d-lg-none mobile-search">
-                        <form action="{{ route('products.search') }}" method="GET" class="position-relative">
-                            <input type="text" name="q" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="{{ __('messages.search_mobile_placeholder') }}" autocomplete="off" style="background: rgba(16, 185, 129, 0.08);">
-                            <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-emerald-600"></i>
-                        </form>
-                    </div>
-                    
                     <ul class="navbar-nav align-items-lg-center">
                         <!-- Home Link -->
                         <li class="nav-item">
@@ -630,7 +815,7 @@
                             </a>
                             @php
                                 $activeCategoryId = request('category');
-                                $activeCategoryRoute = request()->route('category');
+                                $activeCategoryRoute = request()->route('MaDM');
 
                                 if ($activeCategoryId === null && $activeCategoryRoute !== null) {
                                     $activeCategoryId = is_object($activeCategoryRoute)
@@ -638,40 +823,48 @@
                                         : $activeCategoryRoute;
                                 }
                             @endphp
-                            <ul class="dropdown-menu nav-categories-menu rounded-4 mt-2">
+                            <ul class="dropdown-menu nav-categories-menu rounded-4 mt-2" data-catalog-filter>
+                                @php
+                                    $navMaxCount = max(1, (int) $navCategories->max('products_count'));
+                                    $navTotal = (int) $navCategories->sum('products_count');
+                                @endphp
                                 <li class="list-unstyled">
-                                    <span class="nav-categories-label">{{ __('messages.categories') }}</span>
+                                    <div class="nav-categories-head">
+                                        <span class="nav-categories-label">{{ __('messages.categories') }}</span>
+                                        <span class="nav-categories-total">{{ $navCategories->count() }}</span>
+                                    </div>
                                 </li>
+                                @if($navCategories->isNotEmpty())
+                                    <li class="list-unstyled">
+                                        <div class="nav-categories-search">
+                                            <i class="bi bi-search" aria-hidden="true"></i>
+                                            <label for="nav-category-search" class="visually-hidden">{{ __('messages.filter_categories') }}</label>
+                                            <input type="search" id="nav-category-search" autocomplete="off"
+                                                   placeholder="{{ __('messages.filter_categories') }}"
+                                                   data-catalog-filter-search>
+                                        </div>
+                                    </li>
+                                @endif
                                 <li class="list-unstyled">
-                                    <div class="nav-categories-list">
+                                    <div class="nav-categories-list" data-catalog-filter-list>
                                         @forelse($navCategories as $cat)
                                             @php
-                                                $rawIcon = trim((string) ($cat->icon ?? ''));
-                                                $iconName = \Illuminate\Support\Str::startsWith($rawIcon, 'bi-')
-                                                    ? \Illuminate\Support\Str::after($rawIcon, 'bi-')
-                                                    : ($rawIcon !== '' && !\Illuminate\Support\Str::startsWith($rawIcon, 'fa-') ? $rawIcon : 'grid-fill');
                                                 $isActiveCategory = $activeCategoryId !== null && (string) $activeCategoryId === (string) $cat->MaDM;
-                                                $categoryMeta = !empty($cat->description)
-                                                    ? \Illuminate\Support\Str::limit($cat->description, 42)
-                                                    : 'Xem nhanh các sản phẩm theo nhu cầu';
                                             @endphp
                                             <a
                                                 class="dropdown-item nav-category-link {{ $isActiveCategory ? 'is-active' : '' }}"
                                                 href="{{ route('products.index', ['category' => $cat->MaDM]) }}"
+                                                style="--depth: {{ round($cat->products_count / $navMaxCount * 100) }}%"
+                                                data-folded="{{ \App\Support\VietnameseText::fold($cat->name) }}"
                                                 @if($isActiveCategory) aria-current="page" @endif
                                             >
-                                                <span class="nav-category-icon" aria-hidden="true">
-                                                    <i class="bi bi-{{ $iconName }}"></i>
-                                                </span>
-                                                <span class="nav-category-copy">
-                                                    <span class="nav-category-title">{{ $cat->name }}</span>
-                                                    <span class="nav-category-meta">{{ $categoryMeta }}</span>
-                                                </span>
-                                                <i class="bi bi-chevron-right nav-category-chevron" aria-hidden="true"></i>
+                                                <span class="nav-category-title">{{ $cat->name }}</span>
+                                                <span class="nav-category-count">{{ $cat->products_count }}</span>
                                             </a>
                                         @empty
                                             <span class="px-3 py-2 text-muted small text-center">{{ __('messages.loading_categories') }}</span>
                                         @endforelse
+                                        <p class="nav-categories-empty" data-catalog-filter-empty>{{ __('messages.no_category_match') }}</p>
                                     </div>
                                 </li>
                                 <li><hr class="dropdown-divider nav-categories-divider"></li>
@@ -679,6 +872,7 @@
                                     <a class="dropdown-item nav-categories-cta" href="{{ route('products.index') }}">
                                         <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>
                                         <span>{{ __('messages.all_products') }}</span>
+                                        <span class="nav-categories-cta-count">{{ $navTotal }}</span>
                                     </a>
                                 </li>
                             </ul>
@@ -715,7 +909,7 @@
                             <li class="nav-item dropdown">
                                 <a class="nav-link d-flex align-items-center justify-content-center p-2 rounded-circle hover-scale-105" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ __('messages.account_menu') }}" style="background: rgba(16, 185, 129, 0.08); transition: all 0.3s ease;">
                                     <div class="position-relative">
-                                        <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name) }}&background=10b981&color=fff&rounded=true&size=32" alt="" class="rounded-circle border border-2 border-white shadow-sm" style="width: 36px; height: 36px;" width="36" height="36">
+                                        <x-user-avatar :user="auth()->user()" :size="36" ring />
                                         <span class="position-absolute bottom-0 end-0 bg-success rounded-circle border border-2 border-white" style="width: 10px; height: 10px;" aria-hidden="true"></span>
                                     </div>
                                 </a>
@@ -723,7 +917,7 @@
                                     <!-- User Info Header -->
                                     <div class="px-3 py-3 mb-2 rounded-3" style="background: rgba(16, 185, 129, 0.08);">
                                         <div class="d-flex align-items-center gap-2 mb-2">
-                                            <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name) }}&background=10b981&color=fff&rounded=true&size=40" alt="Avatar" class="rounded-circle border border-2 border-white shadow-sm" style="width: 40px; height: 40px;">
+                                            <x-user-avatar :user="auth()->user()" :size="40" ring />
                                             <div class="flex-grow-1 overflow-hidden">
                                                 <p class="mb-0 fw-bold text-gray-900 text-truncate">{{ auth()->user()->name }}</p>
                                                 <p class="mb-0 small text-gray-600 text-truncate">{{ auth()->user()->email }}</p>
@@ -843,7 +1037,7 @@
                         <div class="col-lg-4 col-md-6">
                             <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);">
                                 <a class="d-flex align-items-center mb-3 text-decoration-none" href="{{ route('home') }}">
-                                    <img src="{{ asset('images/logo.png') }}" alt="Logo" class="me-2" style="height: 40px; width: auto;">
+                                    <img src="{{ asset('images/logo-nav.png') }}" alt="Logo" class="me-2" width="176" height="96" style="height: 40px; width: auto;">
                                     <span class="fs-5 fw-bold text-emerald-800">{{ __('messages.app_name') }}</span>
                                 </a>
                                 <p class="text-gray-600 mb-4 small lh-lg">
@@ -869,10 +1063,13 @@
                                 <!-- Danh mục -->
                                 <div class="col-md-4 col-6">
                                     <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
-                                        <h6 class="fw-bold mb-3 text-gray-800 d-flex align-items-center">
+                                        {{-- h2, not h6: these are the footer's own top-level
+                                             headings, and jumping h2 -> h6 broke the outline.
+                                             The .h6 class keeps the visual size. --}}
+                                        <h2 class="h6 fw-bold mb-3 text-gray-800 d-flex align-items-center">
                                             <i class="bi bi-grid-fill text-emerald-600 me-2"></i>
                                             {{ __('messages.categories') }}
-                                        </h6>
+                                        </h2>
                                         <ul class="list-unstyled mb-0">
                                             @forelse($footerCategories as $fCat)
                                             <li class="{{ !$loop->last ? 'mb-2' : 'mb-0' }}">
@@ -896,10 +1093,13 @@
                                 <!-- Hỗ trợ -->
                                 <div class="col-md-4 col-6">
                                     <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
-                                        <h6 class="fw-bold mb-3 text-gray-800 d-flex align-items-center">
+                                        {{-- h2, not h6: these are the footer's own top-level
+                                             headings, and jumping h2 -> h6 broke the outline.
+                                             The .h6 class keeps the visual size. --}}
+                                        <h2 class="h6 fw-bold mb-3 text-gray-800 d-flex align-items-center">
                                             <i class="bi bi-headset text-emerald-600 me-2"></i>
                                             {{ __('messages.contact') }}
-                                        </h6>
+                                        </h2>
                                         <ul class="list-unstyled mb-0">
                                             <li class="mb-2">
                                                 <a href="#" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
@@ -932,10 +1132,13 @@
                                 <!-- Liên hệ -->
                                 <div class="col-md-4 col-12">
                                     <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
-                                        <h6 class="fw-bold mb-3 text-gray-800 d-flex align-items-center">
+                                        {{-- h2, not h6: these are the footer's own top-level
+                                             headings, and jumping h2 -> h6 broke the outline.
+                                             The .h6 class keeps the visual size. --}}
+                                        <h2 class="h6 fw-bold mb-3 text-gray-800 d-flex align-items-center">
                                             <i class="bi bi-geo-alt-fill text-emerald-600 me-2"></i>
                                             {{ __('messages.contact') }}
-                                        </h6>
+                                        </h2>
                                         <ul class="list-unstyled mb-0">
                                             <li class="mb-3 d-flex align-items-start">
                                                 <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-2" style="width: 28px; height: 28px; background: rgba(16, 185, 129, 0.15);">
@@ -974,7 +1177,7 @@
                             </div>
                             <div class="col-md-6 text-center text-md-end">
                                 <p class="mb-0 text-gray-500 small">
-                                    Developed by <span class="fw-semibold text-emerald-600">Phạm Trường Huy</span> - ĐAPTTKHTTT
+                                    Developed by <span class="fw-semibold text-emerald-600">Phạm Trường Huy</span> - MSSV: 2351220234
                                 </p>
                             </div>
                         </div>
@@ -1039,7 +1242,46 @@
         
         <!-- Chatbot Widget (Available for all users, login required to use) -->
         <x-chatbot-widget />
-        
+
+        {{-- Nguồn cho panel tìm kiếm + chuỗi giao diện của nó. Một lần mỗi trang: cả
+             ba ô tìm kiếm dùng chung một <template>. --}}
+        @include('partials.search-panel')
+
+        <script>
+            window.PharmacySearchLang = {
+                placeholders: @json(array_values(config('search.placeholder_rotation', []))),
+                placeholdersWide: @json(array_values(config('search.placeholder_rotation_wide', []))),
+                history: @json(__('messages.search_history')),
+                historyClear: @json(__('messages.search_history_clear')),
+                historyRemove: @json(__('messages.search_history_remove')),
+                suggestionCategories: @json(__('messages.search_suggestion_categories')),
+                suggestionProducts: @json(__('messages.search_suggestion_products')),
+                viewAll: @json(__('messages.search_view_all')),
+                noResults: @json(__('messages.search_no_results')),
+                noResultsHint: @json(__('messages.search_no_results_hint')),
+            };
+        </script>
+
+        @if(config('search.voice.enabled', true))
+            <script>
+                window.PharmacyVoiceLang = {
+                    url: @json(route('voice.normalize')),
+                    start: @json(__('messages.voice_start')),
+                    listening: @json(__('messages.voice_listening')),
+                    working: @json(__('messages.voice_working')),
+                    heard: @json(__('messages.voice_heard')),
+                    undo: @json(__('messages.voice_undo')),
+                    errors: {
+                        'not-allowed': @json(__('messages.voice_error_not_allowed')),
+                        'service-not-allowed': @json(__('messages.voice_error_not_allowed')),
+                        'no-speech': @json(__('messages.voice_error_no_speech')),
+                        network: @json(__('messages.voice_error_network')),
+                        generic: @json(__('messages.voice_error_generic')),
+                    },
+                };
+            </script>
+        @endif
+
         @stack('modals')
         @stack('scripts')
     </body>
