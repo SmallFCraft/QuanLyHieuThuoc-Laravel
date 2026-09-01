@@ -36,16 +36,34 @@ final class VoicePhonetics
         '/^(?:ph|f)/' => 'F',
     ];
 
-    /** Diphthongs. Must run before the codas — see syllable(). */
+    /**
+     * Diphthongs. Must run before the codas — see syllable().
+     *
+     * Order inside the table counts too, for the same reason: `uo` would eat the
+     * "uo" of "uoi" and leave an `i` that no rule claims, so "muối" keyed `mUi`
+     * while "mói" keyed `mO` and the pair stopped matching. Longest rime first.
+     */
     private const RIMES = [
         '/iee|ie|ye|ia/' => 'I',
-        '/uoo|uo|ua/' => 'U',
         '/uoi|oi/' => 'O',
+        '/uoo|uo|ua/' => 'U',
     ];
 
     private const CODAS = [
         '/(?:nh|ng|n|m)$/' => 'N',
         '/(?:ch|c|t|k|p)$/' => 'T',
+    ];
+
+    /**
+     * The single-letter half of ONSETS, as a plain translation table — used by
+     * coarse() to re-apply the classes away from a word start.
+     */
+    private const MID_WORD_ONSETS = [
+        's' => 'S', 'x' => 'S',
+        'd' => 'D', 'v' => 'D', 'r' => 'D',
+        'n' => 'L', 'l' => 'L',
+        'k' => 'K', 'c' => 'K',
+        'f' => 'F',
     ];
 
     private const VOWELS = [
@@ -96,7 +114,12 @@ final class VoicePhonetics
             return null;
         }
 
-        return substr($flat, 0, self::BLOCK_LENGTH);
+        // Case-folded on purpose, unlike phonetic_key: this is the coarse SQL
+        // filter, within() is the exact one. Measured: "tiu" keys `tiu` and
+        // "tiêu" keys `tIu`, so a case-sensitive prefix put them in blocks 'ti'
+        // and 'tI' and the orWhereIn never loaded a candidate within() accepts.
+        // Folding only widens the candidate set; within() still rejects.
+        return strtolower(substr($flat, 0, self::BLOCK_LENGTH));
     }
 
     /**
@@ -163,7 +186,27 @@ final class VoicePhonetics
             return false;
         }
 
-        return levenshtein($flatA, self::flatten($b)) <= max(1, intdiv(strlen($flatA), 3));
+        if (levenshtein($flatA, self::flatten($b)) <= max(1, intdiv(strlen($flatA), 3))) {
+            return true;
+        }
+
+        // Second pass on a coarser form. syllable() applies the §4.1 letter classes
+        // only at a word start, so a name read syllable by syllable collects them
+        // once per syllable while the joined catalog name collects them once in
+        // total: "pa na đôn" keys `pa La DoN` against `panadol`, lev 3 on a budget
+        // of 2. Re-applying the same classes at every position lines the two up and
+        // recovers "sa lon pát", "ni giô ran" and "côn la gien" as well.
+        //
+        // Widening a distance budget cannot do this job: the closest distinct pair
+        // that must stay apart ("vitamin e" / "betadine") sits at lev 4 over 8,
+        // the same ratio as the brand readings that must match, so no threshold
+        // separates them. Measured on the coarse form instead: zero new merges
+        // across the 26 distinct product names, and one new pair over the whole
+        // built index — "Naturals" with "Nature's", one product line.
+        $coarseA = self::coarse($flatA);
+
+        return levenshtein($coarseA, self::coarse(self::flatten($b)))
+            <= max(1, intdiv(strlen($coarseA), 3));
     }
 
     public static function distance(string $a, string $b): int
@@ -174,6 +217,28 @@ final class VoicePhonetics
     private static function digits(string $value): string
     {
         return preg_replace('/[^0-9]/', '', $value) ?? '';
+    }
+
+    /**
+     * The §4.1 letter classes re-applied at every position, not only at a word
+     * start. Only the lowercase leftovers move: an uppercase marker is a class
+     * syllable() already decided, and rewriting those would fold `C` into `K`
+     * and merge classes the table deliberately keeps apart.
+     *
+     * Comparison-only — never stored. `phonetic_key` and `block_key` keep their
+     * own shape, so this needs no index rebuild.
+     */
+    private static function coarse(string $flatKey): string
+    {
+        $classed = preg_replace(
+            ['/tr|ch/', '/gi/', '/ph/', '/qu/'],
+            ['C', 'D', 'F', 'K'],
+            $flatKey
+        ) ?? $flatKey;
+
+        $classed = strtr($classed, self::MID_WORD_ONSETS);
+
+        return preg_replace('/([^0-9])\1+/', '$1', $classed) ?? $classed;
     }
 
     private static function flatten(string $key): string
