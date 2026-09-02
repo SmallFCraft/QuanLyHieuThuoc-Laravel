@@ -184,6 +184,51 @@ const MOCK = () => {
         !(await E(() => document.querySelector('.voice-status').hasAttribute('data-visible')))
     );
 
+    // --- F6b: click ra ngoài cũng tắt dải ------------------------------------------
+    await go();
+    await page.click(MIC);
+    await E(() => { window.__err('no-speech'); window.__end(); });
+    await page.mouse.click(700, 600);
+    await page.waitForTimeout(300);
+    check(
+        'F6b click ra ngoài tắt dải trạng thái',
+        !(await E(() => document.querySelector('.voice-status').hasAttribute('data-visible')))
+    );
+
+    // --- F6c: dải tắt rồi thì panel gợi ý về đúng chỗ -----------------------------
+    const suggested = page.waitForResponse((r) => r.url().includes('/api/search/suggestions'));
+    await page.fill('#header-search', 'vitamin');
+    await suggested;
+    await page.waitForTimeout(400);
+    const panel = await E(() => {
+        const el = document.querySelector('.search-suggestions');
+        const form = document.getElementById('header-search').closest('form');
+
+        return {
+            open: getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().height > 0,
+            gap: Math.round(el.getBoundingClientRect().top - form.getBoundingClientRect().bottom),
+        };
+    });
+    check(
+        'F6c panel không bị dải đẩy xuống sau khi dải tắt',
+        panel.open && panel.gap < 20,
+        `open=${panel.open} gap=${panel.gap}px`
+    );
+
+    // --- F9: session bỏ giữa không được để lại chữ thô không ai xử lý -------------
+    await go();
+    await page.fill('#header-search', 'vitamin c');
+    await page.click(MIC);
+    await E(() => window.__interim('pa ra xê ta'));
+    await page.click(MIC);
+    await E(() => window.__end());
+    await page.waitForTimeout(500);
+    check(
+        'F9 huỷ giữa lượt thì ô về chữ cũ',
+        (await E(() => document.getElementById('header-search').value)) === 'vitamin c',
+        `ô=${await E(() => document.getElementById('header-search').value)}`
+    );
+
     // --- F7: 429 phải hiện như lỗi, không như thành công --------------------------
     await go();
     await page.route('**/api/voice/normalize', (route) =>

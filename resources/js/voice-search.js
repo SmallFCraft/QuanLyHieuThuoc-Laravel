@@ -56,6 +56,16 @@ class VoiceSearch {
         window.addEventListener('scroll', this.positionBound, { passive: true });
         window.addEventListener('resize', this.positionBound, { passive: true });
         document.addEventListener('pharmacy:header-state', this.positionBound);
+
+        // Dải là một overlay position: fixed ở z-index 10000, trên cả header. Không
+        // có đường tắt nào thì một lần bị từ chối mic để nó nằm đó suốt lượt truy cập,
+        // và search-autocomplete.js:106-107 cộng chiều cao của nó vào offset panel —
+        // đo được 2026-09-02 ở 1440px: panel tụt xuống 56px thay vì 8px (dải cao 36px
+        // cộng 12px đệm).
+        this.dismissBound = (event) => this.handleOutsideClick(event);
+        this.keyBound = (event) => this.handleKeydown(event);
+        document.addEventListener('click', this.dismissBound);
+        document.addEventListener('keydown', this.keyBound);
     }
     createStatus() {
         const status = document.createElement('div');
@@ -161,6 +171,42 @@ class VoiceSearch {
         this.applyText(this.heard);
         this.hideStatus();
         this.input.focus();
+    }
+
+    handleKeydown(event) {
+        if (event.key !== 'Escape') {
+            return;
+        }
+
+        // Đang nghe thì Escape huỷ luôn session, không chỉ tắt dải.
+        if (this.recognition) {
+            this.stop();
+        }
+
+        this.dismiss();
+    }
+
+    handleOutsideClick(event) {
+        if (
+            !this.status.hasAttribute('data-visible')
+            || this.status.contains(event.target)
+            || this.button.contains(event.target)
+            || this.input.contains(event.target)
+        ) {
+            return;
+        }
+
+        this.dismiss();
+    }
+
+    /**
+     * Đường ra duy nhất của dải. hideStatus() là chi tiết bên trong; dismiss() còn
+     * bắn lại pharmacy:header-state để search-autocomplete.js đo lại offset ngay,
+     * thay vì chờ lần cuộn kế tiếp.
+     */
+    dismiss() {
+        this.hideStatus();
+        document.dispatchEvent(new CustomEvent('pharmacy:header-state'));
     }
     toggle() {
         // 'working' là lúc đang chờ server: nút đã disabled nên click không tới được
@@ -292,6 +338,13 @@ class VoiceSearch {
         this.release();
         this.recognition = null;
 
+        // Kết quả tạm đã ghi vào ô nhưng không có kết quả cuối nào: chữ đó chưa qua
+        // /api/voice/normalize, không có dải, không có nút nào để bỏ nó. Trả ô về chữ
+        // cũ thay vì để "pa ra xê ta" nằm đó rồi Enter tìm nguyên văn.
+        if (this.heard === '' && this.input.value !== this.previous) {
+            this.input.value = this.previous;
+        }
+
         if (this.button.dataset.state === 'listening') {
             this.setState('idle');
         }
@@ -364,7 +417,13 @@ class VoiceSearch {
     }
 
     fail(code) {
-        this.input.value = this.previous;
+        // Chỉ trả ô về chữ cũ khi lượt nói CHƯA cho kết quả nào. Engine có thể bắn
+        // một lỗi muộn sau khi normalize đã thành công — đo được 2026-09-02: ô đi từ
+        // "canxi" sang "men vi sinh" rồi bị kéo về "canxi" kèm dải đỏ.
+        if (this.heard === '') {
+            this.input.value = this.previous;
+        }
+
         this.setState('idle');
         this.showStatus(errorMessage(code), 'error');
     }
