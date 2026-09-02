@@ -29,7 +29,11 @@ return [
     'voice_listening' => 'Đang nghe, bấm để dừng',
     'voice_working' => 'Đang xử lý...',
     'voice_heard' => 'Nghe được',
-    'voice_undo' => 'Hoàn tác',
+    // "Dùng nguyên văn", không phải "Hoàn tác": nút này áp chữ ASR nghe được, KHÔNG
+    // phải chữ có trong ô trước khi nói. Khi normalizer bóp "pa ra xê ta môn" thành
+    // "Par xê ta môn" thì cái khách cần là chữ thô để tự sửa.
+    'voice_undo' => 'Dùng nguyên văn',
+    'voice_low_confidence' => 'Đoán là',
     'voice_error_not_allowed' => 'Cần cho phép micro để dùng tìm kiếm bằng giọng nói.',
     'voice_error_no_speech' => 'Không nghe được gì, thử nói lại nhé.',
     'voice_error_network' => 'Mất kết nối, thử lại nhé.',

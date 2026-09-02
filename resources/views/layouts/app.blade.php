@@ -1271,6 +1271,7 @@
                     working: @json(__('messages.voice_working')),
                     heard: @json(__('messages.voice_heard')),
                     undo: @json(__('messages.voice_undo')),
+                    lowConfidence: @json(__('messages.voice_low_confidence')),
                     errors: {
                         'not-allowed': @json(__('messages.voice_error_not_allowed')),
                         'service-not-allowed': @json(__('messages.voice_error_not_allowed')),

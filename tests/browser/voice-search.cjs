@@ -225,6 +225,54 @@ const MOCK = () => {
     await page.waitForTimeout(1500);
     check('F14 một request suggestions cho mỗi lượt voice', calls.length === 1, `calls=${calls.length}`);
 
+    // --- F14b: một request kể cả khi ô đang có chữ cũ ----------------------------
+    await go();
+    await page.fill('#header-search', 'vitamin c');
+    await page.waitForTimeout(700);
+    const refine = [];
+    page.on('request', (r) => { if (r.url().includes('/api/search/suggestions')) { refine.push(r.url()); } });
+    await page.click(MIC);
+    const refined = page.waitForResponse((r) => r.url().includes('voice/normalize'));
+    await E(() => { window.__final(['men vi sinh']); window.__end(); });
+    await refined;
+    await page.waitForTimeout(1500);
+    check('F14b một request suggestions khi voice thay chữ đang có', refine.length === 1, `calls=${refine.length}`);
+
+    // --- F8: nhãn nút nói đúng việc nó làm ----------------------------------------
+    await go();
+    await page.fill('#header-search', 'vitamin c');
+    await page.click(MIC);
+    const shown = page.waitForResponse((r) => r.url().includes('voice/normalize'));
+    await E(() => { window.__final(['pa ra xê ta môn năm trăm']); window.__end(); });
+    await shown;
+    await page.waitForTimeout(600);
+    const undoLabel = await E(() => document.querySelector('.voice-status__undo')?.textContent ?? '');
+    await page.click('.voice-status__undo');
+    check(
+        'F8 nút áp đúng chữ ASR và nhãn nói vậy',
+        undoLabel === 'Dùng nguyên văn'
+            && (await E(() => document.getElementById('header-search').value)) === 'pa ra xê ta môn năm trăm',
+        `nhãn=${undoLabel}`
+    );
+
+    // --- F-conf: kết quả không chắc chắn phải nói là đoán -------------------------
+    await go();
+    await page.route('**/api/voice/normalize', (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ text: 'thuốc ho', heard: 'thuấc ho', source: 'phonetic', confident: false }),
+        })
+    );
+    await page.click(MIC);
+    await E(() => { window.__final(['thuấc ho']); window.__end(); });
+    await page.waitForTimeout(800);
+    check(
+        'F-conf kết quả confident=false hiện là "Đoán là"',
+        (await E(() => document.querySelector('.voice-status').textContent)).includes('Đoán là')
+    );
+    await page.unroute('**/api/voice/normalize');
+
     await browser.close();
 
     const failed = results.filter((r) => !r.pass);
