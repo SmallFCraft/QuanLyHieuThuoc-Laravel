@@ -83,7 +83,7 @@ class VoiceSearchNormalizer
         }
 
         foreach ($alternatives as $alternative) {
-            if ($this->catalogHas($alternative)) {
+            if ($this->isRealQuery($alternative)) {
                 return $this->result($alternative, $heard, self::SOURCE_EXACT, true);
             }
         }
@@ -174,18 +174,90 @@ class VoiceSearchNormalizer
     }
 
     /**
-     * Cụm này tìm ra sản phẩm nào không.
+     * Cụm này đã đúng sẵn, không có gì để sửa.
      *
-     * exists() chứ không get(): tầng này chỉ cần biết CÓ hay KHÔNG, còn danh sách
-     * sản phẩm là việc của trang tìm kiếm mà khách sẽ tới sau.
+     * Đây là câu hỏi của T0 — "chuỗi này có cần sửa không" — chứ không phải "chuỗi này
+     * có liên quan catalog không". Hai câu hỏi khác nhau, và trả lời sai câu thứ nhất
+     * bằng câu thứ hai là lỗi gốc của cả tầng.
+     *
+     * KHÔNG dùng Product::storefrontSearch() làm cổng, dù nó là hàm tìm kiếm thật của
+     * shop. Đo 2026-09-02 trên catalog 3.146 sản phẩm: nó khớp CHUỖI CON (`la` nằm
+     * trong "Salonpas", "Calcium") và chỉ cần từng từ khớp đâu đó, kể cả trong
+     * `ingredients_folded`. Nên "ê a ê a" khớp 3.146 sản phẩm (cả catalog), "lá la la
+     * la" 1.271, "ba la bù la" 125 — và T0 tuyên bố `exact` + `confident: true` cho
+     * tiếng ồn rồi dừng, khiến tầng phiên âm và tầng AI không bao giờ chạy.
+     *
+     * Hai điều kiện ở đây, mỗi điều kiện có số đo riêng. Tập kiểm: 12 câu vô nghĩa
+     * (phải chặn), 9 câu nói đúng (phải nhận), 57 đáp án thật của corpus (phải nhận),
+     * 66 câu nghe lệch (phải chặn để T1 chạy).
+     *
+     *   lỏng (storefrontSearch)     0/12   9/9   57/57   —
+     *   AND mọi từ, trọn từ         9/12   9/9   54/57   <- mất đáp án thật
+     *   mọi từ DÀI phải khớp       10/12   9/9   57/57   15/66
+     *   + quá nửa câu là từ dài    12/12   9/9   57/57   19/66  <- dùng cái này
+     *
+     * Phương án AND bị loại vì catalog viết khác cách khách nói: 0 sản phẩm nào có cả
+     * "khau trang" và "y te" trong tên, trong khi "khẩu trang y tế" là cách khách hỏi
+     * và có 8 sản phẩm đúng ý.
+     *
+     * Điều kiện quá-nửa chặn một câu toàn âm tiết vụn qua cổng nhờ vài từ khớp ngẫu
+     * nhiên: "pa ra xe ta mon năm trăm" chỉ có 3/7 từ được xét, cả ba khớp, nên tên
+     * thuốc đọc rời không bao giờ được ghép lại.
+     *
+     * Chặt ở đây an toàn vì T0 không còn là cửa cuối: trượt T0 thì xuống T1 (có cổng
+     * riêng, xem matchPhonetically), rồi AI, rồi nguyên văn. Chuỗi khách nói không bao
+     * giờ mất — chỉ khác ở chỗ hệ thống có tuyên bố chắc chắn hay không.
      */
-    private function catalogHas(string $term): bool
+    private function isRealQuery(string $term): bool
     {
-        if (Product::searchWords($term) === []) {
+        $all = array_unique(Product::searchWords($term));
+
+        $long = array_filter($all, fn (string $word) => strlen($word) >= self::MEANINGFUL_WORD_LENGTH);
+
+        if ($long === []) {
             return false;
         }
 
-        return Product::notExpired()->storefrontSearch($term)->exists();
+        foreach ($long as $word) {
+            if (! $this->nameHasWord($word)) {
+                return false;
+            }
+        }
+
+        return count($long) * 2 >= count($all);
+    }
+
+    /**
+     * Từ nào ngắn hơn thế thì không đủ để một mình chứng minh cụm là thật.
+     *
+     * Đo được: câu vô nghĩa toàn âm tiết ngắn ("la", "lo", "ba", "bu") và chúng chỉ
+     * khớp vì `LIKE '%la%'` khớp CHUỖI CON của "Salonpas", "Calcium". Từ mang nghĩa
+     * trong catalog thì dài hơn.
+     */
+    private const MEANINGFUL_WORD_LENGTH = 3;
+
+    /**
+     * Từ này xuất hiện như một TỪ TRỌN trong tên sản phẩm nào.
+     *
+     * Bốn mẫu LIKE thay cho một `%tu%`, vì `%la%` khớp cả "Salonpas". `name_folded` đã
+     * fold nên các từ cách nhau đúng một khoảng trắng.
+     *
+     * Bốn LIKE chứ không phải RLIKE hay concat(): bộ test chạy trên sqlite :memory:
+     * (phpunit.xml) còn production là MySQL, và cách này là cách duy nhất đã kiểm chạy
+     * đúng trên cả hai.
+     */
+    private function nameHasWord(string $word): bool
+    {
+        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $word);
+
+        return Product::notExpired()
+            ->where(function ($inner) use ($escaped): void {
+                $inner->where('name_folded', $escaped)
+                    ->orWhere('name_folded', 'like', $escaped . ' %')
+                    ->orWhere('name_folded', 'like', '% ' . $escaped)
+                    ->orWhere('name_folded', 'like', '% ' . $escaped . ' %');
+            })
+            ->exists();
     }
 
     /**
@@ -227,7 +299,39 @@ class VoiceSearchNormalizer
 
         // Chỉ đoạn nghe lệch bị thay; phần còn lại của câu giữ nguyên, vì khách có
         // thể đã nói thêm bối cảnh ("cho em bé") mà catalog không chứa.
-        return $this->substitute($best['window'], $best['term']);
+        $fixed = $this->substitute($best['window'], $best['term']);
+
+        // Bản đã sửa phải HƠN bản gốc, không chỉ khác nó. Đo được 2026-09-02: siết
+        // cổng T0 mà không có bước này làm tổng corpus tụt 52/94 xuống 38/94 — chặn
+        // ở T0 chỉ đẩy chuỗi xuống T1, và T1 vốn tuyên bố confident bất kể kết quả.
+        // Hệ quả thật: "ba la bù la" thành "bã la bù la", "ước gì" thành "ướt gì".
+        return $this->countNameWords($fixed) > $this->countNameWords($best['window']['source'])
+            ? $fixed
+            : null;
+    }
+
+    /**
+     * Bao nhiêu từ đủ dài của cụm khớp trọn từ trong tên sản phẩm.
+     *
+     * Thước để so bản gốc với bản đã sửa: sửa đúng thì số từ khớp tăng, sửa bừa thì
+     * không. Dùng chung nameHasWord() và ngưỡng độ dài với isRealQuery() nên hai tầng
+     * đo cùng một thứ và không mâu thuẫn nhau.
+     */
+    private function countNameWords(string $term): int
+    {
+        $hits = 0;
+
+        foreach (array_unique(Product::searchWords($term)) as $word) {
+            if (strlen($word) < self::MEANINGFUL_WORD_LENGTH) {
+                continue;
+            }
+
+            if ($this->nameHasWord($word)) {
+                $hits++;
+            }
+        }
+
+        return $hits;
     }
 
     /**
@@ -451,7 +555,11 @@ class VoiceSearchNormalizer
             return null;
         }
 
-        if ($this->catalogHas($answer)) {
+        // isRealQuery(), không phải catalogHas(): AI được đưa danh sách ứng viên nên
+        // câu trả lời của nó phải khớp catalog trọn vẹn, không phải khớp một từ. Với
+        // tiêu chí lỏng, đo được provider trả "ba la bù la" và lớp kiểm này NHẬN, vì
+        // chuỗi đó "tìm ra" 125 sản phẩm qua LIKE chuỗi con.
+        if ($this->isRealQuery($answer)) {
             return $answer;
         }
 
