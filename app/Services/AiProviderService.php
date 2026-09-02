@@ -62,7 +62,10 @@ class AiProviderService
     {
         return $this->runWithFailover(
             fn (array $provider): array => $this->dispatchChat($provider, $messages, $options),
-            'chat'
+            'chat',
+            // A caller inside a synchronous request (triage, voice search) asks for a
+            // budget for the whole call, not one per provider.
+            isset($options['timeout']) ? max(1, (int) $options['timeout']) : null
         );
     }
 
@@ -196,12 +199,8 @@ class AiProviderService
 
     protected function dispatchChat(array $provider, array $messages, array $options): array
     {
-        // A caller inside a synchronous request (triage) needs to fail fast rather
-        // than inherit the chatbot's generous AI_TIMEOUT.
-        if (isset($options['timeout'])) {
-            $provider['timeout'] = max(1, (int) $options['timeout']);
-        }
-
+        // No timeout handling here: `chat()` resolves the caller's override into a
+        // whole-call budget and `runWithFailover()` writes each provider's slice.
         return match ($provider['mode']) {
             'anthropic_messages' => $this->sendAnthropicMessagesRequest($provider, $messages, $options),
             'responses' => $this->sendResponsesRequest($provider, $messages, $options),
@@ -224,12 +223,23 @@ class AiProviderService
      * Run a provider call, falling back to the next configured provider on failure.
      * Connection errors are Exceptions rather than RuntimeExceptions, so any
      * provider-side failure is caught here.
+     *
+     * `$budget` is seconds for the WHOLE call, not per provider: without it two slow
+     * providers each burn the caller's timeout and the total doubles, which is longer
+     * than the browser client waits and longer than the voice-search cache lock lives.
+     * Each provider gets what the earlier ones left, floored at 1s because Guzzle
+     * reads `timeout(0)` as "wait forever".
      */
-    protected function runWithFailover(callable $callback, string $operation): mixed
+    protected function runWithFailover(callable $callback, string $operation, ?int $budget = null): mixed
     {
         $lastException = null;
+        $startedAt = microtime(true);
 
         foreach ($this->providers as $index => $provider) {
+            if ($budget !== null) {
+                $provider['timeout'] = max(1, (int) ceil($budget - (microtime(true) - $startedAt)));
+            }
+
             try {
                 $result = $callback($provider);
                 $this->lastProviderIndex = $index;
