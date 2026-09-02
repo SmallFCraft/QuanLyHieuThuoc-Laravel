@@ -33,6 +33,7 @@ return [
     'voice_error_not_allowed' => 'Cần cho phép micro để dùng tìm kiếm bằng giọng nói.',
     'voice_error_no_speech' => 'Không nghe được gì, thử nói lại nhé.',
     'voice_error_network' => 'Mất kết nối, thử lại nhé.',
+    'voice_error_timeout' => 'Server chưa trả lời, chữ bạn nói vẫn ở trong ô.',
     'voice_error_generic' => 'Chưa dùng được giọng nói lúc này, bạn gõ giúp nhé.',
 
     'loading_categories' => 'Đang tải danh mục...',

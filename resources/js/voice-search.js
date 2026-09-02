@@ -13,6 +13,16 @@
 /** Tự dừng nếu không nghe được gì: mic sáng vô hạn là một lỗi, không phải tính năng. */
 const SILENCE_MS = 8000;
 
+/**
+ * Ngân sách của lời gọi chuẩn hoá. Cao hơn search.voice.ai_timeout (8s) một chút
+ * để server còn kịp tự trả lỗi trước khi client tự bỏ — nếu client bỏ trước thì
+ * mọi lỗi server đều hiện thành "timeout" và không ai debug được.
+ *
+ * Không có mốc này thì một proxy treo để nút disabled vĩnh viễn: đo được
+ * 2026-09-02, state='working' và disabled=true vẫn còn sau 9 giây.
+ */
+const NORMALIZE_TIMEOUT_MS = 10000;
+
 function lang(key, fallback = '') {
     return window.PharmacyVoiceLang?.[key] ?? fallback;
 }
@@ -32,6 +42,11 @@ class VoiceSearch {
         this.silenceTimer = null;
         this.heard = '';
         this.previous = '';
+
+        // Dính cả trang: bấm lại cũng vô ích trong phiên này vì khách đã bấm Chặn
+        // hoặc Permissions-Policy chặn. setState() đọc cờ này nên nút không bị bật
+        // lại — trước đây setState('idle') bật lại ngay trong cùng một task.
+        this.denied = false;
 
         this.status = this.createStatus();
 
@@ -88,7 +103,7 @@ class VoiceSearch {
             }[state] ?? 'bi bi-mic';
         }
 
-        this.button.disabled = state === 'working';
+        this.button.disabled = state === 'working' || this.denied;
 
         if (state === 'working') {
             this.showStatus(lang('working', 'Đang xử lý...'), 'info');
@@ -123,6 +138,11 @@ class VoiceSearch {
         this.status.append(label, value, undo);
         this.status.setAttribute('data-visible', 'true');
         this.positionStatus();
+    }
+
+    /** Task 5 thay thế: lúc này chỉ hiện chữ nghe được như cũ. */
+    showResult(data) {
+        this.showHeard(data.heard || this.heard);
     }
 
     hideStatus() {
@@ -254,12 +274,11 @@ class VoiceSearch {
     }
 
     handleError(event) {
-        clearTimeout(this.silenceTimer);
+        this.release();
 
-        // not-allowed: khách đã bấm Chặn, hoặc Permissions-Policy chặn. Bấm lại cũng
-        // vô ích trong phiên này, nên nút bị tắt cho tới khi tải lại trang.
+        // not-allowed: khách đã bấm Chặn, hoặc Permissions-Policy chặn.
         if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-            this.button.disabled = true;
+            this.denied = true;
         }
 
         this.fail(event.error);
@@ -276,6 +295,11 @@ class VoiceSearch {
     async normalize(alternatives) {
         this.setState('working');
 
+        // AbortController chứ không phải Promise.race: bỏ mà không huỷ request thì
+        // kết nối vẫn treo và một lượt nói sau vẫn xếp hàng sau nó.
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), NORMALIZE_TIMEOUT_MS);
+
         try {
             const response = await fetch(lang('url', '/api/voice/normalize'), {
                 method: 'POST',
@@ -285,6 +309,7 @@ class VoiceSearch {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
                 },
                 body: JSON.stringify({ alternatives }),
+                signal: controller.signal,
             });
 
             if (!response.ok) {
@@ -294,13 +319,19 @@ class VoiceSearch {
             const data = await response.json();
 
             this.applyText(data.text || this.heard);
-            this.showHeard(data.heard || this.heard);
-        } catch {
-            // Endpoint lỗi, 429 hay mất mạng: chữ khách nói vẫn ở trong ô và sửa được.
-            // Một lượt nói không bao giờ thành ngõ cụt.
+            this.showResult(data);
+        } catch (error) {
+            // Endpoint lỗi, 429, timeout hay mất mạng: chữ khách nói vẫn ở trong ô và
+            // sửa được, nhưng phải nói rõ là bước sửa phát âm KHÔNG chạy. Trước đây
+            // nhánh này hiện y như một lần thành công — đo được 2026-09-02: 429 ra
+            // dải "Nghe được: thuốc ho" với tone info.
             this.applyText(this.heard);
-            this.showHeard(this.heard);
+            this.showStatus(
+                errorMessage(error?.name === 'AbortError' ? 'timeout' : 'network'),
+                'error'
+            );
         } finally {
+            clearTimeout(timer);
             this.setState('idle');
         }
     }

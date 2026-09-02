@@ -1276,6 +1276,7 @@
                         'service-not-allowed': @json(__('messages.voice_error_not_allowed')),
                         'no-speech': @json(__('messages.voice_error_no_speech')),
                         network: @json(__('messages.voice_error_network')),
+                        timeout: @json(__('messages.voice_error_timeout')),
                         generic: @json(__('messages.voice_error_generic')),
                     },
                 };
