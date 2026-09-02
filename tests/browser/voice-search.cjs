@@ -318,6 +318,97 @@ const MOCK = () => {
     );
     await page.unroute('**/api/voice/normalize');
 
+    // --- F11: contrast của chữ trong dải và của ring focus -----------------------
+    await go();
+    const RATIO = () => {
+        const lum = (rgb) => {
+            const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+            return 0.2126 * f(rgb[0]) + 0.7152 * f(rgb[1]) + 0.0722 * f(rgb[2]);
+        };
+        const parse = (s) => (s.match(/[\d.]+/g) || [0, 0, 0]).map(Number);
+        const over = (fg, bg) => { const a = fg.length > 3 ? fg[3] : 1; return [0, 1, 2].map((i) => a * fg[i] + (1 - a) * bg[i]); };
+        const ratio = (a, b) => { const l1 = lum(a); const l2 = lum(b); return +(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)).toFixed(2)); };
+        return { parse, over, ratio };
+    };
+
+    // Chữ trong dải: đo trên nền dải thật, với nút undo thật do showResult() dựng.
+    const textContrast = await E((fns) => {
+        const { parse, over, ratio } = eval(`(${fns})`)();
+        const white = [255, 255, 255];
+        const strip = document.querySelector('.voice-status');
+        strip.setAttribute('data-visible', 'true');
+        strip.innerHTML = '<span class="voice-status__heard">x</span><button class="voice-status__undo">x</button>';
+        const undo = strip.querySelector('.voice-status__undo');
+        const css = (el, prop) => getComputedStyle(el).getPropertyValue(prop);
+        const stripBg = over(parse(css(strip, 'background-color')), white);
+        const out = {
+            undo: ratio(over(parse(css(undo, 'color')), stripBg), stripBg),
+            heard: ratio(over(parse(css(strip, 'color')), stripBg), stripBg),
+            size: css(undo, 'font-size'),
+        };
+        strip.removeAttribute('data-visible');
+        return out;
+    }, RATIO.toString());
+    check('F11 chữ nút trong dải đạt 4.5:1', textContrast.undo >= 4.5, `undo=${textContrast.undo}:1 @ ${textContrast.size}`);
+    check('F11b chữ thân dải đạt 4.5:1', textContrast.heard >= 4.5, `heard=${textContrast.heard}:1`);
+
+    // Ring focus: chỉ đọc được khi phần tử ĐANG focus, và phải đọc từ box-shadow thật
+    // chứ không từ một custom property không tồn tại.
+    await page.focus(MIC);
+    const ringContrast = await E((fns) => {
+        const { parse, over, ratio } = eval(`(${fns})`)();
+        const white = [255, 255, 255];
+        const mic = document.querySelector('[data-voice-search]');
+        const shadow = getComputedStyle(mic).boxShadow;
+
+        if (shadow === 'none' || shadow === '') {
+            return { shadow, ratio: 0 };
+        }
+
+        const input = document.getElementById('header-search');
+        const inputBg = over(parse(getComputedStyle(input).backgroundColor), white);
+
+        return { shadow, ratio: ratio(over(parse(shadow), inputBg), inputBg) };
+    }, RATIO.toString());
+    check(
+        'F11c ring focus của mic đạt 3:1',
+        ringContrast.ratio >= 3,
+        `ratio=${ringContrast.ratio}:1 shadow="${ringContrast.shadow}"`
+    );
+
+    // --- F12: nút ✕ mặc định của type=search phải bị ẩn --------------------------
+    // Đây là kiểm tra SỰ CÓ MẶT CỦA LUẬT trong CSSOM, không phải sự vắng mặt của nút:
+    // chrome-headless-shell trả display=block cho getComputedStyle(input,
+    // '::-webkit-search-cancel-button') dù có hay không có `display: none`, và cssText
+    // của pseudo-element đó rỗng — đo 2026-09-02, nên không có tín hiệu hành vi nào.
+    const cancelHidden = await E(() => {
+        for (const sheet of document.styleSheets) {
+            try {
+                for (const rule of sheet.cssRules) {
+                    if (rule.cssText?.includes('search-cancel-button') && rule.cssText.includes('display: none')) {
+                        return true;
+                    }
+                }
+            } catch { /* stylesheet khác origin */ }
+        }
+        return false;
+    });
+    check('F12 nút ✕ native bị ẩn để không chồng nút mic', cancelHidden);
+
+    // --- lòng trong ô không được đổi khi mic thay icon ---------------------------
+    const inner = await E(() => {
+        const input = document.getElementById('header-search');
+        const pad = (side) => parseFloat(getComputedStyle(input).getPropertyValue(`padding-${side}`));
+        const measure = () => Math.round(input.clientWidth - pad('left') - pad('right'));
+        const had = document.documentElement.hasAttribute('data-voice-ready');
+        const withVoice = measure();
+        document.documentElement.removeAttribute('data-voice-ready');
+        const without = measure();
+        if (had) { document.documentElement.setAttribute('data-voice-ready', 'true'); }
+        return { withVoice, without };
+    });
+    check('lòng trong ô không đổi khi mic thay icon', inner.withVoice === inner.without, `${inner.withVoice} vs ${inner.without}`);
+
     await browser.close();
 
     const failed = results.filter((r) => !r.pass);
