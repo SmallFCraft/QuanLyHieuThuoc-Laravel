@@ -82,10 +82,11 @@ class VoiceSearchNormalizer
      */
     public function normalize(array $alternatives): array
     {
-        // heard là chuỗi khách nói y nguyên — nút "Hoàn tác" trả lại đúng chữ đó, kể
-        // cả dấu câu Chrome tự thêm và cụm mệnh lệnh. Chỉ chuỗi đi vào các tầng so
-        // khớp mới được làm sạch.
-        $heard = trim((string) ($alternatives[0] ?? ''));
+        // heard giữ nguyên dấu câu và cụm mệnh lệnh — nút "Dùng nguyên văn" cần đúng
+        // chữ khách nói. Nhưng ký tự điều khiển thì không phải chữ ai nói. Thay bằng
+        // khoảng trắng như trimPunctuation(), vì cùng một lý do: xoá hẳn thì
+        // "thuốc\x07hạ sốt" dính thành "thuốchạ sốt".
+        $heard = trim(preg_replace('/\p{C}+/u', ' ', (string) ($alternatives[0] ?? '')) ?? '');
         $alternatives = $this->clean($alternatives);
 
         if ($alternatives === []) {
@@ -143,6 +144,16 @@ class VoiceSearchNormalizer
      */
     private function trimPunctuation(string $value): string
     {
+        // \p{C} trước \p{P}: ký tự điều khiển không phải dấu câu, nên bộ cũ để
+        // "\x07abc" đi nguyên vào ô tìm kiếm và vào ?q=. Bỏ ở mọi vị trí, không chỉ
+        // hai đầu — không có ký tự điều khiển nào mang nghĩa trong một tên thuốc.
+        //
+        // Thay bằng KHOẢNG TRẮNG, không phải chuỗi rỗng: đo 2026-09-02, xoá hẳn thì
+        // "thuốc\x07hạ sốt" dính thành "thuốchạ sốt" — một từ không có trong catalog,
+        // tức là đổi một lỗi hiển thị thành một lỗi khớp. Ký tự điều khiển ngăn cách
+        // chứ không nối. Hai đầu do regex dưới và trim() dọn.
+        $value = preg_replace('/\p{C}+/u', ' ', $value) ?? $value;
+
         return preg_replace('/^[\p{P}\s]+|[\p{P}\s]+$/u', '', $value) ?? trim($value);
     }
 
