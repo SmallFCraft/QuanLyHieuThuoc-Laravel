@@ -94,14 +94,22 @@ class VoiceSearchNormalizer
 
         foreach ($alternatives as $alternative) {
             if ($this->isRealQuery($alternative)) {
-                return $this->result($alternative, $heard, self::SOURCE_EXACT, true);
+                // confident không còn nghĩa "một tầng đã trả ra chữ" mà là "chữ đó
+                // đứng được trên catalog". Client dùng cờ này để nói "Nghe được" hay
+                // "Đoán là", nên một cờ dễ dãi là một lời nói dối trên giao diện.
+                return $this->result(
+                    $alternative,
+                    $heard,
+                    self::SOURCE_EXACT,
+                    $this->wordsCoOccur($alternative)
+                );
             }
         }
 
         $phonetic = $this->matchPhonetically($alternatives);
 
         if ($phonetic !== null) {
-            return $this->result($phonetic, $heard, self::SOURCE_PHONETIC, true);
+            return $this->result($phonetic, $heard, self::SOURCE_PHONETIC, $this->wordsCoOccur($phonetic));
         }
 
         $ai = $this->askAi($alternatives);
@@ -247,14 +255,33 @@ class VoiceSearchNormalizer
     private const MEANINGFUL_WORD_LENGTH = 3;
 
     /**
-     * Từ này xuất hiện như một TỪ TRỌN trong tên sản phẩm nào.
+     * Thêm điều kiện "từ này là một TỪ TRỌN trong name_folded" vào một query.
      *
-     * Bốn mẫu LIKE thay cho một `%tu%`, vì `%la%` khớp cả "Salonpas". `name_folded` đã
-     * fold nên các từ cách nhau đúng một khoảng trắng.
+     * Bốn mẫu LIKE thay cho một `%tu%`, vì `%la%` khớp cả "Salonpas". `name_folded`
+     * đã fold nên các từ cách nhau đúng một khoảng trắng.
      *
      * Bốn LIKE chứ không phải RLIKE hay concat(): bộ test chạy trên sqlite :memory:
-     * (phpunit.xml) còn production là MySQL, và cách này là cách duy nhất đã kiểm chạy
-     * đúng trên cả hai.
+     * (phpunit.xml) còn production là MySQL, và cách này là cách duy nhất đã kiểm
+     * chạy đúng trên cả hai.
+     *
+     * Một chỗ duy nhất giữ luật khớp-từ-trọn: nameHasWord() hỏi MỘT từ, wordsCoOccur()
+     * chồng N điều kiện lên cùng một query để hỏi "cùng một sản phẩm". Hai bản sao của
+     * bốn dòng LIKE này là hai chỗ phải sửa khi luật đổi.
+     */
+    private function whereNameHasWord($query, string $word): void
+    {
+        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $word);
+
+        $query->where(function ($inner) use ($escaped): void {
+            $inner->where('name_folded', $escaped)
+                ->orWhere('name_folded', 'like', $escaped . ' %')
+                ->orWhere('name_folded', 'like', '% ' . $escaped)
+                ->orWhere('name_folded', 'like', '% ' . $escaped . ' %');
+        });
+    }
+
+    /**
+     * Từ này xuất hiện như một TỪ TRỌN trong tên sản phẩm nào.
      *
      * Ghi nhớ kết quả theo từ trong suốt một lượt normalize(): isRealQuery() và
      * countNameWords() hỏi về cùng những từ đó nhiều lần — T0 hỏi chuỗi gốc, rồi T1 hỏi
@@ -267,16 +294,10 @@ class VoiceSearchNormalizer
             return $this->wordInName[$word];
         }
 
-        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $word);
+        $query = Product::notExpired();
+        $this->whereNameHasWord($query, $word);
 
-        return $this->wordInName[$word] = Product::notExpired()
-            ->where(function ($inner) use ($escaped): void {
-                $inner->where('name_folded', $escaped)
-                    ->orWhere('name_folded', 'like', $escaped . ' %')
-                    ->orWhere('name_folded', 'like', '% ' . $escaped)
-                    ->orWhere('name_folded', 'like', '% ' . $escaped . ' %');
-            })
-            ->exists();
+        return $this->wordInName[$word] = $query->exists();
     }
 
     /**
@@ -351,6 +372,41 @@ class VoiceSearchNormalizer
         }
 
         return $hits;
+    }
+
+    /**
+     * Mọi từ đủ dài của cụm cùng nằm trong tên của MỘT sản phẩm.
+     *
+     * Đây là điều kiện mà commit 5bd1889 hứa ("require a real product-name match")
+     * nhưng chưa ship: cổng đã ship là so sánh tương đối countNameWords($fixed) >
+     * countNameWords($source), nên "Par xê ta môn năm trăm" đi qua vì 4 > 3.
+     *
+     * MỘT truy vấn cho cả cụm, không phải N như nameHasWord(): các điều kiện AND
+     * chồng nhau trong cùng một câu lệnh. Không thay isRealQuery() — nó cố tình lỏng
+     * để "khẩu trang y tế" (0 sản phẩm có cả 4 từ trong TÊN) vẫn tìm được qua
+     * ingredients_folded. Cổng này chỉ quyết định CỜ, không quyết định chuỗi trả về.
+     *
+     * Đo trên catalog thật 2026-09-02: lies 33 -> 14, confident-mà-catalog-rỗng
+     * 15 -> 1, coverage giữ nguyên 55/94, 4 ca đúng bị hạ cờ oan.
+     */
+    private function wordsCoOccur(string $term): bool
+    {
+        $words = array_unique(array_filter(
+            Product::searchWords($term),
+            fn (string $word) => strlen($word) >= self::MEANINGFUL_WORD_LENGTH
+        ));
+
+        if ($words === []) {
+            return false;
+        }
+
+        $query = Product::notExpired();
+
+        foreach ($words as $word) {
+            $this->whereNameHasWord($query, $word);
+        }
+
+        return $query->exists();
     }
 
     /**
