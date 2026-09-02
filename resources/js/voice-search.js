@@ -116,13 +116,22 @@ class VoiceSearch {
         this.status.setAttribute('data-visible', 'true');
         this.positionStatus();
     }
-    /** Dải kết quả: chữ nghe được cộng nút hoàn tác. */
-    showHeard(heard) {
+    /**
+     * Dải kết quả. Nhãn đổi theo `confident` của server: tầng T1 phiên âm là một
+     * PHỎNG ĐOÁN, không phải một lần khớp catalog, và trình bày hai thứ đó giống
+     * nhau là điều khiến "Par xê ta môn năm trăm" trông như một kết quả thật.
+     */
+    showResult(data) {
+        const heard = data.heard || this.heard;
+        const confident = data.confident !== false;
+
         this.status.dataset.tone = 'info';
         this.status.textContent = '';
 
         const label = document.createElement('span');
-        label.textContent = `${lang('heard', 'Nghe được')}: `;
+        label.textContent = confident
+            ? `${lang('heard', 'Nghe được')}: `
+            : `${lang('lowConfidence', 'Đoán là')}: `;
 
         const value = document.createElement('span');
         value.className = 'voice-status__heard';
@@ -133,16 +142,11 @@ class VoiceSearch {
         undo.type = 'button';
         undo.className = 'voice-status__undo';
         undo.dataset.voiceUndo = 'true';
-        undo.textContent = lang('undo', 'Hoàn tác');
+        undo.textContent = lang('undo', 'Dùng nguyên văn');
 
         this.status.append(label, value, undo);
         this.status.setAttribute('data-visible', 'true');
         this.positionStatus();
-    }
-
-    /** Task 5 thay thế: lúc này chỉ hiện chữ nghe được như cũ. */
-    showResult(data) {
-        this.showHeard(data.heard || this.heard);
     }
 
     hideStatus() {
@@ -343,11 +347,20 @@ class VoiceSearch {
      * bắn event lại dùng đúng đường gõ tay — cùng debounce 300ms, cùng AbortController,
      * cùng điều hướng bàn phím. Không tự submit form: nghe sai mà nhảy sang trang thuốc
      * khác là hỏng theo hướng tệ nhất trong một app nhà thuốc.
+     *
+     * Thứ tự ba dòng dưới đây là cố ý. handleFocus() của panel fetch NGAY, không qua
+     * debounce (search-autocomplete.js:151-158), còn handleInput() thì có debounce
+     * 300ms. Nên: xoá ô trước để lần focus không fetch gì (chuỗi rỗng dưới minChars),
+     * rồi mới điền và bắn `input` để đúng một request debounce đi ra. Đo 2026-09-02:
+     * thứ tự cũ (điền -> input -> focus) cho HAI request /api/search/suggestions y hệt
+     * nhau; chỉ đổi chỗ focus lên đầu vẫn còn hai khi ô đang có chữ cũ, vì focus fetch
+     * theo chữ cũ đó.
      */
     applyText(text) {
+        this.input.value = '';
+        this.input.focus();
         this.input.value = text;
         this.input.dispatchEvent(new Event('input', { bubbles: true }));
-        this.input.focus();
     }
 
     fail(code) {
