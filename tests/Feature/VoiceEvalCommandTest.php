@@ -59,8 +59,15 @@ class VoiceEvalCommandTest extends TestCase
         $this->artisan('voice:eval --floor=95 --lies=999')->assertExitCode(1);
     }
 
+    /**
+     * Ngưỡng mà tập fixture không bao giờ với tới được, cùng hình dạng với
+     * `--floor=95` ở test trên (corpus có 94 ca nên 95 là bất khả) chỉ ngược chiều:
+     * `--lies=-1` là trần không đếm nào lọt xuống dưới. Khoá lại phép SO SÁNH chứ
+     * không khoá số ca nói dối mà fixture tình cờ sinh ra — cần thiết từ khi cổng
+     * co-occurrence hạ số đó về 0 trên fixture một sản phẩm.
+     */
     public function test_it_fails_when_lies_exceed_the_ceiling(): void
     {
-        $this->artisan('voice:eval --floor=0 --lies=0')->assertExitCode(1);
+        $this->artisan('voice:eval --floor=0 --lies=-1')->assertExitCode(1);
     }
 }

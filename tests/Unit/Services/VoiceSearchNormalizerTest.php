@@ -71,7 +71,13 @@ class VoiceSearchNormalizerTest extends TestCase
 
         $this->assertSame(VoiceSearchNormalizer::SOURCE_PHONETIC, $result['source']);
         $this->assertStringContainsString('thuốc', mb_strtolower($result['text']));
-        $this->assertTrue($result['confident']);
+
+        // T1 sửa NỬA câu: `thuấc` -> `Thuốc` nhưng `sốc` vẫn là `sốc`, nên chuỗi trả
+        // về không phải tên sản phẩm nào (`soc` không có trong name_folded nào, và
+        // storefrontSearch('Thuốc hạ sốc') ra 0 sản phẩm). Sửa được một phần vẫn là
+        // sửa — hai assert trên khoá lại điều đó — nhưng nó KHÔNG được tuyên bố chắc
+        // chắn, không thì client nói "Nghe được" trên một trang kết quả rỗng.
+        $this->assertFalse($result['confident']);
     }
 
     /** Chuỗi khách nói phải đi kèm mọi kết quả, để nút "hoàn tác" có gì mà trả về. */
@@ -288,5 +294,63 @@ class VoiceSearchNormalizerTest extends TestCase
         $result = $this->normalizer()->normalize(['Tìm kiếm men vi sinh']);
 
         $this->assertSame('men vi sinh', $result['text']);
+    }
+
+    /**
+     * Từ ghép từ HAI sản phẩm khác nhau không phải một truy vấn chắc chắn.
+     *
+     * isRealQuery() kiểm từng từ độc lập nên "vitamin khẩu trang" đi qua được, dù
+     * không sản phẩm nào có cả hai. Đo trên catalog thật 2026-09-02: 33/94 ca trả
+     * confident mà sai, 15 ca trong đó catalog trả 0 sản phẩm.
+     */
+    public function test_words_from_different_products_are_not_confident(): void
+    {
+        $category = Category::create(['name' => 'Khẩu trang']);
+
+        Product::create([
+            'MaDM' => $category->MaDM,
+            'name' => 'Khẩu trang y tế 4 lớp',
+            'ingredients' => 'Vải không dệt',
+            'price' => 30000,
+            'expiration_date' => now()->addYears(3),
+            'stock_quantity' => 100,
+            'reorder_point' => 10,
+            'batch_number' => 'KT-1',
+        ]);
+
+        $this->artisan('voice:build-phonetics');
+
+        $result = $this->normalizer()->normalize(['hapacol khẩu trang']);
+
+        $this->assertFalse($result['confident']);
+        // Chuỗi trả về KHÔNG đổi: cổng chỉ hạ cờ, không hạ độ phủ.
+        $this->assertSame('hapacol khẩu trang', $result['text']);
+    }
+
+    public function test_words_inside_one_product_name_stay_confident(): void
+    {
+        $result = $this->normalizer()->normalize(['thuốc hạ sốt hapacol']);
+
+        $this->assertTrue($result['confident']);
+        $this->assertSame('exact', $result['source']);
+    }
+
+    /**
+     * T1 chỉ được tuyên bố chắc chắn khi chuỗi ĐÃ SỬA đứng vững trên catalog, không
+     * phải khi nó "hơn bản gốc". Cổng cũ là so sánh tương đối: đo được "pa ra xê ta
+     * môn năm trăm" -> "Par xê ta môn năm trăm" đi qua vì 4 > 3.
+     */
+    public function test_a_phonetic_rewrite_that_names_nothing_is_not_confident(): void
+    {
+        $result = $this->normalizer()->normalize(['pa ra xê ta môn năm trăm']);
+
+        if ($result['source'] === 'phonetic') {
+            $this->assertFalse(
+                $result['confident'],
+                "T1 trả '{$result['text']}' — chuỗi này không phải tên sản phẩm nào."
+            );
+        }
+
+        $this->assertIsString($result['text']);
     }
 }
