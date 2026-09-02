@@ -388,6 +388,13 @@
     pointer-events: none;
 }
 
+/* Chrome/Safari vẽ nút ✕ riêng trong input[type=search], và nó rơi đúng vào ô 48px
+   của nút mic — đo được 2026-09-02: vùng ✕ ở x≈301, hộp mic 261-305. Hai affordance
+   chồng nhau, cái ✕ xám nhìn như đang disabled. Ô đã có nút xoá riêng ở panel gợi ý. */
+[type='search']::-webkit-search-cancel-button {
+    display: none;
+}
+
 .header-search-mic {
     /* 44x44: ngưỡng chạm tối thiểu. Nút to hơn ô 48px của icon nên nó lùi vào 2px
        thay vì 16px, và vẫn nằm trong bán kính của pill. */
@@ -399,7 +406,10 @@
     border: 0;
     border-radius: 50%;
     background: transparent;
-    color: #059669;
+    /* #047857 chứ không phải #059669: đo được 2026-09-02, #059669 trên nền ô cho
+       3.50:1 — qua ngưỡng 3:1 của icon nhưng sát, và cùng tông với nhãn trong dải.
+       #047857 cho 5.09:1. */
+    color: #047857;
     font-size: 1.05rem;
     line-height: 1;
     cursor: pointer;
@@ -421,10 +431,12 @@
     color: #047857;
 }
 
-/* Ring thay cho outline mặc định, không phải bỏ outline: bàn phím cần thấy focus. */
+/* Ring thay cho outline mặc định, không phải bỏ outline: bàn phím cần thấy focus.
+   Alpha 0.9 và tông đậm hơn: rgba(16,185,129,0.4) trên nền ô cho 1.42:1, dưới mức
+   3:1 mà một chỉ dấu focus cần. rgba(4,120,87,0.9) cho 4.24:1. */
 .header-search-mic:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.9);
 }
 
 .header-search-mic[disabled] {
@@ -499,7 +511,9 @@
     padding: 0 0.5rem;
     border: 0;
     background: transparent;
-    color: #059669;
+    /* #047857 chứ không phải #059669: đo được 2026-09-02, #059669 trên nền dải cho
+       3.77:1 mà chữ 13px cần 4.5:1. #047857 cho 5.48:1. */
+    color: #047857;
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
@@ -507,7 +521,7 @@
 
 .voice-status__undo:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.9);
     border-radius: 8px;
 }
 

@@ -81,18 +81,26 @@ class VoiceSearch {
     }
 
     /**
-     * Đặt dải ngay dưới form. Cùng cách tính với panel gợi ý — xem
-     * SearchAutocomplete.positionSuggestions() — nên hai thứ không chồng nhau.
+     * Đặt dải ngay dưới form, kẹp trong viewport ở CẢ HAI mép.
+     *
+     * Chỉ kẹp mép trái là đủ cho desktop nhưng không đủ cho 375px: đo được
+     * 2026-09-02, một câu dài đẩy dải tới left=114 right=465 trong viewport 375px và
+     * nút "Dùng nguyên văn" ra ngoài 75px. position: fixed không sinh scrollbar nên
+     * phần đó không với tới được. GUTTER = 12 giống
+     * SearchAutocomplete.positionSuggestions().
      */
     positionStatus() {
         if (!this.status.hasAttribute('data-visible') || !this.form?.isConnected) {
             return;
         }
 
+        const GUTTER = 12;
         const rect = this.form.getBoundingClientRect();
+        const width = this.status.getBoundingClientRect().width;
+        const maxLeft = Math.max(GUTTER, window.innerWidth - GUTTER - width);
 
         this.status.style.top = `${rect.bottom + 8}px`;
-        this.status.style.left = `${Math.max(12, rect.left)}px`;
+        this.status.style.left = `${Math.min(Math.max(GUTTER, rect.left), maxLeft)}px`;
     }
 
     setState(state) {
