@@ -67,6 +67,16 @@ class VoiceSearchNormalizer
     private const AI_NO_HELP = "\0no-help";
 
     /**
+     * Ghi nhớ "từ này có trong tên sản phẩm không" trong một lượt normalize().
+     *
+     * Service được resolve mỗi request nên bộ nhớ này chết theo request — không phải
+     * cache dài hạn, chỉ để một lượt không hỏi DB cùng một từ bốn lần.
+     *
+     * @var array<string, bool>
+     */
+    private array $wordInName = [];
+
+    /**
      * @param array<int, string> $alternatives Web Speech trả tối đa 3, tốt nhất trước.
      * @return array{text: string, heard: string, source: string, confident: bool}
      */
@@ -245,12 +255,21 @@ class VoiceSearchNormalizer
      * Bốn LIKE chứ không phải RLIKE hay concat(): bộ test chạy trên sqlite :memory:
      * (phpunit.xml) còn production là MySQL, và cách này là cách duy nhất đã kiểm chạy
      * đúng trên cả hai.
+     *
+     * Ghi nhớ kết quả theo từ trong suốt một lượt normalize(): isRealQuery() và
+     * countNameWords() hỏi về cùng những từ đó nhiều lần — T0 hỏi chuỗi gốc, rồi T1 hỏi
+     * lại chuỗi gốc và chuỗi đã sửa. Đo được 2026-09-02: "thuấc hạ sốc" tốn 6 truy vấn
+     * mà 4 trong số đó lặp lại cùng một từ.
      */
     private function nameHasWord(string $word): bool
     {
+        if (array_key_exists($word, $this->wordInName)) {
+            return $this->wordInName[$word];
+        }
+
         $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $word);
 
-        return Product::notExpired()
+        return $this->wordInName[$word] = Product::notExpired()
             ->where(function ($inner) use ($escaped): void {
                 $inner->where('name_folded', $escaped)
                     ->orWhere('name_folded', 'like', $escaped . ' %')
