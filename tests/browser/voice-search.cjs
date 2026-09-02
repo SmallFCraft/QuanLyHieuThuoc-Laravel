@@ -107,6 +107,33 @@ const MOCK = () => {
         `log=${JSON.stringify(await log())}`
     );
 
+    // --- F1b: hai lần bấm nhanh không được để máy tưởng vẫn đang nghe -------------
+    await go();
+    await page.click(MIC);
+    await page.click(MIC);
+    await E(() => window.__end());
+    await E(() => window.__reset());
+    await page.click(MIC);
+    check(
+        'F1b bấm lại sau khi dừng thì mở session mới',
+        (await log()).includes('new'),
+        `log=${JSON.stringify(await log())}`
+    );
+
+    // --- F1c: kết quả cuối không được để timer 8 giây bật lại nút giữa lúc chờ ----
+    await go();
+    await page.route('**/api/voice/normalize', () => {});
+    await page.click(MIC);
+    // Cố tình KHÔNG gọi __end(): mô phỏng engine không bắn `end` sau kết quả cuối.
+    await E(() => window.__final(['men vi sinh']));
+    await page.waitForTimeout(9000);
+    check(
+        'F1c timer im lặng không bật lại nút khi đang chờ server',
+        (await state()) === 'working' && (await E(() => document.querySelector('[data-voice-search]').disabled)),
+        `state=${await state()}`
+    );
+    await page.unroute('**/api/voice/normalize');
+
     // --- F2: fetch treo không được để nút disabled vĩnh viễn -----------------------
     await go();
     await page.route('**/api/voice/normalize', () => {});
@@ -202,8 +229,6 @@ const MOCK = () => {
 
     const failed = results.filter((r) => !r.pass);
     console.log(`\n${results.length - failed.length}/${results.length} đạt`);
-    // Đảo ngược CÓ Ý: hôm nay tám check này phải đỏ — đó chính là bản tái hiện lỗi.
-    // Task 3 lật lại thành `failed.length === 0 ? 0 : 1` khi các fix đã vào.
-    process.exit(failed.length === 0 ? 1 : 0);
+    process.exit(failed.length === 0 ? 0 : 1);
 })();
 
