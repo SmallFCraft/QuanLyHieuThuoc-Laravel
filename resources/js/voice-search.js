@@ -139,6 +139,12 @@ class VoiceSearch {
         this.input.focus();
     }
     toggle() {
+        // 'working' là lúc đang chờ server: nút đã disabled nên click không tới được
+        // đây, nhưng bàn phím và script tự động thì có.
+        if (this.button.dataset.state === 'working') {
+            return;
+        }
+
         if (this.recognition) {
             this.stop();
 
@@ -167,46 +173,79 @@ class VoiceSearch {
         recognition.onerror = (event) => this.handleError(event);
         recognition.onend = () => this.handleEnd();
 
-        this.recognition = recognition;
         this.previous = this.input.value;
+        this.heard = '';
         this.setState('listening');
         this.hideStatus();
-        this.armSilenceTimer();
 
         try {
             recognition.start();
         } catch {
-            // start() ném nếu đã đang chạy — coi như lỗi chung rồi về trạng thái rảnh.
+            // Gán SAU start(): start() ném nghĩa là không có session nào, nên cũng
+            // không có `end` nào để nhả this.recognition. Gán trước là để nút chết
+            // vĩnh viễn — toggle() sẽ mãi vào nhánh stop() của một session không tồn
+            // tại. Đo được 2026-09-02: log ["new","start"] rồi ["stop","stop"].
             this.fail('generic');
+
+            return;
         }
+
+        this.recognition = recognition;
+        this.armSilenceTimer();
     }
 
+    /**
+     * abort(), không phải stop(): theo spec Web Speech, stop() nghĩa là "ngừng nghe
+     * và cố trả kết quả từ audio đã nhận", còn abort() mới là huỷ. Nhãn của nút là
+     * "Đang nghe, bấm để dừng" — khách bấm để HUỶ, không phải để chốt một câu họ
+     * vừa nhận ra là nói sai.
+     */
     stop() {
+        this.release();
+        this.recognition?.abort();
+        this.recognition = null;
+        this.setState('idle');
+    }
+
+    /** Một chỗ duy nhất nhả tài nguyên của một session, gọi được nhiều lần. */
+    release() {
         clearTimeout(this.silenceTimer);
-        this.recognition?.stop();
+        this.silenceTimer = null;
     }
 
     armSilenceTimer() {
-        clearTimeout(this.silenceTimer);
-        this.silenceTimer = setTimeout(() => this.recognition?.stop(), SILENCE_MS);
+        this.release();
+        // abort() cùng lý do như stop(): hết 8 giây im lặng thì huỷ, không chốt một
+        // câu nghe được nửa vời.
+        this.silenceTimer = setTimeout(() => this.stop(), SILENCE_MS);
     }
     handleResult(event) {
-        this.armSilenceTimer();
-
         const result = event.results[event.results.length - 1];
         const alternatives = Array.from(result)
             .map((alternative) => alternative.transcript.trim())
             .filter((transcript) => transcript !== '')
             .slice(0, 3);
 
-        if (alternatives.length === 0) {
-            return;
-        }
-
         if (!result.isFinal) {
+            // Chỉ gia hạn khi CÒN đang nghe. Gia hạn cả ở kết quả cuối là để một timer
+            // 8 giây sống qua lúc normalize() đang bay: stop() giờ tự đặt state, nên
+            // nó sẽ bật lại nút giữa lúc request chưa về và một click nữa mở session
+            // thứ hai đè lên session chưa xong.
+            this.armSilenceTimer();
+
+            if (alternatives.length === 0) {
+                return;
+            }
+
             // Chỉ hiện tạm trong ô, chưa gọi server: kết quả tạm đổi từng từ.
             this.input.value = alternatives[0];
 
+            return;
+        }
+
+        this.release();
+
+        if (alternatives.length === 0) {
             return;
         }
 
@@ -227,7 +266,7 @@ class VoiceSearch {
     }
 
     handleEnd() {
-        clearTimeout(this.silenceTimer);
+        this.release();
         this.recognition = null;
 
         if (this.button.dataset.state === 'listening') {
