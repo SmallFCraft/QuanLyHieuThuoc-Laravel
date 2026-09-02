@@ -92,6 +92,53 @@ class VoiceSearchTest extends TestCase
         ];
     }
 
+    /**
+     * Byte UTF-8 hỏng phải bị chặn ở biên, không được thành 500.
+     *
+     * $this->post, KHÔNG phải postJson: postJson chạy payload qua json_encode(), và
+     * json_encode() trả false trên byte hỏng nên byte đó không bao giờ rời máy test —
+     * đo 2026-09-02, postJson cho 422 với thông báo "alternatives là bắt buộc", tức là
+     * pass vì key rỗng, không phải vì encoding. Form POST là đường duy nhất trong bộ
+     * test đưa được byte thô tới controller, và đo được nó cho 500:
+     * InvalidArgumentException "Malformed UTF-8 characters".
+     */
+    public function test_it_rejects_malformed_utf8(): void
+    {
+        $response = $this->post(
+            route('voice.normalize'),
+            ['alternatives' => ["\xC3\x28 abc"]],
+            ['Accept' => 'application/json']
+        );
+
+        $response->assertStatus(422);
+    }
+
+    /** Khoá `alternatives` không tuần tự thì `heard` rỗng mà `text` có chữ. */
+    public function test_it_normalises_non_sequential_keys(): void
+    {
+        $response = $this->postJson(route('voice.normalize'), [
+            'alternatives' => ['a' => 'thuốc hạ sốt'],
+        ]);
+
+        $response->assertOk()->assertJsonPath('heard', 'thuốc hạ sốt');
+    }
+
+    public function test_it_strips_control_characters(): void
+    {
+        $response = $this->postJson(route('voice.normalize'), [
+            'alternatives' => ["\x07thuốc hạ sốt\x01"],
+        ]);
+
+        $response->assertOk();
+        $this->assertSame('thuốc hạ sốt', $response->json('heard'));
+
+        $this->assertSame(
+            'thuốc hạ sốt',
+            $this->postJson(route('voice.normalize'), ['alternatives' => ["thuốc\x07hạ sốt"]])->json('heard'),
+            'Ký tự điều khiển GIỮA câu: regex hai đầu của trimPunctuation() không với tới.'
+        );
+    }
+
     public function test_it_throttles_at_thirty_per_minute(): void
     {
         for ($i = 0; $i < 30; $i++) {

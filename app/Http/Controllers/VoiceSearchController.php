@@ -31,9 +31,25 @@ class VoiceSearchController extends Controller
             // Web Speech trả tối đa 3 alternative theo maxAlternatives của client.
             'alternatives' => ['required', 'array', 'min:1', 'max:3'],
             // 200 ký tự: dài hơn thì không còn là một truy vấn tìm kiếm.
-            'alternatives.*' => ['required', 'string', 'max:200'],
+            //
+            // Rule `string` KHÔNG kiểm encoding, và một byte UTF-8 hỏng đi tới
+            // response()->json() là một 500 không cần đăng nhập. Chặn ở biên chứ
+            // không sửa ở trong: một chuỗi không phải UTF-8 thì Web Speech không
+            // sinh ra được, nên nó không phải khách thật.
+            //
+            // is_string trước mb_check_encoding: rule `string` trượt KHÔNG chặn
+            // closure này chạy (không có `bail`), nên một phần tử mảng lồng vào đây
+            // là "Array to string conversion" — lại đúng cái 500 đang phải đóng.
+            'alternatives.*' => ['required', 'string', 'max:200', function (string $attribute, mixed $value, callable $fail): void {
+                if (is_string($value) && ! mb_check_encoding($value, 'UTF-8')) {
+                    $fail('Chuỗi không phải UTF-8 hợp lệ.');
+                }
+            }],
         ]);
 
-        return response()->json($normalizer->normalize($validated['alternatives']));
+        // array_values: khoá không tuần tự ({"a": "..."}) qua được `array|min:1`
+        // nhưng $alternatives[0] thì miss, nên `heard` rỗng trong khi `text` có chữ
+        // và nút "Dùng nguyên văn" không khôi phục được gì.
+        return response()->json($normalizer->normalize(array_values($validated['alternatives'])));
     }
 }
