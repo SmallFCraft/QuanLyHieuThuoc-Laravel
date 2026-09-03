@@ -118,7 +118,7 @@ class VoiceNormalizeLoadTest extends TestCase
         for ($i = 0; $i < 100; $i++) {
             $this->clearThrottle();
 
-            $this->postJson(route('voice.normalize'), ['alternatives' => ['bơ bơ rin gì đó']])
+            $this->postJson(route('voice.normalize'), ['alternatives' => ['ù ù cạc cạc']])
                 ->assertOk();
         }
 
@@ -134,11 +134,12 @@ class VoiceNormalizeLoadTest extends TestCase
         $throttled = 0;
 
         for ($i = 0; $i < 40; $i++) {
-            // "bơ bơ rin gì đó N" chứ không phải "câu lạ số N": đo được, "số 0".."số 9"
-            // khớp tầng phiên âm với token "sốt" của catalog fixture, nên 10 trong 30
-            // lượt đầu không bao giờ tới AI và số lời gọi là 20 chứ không phải 30. Câu
-            // dưới đây trượt cả hai tầng rẻ ở cả 40 lượt — đúng cái mà test cần.
-            $status = $this->postJson(route('voice.normalize'), ['alternatives' => ["bơ bơ rin gì đó {$i}"]])
+            // "ù ù cạc cạc N", câu duy nhất đã đo là trượt cả T0 và T1 ở cửa sổ 5 từ.
+            // Trước đây là "bơ bơ rin gì đó N", nhưng Task 10 nới cửa sổ lên 5 và nó
+            // khớp phiên âm: "rin" -> "Viên", "đó" -> "đau", nên câu đó không còn xuống
+            // tới AI và số lời gọi là 0 chứ không phải 30. Hậu tố số cũng đã kiểm: 0..9
+            // giữ nguyên `raw` cả mười.
+            $status = $this->postJson(route('voice.normalize'), ['alternatives' => ["ù ù cạc cạc {$i}"]])
                 ->getStatusCode();
 
             if ($status === 429) {

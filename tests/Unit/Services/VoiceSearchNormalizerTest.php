@@ -353,4 +353,71 @@ class VoiceSearchNormalizerTest extends TestCase
 
         $this->assertIsString($result['text']);
     }
+
+    /**
+     * Sản phẩm có TÊN là chính chữ "Paracetamol".
+     *
+     * Fixture của setUp() để "Paracetamol 500mg" ở cột `ingredients`, mà
+     * voice:build-phonetics chỉ index `name`, tên danh mục và token của `name` — đo
+     * 2026-09-02: 0 dòng index nào chứa "paracetamol". KHÔNG đưa vào setUp() vì mọi
+     * test khác trong file đo trên một catalog một sản phẩm.
+     */
+    private function seedSpelledOutDrug(): void
+    {
+        Product::create([
+            'MaDM' => Category::first()->MaDM,
+            'name' => 'Paracetamol Kabi 500mg',
+            'ingredients' => 'Paracetamol 500mg',
+            'price' => 20000,
+            'expiration_date' => now()->addYears(2),
+            'stock_quantity' => 10,
+            'reorder_point' => 5,
+            'batch_number' => 'VN-2',
+        ]);
+
+        $this->artisan('voice:build-phonetics');
+    }
+
+    /**
+     * Tên thuốc đọc rời từng âm tiết là ca dùng CHÍNH của tính năng này, và với cửa
+     * sổ 3 từ nó không thể khớp: "pa ra xê ta môn" là 5 âm tiết. Đo 2026-09-02:
+     * within('pa Da Se ta moN', 'paracetamol') = true, tức là chỉ thiếu một cửa sổ đủ
+     * rộng để hỏi tới nó.
+     */
+    public function test_a_five_syllable_drug_name_reaches_the_phonetic_index(): void
+    {
+        $this->seedSpelledOutDrug();
+
+        $result = $this->normalizer()->normalize(['pa ra xê ta môn']);
+
+        $this->assertSame('phonetic', $result['source']);
+        $this->assertStringContainsString(
+            'paracetamol',
+            mb_strtolower($result['text']),
+            "Trả về '{$result['text']}' — cửa sổ vẫn chưa đủ rộng cho 5 âm tiết."
+        );
+    }
+
+    /**
+     * Ngân sách cửa sổ không được tiêu vào khoá trùng. Web Speech trả 3 alternative
+     * gần giống nhau nên phần lớn cửa sổ là bản sao.
+     */
+    public function test_duplicate_alternatives_do_not_spend_the_window_budget(): void
+    {
+        $this->seedSpelledOutDrug();
+
+        config(['search.voice.max_windows' => 3]);
+
+        $queries = 0;
+        \DB::listen(function () use (&$queries): void {
+            $queries++;
+        });
+
+        $result = $this->normalizer()->normalize(['pa ra xê ta môn', 'pa ra xê ta môn', 'pa ra xê ta môn']);
+
+        $this->assertSame('phonetic', $result['source']);
+        // lookup() là MỘT truy vấn bất kể bao nhiêu cửa sổ; phần còn lại là
+        // nameHasWord() theo từ. Ba alternative y hệt nhau không được nhân ba chi phí.
+        $this->assertLessThan(8, $queries, "Tốn {$queries} truy vấn cho ba alternative giống nhau.");
+    }
 }

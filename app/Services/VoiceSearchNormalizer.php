@@ -29,9 +29,6 @@ class VoiceSearchNormalizer
     public const SOURCE_AI = 'ai';
     public const SOURCE_RAW = 'raw';
 
-    /** Cửa sổ dài nhất xét tới: tên thuốc trong catalog hầu hết 1-3 âm tiết. */
-    private const MAX_WINDOW_WORDS = 3;
-
     /** Cụm mở đầu dài nhất trong LEAD_PHRASES ("tôi muốn tìm" — ba từ). */
     private const MAX_LEAD_WORDS = 3;
 
@@ -421,32 +418,37 @@ class VoiceSearchNormalizer
     }
 
     /**
-     * Cửa sổ 1-3 từ liền nhau, dài trước ngắn sau, gộp trùng qua mọi alternative.
+     * Cửa sổ 1-N từ liền nhau, dài trước ngắn sau, gộp trùng qua mọi alternative.
      *
-     * Đo được: 3 alternative x 6 cửa sổ chỉ cho 6-14 khoá khác nhau, vì Web Speech
-     * trả các alternative gần giống nhau.
+     * Bề rộng và số cửa sổ đọc từ config vì phải nới cùng nhau: vòng lặp đi dài-trước
+     * nên cap hẹp tiêu hết ngân sách ngay ở tầng dài nhất, xem config/search.php.
      *
      * @return array<string, array{key: string, text: string, source: string}>
      */
     private function windows(array $alternatives): array
     {
-        $cap = max(1, (int) config('search.voice.max_windows', 6));
+        $cap = max(1, (int) config('search.voice.max_windows', 14));
+        $maxWords = max(1, (int) config('search.voice.max_window_words', 5));
         $windows = [];
 
         foreach ($alternatives as $alternative) {
             $words = preg_split('/\s+/', $alternative, -1, PREG_SPLIT_NO_EMPTY) ?: [];
             $taken = 0;
 
-            for ($size = self::MAX_WINDOW_WORDS; $size >= 1 && $taken < $cap; $size--) {
+            for ($size = $maxWords; $size >= 1 && $taken < $cap; $size--) {
                 for ($i = 0; $i + $size <= count($words) && $taken < $cap; $i++) {
                     $text = implode(' ', array_slice($words, $i, $size));
                     $key = VoicePhonetics::key($text);
 
-                    $taken++;
-
+                    // $taken++ SAU khi loại: khoá rỗng và khoá trùng không sinh ứng
+                    // viên nào, nên tính chúng vào ngân sách là thu hẹp vùng phủ mà
+                    // không được gì. Ba alternative của Web Speech gần giống nhau nên
+                    // phần lớn cửa sổ là bản sao.
                     if ($key === '' || isset($windows[$key])) {
                         continue;
                     }
+
+                    $taken++;
 
                     $windows[$key] = ['key' => $key, 'text' => $text, 'source' => $alternative];
                 }
