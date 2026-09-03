@@ -86,8 +86,17 @@ return [
         // Token 1-2 lần phần lớn là mã lô hoặc số đo bao bì.
         'phonetic_min_hits' => 3,
 
-        // Số cửa sổ tối đa lấy từ mỗi alternative. Đo được: 3 alternative x 6
-        // cửa sổ chỉ cho 6-14 khoá khác nhau, kéo ~200 dòng ở trường hợp xấu nhất.
-        'max_windows' => 6,
+        // Cửa sổ dài nhất xét tới. 3 là quá hẹp cho ca dùng chính: "pa ra xê ta môn"
+        // (paracetamol) là 5 âm tiết, và đo 2026-09-02 cho thấy dòng `Paracetamol` CÓ
+        // trong index, within() nhận nó, nhưng không cửa sổ nào chứa nổi cả cụm.
+        // Nhóm syllable-split của corpus: 2/7 khớp ở 3 từ, 4/7 ở 5 từ.
+        'max_window_words' => 5,
+
+        // Số cửa sổ tối đa lấy từ mỗi alternative. Phải nới cùng max_window_words:
+        // vòng lặp đi dài-trước nên với cap 6 nó tiêu hết ngân sách ngay ở tầng dài
+        // nhất và các cụm ngắn không bao giờ được sinh. Đo trên corpus 94 ca với cổng
+        // đồng-xuất-hiện: cap 6 cho 55/94 và 466 truy vấn, cap 14 cho 56/94 và 928.
+        // lookup() vẫn là MỘT truy vấn, phần tăng là nameHasWord() theo từ.
+        'max_windows' => 14,
     ],
 ];
