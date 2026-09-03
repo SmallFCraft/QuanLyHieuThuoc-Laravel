@@ -563,11 +563,13 @@
                    Nav là position: fixed nên đổi padding của nó không đẩy nội dung
                    trang: main giữ nguyên padding-top: 86px. Reflow gói trong ba phần tử
                    của thanh, một lần mỗi lần vượt ngưỡng — không phải mỗi frame cuộn. */
-                .site-header {
-                    transition: box-shadow 0.26s ease-out, background-color 0.26s ease-out,
-                                padding-top 0.26s cubic-bezier(0.4, 0, 0.2, 1),
-                                padding-bottom 0.26s cubic-bezier(0.4, 0, 0.2, 1);
-                }
+                /* transition KHÔNG khai lại ở đây: khối reduced-motion ở trên cùng
+                   specificity nhưng đứng trước trong source order, nên khai lại là ghi
+                   đè nó — đo 2026-09-02 ở 375px, prefers-reduced-motion vẫn thấy
+                   padding-top trong transition-property. Chuyển động thật thì đã bị
+                   quy tắc `*` toàn cục trong storefront.css:2140 ép về 0.01ms, nên đây
+                   là dọn một khai báo tự mâu thuẫn, không phải sửa một lỗi thấy được.
+                   Khai báo gốc ở trên đã phủ khổ này. */
                 :root[data-header-scrolled] .site-header {
                     padding-top: 0.35rem;
                     padding-bottom: 0.35rem;
