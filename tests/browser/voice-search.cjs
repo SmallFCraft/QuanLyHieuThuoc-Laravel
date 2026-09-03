@@ -409,6 +409,65 @@ const MOCK = () => {
     });
     check('lòng trong ô không đổi khi mic thay icon', inner.withVoice === inner.without, `${inner.withVoice} vs ${inner.without}`);
 
+    // --- L2: nút đang chờ server phải tự nói là đang xử lý ------------------------
+    // Route treo để state đứng ở 'working' đủ lâu mà đọc thuộc tính, không đua với
+    // NORMALIZE_TIMEOUT_MS.
+    await go();
+    await page.route('**/api/voice/normalize', () => {});
+    await page.click(MIC);
+    await E(() => { window.__final(['men vi sinh']); window.__end(); });
+    await page.waitForTimeout(400);
+    const working = await E(() => {
+        const mic = document.querySelector('[data-voice-search]');
+
+        return { busy: mic.getAttribute('aria-busy'), label: mic.getAttribute('aria-label') };
+    });
+    check(
+        'L2 nút đang xử lý báo đúng trạng thái',
+        working.busy === 'true' && working.label === 'Đang xử lý...',
+        `aria-busy=${working.busy} aria-label=${working.label}`
+    );
+    await page.unroute('**/api/voice/normalize');
+
+    // --- L3: Tab bắc cầu hai chiều giữa ô và nút trong dải ------------------------
+    // Dải là con cuối của <body> nên thứ tự Tab tự nhiên không tới được nó; cầu JS
+    // trong voice-search.js phải nối một bước, và Shift+Tab phải trả focus về ô.
+    await go();
+    await page.click(MIC);
+    const bridged = page.waitForResponse((r) => r.url().includes('voice/normalize'));
+    await E(() => { window.__final(['men vi sinh']); window.__end(); });
+    await bridged;
+    await page.waitForTimeout(600);
+    await page.focus('#header-search');
+    await page.keyboard.press('Tab');
+    const onUndo = await E(() => document.activeElement.classList.contains('voice-status__undo'));
+    await page.keyboard.press('Shift+Tab');
+    const backOnInput = await E(() => document.activeElement.id === 'header-search');
+    check('L3 Tab bắc cầu hai chiều giữa ô và nút trong dải', onUndo && backOnInput, `undo=${onUndo} back=${backOnInput}`);
+
+    // --- L3b: dải vẫn dùng toạ độ viewport, không bị header bắt làm containing block ---
+    // Chuyển dải vào trong header là cách "sửa" Tab bị loại: .site-header có
+    // backdrop-filter, thứ tạo containing block cho position: fixed, nên toạ độ
+    // positionStatus() tính ra sẽ lệch đúng bằng offset của header.
+    const aligned = await E(() => {
+        const s = document.querySelector('.voice-status');
+        const f = document.getElementById('header-search').closest('form');
+
+        return Math.abs(s.getBoundingClientRect().top - (f.getBoundingClientRect().bottom + 8)) < 2;
+    });
+    check('L3b dải neo đúng 8px dưới form', aligned);
+
+    // --- L4: khối mobile không được ghi đè khai báo reduced-motion ----------------
+    // Kiểm KHAI BÁO, không phải chuyển động cảm nhận được: storefront.css:2140 đã ép
+    // mọi transition-duration về 0.01ms dưới prefers-reduced-motion, nên đây là dọn
+    // một khai báo tự mâu thuẫn.
+    const reduced = await browser.newContext({ reducedMotion: 'reduce', viewport: { width: 375, height: 812 } });
+    const rp = await reduced.newPage();
+    await rp.goto(BASE, { waitUntil: 'domcontentloaded' });
+    const headerTransition = await rp.evaluate(() => getComputedStyle(document.querySelector('.site-header')).transitionProperty);
+    check('L4 reduced-motion tắt transition của header ở 375px', !headerTransition.includes('padding'), `transition=${headerTransition}`);
+    await reduced.close();
+
     await browser.close();
 
     const failed = results.filter((r) => !r.pass);

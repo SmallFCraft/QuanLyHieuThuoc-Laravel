@@ -50,6 +50,9 @@ class VoiceSearch {
 
         this.status = this.createStatus();
 
+        // Dải ở xa ô trong DOM, nên buộc quan hệ bằng aria thay vì bằng vị trí.
+        this.input.setAttribute('aria-describedby', 'voice-status');
+
         this.positionBound = () => this.positionStatus();
         this.button.addEventListener('click', () => this.toggle());
         this.status.addEventListener('click', (event) => this.handleStatusClick(event));
@@ -66,6 +69,16 @@ class VoiceSearch {
         this.keyBound = (event) => this.handleKeydown(event);
         document.addEventListener('click', this.dismissBound);
         document.addEventListener('keydown', this.keyBound);
+
+        // Dải nằm ở cuối <body> nên thứ tự Tab tự nhiên đặt nó sau cả trang — đo
+        // 2026-09-02: 60 lần Tab không tới được nút trong dải. KHÔNG chuyển nó vào
+        // trong header để sửa: .site-header có backdrop-filter, thứ tạo containing
+        // block cho position: fixed, nên mọi toạ độ positionStatus() tính ra sẽ lệch
+        // đúng bằng offset của header (đo được: top 200 -> 250, left 100 -> 130).
+        // Thay vào đó bắc cầu Tab bằng JS, hai chiều.
+        this.tabBound = (event) => this.handleTab(event);
+        this.input.addEventListener('keydown', this.tabBound);
+        this.status.addEventListener('keydown', this.tabBound);
     }
     createStatus() {
         const status = document.createElement('div');
@@ -74,6 +87,7 @@ class VoiceSearch {
         // đang xử lý hay đã lỗi, mà không bị lấy mất focus khỏi ô tìm kiếm.
         status.setAttribute('role', 'status');
         status.setAttribute('aria-live', 'polite');
+        status.id = 'voice-status';
 
         document.body.appendChild(status);
 
@@ -107,8 +121,14 @@ class VoiceSearch {
         this.button.dataset.state = state;
         this.button.setAttribute(
             'aria-label',
-            state === 'listening' ? lang('listening', 'Đang nghe') : lang('start', 'Tìm bằng giọng nói')
+            {
+                listening: lang('listening', 'Đang nghe'),
+                // 'working' rơi vào nhánh mặc định trước đây, nên một nút đang disabled
+                // và đang quay tự giới thiệu là "Tìm bằng giọng nói".
+                working: lang('working', 'Đang xử lý...'),
+            }[state] ?? lang('start', 'Tìm bằng giọng nói')
         );
+        this.button.setAttribute('aria-busy', state === 'working' ? 'true' : 'false');
 
         const icon = this.button.querySelector('i');
 
@@ -192,6 +212,30 @@ class VoiceSearch {
         }
 
         this.dismiss();
+    }
+
+    handleTab(event) {
+        if (event.key !== 'Tab') {
+            return;
+        }
+
+        const undo = this.status.querySelector('[data-voice-undo]');
+
+        if (!undo || !this.status.hasAttribute('data-visible')) {
+            return;
+        }
+
+        if (event.target === this.input && !event.shiftKey) {
+            event.preventDefault();
+            undo.focus();
+
+            return;
+        }
+
+        if (event.target === undo && event.shiftKey) {
+            event.preventDefault();
+            this.input.focus();
+        }
     }
 
     handleOutsideClick(event) {
@@ -440,7 +484,12 @@ class VoiceSearch {
 document.addEventListener('DOMContentLoaded', () => {
     const button = document.querySelector('[data-voice-search]');
     const input = document.getElementById('header-search');
-    const supported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+    // isSecureContext: trên http://<LAN-IP>:8123 (điện thoại vào bằng IP nội bộ) symbol
+    // vẫn tồn tại nên trước đây data-voice-ready được đặt, kính lúp bị ẩn, và nút mic lỗi
+    // ở mọi lần bấm. Web Speech chỉ chạy ở secure context; http://localhost là trustworthy
+    // origin nên dev server không bị ảnh hưởng (đo 2026-09-02: isSecureContext=true).
+    const supported = window.isSecureContext
+        && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
     if (!button || !input || !supported) {
         // Không hỗ trợ: không đặt data-voice-ready, nên CSS giữ icon kính lúp và nút
