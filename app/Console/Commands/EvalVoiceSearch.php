@@ -22,8 +22,8 @@ use Illuminate\Console\Command;
 class EvalVoiceSearch extends Command
 {
     protected $signature = 'voice:eval
-        {--floor=55 : Số ca đạt tối thiểu, dưới ngưỡng thì lệnh thoát 1}
-        {--lies=33 : Số ca "confident mà sai" tối đa}
+        {--floor=56 : Số ca đạt tối thiểu, dưới ngưỡng thì lệnh thoát 1}
+        {--lies=14 : Số ca "confident mà sai" tối đa}
         {--json : Ghi kết quả vào storage/app/voice-eval.json}';
 
     protected $description = 'Đo tìm kiếm bằng giọng nói trên tập 94 ca thật';
