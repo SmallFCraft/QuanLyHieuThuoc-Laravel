@@ -73,6 +73,9 @@ class VoiceSearchNormalizer
      */
     private array $wordInName = [];
 
+    /** Ứng viên T1 đã loại, giữ lại cho prompt AI trong cùng một lượt normalize(). */
+    private ?array $phoneticLeftovers = null;
+
     /**
      * @param array<int, string> $alternatives Web Speech trả tối đa 3, tốt nhất trước.
      * @return array{text: string, heard: string, source: string, confident: bool}
@@ -330,6 +333,12 @@ class VoiceSearchNormalizer
 
         $candidates = $this->lookup($windows);
 
+        // Docblock của candidatesForPrompt() nói "một truy vấn phục vụ cả hai tầng";
+        // trước đây nó tự gọi lại windows() + lookup(), nên thật ra là hai. Ghi ngay
+        // sau lookup() chứ không ở chỗ return: bốn trong năm đường ra của hàm này trả
+        // null SAU lookup(), và đúng những đường đó mới là lúc askAi() được gọi.
+        $this->phoneticLeftovers = ['windows' => $windows, 'candidates' => $candidates];
+
         if ($candidates->isEmpty()) {
             return null;
         }
@@ -475,8 +484,13 @@ class VoiceSearchNormalizer
     private function lookup(array $windows): Collection
     {
         $keys = array_keys($windows);
+        // Callback tường minh: array_filter() không callback bỏ "0" vì nó falsy. Chỉ
+        // xảy ra khi cả khoá phiên âm của một cửa sổ là đúng một ký tự "0" (blockKey
+        // trả 2 ký tự cho mọi chuỗi dài hơn, và 2 ký tự thì không bao giờ falsy), nên
+        // đây là bịt một cái bẫy tiềm ẩn chứ không phải một ca đã gặp.
         $blocks = array_values(array_unique(array_filter(
-            array_map(fn (array $window) => VoicePhonetics::blockKey($window['key']), $windows)
+            array_map(fn (array $window) => VoicePhonetics::blockKey($window['key']), $windows),
+            fn (?string $block) => $block !== null && $block !== ''
         )));
 
         return VoicePhonetic::query()
@@ -630,13 +644,16 @@ class VoiceSearchNormalizer
      */
     private function candidatesForPrompt(array $alternatives): array
     {
-        $windows = $this->windows($alternatives);
+        ['windows' => $windows, 'candidates' => $candidates] = $this->phoneticLeftovers
+            ?? ['windows' => $this->windows($alternatives), 'candidates' => null];
 
         if ($windows === []) {
             return [];
         }
 
-        return $this->lookup($windows)
+        $candidates ??= $this->lookup($windows);
+
+        return $candidates
             ->sortByDesc(fn (VoicePhonetic $row) => (self::KIND_BONUS[$row->kind] ?? 0) + min((int) $row->weight, 20))
             ->pluck('term')
             ->unique()
