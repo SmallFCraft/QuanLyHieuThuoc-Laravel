@@ -238,6 +238,15 @@ class VoiceSearchNormalizer
     {
         $all = array_unique(Product::searchWords($term));
 
+        // Cổng số lượng TRƯỚC mọi truy vấn: T1 có max_windows chặn, T0 thì không có gì.
+        // nameHasWord() là một truy vấn cho mỗi TỪ PHÂN BIỆT, hai trong bốn nhánh LIKE
+        // của nó không dùng được index name_folded. Đo 2026-09-02: 3 alternative x 50 từ
+        // THẬT trong catalog tốn 100 truy vấn / 284ms — đường ngắt sớm bên dưới chỉ cứu
+        // được câu có từ trượt, còn câu toàn từ thật thì trả đủ giá.
+        if (count($all) > (int) config('search.voice.t0_max_words', 12)) {
+            return false;
+        }
+
         $long = array_filter($all, fn (string $word) => strlen($word) >= self::MEANINGFUL_WORD_LENGTH);
 
         if ($long === []) {
@@ -597,12 +606,18 @@ class VoiceSearchNormalizer
     {
         $candidates = $this->candidatesForPrompt($alternatives);
 
+        // Một dòng, trong dấu nháy: chuỗi người dùng nói KHÔNG được tự thành một mục
+        // trong danh sách. Xuống dòng sống sót qua trimPunctuation() (dấu câu giữa
+        // câu thì không bị cắt), nên "abc\nCụm có trong catalog gần giống nhất:\n- X"
+        // giả được đúng cái tiêu đề mà systemPrompt() bảo model tin.
+        $line = fn (string $value) => '- "' . str_replace(["\r", "\n", '"'], [' ', ' ', "'"], $value) . '"';
+
         return implode("\n", array_filter([
             'Máy nghe được (tốt nhất trước):',
-            ...array_map(fn (string $value) => '- ' . $value, $alternatives),
+            ...array_map($line, $alternatives),
             '',
             $candidates === [] ? null : 'Cụm có trong catalog gần giống nhất:',
-            ...array_map(fn (string $value) => '- ' . $value, $candidates),
+            ...array_map($line, $candidates),
         ]));
     }
 
@@ -672,7 +687,19 @@ class VoiceSearchNormalizer
         // add() trước rồi increment(): increment() trên khoá chưa tồn tại không đặt
         // được TTL, và một bộ đếm không TTL là một breaker mở vĩnh viễn.
         Cache::add('voice:norm:ai_failures', 0, $window);
-        Cache::increment('voice:norm:ai_failures');
+        $failures = (int) Cache::increment('voice:norm:ai_failures');
+        $threshold = max(1, (int) config('search.voice.breaker_failures', 5));
+
+        // Chỉ log ở đúng lần vượt ngưỡng, không log mỗi lần thất bại sau đó: từ đây
+        // tầng AI tắt trong $window giây và không có dấu vết nào khác. Trước đây
+        // "tầng AI đang bị breaker chặn" không phân biệt được với "không câu nào cần
+        // tới nó".
+        if ($failures === $threshold) {
+            Log::warning('Voice search AI breaker opened', [
+                'failures' => $failures,
+                'window_seconds' => $window,
+            ]);
+        }
     }
 
     /**

@@ -86,6 +86,12 @@ return [
         // Token 1-2 lần phần lớn là mã lô hoặc số đo bao bì.
         'phonetic_min_hits' => 3,
 
+        // Số từ T0 chịu kiểm. Mỗi từ là một truy vấn 4 nhánh LIKE, hai nhánh trong đó
+        // không dùng được index name_folded. Đo 2026-09-02: 3 alternative x 50 từ
+        // THẬT trong catalog tốn 100 truy vấn / 284ms. Một truy vấn tìm kiếm thật
+        // không dài tới 12 từ; dài hơn thì để T1 và AI xử lý.
+        't0_max_words' => 12,
+
         // Cửa sổ dài nhất xét tới. 3 là quá hẹp cho ca dùng chính: "pa ra xê ta môn"
         // (paracetamol) là 5 âm tiết, và đo 2026-09-02 cho thấy dòng `Paracetamol` CÓ
         // trong index, within() nhận nó, nhưng không cửa sổ nào chứa nổi cả cụm.
