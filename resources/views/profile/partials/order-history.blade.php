@@ -1,18 +1,15 @@
-<!-- Order History Section -->
-<div class="glass-card rounded-4 border-0 p-4 p-md-5">
-    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
-        <div class="d-flex align-items-center gap-3">
-            <div class="bg-emerald-100 text-emerald-600 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 icon-circle-md">
-                <i class="bi bi-bag-check-fill fs-3"></i>
-            </div>
-            <div>
-                <h5 class="fw-bold text-gray-900 mb-1">{{ __('messages.profile.orders_title') }}</h5>
-                <p class="text-gray-500 small mb-0">{{ __('messages.profile.orders_desc') }}</p>
-            </div>
+<div class="profile-card">
+    <div class="profile-card__head">
+        <span class="profile-card__icon"><i class="bi bi-bag-check-fill"></i></span>
+        <div>
+            <h2 class="profile-card__title">{{ __('messages.profile.orders_title') }}</h2>
+            <p class="profile-card__subtitle">{{ __('messages.profile.orders_desc') }}</p>
         </div>
     </div>
 
     @php
+        // 5 đơn mỗi trang: khối này nằm trong một tab nên phân trang dài sẽ đẩy các
+        // tab còn lại xuống ngoài màn hình.
         $orders = auth()->user()->orders()->with('items.product')->latest()->paginate(5);
     @endphp
 

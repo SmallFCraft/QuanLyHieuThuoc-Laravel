@@ -1,56 +1,43 @@
-<!-- Account Settings Section -->
-<!-- Notification Preferences -->
-<div class="glass-card rounded-4 border-0 p-4 p-md-5 mb-4">
-    <div class="d-flex align-items-center gap-3 mb-4">
-        <div class="bg-emerald-100 text-emerald-600 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 icon-circle-md">
-            <i class="bi bi-bell-fill fs-3"></i>
-        </div>
+<div class="profile-card">
+    <div class="profile-card__head">
+        <span class="profile-card__icon"><i class="bi bi-bell-fill"></i></span>
         <div>
-            <h5 class="fw-bold text-gray-900 mb-0">{{ __('messages.profile.notifications') }}</h5>
-            <p class="text-gray-500 small mb-0">{{ __('messages.profile.notifications_desc') }}</p>
+            <h2 class="profile-card__title">{{ __('messages.profile.notifications') }}</h2>
+            <p class="profile-card__subtitle">{{ __('messages.profile.notifications_desc') }}</p>
         </div>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
-        <div>
-            <p class="fw-medium text-gray-900 mb-1">{{ __('messages.profile.order_notif') }}</p>
-            <small class="text-gray-500">{{ __('messages.profile.order_notif_desc') }}</small>
+    {{-- ponytail: các công tắc này chưa có cột lưu trong DB, nên trạng thái không
+         sống qua lần tải trang. Đánh dấu disabled + nhãn "sắp có" thay vì để chúng
+         trông như đã lưu được — trước đây bật/tắt chỉ ghi console.log.
+         Nâng cấp khi có bảng user_notification_preferences. --}}
+    @foreach([
+        ['id' => 'orderNotif', 'label' => __('messages.profile.order_notif'), 'desc' => __('messages.profile.order_notif_desc'), 'on' => true],
+        ['id' => 'promoNotif', 'label' => __('messages.profile.promo_notif'), 'desc' => __('messages.profile.promo_notif_desc'), 'on' => true],
+        ['id' => 'healthNotif', 'label' => __('messages.profile.health_notif'), 'desc' => __('messages.profile.health_notif_desc'), 'on' => false],
+    ] as $index => $pref)
+        <div class="d-flex justify-content-between align-items-center gap-3 py-3 {{ $index < 2 ? 'border-bottom' : '' }}">
+            <div>
+                <label class="fw-medium text-gray-900 mb-1 d-block" for="{{ $pref['id'] }}">{{ $pref['label'] }}</label>
+                <small class="text-gray-500">{{ $pref['desc'] }}</small>
+            </div>
+            <div class="form-check form-switch flex-shrink-0">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="{{ $pref['id'] }}" @checked($pref['on']) disabled
+                       aria-describedby="{{ $pref['id'] }}-note">
+            </div>
         </div>
-        <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="orderNotif" checked>
-        </div>
-    </div>
+    @endforeach
 
-    <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
-        <div>
-            <p class="fw-medium text-gray-900 mb-1">{{ __('messages.profile.promo_notif') }}</p>
-            <small class="text-gray-500">{{ __('messages.profile.promo_notif_desc') }}</small>
-        </div>
-        <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="promoNotif" checked>
-        </div>
-    </div>
-
-    <div class="d-flex justify-content-between align-items-center py-3">
-        <div>
-            <p class="fw-medium text-gray-900 mb-1">{{ __('messages.profile.health_notif') }}</p>
-            <small class="text-gray-500">{{ __('messages.profile.health_notif_desc') }}</small>
-        </div>
-        <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="healthNotif">
-        </div>
-    </div>
+    <p id="orderNotif-note" class="profile-field__hint mb-0 mt-2">{{ __('messages.profile.notifications_soon') }}</p>
 </div>
 
-<!-- Account Information -->
-<div class="glass-card rounded-4 border-0 p-4 p-md-5 mb-4">
-    <div class="d-flex align-items-center gap-3 mb-4">
-        <div class="bg-gray-100 text-gray-600 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 icon-circle-md">
-            <i class="bi bi-info-circle-fill fs-3"></i>
-        </div>
+<div class="profile-card">
+    <div class="profile-card__head">
+        <span class="profile-card__icon"><i class="bi bi-info-circle-fill"></i></span>
         <div>
-            <h5 class="fw-bold text-gray-900 mb-0">{{ __('messages.profile.account_info') }}</h5>
-            <p class="text-gray-500 small mb-0">{{ __('messages.profile.account_info_desc') }}</p>
+            <h2 class="profile-card__title">{{ __('messages.profile.account_info') }}</h2>
+            <p class="profile-card__subtitle">{{ __('messages.profile.account_info_desc') }}</p>
         </div>
     </div>
 
@@ -58,21 +45,15 @@
         <div class="col-md-6">
             <div class="p-3 rounded-3 bg-emerald-50">
                 <small class="text-gray-500 d-block mb-1">{{ __('messages.profile.role') }}</small>
-                <p class="fw-medium text-gray-900 mb-0">
-                    <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-3 py-1">
-                        {{ role_text($user->role) }}
-                    </span>
-                </p>
+                <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-3 py-1">{{ role_text($user->role) }}</span>
             </div>
         </div>
         <div class="col-md-6">
             <div class="p-3 rounded-3 bg-emerald-50">
                 <small class="text-gray-500 d-block mb-1">{{ __('messages.profile.status_label') }}</small>
-                <p class="fw-medium text-gray-900 mb-0">
-                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1">
-                        <i class="bi bi-check-circle me-1"></i>{{ $user->status == 'active' ? __('messages.auth.status_active') : __('messages.auth.status_inactive') }}
-                    </span>
-                </p>
+                <span class="badge {{ $user->status === 'active' ? 'bg-success' : 'bg-secondary' }} bg-opacity-10 {{ $user->status === 'active' ? 'text-success' : 'text-secondary' }} rounded-pill px-3 py-1">
+                    <i class="bi {{ $user->status === 'active' ? 'bi-check-circle' : 'bi-pause-circle' }} me-1" aria-hidden="true"></i>{{ $user->status === 'active' ? __('messages.auth.status_active') : __('messages.auth.status_inactive') }}
+                </span>
             </div>
         </div>
         <div class="col-md-6">
@@ -90,20 +71,17 @@
     </div>
 </div>
 
-<!-- Delete Account -->
-<div class="glass-card rounded-4 border-0 p-4 p-md-5 border-start border-danger border-3">
-    <div class="d-flex align-items-center gap-3 mb-4">
-        <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 icon-circle-md">
-            <i class="bi bi-exclamation-triangle-fill fs-3"></i>
-        </div>
+<div class="profile-card profile-danger-zone">
+    <div class="profile-card__head">
+        <span class="profile-card__icon profile-card__icon--danger"><i class="bi bi-exclamation-triangle-fill"></i></span>
         <div>
-            <h5 class="fw-bold text-gray-900 mb-0">{{ __('messages.profile.danger_zone') }}</h5>
-            <p class="text-gray-500 small mb-0">{{ __('messages.profile.danger_zone_desc') }}</p>
+            <h2 class="profile-card__title">{{ __('messages.profile.danger_zone') }}</h2>
+            <p class="profile-card__subtitle">{{ __('messages.profile.danger_zone_desc') }}</p>
         </div>
     </div>
 
     <div class="alert-glass-danger mb-4 p-3 rounded-3">
-        <i class="bi bi-shield-exclamation me-2"></i>
+        <i class="bi bi-shield-exclamation me-2" aria-hidden="true"></i>
         <strong>{{ __('messages.profile.delete_warning_title') }}</strong> {{ __('messages.profile.delete_warning_desc') }}
     </div>
 
@@ -112,58 +90,22 @@
         @method('delete')
 
         <div class="mb-4">
-            <label for="delete_password" class="form-label fw-medium text-gray-700">
-                {{ __('messages.profile.delete_password_label') }}
+            <label for="delete_password" class="form-label">
+                <i class="bi bi-lock" aria-hidden="true"></i>{{ __('messages.profile.delete_password_label') }}
             </label>
-            <input type="password" 
-                   class="form-control rounded-3 shadow-none @error('password', 'userDeletion') is-invalid @enderror"
-                   id="delete_password" 
-                   name="password" 
+            <input type="password"
+                   class="form-control @error('password', 'userDeletion') is-invalid @enderror"
+                   id="delete_password"
+                   name="password"
+                   autocomplete="current-password"
                    placeholder="{{ __('messages.profile.delete_password_placeholder') }}">
             @error('password', 'userDeletion')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
         </div>
 
-        <button type="button" class="btn btn-danger rounded-pill px-4 py-2 fw-medium" onclick="confirmDelete()">
-            <i class="bi bi-trash3 me-1"></i>{{ __('messages.profile.delete_account_btn') }}
+        <button type="button" class="btn profile-btn-danger" data-delete-account-trigger>
+            <i class="bi bi-trash3 me-1" aria-hidden="true"></i>{{ __('messages.profile.delete_account_btn') }}
         </button>
     </form>
 </div>
-
-@push('scripts')
-<script>
-function confirmDelete() {
-    Swal.fire({
-        title: '{{ __("messages.profile.js.delete_confirm_title") }}',
-        html: '<p class="mb-2">{{ __("messages.profile.js.delete_confirm_text1") }}</p>' +
-              '<ul class="text-start">' +
-              '<li>{{ __("messages.profile.js.delete_confirm_li1") }}</li>' +
-              '<li>{{ __("messages.profile.js.delete_confirm_li2") }}</li>' +
-              '<li>{{ __("messages.profile.js.delete_confirm_li3") }}</li>' +
-              '<li>{{ __("messages.profile.js.delete_confirm_li4") }}</li>' +
-              '</ul>' +
-              '<p class="text-danger fw-bold">{{ __("messages.profile.js.delete_confirm_warning") }}</p>',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#6b7280',
-        confirmButtonText: '<i class="bi bi-trash3 me-1"></i>{{ __("messages.profile.js.delete_btn") }}',
-        cancelButtonText: '{{ __("messages.profile.js.cancel_btn") }}',
-        reverseButtons: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            document.getElementById('deleteAccountForm').submit();
-        }
-    });
-}
-
-// Save notification preferences
-document.querySelectorAll('.form-check-input').forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-        // Here you can add AJAX call to save preferences
-        console.log(this.id + ' changed to: ' + this.checked);
-    });
-});
-</script>
-@endpush

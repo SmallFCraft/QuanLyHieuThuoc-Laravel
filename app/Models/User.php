@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -31,6 +32,7 @@ class User extends Authenticatable
         'gender',
         'address',
         'phone',
+        'avatar',
         'password',
         'role',
         'status',
@@ -113,5 +115,35 @@ class User extends Authenticatable
     public function ageInYears(): ?int
     {
         return $this->birth_date?->age;
+    }
+
+    /**
+     * URL ảnh đại diện, hoặc null khi chưa tải lên (giao diện tự đổ về chữ cái đầu).
+     *
+     * Kiểm tra file có thật: bản ghi có thể còn trỏ tới ảnh đã bị xoá khỏi disk, lúc
+     * đó một <img> hỏng xấu hơn là chữ cái đầu.
+     */
+    public function avatarUrl(): ?string
+    {
+        if (! $this->avatar) {
+            return null;
+        }
+
+        if (! Storage::disk(config('uploads.avatars.disk', 'public'))->exists($this->avatar)) {
+            return null;
+        }
+
+        // asset(), không phải Storage::url(): URL của disk 'public' dựng từ APP_URL, nên
+        // trên dev server (cổng 8123) nó trả về http://localhost/... và ảnh không tải
+        // được. asset() lấy origin từ request hiện tại.
+        // ponytail: gắn với disk 'public' + symlink public/storage. Đổi sang S3 thì
+        // quay lại Storage::url() và đặt APP_URL/ASSET_URL cho đúng.
+        return asset('storage/' . ltrim($this->avatar, '/'));
+    }
+
+    /** Chữ cái đầu của tên, dùng khi chưa có ảnh đại diện. */
+    public function initial(): string
+    {
+        return mb_strtoupper(mb_substr(trim($this->name), 0, 1)) ?: '?';
     }
 }
