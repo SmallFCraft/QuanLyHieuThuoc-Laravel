@@ -1,110 +1,92 @@
-<!-- Security Settings Section -->
-<!-- Change Password -->
-<div class="glass-card rounded-4 border-0 p-4 p-md-5 mb-4">
-    <div class="d-flex align-items-center gap-3 mb-4">
-        <div class="bg-emerald-100 text-emerald-600 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 icon-circle-md">
-            <i class="bi bi-shield-lock-fill fs-3"></i>
-        </div>
+<div class="profile-card">
+    <div class="profile-card__head">
+        <span class="profile-card__icon"><i class="bi bi-shield-lock-fill"></i></span>
         <div>
-            <h5 class="fw-bold text-gray-900 mb-0">{{ __('messages.profile.change_password') }}</h5>
-            <p class="text-gray-500 small mb-0">{{ __('messages.profile.change_password_desc') }}</p>
+            <h2 class="profile-card__title">{{ __('messages.profile.change_password') }}</h2>
+            <p class="profile-card__subtitle">{{ __('messages.profile.change_password_desc') }}</p>
         </div>
     </div>
+
+    @if (session('status') === 'password-updated')
+        <div class="profile-flash mb-4" role="status">
+            <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+            <span>{{ __('messages.profile.password_updated') }}</span>
+        </div>
+    @endif
 
     <form method="POST" action="{{ route('password.update') }}" id="passwordForm">
         @csrf
         @method('put')
 
-        <div class="mb-3">
-            <label for="current_password" class="form-label fw-medium text-gray-700">
-                <i class="bi bi-lock text-emerald-600 me-1"></i>{{ __('messages.profile.current_password') }}
-            </label>
-            <div class="input-group">
-                <input type="password" 
-                       class="form-control rounded-start-3 shadow-none @error('current_password', 'updatePassword') is-invalid @enderror"
-                       id="current_password" 
-                       name="current_password"
-                       placeholder="{{ __('messages.profile.current_password_placeholder') }}">
-                <button class="btn btn-outline-secondary rounded-end-3" type="button" onclick="togglePassword('current_password')">
-                    <i class="bi bi-eye" id="current_password_icon"></i>
-                </button>
-                @error('current_password', 'updatePassword')
+        @foreach([
+            ['id' => 'current_password', 'label' => __('messages.profile.current_password'), 'icon' => 'lock', 'placeholder' => __('messages.profile.current_password_placeholder'), 'autocomplete' => 'current-password', 'hint' => null],
+            ['id' => 'password', 'label' => __('messages.profile.new_password'), 'icon' => 'key', 'placeholder' => __('messages.profile.new_password_placeholder'), 'autocomplete' => 'new-password', 'hint' => __('messages.profile.new_password_hint')],
+            ['id' => 'password_confirmation', 'label' => __('messages.profile.confirm_password'), 'icon' => 'check-circle', 'placeholder' => __('messages.profile.confirm_password_placeholder'), 'autocomplete' => 'new-password', 'hint' => null],
+        ] as $field)
+            <div class="mb-3">
+                <label for="{{ $field['id'] }}" class="form-label form-label--required">
+                    <i class="bi bi-{{ $field['icon'] }}" aria-hidden="true"></i>{{ $field['label'] }}
+                </label>
+                <div class="input-group">
+                    {{-- Không có icon dẫn đầu: nhãn phía trên đã mang đúng icon đó, và
+                         41px của input-group-text làm placeholder bị cắt ở 320px. --}}
+                    <input type="password"
+                           class="form-control @error($field['id'], 'updatePassword') is-invalid @enderror"
+                           id="{{ $field['id'] }}"
+                           name="{{ $field['id'] }}"
+                           autocomplete="{{ $field['autocomplete'] }}"
+                           placeholder="{{ $field['placeholder'] }}"
+                           style="border-radius: var(--profile-radius-sm) 0 0 var(--profile-radius-sm); border-left-width: 1px;">
+                    {{-- Nút hiện/ẩn mật khẩu: aria-pressed để screen reader biết đang ở
+                         trạng thái nào, không chỉ dựa vào hình con mắt. --}}
+                    <button class="btn profile-btn-ghost" type="button"
+                            data-password-toggle="{{ $field['id'] }}"
+                            aria-pressed="false"
+                            aria-label="{{ __('messages.profile.password_show') }}"
+                            title="{{ __('messages.profile.password_show') }}"
+                            style="border-radius: 0 var(--profile-radius-sm) var(--profile-radius-sm) 0; padding-inline: 0.9rem;">
+                        <i class="bi bi-eye" aria-hidden="true"></i>
+                    </button>
+                </div>
+                @error($field['id'], 'updatePassword')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
+                @if($field['hint'])
+                    <span class="profile-field__hint">{{ $field['hint'] }}</span>
+                @endif
+                @if($field['id'] === 'password')
+                    {{-- Chỉ báo độ mạnh mật khẩu, cập nhật khi người dùng nhập. Kèm chữ,
+                         vì một thanh màu không nói được gì với screen reader. --}}
+                    <div class="profile-progress mt-2" data-password-strength-track hidden>
+                        <div class="profile-progress__bar" data-password-strength-bar style="width: 0"></div>
+                    </div>
+                    <span class="profile-field__hint" data-password-strength-text aria-live="polite"></span>
+                @endif
             </div>
-        </div>
+        @endforeach
 
-        <div class="mb-3">
-            <label for="password" class="form-label fw-medium text-gray-700">
-                <i class="bi bi-key text-emerald-600 me-1"></i>{{ __('messages.profile.new_password') }}
-            </label>
-            <div class="input-group">
-                <input type="password" 
-                       class="form-control rounded-start-3 shadow-none @error('password', 'updatePassword') is-invalid @enderror"
-                       id="password" 
-                       name="password"
-                       placeholder="{{ __('messages.profile.new_password_placeholder') }}">
-                <button class="btn btn-outline-secondary rounded-end-3" type="button" onclick="togglePassword('password')">
-                    <i class="bi bi-eye" id="password_icon"></i>
-                </button>
-                @error('password', 'updatePassword')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
-            </div>
-            <small class="text-gray-500">{{ __('messages.profile.new_password_hint') }}</small>
-        </div>
-
-        <div class="mb-4">
-            <label for="password_confirmation" class="form-label fw-medium text-gray-700">
-                <i class="bi bi-check-circle text-emerald-600 me-1"></i>{{ __('messages.profile.confirm_password') }}
-            </label>
-            <div class="input-group">
-                <input type="password" 
-                       class="form-control rounded-start-3 shadow-none"
-                       id="password_confirmation" 
-                       name="password_confirmation"
-                       placeholder="{{ __('messages.profile.confirm_password_placeholder') }}">
-                <button class="btn btn-outline-secondary rounded-end-3" type="button" onclick="togglePassword('password_confirmation')">
-                    <i class="bi bi-eye" id="password_confirmation_icon"></i>
-                </button>
-            </div>
-        </div>
-
-        <div class="d-flex align-items-center gap-3">
-            <button type="submit" class="btn btn-glass-primary rounded-pill px-4 py-2 fw-medium">
-                <i class="bi bi-key me-1"></i>{{ __('messages.profile.update_password') }}
-            </button>
-            
-            @if (session('status') === 'password-updated')
-                <span class="text-success small fw-medium animate-fade-in">
-                    <i class="bi bi-check-circle-fill me-1"></i>{{ __('messages.profile.password_updated') }}
-                </span>
-            @endif
-        </div>
+        <button type="submit" class="btn profile-btn-primary mt-2">
+            <i class="bi bi-key me-1" aria-hidden="true"></i>{{ __('messages.profile.update_password') }}
+        </button>
     </form>
 </div>
 
-<!-- Security Tips -->
-<div class="alert-glass-info p-4 rounded-4 mb-4">
-    <h6 class="fw-bold text-gray-900 mb-3">
-        <i class="bi bi-lightbulb text-warning me-2"></i>{{ __('messages.profile.security_tips') }}
-    </h6>
-    <ul class="list-unstyled mb-0">
-        <li class="mb-2">
-            <i class="bi bi-check-circle-fill text-success me-2"></i>
-            <span class="text-gray-700">{{ __('messages.profile.security_tip_1') }}</span>
-        </li>
-        <li class="mb-2">
-            <i class="bi bi-check-circle-fill text-success me-2"></i>
-            <span class="text-gray-700">{{ __('messages.profile.security_tip_2') }}</span>
-        </li>
-        <li class="mb-2">
-            <i class="bi bi-check-circle-fill text-success me-2"></i>
-            <span class="text-gray-700">{{ __('messages.profile.security_tip_3') }}</span>
-        </li>
-        <li class="mb-0">
-            <i class="bi bi-check-circle-fill text-success me-2"></i>
-            <span class="text-gray-700">{{ __('messages.profile.security_tip_4') }}</span>
-        </li>
+<div class="profile-card">
+    <div class="profile-card__head">
+        <span class="profile-card__icon"><i class="bi bi-lightbulb-fill"></i></span>
+        <div>
+            <h2 class="profile-card__title">{{ __('messages.profile.security_tips') }}</h2>
+        </div>
+    </div>
+
+    <ul class="profile-overview-list">
+        @foreach(['security_tip_1', 'security_tip_2', 'security_tip_3', 'security_tip_4'] as $tip)
+            <li class="profile-overview-item">
+                <span class="profile-overview-item__icon"><i class="bi bi-check-lg"></i></span>
+                <span class="profile-overview-item__body">
+                    <span class="text-gray-700 small">{{ __("messages.profile.{$tip}") }}</span>
+                </span>
+            </li>
+        @endforeach
     </ul>
 </div>

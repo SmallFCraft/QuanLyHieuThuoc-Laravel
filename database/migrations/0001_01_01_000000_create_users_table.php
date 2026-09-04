@@ -20,13 +20,15 @@ return new class extends Migration
             $table->string('gender', 20)->nullable();
             $table->text('address')->nullable();
             $table->string('phone', 20)->nullable();
+            // Đường dẫn tương đối trên disk 'public' (vd "avatars/<uuid>.jpg"), không
+            // phải URL đầy đủ: đổi APP_URL hoặc chuyển disk thì không phải sửa dữ liệu.
+            $table->string('avatar')->nullable();
             $table->string('password');
             $table->enum('role', ['Administrator', 'Pharmacist', 'User'])->default('User');
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->rememberToken();
             $table->timestamps();
-            
-            $table->index('email');
+
             $table->index('role');
         });
 

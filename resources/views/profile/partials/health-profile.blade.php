@@ -4,35 +4,31 @@
     $hasConsent = (bool) $healthProfile?->hasConsented();
 @endphp
 
-<div class="glass-card rounded-4 border-0 p-4 p-md-5 mb-4 health-profile-card" id="health-profile">
-    <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 mb-4">
-        <div class="bg-emerald-100 text-emerald-600 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 icon-circle-md">
-            <i class="bi bi-heart-pulse-fill fs-3"></i>
-        </div>
+<div class="profile-card health-profile-card mb-3" id="health-profile">
+    <div class="profile-card__head">
+        <span class="profile-card__icon"><i class="bi bi-heart-pulse-fill"></i></span>
         <div class="flex-grow-1">
-            <h5 class="fw-bold text-gray-900 mb-1">{{ __('messages.health_profile.title') }}</h5>
-            <p class="text-gray-500 small mb-0">{{ __('messages.health_profile.desc') }}</p>
+            <h2 class="profile-card__title">{{ __('messages.health_profile.title') }}</h2>
+            <p class="profile-card__subtitle">{{ __('messages.health_profile.desc') }}</p>
         </div>
-        <div>
-            {{-- text-success on the 10%-opacity tint measures 3.97:1; hp-badge-secure
-                 darkens the text so the label clears 4.5:1. --}}
-            <span class="badge bg-success bg-opacity-10 rounded-pill px-3 py-2 hp-badge-secure">
-                <i class="bi bi-lock-fill me-1"></i>{{ __('messages.health_profile.encrypted_badge') }}
-            </span>
-        </div>
+        {{-- text-success on the 10%-opacity tint measures 3.97:1; hp-badge-secure
+             darkens the text so the label clears 4.5:1. --}}
+        <span class="badge bg-success bg-opacity-10 rounded-pill px-3 py-2 hp-badge-secure flex-shrink-0">
+            <i class="bi bi-lock-fill me-1" aria-hidden="true"></i>{{ __('messages.health_profile.encrypted_badge') }}
+        </span>
     </div>
 
     @if (session('status') === 'health-profile-updated')
-        <div class="alert alert-glass-success border-0 d-flex align-items-center gap-2 mb-4" role="status">
-            <i class="bi bi-check-circle-fill"></i>
-            <span class="fw-medium">{{ __('messages.health_profile.update_success') }}</span>
+        <div class="profile-flash mb-4" role="status">
+            <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+            <span>{{ __('messages.health_profile.update_success') }}</span>
         </div>
     @endif
 
     @if (session('status') === 'health-profile-deleted')
-        <div class="alert alert-glass-success border-0 d-flex align-items-center gap-2 mb-4" role="status">
-            <i class="bi bi-trash3-fill"></i>
-            <span class="fw-medium">{{ __('messages.health_profile.delete_success') }}</span>
+        <div class="profile-flash mb-4" role="status">
+            <i class="bi bi-trash3-fill" aria-hidden="true"></i>
+            <span>{{ __('messages.health_profile.delete_success') }}</span>
         </div>
     @endif
 
@@ -190,18 +186,18 @@
             </div>
         </div>
 
-        <div class="d-flex flex-column flex-sm-row gap-3 mt-4 pt-3 border-top">
-            <button type="submit" class="btn btn-glass-primary rounded-pill px-4 hp-btn fw-medium">
-                <i class="bi bi-check-lg me-1"></i>{{ __('messages.health_profile.save') }}
+        <div class="d-flex flex-column flex-sm-row gap-2 mt-4 pt-3 border-top">
+            <button type="submit" class="btn profile-btn-primary">
+                <i class="bi bi-check-lg me-1" aria-hidden="true"></i>{{ __('messages.health_profile.save') }}
             </button>
 
             @if ($healthProfile)
                 <button type="button"
-                        class="btn btn-outline-danger rounded-pill px-4 hp-btn fw-medium"
+                        class="btn profile-btn-danger"
                         data-bs-toggle="modal"
                         data-bs-target="#deleteHealthProfileModal"
                         aria-label="{{ __('messages.health_profile.delete_open') }}">
-                    <i class="bi bi-trash3 me-1"></i>{{ __('messages.health_profile.delete') }}
+                    <i class="bi bi-trash3 me-1" aria-hidden="true"></i>{{ __('messages.health_profile.delete') }}
                 </button>
             @endif
         </div>
@@ -245,16 +241,17 @@
 .health-profile-card {
     --hp-focus-ring: 0 0 0 3px rgba(16, 185, 129, 0.35);
 }
-/* 16px keeps iOS Safari from zooming the viewport on focus. */
+/* hp-input dùng chung kích thước với .profile-page .form-control để tab này không
+   lệch khỏi các tab còn lại. 16px giữ iOS Safari khỏi phóng viewport khi focus. */
 .hp-input,
 .hp-tag-input {
-    min-height: 48px;
+    min-height: var(--profile-field-height, 46px);
     font-size: 1rem;
-    border-radius: 12px;
-    border: 1.5px solid #d1d5db;
-    padding: 12px 16px;
+    border-radius: var(--profile-radius-sm, 10px);
+    border: 1px solid rgba(21, 128, 61, 0.18);
+    padding: 0.55rem 0.75rem;
     width: 100%;
-    background: #f9fafb;
+    background: rgba(255, 255, 255, 0.92);
 }
 .hp-input:focus,
 .hp-tag-input:focus,
@@ -272,23 +269,11 @@
     align-items: center;
     justify-content: center;
 }
-/* .btn-glass-primary is rgba(16,185,129,.3): white on it composites to 1.33:1.
-   This tab holds health data, so its save button gets a solid tone (5.48:1). */
-.hp-btn.btn-glass-primary {
-    background: #047857;
-    border-color: #047857;
-    color: #fff;
-}
-.hp-btn.btn-glass-primary:hover {
-    background: #065F46;
-    border-color: #065F46;
-    color: #fff;
-}
 .hp-badge-secure { color: #065F46; }
 .hp-tag-field {
-    border: 1.5px solid #d1d5db;
-    border-radius: 12px;
-    background: #f9fafb;
+    border: 1px solid rgba(21, 128, 61, 0.18);
+    border-radius: var(--profile-radius-sm, 10px);
+    background: rgba(255, 255, 255, 0.92);
     padding: 10px;
 }
 .hp-tag-field:focus-within {
