@@ -158,6 +158,63 @@
     height: 100%;
 }
 
+/* Ba thẻ thống kê ở hero. Trước đây dùng .row + col-lg-auto nên mỗi thẻ rộng theo
+   độ dài nhãn của nó (99/88/147px trên desktop) và nhãn hai dòng làm thẻ thứ ba cao
+   hơn 24px. Grid ba cột 1fr bằng nhau, thẻ là con trực tiếp nên stretch theo hàng:
+   ba thẻ luôn cùng bề rộng và cùng chiều cao ở mọi bề rộng màn hình. */
+.home-stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    /* Không để ba thẻ giãn hết chiều ngang container ở tablet trở lên. */
+    max-width: 30rem;
+    margin-inline: auto;
+}
+
+.home-stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    min-height: 88px;
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+}
+
+.home-stat-value {
+    color: #047857;
+    font-size: clamp(1.05rem, 2.4vw, 1.5rem);
+    font-weight: 700;
+    line-height: 1.15;
+    /* Chữ số cùng bề rộng: "3.132" và "51" thẳng cột nhau và không nhảy khi số đổi. */
+    font-variant-numeric: tabular-nums;
+}
+
+.home-stat-label {
+    color: #475569;
+    font-size: clamp(0.7rem, 1.5vw, 0.82rem);
+    line-height: 1.25;
+    text-wrap: balance;
+}
+
+@media (min-width: 768px) {
+    .home-stat-row {
+        gap: 0.75rem;
+    }
+}
+
+@media (min-width: 992px) {
+    .home-stat-row {
+        margin-inline: 0;
+    }
+
+    .home-stat-card {
+        align-items: flex-start;
+        text-align: left;
+    }
+}
+
 .home-step-num {
     width: 2.5rem;
     height: 2.5rem;
@@ -303,11 +360,6 @@
     .home-trust-strip {
         font-size: 0.8rem;
     }
-
-    .home-hero-visual img {
-        max-height: 220px;
-        object-fit: cover;
-    }
 }
 
 /* Public storefront polish */
@@ -372,24 +424,6 @@
     box-shadow: 0 18px 42px rgba(20, 83, 45, 0.12);
 }
 
-.home-hero-visual {
-    position: relative;
-}
-
-.home-hero-visual::before {
-    content: '';
-    position: absolute;
-    inset: 10px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, rgba(21, 128, 61, 0.12), rgba(3, 105, 161, 0.1));
-    transform: rotate(-2deg);
-    z-index: -1;
-}
-
-.home-hero-visual img {
-    filter: saturate(1.04) contrast(1.02);
-}
-
 .home-visual-board {
     position: relative;
     padding: 0.9rem;
@@ -442,12 +476,82 @@
 }
 
 .home-visual-pulse {
+    position: relative;
     width: 0.72rem;
     height: 0.72rem;
     flex: 0 0 auto;
     border-radius: 999px;
     background: #86efac;
-    box-shadow: 0 0 0 8px rgba(134, 239, 172, 0.2);
+    /* White, not the old 8px green spread: the badge behind it is emerald, so a
+       same-hue glow measured 1.6:1 against it and read as a smudge. */
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.16);
+    animation: pulseBreathe 2.6s var(--pharma-easing) infinite;
+}
+
+/* An infinite loop, against the house rule, because this one carries meaning: the
+   badge claims support is live right now, and a still dot beside that claim reads
+   as a screenshot. One heartbeat, shared period, transform and opacity only. */
+.home-visual-pulse::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    /* A white ring rather than a light-green disc — the disc travelled across the
+       badge's own emerald at 1.6:1, invisible. White holds about 5:1 the whole way,
+       and a ring leaves the dot itself unobscured. */
+    border: 2px solid rgba(255, 255, 255, 0.92);
+    animation: pulseHalo 2.6s var(--pharma-easing) infinite;
+}
+
+@keyframes pulseBreathe {
+    0%, 70%, 100% {
+        transform: scale(1);
+    }
+    35% {
+        transform: scale(1.18);
+    }
+}
+
+@keyframes pulseHalo {
+    /* The mid stop is doing real work: on one easing curve the opacity collapsed to
+       0.22 by the time the ring reached scale 2.25, so the ripple read as a blip.
+       Holding it high through the first half of the travel makes the ring legible. */
+    0% {
+        opacity: 0.9;
+        transform: scale(1);
+    }
+    20% {
+        opacity: 0.72;
+        transform: scale(1.55);
+    }
+    45%, 100% {
+        opacity: 0;
+        transform: scale(2.7);
+    }
+}
+
+/* The badge sits on top of the photo, so it arrives after it rather than with it. */
+.home-visual-badge {
+    animation: badgeArrive 480ms var(--pharma-easing) 380ms both;
+}
+
+@keyframes badgeArrive {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    /* The global block below stops every animation dead, which would leave the halo
+       parked on top of the dot. Drop it and keep the plain dot. */
+    .home-visual-pulse::after {
+        display: none;
+    }
 }
 
 .home-visual-feature-grid {
@@ -497,81 +601,6 @@
     color: #64748b;
     font-size: 0.88rem;
     line-height: 1.35;
-}
-
-.home-search-band form {
-    display: grid;
-    grid-template-columns: minmax(210px, 0.7fr) minmax(300px, 1fr);
-    gap: 0.85rem;
-    max-width: 980px !important;
-    padding: 1rem !important;
-    border-radius: 22px !important;
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(240, 253, 244, 0.92)) !important;
-    border: 1px solid rgba(21, 128, 61, 0.16);
-    box-shadow: 0 18px 44px rgba(20, 83, 45, 0.11) !important;
-}
-
-.home-search-copy {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 0.2rem;
-    padding: 0.25rem 0.75rem;
-}
-
-.home-search-copy strong {
-    color: #10231a;
-    font-size: 1.05rem;
-    line-height: 1.35;
-}
-
-.home-search-control {
-    min-height: 56px;
-    padding: 0.25rem 0.35rem 0.25rem 0.85rem;
-    border-radius: 999px;
-    background: #ffffff;
-    border: 1px solid rgba(21, 128, 61, 0.14);
-}
-
-.home-search-control .form-control {
-    min-width: 0;
-}
-
-.home-search-control .btn {
-    background: var(--pharma-primary);
-    border-color: var(--pharma-primary);
-    min-height: 44px;
-}
-
-.home-search-chips {
-    grid-column: 1 / -1;
-    display: flex;
-    gap: 0.55rem;
-    flex-wrap: wrap;
-    padding: 0 0.75rem 0.15rem;
-}
-
-.home-search-chips a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 34px;
-    padding: 0.4rem 0.75rem;
-    border-radius: 999px;
-    color: #047857;
-    background: rgba(255, 255, 255, 0.84);
-    border: 1px solid rgba(21, 128, 61, 0.14);
-    text-decoration: none;
-    font-size: 0.86rem;
-    font-weight: 600;
-    transition: color var(--pharma-motion), border-color var(--pharma-motion), box-shadow var(--pharma-motion);
-}
-
-.home-search-chips a:hover,
-.home-search-chips a:focus-visible {
-    color: #0369a1;
-    border-color: rgba(3, 105, 161, 0.25);
-    box-shadow: 0 8px 18px rgba(3, 105, 161, 0.1);
 }
 
 .home-section-link {
@@ -1053,6 +1082,7 @@
 
 .home-page .row > [class*="col-"]:nth-child(2) .product-card,
 .home-page .row > [class*="col-"]:nth-child(2) .home-glass-panel,
+.home-stat-card:nth-child(2),
 .catalog-product-card:nth-child(2),
 .catalog-filter-list > :nth-child(2),
 .product-detail-page .glass-card:nth-of-type(2) {
@@ -1061,6 +1091,7 @@
 
 .home-page .row > [class*="col-"]:nth-child(3) .product-card,
 .home-page .row > [class*="col-"]:nth-child(3) .home-glass-panel,
+.home-stat-card:nth-child(3),
 .catalog-filter-list > :nth-child(3),
 .product-detail-page .glass-card:nth-of-type(3) {
     animation-delay: 90ms;
@@ -1179,12 +1210,40 @@
     color: var(--pharma-primary);
 }
 
-.catalog-search-form {
-    padding: 0.45rem;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(21, 128, 61, 0.14);
-    box-shadow: 0 16px 36px rgba(20, 83, 45, 0.12);
+/* Lửa cho ba danh mục nhiều hàng nhất, ở cả dropdown header và sidebar catalog.
+   Nằm trong span nhãn ngay sau tên: nhãn xuống hai dòng (lưới 2 cột) thì lửa đi
+   theo chữ, hàng không lửa vẫn thẳng lề trái.
+
+   #b91c1c, không phải .text-danger (#dc2626): trên vệt tồn kho
+   rgba(16,185,129,0.19) thì dc2626 chỉ đạt 4.03:1, còn b91c1c đạt 5.41:1. */
+.category-flame {
+    margin-left: 0.3rem;
+    font-size: 0.8em;
+    color: #b91c1c;
+}
+
+/* Hàng đang chọn là gradient xanh đặc — đỏ trên đó không đạt AA, nên lửa lấy luôn
+   màu chữ trắng của hàng. */
+.catalog-filter-link.is-active .category-flame,
+.nav-category-link.is-active .category-flame {
+    color: inherit;
+}
+
+/* Khối kết quả catalog trong lúc chờ fetch (catalog-async.js). Mờ nhẹ thay vì
+   spinner: lưới cũ vẫn đọc được và không có khoảng trắng nhảy vào. */
+[data-catalog-results] {
+    transition: opacity 0.18s ease-out;
+}
+
+[data-catalog-results].is-loading {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-catalog-results] {
+        transition: none;
+    }
 }
 
 .catalog-shell,
@@ -2104,15 +2163,6 @@
         min-height: 260px;
     }
 
-    .home-search-band form {
-        grid-template-columns: 1fr;
-        border-radius: 18px !important;
-    }
-
-    .home-search-copy {
-        padding: 0.25rem 0.3rem;
-    }
-
     .catalog-hero .container,
     .product-detail-hero .container {
         text-align: left;
@@ -2206,21 +2256,6 @@
         display: none;
     }
 
-    .home-search-control {
-        border-radius: 16px;
-        flex-wrap: nowrap;
-    }
-
-    .home-search-control .btn {
-        padding-left: 0.9rem !important;
-        padding-right: 0.9rem !important;
-    }
-
-    .home-search-chips {
-        padding-left: 0.25rem;
-        padding-right: 0.25rem;
-    }
-
     .home-category-card {
         min-height: 138px;
         padding: 0.9rem;
@@ -2230,20 +2265,9 @@
         border-radius: 12px;
     }
 
-    .home-page .row.g-3.mt-2 .home-glass-panel,
-    .home-page .row.g-3.mt-md-3 .home-glass-panel {
-        padding: 0.65rem 0.4rem !important;
-    }
-
-    .home-page .row.g-3.mt-2 .fs-4,
-    .home-page .row.g-3.mt-md-3 .fs-4 {
-        font-size: 1.05rem !important;
-    }
-
-    .home-page .row.g-3.mt-2 .small,
-    .home-page .row.g-3.mt-md-3 .small {
-        font-size: 0.72rem;
-        line-height: 1.2;
+    .home-stat-card {
+        min-height: 76px;
+        padding: 0.6rem 0.35rem;
     }
 
     .catalog-hero-metrics {
@@ -2254,10 +2278,6 @@
         font-size: 0.78rem;
         min-height: 36px;
         padding: 0.45rem 0.65rem;
-    }
-
-    .catalog-search-form {
-        border-radius: 18px;
     }
 
     .product-detail-hero--rich {
