@@ -4,7 +4,7 @@
 
 @php
     $discountPrice = $product->price_vnd * 1.1;
-    $isLowStock = $product->stock_quantity > 0 && $product->stock_quantity <= $product->reorder_point;
+    $inStock = $product->stock_quantity > 0;
     $hasIngredients = filled($product->ingredients);
     $hasUsage = filled($product->usage);
 @endphp
@@ -64,16 +64,13 @@
                                 <span>{{ number_format($product->views_count, 0, ',', '.') }}</span>
                                 <small>lượt xem</small>
                             </div>
-                            <div>
-                                <i class="bi bi-box-seam"></i>
-                                <span>{{ $product->stock_quantity }}</span>
-                                <small>{{ __('messages.product_stock') }}</small>
-                            </div>
-                            <div>
-                                <i class="bi bi-calendar2-check"></i>
-                                <span>{{ $product->formatted_expiration_date }}</span>
-                                <small>{{ __('messages.product_expiration') }}</small>
-                            </div>
+                            @if($product->shelf_life_text)
+                                <div>
+                                    <i class="bi bi-calendar2-check"></i>
+                                    <span>{{ $product->shelf_life_text }}</span>
+                                    <small>{{ __('messages.shelf_life_label') }}</small>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -87,10 +84,10 @@
                             <a href="{{ route('products.category', $product->MaDM) }}" class="product-status-chip product-status-chip--link">
                                 <i class="bi bi-bookmark"></i>{{ $product->category->name }}
                             </a>
-                            @if($product->stock_quantity > 0)
-                                <span class="product-status-chip {{ $isLowStock ? 'product-status-chip--warning' : 'product-status-chip--success' }}">
-                                    <i class="bi {{ $isLowStock ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill' }}"></i>
-                                    {{ $isLowStock ? __('messages.low_stock') : __('messages.in_stock') }}
+                            @if($inStock)
+                                <span class="product-status-chip product-status-chip--success">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    {{ __('messages.in_stock') }}
                                 </span>
                             @else
                                 <span class="product-status-chip product-status-chip--danger">
@@ -112,16 +109,16 @@
                                 </div>
                                 <p><i class="bi bi-info-circle"></i>{{ __('messages.vat_included') }}</p>
                             </div>
-                            <div class="product-stock-summary {{ $product->stock_quantity > 0 ? ($isLowStock ? 'is-low' : 'is-ready') : 'is-out' }}">
+                            <div class="product-stock-summary {{ $inStock ? 'is-ready' : 'is-out' }}">
                                 <span class="product-stock-summary__icon">
-                                    <i class="bi {{ $product->stock_quantity > 0 ? ($isLowStock ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill') : 'bi-x-circle-fill' }}"></i>
+                                    <i class="bi {{ $inStock ? 'bi-check-circle-fill' : 'bi-x-circle-fill' }}"></i>
                                 </span>
                                 <div>
                                     <small>{{ __('messages.stock_status') }}</small>
-                                    <strong>{{ $product->stock_quantity > 0 ? ($isLowStock ? __('messages.low_stock') : __('messages.in_stock')) : __('messages.out_of_stock') }}</strong>
+                                    <strong>{{ $inStock ? __('messages.in_stock') : __('messages.out_of_stock') }}</strong>
                                     <em>
-                                        @if($product->stock_quantity > 0)
-                                            {{ __('messages.products_left', ['count' => number_format($product->stock_quantity, 0, ',', '.')]) }}
+                                        @if($inStock)
+                                            {{ __('messages.ready_to_ship') }}
                                         @else
                                             {{ __('messages.contact_to_preorder') }}
                                         @endif
@@ -154,7 +151,7 @@
                             </div>
                         </div>
 
-                        @if($product->stock_quantity > 0)
+                        @if($inStock)
                             <form action="{{ route('cart.add') }}" method="POST" class="product-buy-panel js-add-to-cart-form" id="buy-panel">
                                 @csrf
                                 <input type="hidden" name="MaSP" value="{{ $product->MaSP }}">
@@ -162,12 +159,13 @@
                                 <div class="product-quantity-row">
                                     <div>
                                         <label for="qty-input">{{ __('messages.cart.quantity') }}</label>
-                                        <span>{!! __('messages.products_left', ['count' => '<strong>' . $product->stock_quantity . '</strong>']) !!}</span>
                                     </div>
                                     <div class="product-qty-control">
                                         <button type="button" onclick="changeQty(-1)" aria-label="Giảm số lượng">
                                             <i class="bi bi-dash"></i>
                                         </button>
+                                        {{-- max still bounds the input so the cart cannot be handed an
+                                             unfillable quantity; the ceiling itself is not shown. --}}
                                         <input type="number" name="quantity" id="qty-input" value="1" min="1" max="{{ $product->stock_quantity }}" data-unit-price="{{ $product->price_vnd }}">
                                         <button type="button" onclick="changeQty(1)" aria-label="Tăng số lượng">
                                             <i class="bi bi-plus"></i>
@@ -249,24 +247,20 @@
                                 <div class="product-spec-grid">
                                     <div>
                                         <span>{{ __('messages.product_id') }}</span>
-                                        <strong>#{{ $product->MaSP }}</strong>
+                                        <strong>{{ $product->display_code }}</strong>
                                     </div>
                                     <div>
                                         <span>{{ __('messages.product_category') }}</span>
                                         <strong>{{ $product->category->name }}</strong>
                                     </div>
                                     <div>
-                                        <span>{{ __('messages.product_stock') }}</span>
-                                        <strong>{{ __('messages.products_left', ['count' => $product->stock_quantity]) }}</strong>
+                                        <span>{{ __('messages.stock_status') }}</span>
+                                        <strong>{{ $inStock ? __('messages.in_stock') : __('messages.out_of_stock') }}</strong>
                                     </div>
-                                    <div>
-                                        <span>{{ __('messages.product_expiration') }}</span>
-                                        <strong>{{ $product->formatted_expiration_date }}</strong>
-                                    </div>
-                                    @if($product->batch_number)
+                                    @if($product->shelf_life_text)
                                         <div>
-                                            <span>{{ __('messages.product_batch') }}</span>
-                                            <strong>{{ $product->batch_number }}</strong>
+                                            <span>{{ __('messages.shelf_life_label') }}</span>
+                                            <strong>{{ $product->shelf_life_text }}</strong>
                                         </div>
                                     @endif
                                 </div>
@@ -297,9 +291,11 @@
                         <details open>
                             <summary>{{ __('messages.product_overview') }}</summary>
                             <div class="product-spec-grid">
-                                <div><span>{{ __('messages.product_id') }}</span><strong>#{{ $product->MaSP }}</strong></div>
-                                <div><span>{{ __('messages.product_stock') }}</span><strong>{{ __('messages.products_left', ['count' => $product->stock_quantity]) }}</strong></div>
-                                <div><span>{{ __('messages.product_expiration') }}</span><strong>{{ $product->formatted_expiration_date }}</strong></div>
+                                <div><span>{{ __('messages.product_id') }}</span><strong>{{ $product->display_code }}</strong></div>
+                                <div><span>{{ __('messages.stock_status') }}</span><strong>{{ $inStock ? __('messages.in_stock') : __('messages.out_of_stock') }}</strong></div>
+                                @if($product->shelf_life_text)
+                                    <div><span>{{ __('messages.shelf_life_label') }}</span><strong>{{ $product->shelf_life_text }}</strong></div>
+                                @endif
                             </div>
                         </details>
                         <details>
@@ -387,11 +383,11 @@
         </div>
     </section>
 
-    @if($product->stock_quantity > 0)
+    @if($inStock)
         <div class="sticky-cart-bar d-lg-none">
             <div>
                 <strong>{{ $product->formatted_price }}</strong>
-                <span>{{ __('messages.products_left', ['count' => $product->stock_quantity]) }}</span>
+                <span>{{ __('messages.in_stock') }}</span>
             </div>
             <button onclick="scrollToBuyPanel()" class="btn">
                 <i class="bi bi-cart-plus"></i>{{ __('messages.buy_now') }}

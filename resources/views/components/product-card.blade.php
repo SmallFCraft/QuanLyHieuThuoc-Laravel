@@ -76,14 +76,18 @@
                 @isset($meta)
                     {{ $meta }}
                 @else
+                    {{-- Availability only. Exact stock counts and batch expiry dates are
+                         internal figures; pharmacy storefronts state neither. --}}
                     <span class="{{ $product->stock_quantity > 0 ? 'is-available' : 'is-unavailable' }}">
                         <i class="bi {{ $product->stock_quantity > 0 ? 'bi-check-circle' : 'bi-x-circle' }}"></i>
-                        {{ $product->stock_quantity > 0 ? __('messages.profile.available_now') : __('messages.profile.unavailable_now') }}
+                        {{ $product->stock_quantity > 0 ? __('messages.in_stock') : __('messages.out_of_stock') }}
                     </span>
-                    <span>
-                        <i class="bi bi-calendar2-check"></i>
-                        {{ __('messages.profile.expires_on') }} {{ $product->formatted_expiration_date }}
-                    </span>
+                    @if($product->shelf_life_text)
+                        <span>
+                            <i class="bi bi-calendar2-check"></i>
+                            {{ __('messages.shelf_life') }} {{ $product->shelf_life_text }}
+                        </span>
+                    @endif
                 @endisset
             </div>
         @endif

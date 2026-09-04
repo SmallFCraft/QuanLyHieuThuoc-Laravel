@@ -4,41 +4,44 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\SearchQuery;
+use App\Support\VietnameseText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 class ProductCatalogController extends Controller
 {
+    /** Sản phẩm mỗi trang trên catalog, search và trang danh mục — ba chỗ phải bằng nhau. */
+    private const PER_PAGE = 10;
+
     /**
      * Display the public product catalog.
      */
     public function index(Request $request)
     {
+        $searchTerm = trim((string) $request->input('q', ''));
+
         $query = Product::with('category')
             ->notExpired()
-            ->where('stock_quantity', '>', 0);
+            ->where('stock_quantity', '>', 0)
+            ->storefrontSearch($searchTerm)
+            ->orderBySearchRelevance($searchTerm);
 
-        // Apply category filter if provided
-        if ($request->has('category') && $request->category) {
-            $query->where('MaDM', $request->category);
+        if ($request->filled('category')) {
+            $query->where('MaDM', $request->input('category'));
         }
 
-        // Apply search filter if provided
-        if ($request->has('search') && $request->search) {
-            $searchTerm = trim($request->search);
-            $query->where(function($q) use ($searchTerm) {
-                $q->where('name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('ingredients', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('usage', 'like', '%' . $searchTerm . '%');
-            });
-        }
-
-        // Paginate results (12 per page)
-        $products = $query->paginate(12);
+        $products = $query->paginate(self::PER_PAGE)->withQueryString();
 
         $categories = $this->getFilterCategories();
 
-        return view('products.index', compact('products', 'categories'));
+        if ($request->ajax()) {
+            return $this->resultsFragment($products, $searchTerm);
+        }
+
+        $this->recordSearch($request, $searchTerm, $products->total());
+
+        return view('products.index', compact('products', 'categories', 'searchTerm'));
     }
 
     /**
@@ -68,57 +71,83 @@ class ProductCatalogController extends Controller
     /**
      * Display products by category.
      */
-    public function byCategory($MaDM)
+    public function byCategory(Request $request, $MaDM)
     {
         $category = Category::findOrFail($MaDM);
-        
+
         $products = Product::with('category')
             ->notExpired()
             ->where('MaDM', $MaDM)
             ->where('stock_quantity', '>', 0)
-            ->paginate(12);
+            ->paginate(self::PER_PAGE);
 
         $categories = $this->getFilterCategories();
+
+        if ($request->ajax()) {
+            return $this->resultsFragment($products, '');
+        }
 
         return view('products.index', compact('products', 'categories', 'category'));
     }
 
     /**
-     * Search products by name.
+     * Search products by name or active ingredient.
      */
     public function search(Request $request)
     {
-        $searchTerm = trim($request->input('q', ''));
-        
-        $query = Product::with('category')
+        $searchTerm = trim((string) $request->input('q', ''));
+
+        $products = Product::with('category')
             ->notExpired()
-            ->where('stock_quantity', '>', 0);
-            
-        if (!empty($searchTerm)) {
-            $query->where(function($q) use ($searchTerm) {
-                // Ưu tiên tìm chuỗi chính xác trên các trường liên quan
-                $q->where('name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('ingredients', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('usage', 'like', '%' . $searchTerm . '%');
-                  
-                // Mở rộng bộ lọc: tách từ khóa và tìm kiếm chéo
-                $words = explode(' ', mb_strtolower($searchTerm, 'UTF-8'));
-                if (count($words) > 1) {
-                    foreach ($words as $word) {
-                        if (mb_strlen($word, 'UTF-8') >= 3) { // Chỉ tìm các từ khóa có nghĩa
-                            $q->orWhere('name', 'like', '%' . $word . '%')
-                              ->orWhere('usage', 'like', '%' . $word . '%');
-                        }
-                    }
-                }
-            });
-        }
-        
-        $products = $query->paginate(12)->withQueryString();
+            ->where('stock_quantity', '>', 0)
+            ->storefrontSearch($searchTerm)
+            ->orderBySearchRelevance($searchTerm)
+            ->paginate(self::PER_PAGE)
+            ->withQueryString();
 
         $categories = $this->getFilterCategories();
 
+        if ($request->ajax()) {
+            return $this->resultsFragment($products, $searchTerm);
+        }
+
+        $this->recordSearch($request, $searchTerm, $products->total());
+
         return view('products.index', compact('products', 'categories', 'searchTerm'));
+    }
+
+    /**
+     * Đếm một lượt tìm cho khối "Xu hướng tìm kiếm".
+     *
+     * Chỉ đếm lượt tìm đầu tiên có kết quả: sang trang 2 là cùng một ý định, và một
+     * từ khoá không ra sản phẩm nào thì đưa lên trang chủ chỉ dẫn người sau vào một
+     * trang trống. Ghi sau khi view đã dựng xong nên một lỗi ở đây không làm sập
+     * trang kết quả.
+     */
+    private function recordSearch(Request $request, string $searchTerm, int $total): void
+    {
+        if ($searchTerm === '' || $total < 1 || $request->has('page')) {
+            return;
+        }
+
+        SearchQuery::record($searchTerm);
+    }
+
+    /**
+     * Chỉ khối kết quả, cho bộ lọc danh mục và phân trang chạy không tải lại trang.
+     *
+     * Trả về đúng partial mà trang đầy đủ render, nên hai đường không thể lệch nhau.
+     * Không có JS thì các link vẫn là link thật và nhánh này không bao giờ chạy.
+     */
+    private function resultsFragment($products, string $searchTerm): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'html' => view('products.partials.results', [
+                'products' => $products,
+                'searchTerm' => $searchTerm,
+            ])->render(),
+            'total' => $products->total(),
+        ]);
     }
 
     /**
@@ -126,42 +155,45 @@ class ProductCatalogController extends Controller
      */
     public function suggestions(Request $request)
     {
-        $query = $request->input('q', '');
-        
-        if (strlen($query) < 2) {
-            return response()->json([]);
+        $term = trim((string) $request->input('q', ''));
+
+        // mb_strlen, not strlen: "đ" is two bytes, so a byte-length gate let a
+        // single-letter query through and matched most of the catalog.
+        if (mb_strlen($term) < 2 || Product::searchWords($term) === []) {
+            return response()->json(['products' => [], 'categories' => []]);
         }
 
-        // Get product suggestions
         $products = Product::notExpired()
             ->where('stock_quantity', '>', 0)
-            ->where(function($q) use ($query) {
-                $q->where('name', 'like', '%' . $query . '%')
-                  ->orWhere('ingredients', 'like', '%' . $query . '%');
-            })
+            ->storefrontSearch($term)
+            ->orderBySearchRelevance($term)
             ->select('MaSP', 'name', 'MaDM', 'price', 'image')
             ->with('category:MaDM,name')
             ->limit(8)
             ->get();
 
-        // Get category suggestions
-        $categories = Category::where('name', 'like', '%' . $query . '%')
-            ->select('MaDM', 'name')
-            ->limit(3)
-            ->get();
+        $folded = VietnameseText::fold($term);
+
+        // Filtered in PHP: category names need the same folding as products, and
+        // there are only a few dozen of them behind a cache, so a query per
+        // keystroke buys nothing.
+        $categories = $this->getFilterCategories()
+            ->filter(fn ($category) => str_contains(VietnameseText::fold($category->name), $folded))
+            ->take(3)
+            ->values();
 
         return response()->json([
-            'products' => $products->map(function($product) {
+            'products' => $products->map(function (Product $product) {
                 return [
                     'MaSP' => $product->MaSP,
                     'name' => $product->name,
-                    'category' => $product->category->name,
+                    'category' => $product->category?->name,
                     'price' => $product->formatted_price,
                     'image_url' => $product->image_url,
                     'url' => route('products.show', $product->MaSP),
                 ];
             }),
-            'categories' => $categories->map(function($category) {
+            'categories' => $categories->map(function ($category) {
                 return [
                     'id' => $category->MaDM,
                     'name' => $category->name,
@@ -173,6 +205,9 @@ class ProductCatalogController extends Controller
 
     /**
      * Get cached categories for the public catalog filter.
+     *
+     * Category::scopeBrowsable() is shared with the header dropdown, so the sidebar
+     * and the nav always list the same categories in the same order.
      */
     protected function getFilterCategories()
     {
@@ -180,16 +215,8 @@ class ProductCatalogController extends Controller
             Category::FILTER_CACHE_KEY,
             now()->addMinutes(10),
             fn () => Category::query()
-                ->select('MaDM', 'name', 'icon')
-                ->whereHas('products', function ($query) {
-                    $query->notExpired()->where('stock_quantity', '>', 0);
-                })
-                ->withCount([
-                    'products' => function ($query) {
-                        $query->notExpired()->where('stock_quantity', '>', 0);
-                    },
-                ])
-                ->orderBy('name')
+                ->select('MaDM', 'name')
+                ->browsable()
                 ->get()
         );
     }

@@ -16,8 +16,19 @@ return new class extends Migration
             $table->string('product_code', 16)->nullable();
             $table->foreignId('MaDM')->constrained('categories', 'MaDM')->onDelete('restrict');
             $table->string('name');
+            // Bản không dấu của các trường khách hàng tìm theo tên. Collation
+            // utf8mb4_0900_ai_ci gộp dấu thanh — "á" khớp "a" — nhưng không gộp "đ",
+            // nên khách gõ "dau dau" không ra gì còn "đau đầu" ra 30 sản phẩm. Fold
+            // thực hiện trong PHP bằng VietnameseText::fold(), cùng helper mà chatbot
+            // và triage engine dùng, để cả ba đồng ý một từ trông như thế nào.
+            $table->string('name_folded')->nullable();
             $table->text('ingredients')->nullable();
+            $table->text('ingredients_folded')->nullable();
             $table->text('usage')->nullable();
+            // Hạn dùng do nhà sản xuất công bố, tính theo tháng kể từ ngày sản xuất —
+            // thuộc tính của sản phẩm. expiration_date là hạn của lô hàng thực tế đang
+            // giữ, do nhân viên nhập và FEFO tiêu thụ. Hai cái trả lời hai câu hỏi khác.
+            $table->unsignedSmallInteger('shelf_life_months')->nullable();
             $table->decimal('price', 10, 2);
             $table->date('expiration_date');
             $table->integer('stock_quantity')->default(0);
@@ -27,12 +38,12 @@ return new class extends Migration
             $table->unsignedInteger('views_count')->default(0);
             $table->timestamps();
             $table->softDeletes();
-            
-            $table->index('MaDM', 'products_madm_index');
+
             $table->index('expiration_date');
             $table->index('batch_number');
             $table->index('deleted_at');
             $table->index('views_count');
+            $table->index('name_folded');
             $table->index(['MaDM', 'expiration_date'], 'products_madm_expiration_idx');
             $table->index(['stock_quantity', 'reorder_point'], 'products_stock_reorder_idx');
             $table->unique(['name', 'batch_number'], 'unique_batch_per_product');

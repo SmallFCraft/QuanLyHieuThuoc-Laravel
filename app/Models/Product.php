@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Helpers\VietnameseHelper;
 use App\Support\ProductCodeGenerator;
+use App\Support\VietnameseText;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -26,8 +27,11 @@ class Product extends Model
         'MaDM',
         'product_code',
         'name',
+        'name_folded',
         'ingredients',
+        'ingredients_folded',
         'usage',
+        'shelf_life_months',
         'price',
         'expiration_date',
         'stock_quantity',
@@ -47,6 +51,7 @@ class Product extends Model
         'expiration_date' => 'date',
         'stock_quantity' => 'integer',
         'reorder_point' => 'integer',
+        'shelf_life_months' => 'integer',
     ];
 
     protected static function booted(): void
@@ -60,6 +65,19 @@ class Product extends Model
 
             if ($category instanceof Category) {
                 $product->product_code = ProductCodeGenerator::productCodeForCategory($category);
+            }
+        });
+
+        // Kept in sync on every write rather than at the call sites, so a product
+        // created by the crawler, the admin form or a factory is searchable the
+        // same way.
+        static::saving(function (Product $product): void {
+            if ($product->isDirty('name')) {
+                $product->name_folded = VietnameseText::fold((string) $product->name);
+            }
+
+            if ($product->isDirty('ingredients')) {
+                $product->ingredients_folded = VietnameseText::fold((string) $product->ingredients);
             }
         });
     }
@@ -125,8 +143,10 @@ class Product extends Model
         if ($this->isExpired()) {
             return false;
         }
-        
-        return $this->expiration_date->diffInDays(Carbon::now()) <= $days;
+
+        // Carbon 3 returns a signed difference, so calling diffInDays() on the later
+        // date yields a negative number and `<= $days` matched every future date.
+        return Carbon::now()->diffInDays($this->expiration_date, true) <= $days;
     }
 
     /**
@@ -178,6 +198,19 @@ class Product extends Model
     public function getDisplayCodeAttribute(): string
     {
         return $this->product_code ?: '#' . $this->MaSP;
+    }
+
+    /**
+     * Shelf life for the storefront, the way pharmacy chains state it: "36 tháng"
+     * from the date of manufacture. Kept in the unit the manufacturer published —
+     * rewriting 36 months as "3 năm" would no longer match the source label.
+     * Null when none was published, so callers hide the row instead of guessing.
+     */
+    public function getShelfLifeTextAttribute(): ?string
+    {
+        $months = (int) ($this->shelf_life_months ?? 0);
+
+        return $months > 0 ? $months . ' tháng' : null;
     }
 
     /**
@@ -253,6 +286,118 @@ class Product extends Model
     }
 
     /**
+     * The customer-facing product search. Shared by the catalog screen, the search
+     * results page and the autocomplete endpoint so all three answer a query the
+     * same way.
+     *
+     * Every word must match (AND, not OR). With a crawled catalog of thousands of
+     * rows, ORing the words of "thuốc ho cho trẻ" matched 2,875 of 3,132 products —
+     * a result set that size is indistinguishable from no filter at all.
+     *
+     * Matching runs on the folded columns so an accent-free query works: the MySQL
+     * collation folds tone marks but not "đ", so "dau dau" found nothing while
+     * "đau đầu" found 30.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeStorefrontSearch($query, ?string $term)
+    {
+        $words = self::searchWords($term);
+
+        if ($words === []) {
+            return $query;
+        }
+
+        // Repeating a LIKE for a repeated word adds nothing, so the conditions are
+        // de-duplicated here rather than in searchWords() — the ranking below needs
+        // the phrase intact.
+        foreach (array_unique($words) as $word) {
+            $like = '%' . self::escapeLike($word) . '%';
+
+            $query->where(function ($inner) use ($like) {
+                $inner->where('name_folded', 'like', $like)
+                    ->orWhere('ingredients_folded', 'like', $like);
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Rank a storefront search: whole phrase in the name first, then all words in
+     * the name, then anything left (an ingredient match).
+     *
+     * Without this, "paracetamol" led with six products that never name it —
+     * they merely list it deep in their usage text — while the actual paracetamol
+     * products sat further down the page.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeOrderBySearchRelevance($query, ?string $term)
+    {
+        $words = self::searchWords($term);
+
+        if ($words === []) {
+            return $query;
+        }
+
+        $phrase = self::escapeLike(implode(' ', $words));
+
+        // Starting with the phrase beats merely containing it: a search for
+        // "panadol" should open with "Panadol Extra", not a combination product
+        // that mentions it mid-name.
+        $sql = 'CASE WHEN name_folded LIKE ? THEN 3 WHEN name_folded LIKE ? THEN 2 ';
+        $bindings = [$phrase . '%', '%' . $phrase . '%'];
+
+        $nameHits = [];
+        foreach ($words as $word) {
+            $nameHits[] = 'name_folded LIKE ?';
+            $bindings[] = '%' . self::escapeLike($word) . '%';
+        }
+
+        $sql .= 'WHEN ' . implode(' AND ', $nameHits) . ' THEN 1 ELSE 0 END DESC';
+
+        return $query
+            ->orderByRaw($sql, $bindings)
+            ->orderByDesc('views_count')
+            ->orderBy('MaSP');
+    }
+
+    /**
+     * Folded query words, in the order typed. Single characters are dropped: one
+     * letter matches most of the catalog and says nothing about intent.
+     *
+     * Repeats are kept — "đau đầu" folds to "dau dau", and collapsing that to a
+     * single word would lose the phrase the ranking scores against.
+     *
+     * @return array<string>
+     */
+    public static function searchWords(?string $term): array
+    {
+        $folded = VietnameseText::fold((string) $term);
+
+        if ($folded === '') {
+            return [];
+        }
+
+        return array_values(array_filter(
+            explode(' ', $folded),
+            fn (string $word) => mb_strlen($word) >= 2
+        ));
+    }
+
+    /**
+     * Neutralise LIKE wildcards typed by the customer. A bare "%" was matching the
+     * entire catalog and reading as a broken search.
+     */
+    private static function escapeLike(string $value): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $value);
+    }
+
+    /**
      * The admin product search. Shared by the DataTables endpoint, the products
      * export and the inventory screen/export so a searchable column added here
      * cannot go missing from one of them.
@@ -268,11 +413,13 @@ class Product extends Model
             return $query;
         }
 
-        return $query->where(function ($inner) use ($term) {
-            $inner->where('name', 'like', "%{$term}%")
-                ->orWhere('batch_number', 'like', "%{$term}%")
-                ->orWhere('product_code', 'like', "%{$term}%")
-                ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery->where('name', 'like', "%{$term}%"));
+        $like = '%' . self::escapeLike($term) . '%';
+
+        return $query->where(function ($inner) use ($like) {
+            $inner->where('name', 'like', $like)
+                ->orWhere('batch_number', 'like', $like)
+                ->orWhere('product_code', 'like', $like)
+                ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery->where('name', 'like', $like));
         });
     }
 
