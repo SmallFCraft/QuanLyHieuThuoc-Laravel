@@ -398,6 +398,13 @@ body.admin-body {
     box-shadow: none;
 }
 
+/* Xem chú thích trong app.css: placeholder quá dài phải cắt bằng ellipsis,
+   và khai báo phải nằm trên element chứ không phải ::placeholder. */
+input,
+textarea {
+    text-overflow: ellipsis;
+}
+
 .form-control:focus,
 .form-select:focus {
     border-color: #22c55e;

@@ -2498,6 +2498,93 @@ class ChatbotServiceTest extends TestCase
         $this->assertEmpty($this->chatbotService->searchProducts('hỗ trợ tiêu hóa nhanh')->all());
     }
 
+    public function test_product_search_ignores_an_accent_blind_substring_hit(): void
+    {
+        $vitamins = Category::factory()->create(['name' => 'Thuốc bổ & vitamin']);
+        Product::factory()->create([
+            'MaDM' => $vitamins->MaDM,
+            'name' => 'Siro A.T Ascorbic',
+            'ingredients' => 'Acid ascorbic 500mg',
+            // MySQL's utf8mb4_unicode_ci ignores Vietnamese diacritics, so
+            // `LIKE '%thử thai%'` matched this pharmacology text and answered a
+            // pregnancy-test question with a vitamin C syrup.
+            'usage' => 'Có một ngưỡng đào thải acid ascorbic qua thận khoảng 14 microgam/ml',
+            'stock_quantity' => 50,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $this->assertEmpty($this->chatbotService->searchProducts('que thử thai')->all());
+        $this->assertEmpty($this->chatbotService->searchProducts('thử thai')->all());
+    }
+
+    public function test_product_search_drops_a_price_question_before_narrowing(): void
+    {
+        $digestive = Category::factory()->create(['name' => 'Thuốc tiêu hóa']);
+        Product::factory()->create([
+            'MaDM' => $digestive->MaDM,
+            'name' => 'Biviantac',
+            'usage' => 'Không rõ cần trung hòa lượng acid dịch vị bao nhiêu là tối ưu',
+            'stock_quantity' => 50,
+            'expiration_date' => now()->addYear(),
+        ]);
+        $wanted = Product::factory()->create([
+            'MaDM' => $digestive->MaDM,
+            'name' => 'Men vi sinh Enterogermina',
+            'usage' => 'Bổ sung men vi sinh, hỗ trợ tiêu hóa',
+            'stock_quantity' => 50,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        $names = $this->chatbotService->searchProducts('men vi sinh giá bao nhiêu')->pluck('name')->all();
+
+        $this->assertContains($wanted->name, $names);
+        $this->assertNotContains('Biviantac', $names);
+    }
+
+    public function test_match_verification_keeps_an_unaccented_query(): void
+    {
+        $method = new \ReflectionMethod($this->chatbotService, 'phraseOccursAsWord');
+        $method->setAccessible(true);
+
+        // The verification step runs after an accent-blind LIKE prefilter, so on MySQL
+        // it must not undo the thing that prefilter is good at: a customer typing
+        // without diacritics still reaches accented product text.
+        $this->assertTrue($method->invoke($this->chatbotService, 'Điều trị loét dạ dày', 'da day'));
+        $this->assertTrue($method->invoke($this->chatbotService, 'Điều trị loét dạ dày', 'dạ dày'));
+
+        // Typed with diacritics, they have to survive: "thử thai" is not "thu thải".
+        $this->assertFalse($method->invoke($this->chatbotService, 'ngưỡng đào thải acid ascorbic', 'thử thai'));
+
+        // Whole words only, either way.
+        $this->assertFalse($method->invoke($this->chatbotService, 'chống oxy hóa', 'hoa qua'));
+    }
+
+    public function test_product_search_ignores_the_verb_a_customer_wraps_the_query_in(): void
+    {
+        $respiratory = Category::factory()->create(['name' => 'Thuốc ho - hô hấp']);
+        $wanted = Product::factory()->create([
+            'MaDM' => $respiratory->MaDM,
+            'name' => 'Siro Thuốc ho Bách Hộ',
+            'usage' => 'Điều trị ho dai dẳng lâu ngày, ho gà',
+            'stock_quantity' => 60,
+            'expiration_date' => now()->addYear(),
+        ]);
+
+        // Every keyword tier LIKE-matches the surviving text as one phrase, so
+        // "kiếm thuốc ho" searched for the literal string "kiếm thuốc ho" and found
+        // nothing while the shelf held five cough medicines.
+        foreach (['kiếm thuốc ho', 'kiem thuoc ho', 'coi thuốc ho', 'tư vấn thuốc ho'] as $phrasing) {
+            $method = new \ReflectionMethod($this->chatbotService, 'sanitizeCatalogQuery');
+            $method->setAccessible(true);
+            $names = $this->chatbotService
+                ->searchProducts($method->invoke($this->chatbotService, $phrasing))
+                ->pluck('name')
+                ->all();
+
+            $this->assertContains($wanted->name, $names, "\"{$phrasing}\" found nothing");
+        }
+    }
+
     public function test_assistant_response_removes_foreign_script_words(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);

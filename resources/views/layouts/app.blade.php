@@ -860,7 +860,7 @@
                                                 data-folded="{{ \App\Support\VietnameseText::fold($cat->name) }}"
                                                 @if($isActiveCategory) aria-current="page" @endif
                                             >
-                                                <span class="nav-category-title">{{ $cat->name }}</span>
+                                                <span class="nav-category-title">{{ $cat->name }}@if($loop->index < 3)<i class="bi bi-fire category-flame" aria-hidden="true"></i>@endif</span>
                                                 <span class="nav-category-count">{{ $cat->products_count }}</span>
                                             </a>
                                         @empty

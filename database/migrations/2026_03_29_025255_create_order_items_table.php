@@ -20,10 +20,8 @@ return new class extends Migration
             $table->decimal('unit_price', 10, 2);
             $table->string('batch_number', 100);
             $table->timestamps();
-            
-            $table->index('MaDH', 'order_items_madh_index');
+
             $table->index('MaSP', 'order_items_masp_index');
-            $table->index('MaLo', 'order_items_malo_index');
             $table->index(['MaDH', 'MaSP'], 'order_items_madh_masp_idx');
             $table->index(['MaLo', 'MaSP'], 'order_items_malo_masp_idx');
         });

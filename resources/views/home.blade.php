@@ -49,24 +49,18 @@
                         </div>
                     </div>
 
-                    <div class="row g-3 mt-2 mt-md-3 text-center text-lg-start">
-                        <div class="col-4 col-sm-4 col-lg-auto">
-                            <div class="home-glass-panel px-3 py-2 rounded-4">
-                                <span class="d-block fw-bold text-success fs-4 mb-0">{{ __('messages.home_stat_products_value') }}</span>
-                                <span class="small text-muted">{{ __('messages.home_stat_products_label') }}</span>
-                            </div>
+                    <div class="home-stat-row mt-3 mt-md-4">
+                        <div class="home-glass-panel home-stat-card rounded-4">
+                            <span class="home-stat-value">{{ number_format($sellableProductCount, 0, ',', '.') }}</span>
+                            <span class="home-stat-label">{{ __('messages.home_stat_products_label') }}</span>
                         </div>
-                        <div class="col-4 col-sm-4 col-lg-auto">
-                            <div class="home-glass-panel px-3 py-2 rounded-4">
-                                <span class="d-block fw-bold text-success fs-4 mb-0">{{ __('messages.home_stat_support_value') }}</span>
-                                <span class="small text-muted">{{ __('messages.home_stat_support_label') }}</span>
-                            </div>
+                        <div class="home-glass-panel home-stat-card rounded-4">
+                            <span class="home-stat-value">{{ number_format($sellableCategoryCount, 0, ',', '.') }}</span>
+                            <span class="home-stat-label">{{ __('messages.home_stat_categories_label') }}</span>
                         </div>
-                        <div class="col-4 col-sm-4 col-lg-auto">
-                            <div class="home-glass-panel px-3 py-2 rounded-4">
-                                <span class="d-block fw-bold text-success fs-4 mb-0">{{ __('messages.home_stat_fefo_value') }}</span>
-                                <span class="small text-muted">{{ __('messages.home_stat_fefo_label') }}</span>
-                            </div>
+                        <div class="home-glass-panel home-stat-card rounded-4">
+                            <span class="home-stat-value">{{ __('messages.home_stat_fefo_value') }}</span>
+                            <span class="home-stat-label">{{ __('messages.home_stat_fefo_label') }}</span>
                         </div>
                     </div>
                 </div>
@@ -103,54 +97,7 @@
 
                     </div>
                 </div>
-
-                <div class="col-lg-6 fade-in d-none" style="animation-delay: 0.12s;">
-                    <div class="glass-card border-0 p-3 p-md-4 rounded-4 shadow-sm home-hero-visual">
-                        <img src="https://images.unsplash.com/photo-1576602976047-174e57a47881?auto=format&fit=crop&q=80&w=800&h=600" alt="Đội ngũ nhà thuốc" class="img-fluid rounded-4 w-100 object-fit-cover shadow-sm" style="min-height: 200px; max-height: min(52vh, 440px);">
-                        <div class="d-flex justify-content-center justify-content-lg-start mt-3">
-                            <div class="home-glass-panel p-3 rounded-4 d-flex align-items-center gap-3 shadow-sm w-100" style="max-width: 320px;">
-                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px; background: rgba(16,185,129,0.15); color: #059669;">
-                                    <i class="bi bi-shield-check fs-4"></i>
-                                </div>
-                                <div class="text-start">
-                                    <p class="mb-0 fw-semibold text-dark">{{ __('messages.home_quality_badge') }}</p>
-                                    <p class="mb-0 small text-muted">{{ __('messages.home_quality_desc') }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
-        </div>
-    </section>
-
-    <!-- Tìm kiếm nhanh -->
-    <section class="home-search-band pb-4 pb-md-5 position-relative overflow-hidden" id="tim-kiem">
-        <div class="home-section-mesh home-section-mesh--subtle" aria-hidden="true"></div>
-        <div class="container position-relative">
-            <form action="{{ route('products.search') }}" method="GET" class="home-glass-panel p-2 p-md-3 rounded-pill mx-auto shadow-sm" style="max-width: 800px; background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);" role="search" aria-label="Tìm sản phẩm">
-                <div class="home-search-copy">
-                    <span class="text-success fw-bold text-uppercase small">{{ __('messages.home_explore') }}</span>
-                    <strong>{{ __('messages.home_search_placeholder') }}</strong>
-                </div>
-                <div class="input-group input-group-lg align-items-center home-search-control">
-                    <span class="input-group-text border-0 bg-transparent ps-3 ps-md-4">
-                        <i class="bi bi-search text-success"></i>
-                    </span>
-                    <input type="text" id="home-search-q" name="q" value="{{ request('q') }}" class="form-control border-0 bg-transparent py-2 py-md-3 fs-6 fs-md-5 shadow-none" placeholder="{{ __('messages.home_search_placeholder') }}" autocomplete="off" style="box-shadow: none !important; outline: none !important;">
-                    <button type="submit" class="btn btn-success rounded-pill px-4 px-md-5 fw-semibold shadow-sm ms-2 me-1">
-                        <span class="d-none d-sm-inline">{{ __('messages.search') }}</span>
-                        <i class="bi bi-search d-sm-none"></i>
-                    </button>
-                </div>
-                @if($categories->isNotEmpty())
-                    <div class="home-search-chips">
-                        @foreach($categories->take(4) as $category)
-                            <a href="{{ route('products.category', $category->MaDM) }}">{{ $category->name }}</a>
-                        @endforeach
-                    </div>
-                @endif
-            </form>
         </div>
     </section>
 
@@ -176,7 +123,7 @@
                                 <i class="bi bi-{{ $category->icon ?? 'grid-fill' }}" style="font-size: 1.5rem;"></i>
                             </div>
                             <span class="fw-semibold text-truncate d-block text-dark mb-1" title="{{ $category->name }}">{{ $category->name }}</span>
-                            <span class="home-category-count">{{ $category->available_products_count }} {{ mb_strtolower(__('messages.products')) }}</span>
+                            <span class="home-category-count">{{ $category->products_count }} {{ mb_strtolower(__('messages.products')) }}</span>
                             <i class="bi bi-arrow-up-right home-category-arrow" aria-hidden="true"></i>
                         </a>
                     </div>
@@ -220,10 +167,6 @@
                                 @if($product->stock_quantity == 0)
                                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
                                         <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
-                                    </span>
-                                @elseif($product->stock_quantity <= $product->reorder_point)
-                                    <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">
-                                        <i class="bi bi-exclamation-triangle me-1"></i>{{ __('messages.low_stock') }}
                                     </span>
                                 @endif
                             </x-slot:badges>
@@ -280,10 +223,6 @@
                                 @if($product->stock_quantity == 0)
                                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
                                         <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
-                                    </span>
-                                @elseif($product->stock_quantity <= $product->reorder_point)
-                                    <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">
-                                        <i class="bi bi-exclamation-triangle me-1"></i>{{ __('messages.low_stock') }}
                                     </span>
                                 @endif
                             </x-slot:badges>

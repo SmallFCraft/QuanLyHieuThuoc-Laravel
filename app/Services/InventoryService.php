@@ -156,6 +156,10 @@ class InventoryService
     /**
      * Get inventory summary statistics.
      *
+     * Key names match what admin/inventory/index.blade.php reads. The view falls
+     * back to `?? 0`, so a rename here shows four zero cards above a table that
+     * lists the very rows being counted, with nothing failing loudly.
+     *
      * @return array
      */
     public function getInventorySummary(): array
@@ -163,10 +167,10 @@ class InventoryService
         return [
             'total_products' => Product::count(),
             'total_value' => Product::sum(DB::raw('ROUND(price, 0) * stock_quantity')),
-            'low_stock_count' => Product::lowStock()->count(),
-            'expiring_soon_count' => Product::expiringSoon(30)->count(),
-            'expired_count' => Product::where('expiration_date', '<', Carbon::now())->count(),
-            'out_of_stock_count' => Product::where('stock_quantity', 0)->count(),
+            'low_stock' => Product::lowStock()->count(),
+            'expiring_soon' => Product::expiringSoon(30)->count(),
+            'expired' => Product::where('expiration_date', '<', Carbon::now())->count(),
+            'out_of_stock' => Product::where('stock_quantity', 0)->count(),
         ];
     }
 }

@@ -19,7 +19,6 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['ingredient_a', 'ingredient_b'], 'drug_interactions_pair_unique');
-            $table->index('ingredient_a');
             $table->index('ingredient_b');
         });
 

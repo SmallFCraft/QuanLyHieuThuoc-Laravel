@@ -24,7 +24,7 @@
         <div class="min-vh-100 d-flex flex-column align-items-center justify-content-center px-3 py-5">
             <!-- Logo -->
             <a href="{{ route('home') }}" class="text-decoration-none d-flex align-items-center gap-2 mb-4">
-                <img src="{{ asset('images/logo.png') }}" alt="Logo" style="height: 48px; width: auto; object-fit: contain;">
+                <img src="{{ asset('images/logo-nav.png') }}" alt="Logo" width="176" height="96" style="height: 48px; width: auto; object-fit: contain;">
                 <span class="fw-bold fs-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-900 to-emerald-600">{{ __('messages.app_name') }}</span>
             </a>
 

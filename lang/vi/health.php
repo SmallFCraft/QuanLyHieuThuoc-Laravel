@@ -60,7 +60,6 @@ return [
     'products_empty' => 'Nhà thuốc hiện chưa có sản phẩm không kê đơn phù hợp với triệu chứng này. Anh/chị hỏi dược sĩ để được chọn đúng thuốc nhé.',
     'product_usage_label' => 'Cách dùng',
     'product_stock_in' => 'Còn hàng',
-    'product_stock_low' => 'Còn ít hàng',
     'no_products' => 'Em không gợi ý thuốc cho tình huống này. Việc gặp bác sĩ hoặc dược sĩ là bước cần thiết.',
 
     // Cơ sở của kết luận: chỉ hiện dữ liệu đã lưu, không sinh nội dung y khoa mới.

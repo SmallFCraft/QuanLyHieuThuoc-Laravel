@@ -79,7 +79,7 @@
                         id="chatSessionSearch"
                         class="form-control"
                         value="{{ $search }}"
-                        placeholder="VD: CHAT-1A2B3C4D, email@example.com, Nguyễn Văn A hoặc #12"
+                        placeholder="VD: CHAT-1A2B3C4D, email hoặc #12"
                     >
                 </div>
                 <div class="col-12 col-lg-4 col-xl-3 d-flex gap-2">
