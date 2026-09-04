@@ -16,8 +16,9 @@ use Illuminate\Database\Seeder;
  * IMPORTANT: this data was compiled for an academic project and has NOT been
  * reviewed by a licensed pharmacist. Every triage rule leaves `reviewed_by` null
  * on purpose — production use requires professional review first.
- * Drug pairs below are limited to active ingredients that actually exist in
- * ProductSeeder, so the safety checks have something real to match against.
+ * Drug pairs below are limited to active ingredients commonly stocked by
+ * Vietnamese pharmacies. Products are crawled from Nhà Thuốc Long Châu, so a
+ * crawled product only triggers a check when its ingredient appears here.
  */
 class MedicalKnowledgeSeeder extends Seeder
 {
@@ -548,8 +549,8 @@ class MedicalKnowledgeSeeder extends Seeder
 
     /**
      * Ingredient names are stored lowercase without dosage, matching how
-     * DrugSafetyService normalises products.ingredients before lookup.
-     * Every ingredient below exists in ProductSeeder so the checks fire on real data.
+     * DrugSafetyService normalises products.ingredients before lookup. The crawler
+     * writes ingredients in the same "Name 500mg" form the parser expects.
      */
     protected function seedDrugInteractions(): void
     {

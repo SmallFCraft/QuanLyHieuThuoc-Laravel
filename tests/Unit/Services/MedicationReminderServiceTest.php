@@ -235,11 +235,16 @@ class MedicationReminderServiceTest extends TestCase
         $this->reminder(['MaSP' => $mineProduct->MaSP]);
         $this->reminder(['MaSP' => $theirsProduct->MaSP, 'MaKH' => $other->MaKH]);
 
+        // Neo vào aria-label của nút huỷ, không phải tên sản phẩm trần: panel tìm kiếm
+        // nhúng sản phẩm xem nhiều vào mọi trang storefront, nên quét cả trang thì tên
+        // nào cũng có thể xuất hiện ngoài bảng nhắc thuốc.
+        $cancelLabel = fn (Product $product) => __('messages.reminder.btn_cancel_aria', ['name' => $product->name]);
+
         $this->actingAs($this->user)
             ->get(route('reminders.index'))
             ->assertOk()
-            ->assertSee($mineProduct->name)
-            ->assertDontSee($theirsProduct->name);
+            ->assertSee($cancelLabel($mineProduct))
+            ->assertDontSee($cancelLabel($theirsProduct));
     }
 
     public function test_a_customer_cannot_cancel_someone_elses_reminder(): void

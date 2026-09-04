@@ -74,8 +74,10 @@ class ProductBatch extends Model
         if ($this->isExpired()) {
             return false;
         }
-        
-        return $this->expiration_date->diffInDays(Carbon::now()) <= $days;
+
+        // Carbon 3 returns a signed difference, so calling diffInDays() on the later
+        // date yields a negative number and `<= $days` matched every future date.
+        return Carbon::now()->diffInDays($this->expiration_date, true) <= $days;
     }
 
     /**

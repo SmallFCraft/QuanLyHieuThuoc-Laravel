@@ -143,6 +143,46 @@ class ProductManagementTest extends TestCase
         $this->assertTrue($product->isExpiringSoon(180));
     }
 
+    public function test_a_distant_expiry_is_not_flagged_as_expiring_soon(): void
+    {
+        $product = Product::create([
+            'MaDM' => $this->category->MaDM,
+            'name' => 'Test Medicine Far',
+            'price' => 50000,
+            'expiration_date' => now()->addMonths(36),
+            'stock_quantity' => 100,
+            'reorder_point' => 10,
+            'batch_number' => 'BATCH-005-FAR',
+        ]);
+
+        // The signed Carbon 3 difference made this return true for every future
+        // date, so the inventory screen labelled the whole catalog "Sắp hết hạn".
+        $this->assertFalse($product->isExpiringSoon(30));
+        $this->assertFalse($product->isExpiringSoon(180));
+
+        $batch = ProductBatch::where('MaSP', $product->MaSP)->sole();
+        $this->assertFalse($batch->isExpiringSoon(30));
+    }
+
+    public function test_the_expiring_soon_boundary_matches_the_query_scope(): void
+    {
+        $product = Product::create([
+            'MaDM' => $this->category->MaDM,
+            'name' => 'Test Medicine Boundary',
+            'price' => 50000,
+            'expiration_date' => now()->addDays(20),
+            'stock_quantity' => 100,
+            'reorder_point' => 10,
+            'batch_number' => 'BATCH-005-EDGE',
+        ]);
+
+        // The summary cards count with scopeExpiringSoon() while the table labels
+        // rows with isExpiringSoon(); disagreement shows a wrong count next to the
+        // rows it claims to describe.
+        $this->assertTrue($product->isExpiringSoon(30));
+        $this->assertSame(1, Product::expiringSoon(30)->count());
+    }
+
     public function test_batch_number_must_be_unique_per_product(): void
     {
         Product::create([

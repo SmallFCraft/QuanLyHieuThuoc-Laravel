@@ -5,6 +5,8 @@
 @import './storefront.css';
 /* Import Search Autocomplete Styles */
 @import './search-autocomplete.css';
+/* Trang tài khoản: một bảng style thay cho các khối <style> rải trong từng partial */
+@import './profile.css';
 
 @tailwind base;
 @tailwind components;
@@ -47,6 +49,13 @@ body::-webkit-scrollbar-thumb:hover,
 html, body, * {
     scrollbar-width: thin !important;
     scrollbar-color: #10b981 #f8fafc !important;
+}
+
+/* Placeholder dài hơn ô bị cắt giữa nét chữ (mặc định text-overflow: clip).
+   Đặt trên element, không phải ::placeholder — Chromium bỏ qua khai báo ở pseudo-element. */
+input,
+textarea {
+    text-overflow: ellipsis;
 }
 
 /* Keep Bootstrap switches intact after Tailwind Forms resets checkbox styles. */

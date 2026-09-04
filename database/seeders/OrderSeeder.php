@@ -20,7 +20,7 @@ class OrderSeeder extends Seeder
         $products = Product::all();
         
         if ($users->isEmpty() || $products->isEmpty()) {
-            $this->command->warn('Please run UserSeeder and ProductSeeder first!');
+            $this->command->warn('Chưa có user hoặc sản phẩm. Chạy UserSeeder và `php artisan crawl:longchau` trước!');
             return;
         }
 

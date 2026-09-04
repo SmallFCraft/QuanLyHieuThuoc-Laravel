@@ -134,8 +134,8 @@
                             @php $stock = (int) ($product['stock_quantity'] ?? 0); @endphp
                             @if ($stock > 0)
                                 <p class="small text-gray-600 mb-3">
-                                    <i class="bi {{ $stock > 10 ? 'bi-check-circle' : 'bi-exclamation-circle' }} me-1" aria-hidden="true"></i>
-                                    {{ $stock > 10 ? __('messages.health.product_stock_in') : __('messages.health.product_stock_low') }}
+                                    <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
+                                    {{ __('messages.health.product_stock_in') }}
                                 </p>
                             @endif
 

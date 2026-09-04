@@ -22,10 +22,9 @@ return new class extends Migration
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
             $table->timestamps();
-            
+
             $table->index('MaKH', 'audit_logs_makh_index');
             $table->index('action');
-            $table->index(['model_type', 'MaDoiTuong'], 'audit_logs_model_type_madoituong_index');
             $table->index('created_at');
             $table->index(['model_type', 'MaDoiTuong', 'created_at'], 'audit_logs_target_created_idx');
         });

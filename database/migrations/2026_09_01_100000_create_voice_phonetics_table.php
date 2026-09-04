@@ -24,7 +24,9 @@ return new class extends Migration
             // Khoá phiên âm giữ dấu cách giữa các âm tiết: luật so của
             // VoicePhonetics::within() cần so từng âm tiết, vì một ngưỡng
             // Levenshtein trên khoá nối liền gộp "vitamin C" với "vitamin D".
-            $this->caseSensitive($table->string('phonetic_key', 191))->index();
+            // Không index riêng: unique (phonetic_key, term_folded) bên dưới đã
+            // phủ leading-prefix, mọi lookup phonetic_key chạy qua nó.
+            $this->caseSensitive($table->string('phonetic_key', 191));
 
             // Hai ký tự đầu của khoá đã bỏ dấu cách. Bộ lọc thô làm trong SQL cho
             // tầng khớp gần — within() là hàm PHP, không phải vị từ SQL, nên không

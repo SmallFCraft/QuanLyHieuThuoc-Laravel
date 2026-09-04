@@ -18,7 +18,7 @@
 
         <aside class="admin-sidebar" id="adminSidebar" aria-label="Điều hướng quản trị">
             <div class="admin-sidebar__brand">
-                <img src="{{ asset('images/logo.png') }}" alt="Nhà Thuốc Sinh Thái">
+                <img src="{{ asset('images/logo-nav.png') }}" alt="Nhà Thuốc Sinh Thái" width="176" height="96">
                 <div>
                     <p class="admin-sidebar__brand-title">Nhà Thuốc</p>
                     <span class="admin-sidebar__brand-subtitle">Bảng điều khiển</span>

@@ -116,11 +116,23 @@ Nếu cần tra cứu dữ liệu, hãy thực hiện im lặng và chỉ trả 
 PROMPT;
 
 
+    /**
+     * Verbs and framing a customer wraps a catalog search in. Stripped before the
+     * keyword tiers run, because whatever survives is LIKE-matched against product
+     * text as one phrase: "kiếm thuốc ho" found nothing while "thuốc ho" finds five.
+     *
+     * Accent-free spellings are listed only where they cannot collide with real
+     * catalog vocabulary. "tim" is absent even though "tìm" belongs here — it is also
+     * the heart, and the catalog has cardiac products; same for "tiem" ("tiêm",
+     * injectable) as a folding of "tiệm".
+     */
     protected const SEARCH_STOP_WORDS = [
         'cho tôi hỏi', 'cho mình hỏi', 'tôi muốn tìm', 'tôi muốn mua', 'tôi cần tìm', 'tôi cần mua',
         'cần tìm', 'cần mua', 'cho tôi', 'tôi muốn', 'tôi cần', 'có bán', 'cho hỏi',
         'tôi', 'mình', 'anh', 'chị', 'em', 'cần', 'mua', 'tìm', 'có', 'giá', 'bao nhiêu',
-        'cái', 'hỏi', 'xem', 'muốn', 'về', 'loại', 'tao', 'mày'
+        'cái', 'hỏi', 'xem', 'muốn', 'về', 'loại', 'tao', 'mày',
+        'kiếm', 'kiem', 'tìm kiếm', 'kiếm giúp', 'coi', 'lấy', 'lay',
+        'gợi ý', 'tư vấn', 'giới thiệu', 'shop', 'nhà thuốc',
     ];
 
     protected const CATEGORY_KEYWORDS = [
@@ -268,6 +280,27 @@ PROMPT;
         'các', 'cac', 'một', 'mot', 'vài', 'vai', 'hỗ', 'trợ', 'ý',
         'muốn', 'muon', 'tìm', 'gợi', 'goi',
     ];
+
+    /**
+     * Price questions, stripped as whole phrases before the narrowing windows are
+     * built. "que thử thai giá bao nhiêu" searched on "bao nhiêu", which matched
+     * "cần trung hòa lượng acid dịch vị bao nhiêu" in an antacid's usage text and
+     * answered a pregnancy-test question with a stomach medicine.
+     *
+     * Phrases, not tokens: "bao" alone is meaningful ("bao cao su"), "giá" folds
+     * together with "già" ("nước oxy già"). Longest first so the whole phrase goes.
+     */
+    protected const QUERY_PRICE_PHRASES = [
+        'gia bao nhieu', 'het bao nhieu', 'gia ca bao nhieu',
+        'bao nhieu', 'gia bao', 'bn',
+    ];
+
+    /**
+     * Rows fetched per keyword tier before keepGenuineMatches() throws away the
+     * accent-blind LIKE hits. Larger than the 5 shown so a handful of false matches
+     * cannot starve a tier that does hold real ones.
+     */
+    protected const QUERY_MATCH_FETCH_LIMIT = 25;
 
     /**
      * Fallback replies that only say the AI provider is unavailable. They are shown
@@ -2592,7 +2625,9 @@ PROMPT;
             return [];
         }
 
-        $tokens = $this->stripQueryNoiseTokens(explode(' ', $normalized));
+        $tokens = $this->stripQueryNoiseTokens(
+            explode(' ', $this->stripPricePhrases($normalized))
+        );
         $tokenCount = count($tokens);
         if ($tokenCount === 0) {
             return [];
@@ -2621,6 +2656,40 @@ PROMPT;
             static fn (string $token): bool => $token !== ''
                 && !in_array($token, self::QUERY_NOISE_TOKENS, true)
         ));
+    }
+
+    /**
+     * Drop "giá bao nhiêu" and friends from an already-normalized query.
+     *
+     * Matched on the folded text so "gia"/"giá" and "nhieu"/"nhiêu" are one rule, but
+     * cut out of the original by word position: the candidates are searched with LIKE
+     * against real product text, which keeps its diacritics.
+     */
+    protected function stripPricePhrases(string $normalized): string
+    {
+        $words = preg_split('/\s+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if ($words === []) {
+            return '';
+        }
+
+        $folded = array_map(fn (string $word): string => $this->normalizeIntentText($word), $words);
+
+        foreach (self::QUERY_PRICE_PHRASES as $phrase) {
+            $needle = explode(' ', $phrase);
+            $span = count($needle);
+
+            for ($i = 0; $i + $span <= count($folded); $i++) {
+                if (array_slice($folded, $i, $span) !== $needle) {
+                    continue;
+                }
+
+                array_splice($words, $i, $span);
+                array_splice($folded, $i, $span);
+                $i--;
+            }
+        }
+
+        return implode(' ', $words);
     }
 
     /**
@@ -5691,8 +5760,11 @@ PROMPT;
                     $q->whereNotIn('MaSP', $products->pluck('MaSP'));
                 })
                 ->FEFO()
-                ->limit(5 - $products->count())
+                ->limit(self::QUERY_MATCH_FETCH_LIMIT)
                 ->get();
+
+            $partialMatches = $this->keepGenuineMatches($partialMatches, $query)
+                ->take(5 - $products->count());
 
             if ($partialMatches->isNotEmpty()) {
                 $products = $products->concat($partialMatches)->values();
@@ -5794,8 +5866,10 @@ PROMPT;
                         ->orWhere('usage', 'LIKE', "%{$candidate}%");
                 })
                 ->FEFO()
-                ->limit(5)
+                ->limit(self::QUERY_MATCH_FETCH_LIMIT)
                 ->get();
+
+            $matches = $this->keepGenuineMatches($matches, $candidate)->take(5);
 
             if ($matches->isNotEmpty()) {
                 return $matches;
@@ -5803,6 +5877,59 @@ PROMPT;
         }
 
         return collect();
+    }
+
+    /**
+     * Keep only the rows where the phrase really occurs as a whole word.
+     *
+     * LIKE decides accent sensitivity by collation, and MySQL's utf8mb4_unicode_ci
+     * ignores Vietnamese diacritics entirely, so `%thử thai%` matched "hấp thu thải
+     * trừ" inside an antacid's pharmacology text — a pregnancy-test question answered
+     * with a stomach medicine. Substring matching is the other half of it: "bao nhiêu"
+     * hit "trung hòa lượng acid dịch vị bao nhiêu".
+     *
+     * Diacritics are enforced only when the customer typed them, so "dau da day" keeps
+     * finding "đau dạ dày" while "thử thai" no longer matches "thu thải".
+     */
+    protected function keepGenuineMatches(Collection $products, string $phrase): Collection
+    {
+        $phrase = trim($phrase);
+        if ($phrase === '' || $products->isEmpty()) {
+            return $products;
+        }
+
+        return $products
+            ->filter(fn (Product $product): bool => $this->phraseOccursInProduct($product, $phrase))
+            ->values();
+    }
+
+    protected function phraseOccursInProduct(Product $product, string $phrase): bool
+    {
+        foreach ([$product->name, $product->ingredients, $product->usage] as $field) {
+            if ($this->phraseOccursAsWord((string) $field, $phrase)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function phraseOccursAsWord(string $haystack, string $phrase): bool
+    {
+        if (trim($haystack) === '') {
+            return false;
+        }
+
+        // Typed without diacritics: fold both sides, which is what lets a customer
+        // search "dau da day". Typed with them: they have to survive the match.
+        if ($this->normalizeIntentText($phrase) === mb_strtolower($phrase, 'UTF-8')) {
+            return VietnameseText::containsWord($this->normalizeIntentText($haystack), $phrase);
+        }
+
+        return preg_match(
+            '/(?<![\p{L}\p{N}])' . preg_quote(mb_strtolower($phrase, 'UTF-8'), '/') . '(?![\p{L}\p{N}])/u',
+            mb_strtolower($haystack, 'UTF-8')
+        ) === 1;
     }
 
     /**

@@ -232,10 +232,7 @@
                                             <div class="product-info">
                                                 <h4 class="product-name" x-text="product.name"></h4>
                                                 <p class="product-price" x-text="formatCurrency(product.price)"></p>
-                                                <p class="product-stock">{{ __('messages.chatbot.in_stock') }} <span x-text="product.stock_quantity"></span> {{ __('messages.chatbot.products') }}</p>
-                                                <template x-if="product.expiration_date">
-                                                    <p class="product-expiry" x-text="'{{ __('messages.chatbot.expiry') }}' + formatDate(product.expiration_date)"></p>
-                                                </template>
+                                                <p class="product-stock" x-text="product.stock_quantity > 0 ? '{{ __('messages.in_stock') }}' : '{{ __('messages.out_of_stock') }}'"></p>
                                                 <div class="flex items-center gap-2 mt-2">
                                                     <button @click="addToCart(product, 1)" class="btn-add-cart flex-1">
                                                         {{ __('messages.chatbot.add_to_cart') }}

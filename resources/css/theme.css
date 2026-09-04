@@ -24,6 +24,8 @@
     --pharma-shadow: 0 18px 44px rgba(20, 83, 45, 0.1);
     --pharma-shadow-hover: 0 22px 54px rgba(20, 83, 45, 0.16);
     --pharma-motion: 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    /* Same curve on its own, for animations that set their own duration. */
+    --pharma-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* Global Custom Scrollbar */
@@ -133,16 +135,21 @@ body {
     color: #fff;
 }
 
+/* Solid, not rgba(16,185,129,.35): over the light hero that composited to a mint
+   tint carrying white label text at 1.4:1 — the label was barely there, and the
+   button barely separated from the page (1.38:1). #047857 puts white at 5.48:1 and
+   the surface at 5.32:1 against the hero. This is the primary CTA on the site; the
+   glass treatment belongs on the secondary next to it. */
 .btn-glass-success {
-    background: rgba(16, 185, 129, 0.35);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: #047857;
+    border: 1px solid #047857;
     color: #fff;
 }
 
-.btn-glass-success:hover {
-    background: rgba(16, 185, 129, 0.55);
+.btn-glass-success:hover,
+.btn-glass-success:focus {
+    background: #065f46;
+    border-color: #065f46;
     color: #fff;
 }
 

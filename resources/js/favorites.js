@@ -247,7 +247,15 @@ async function refreshProfileFavoritesSection(favoritesRef) {
             return false;
         }
 
-        root.outerHTML = html;
+        // Đọc lại root sau await: hai lần refresh chạy chồng nhau thì lần trước đã
+        // thay node, khiến `root` mất parent và outerHTML ném NoModificationAllowedError.
+        const target = getProfileFavoritesRoot();
+
+        if (!target?.parentNode) {
+            return false;
+        }
+
+        target.outerHTML = html;
 
         applyFavoriteState(favoritesRef, new Set((data.favorites || []).map(String)), {
             profile: {
@@ -354,6 +362,25 @@ function showFavoriteError() {
             timer: 2600,
         });
     }
+}
+
+/** Idempotent: chạy lại được sau khi lưới sản phẩm bị thay tại chỗ, không gắn trùng. */
+function bindFavoriteButtons(favoritesRef) {
+    getFavoriteButtons().forEach((button) => {
+        if (button.dataset.favoriteToggleBound === 'true') {
+            return;
+        }
+
+        button.dataset.favoriteToggleBound = 'true';
+
+        button.addEventListener('click', async () => {
+            try {
+                await toggleFavorite(button, favoritesRef);
+            } catch (error) {
+                showFavoriteError();
+            }
+        });
+    });
 }
 
 function setupProfileRemoveButtons(favoritesRef) {
@@ -472,17 +499,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    getFavoriteButtons().forEach((button) => {
-        button.addEventListener('click', async () => {
-            try {
-                await toggleFavorite(button, favoritesRef);
-            } catch (error) {
-                showFavoriteError();
-            }
-        });
-    });
+    bindFavoriteButtons(favoritesRef);
 
     setupProfileRemoveButtons(favoritesRef);
+
+    // Lưới catalog được thay tại chỗ khi lọc danh mục / đổi trang (catalog-async.js),
+    // nên các nút tim mới cần gắn lại handler và áp lại trạng thái đã lưu.
+    document.addEventListener('pharmacy:content-updated', () => {
+        bindFavoriteButtons(favoritesRef);
+        syncAllFavoriteButtons(favoritesRef.current);
+    });
 
     window.addEventListener('storage', (event) => {
         if (event.key !== FAVORITE_STORAGE_KEY) {

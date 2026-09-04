@@ -18,7 +18,6 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['MaKH', 'MaSP'], 'favorites_user_product_unique');
-            $table->index('MaKH', 'favorites_makh_index');
             $table->index('MaSP', 'favorites_masp_index');
         });
     }

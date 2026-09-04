@@ -86,7 +86,9 @@ return [
     */
 
     'images' => [
-        'max_size' => 5120, // KB
+        // Giới hạn dung lượng và định dạng dùng chung với ảnh đại diện — xem
+        // config/uploads.php. Client kiểm ở cùng ngưỡng nên không lệch với server.
+        'max_size' => env('UPLOAD_MAX_SIZE_KB', 5120), // KB
         'allowed_types' => ['jpeg', 'jpg', 'png'],
         'storage_path' => 'chatbot-uploads',
         'cleanup_after' => 24, // hours
