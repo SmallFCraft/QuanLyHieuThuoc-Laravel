@@ -5,6 +5,7 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/backups
 /vendor
 /docs
 .env
@@ -35,3 +36,9 @@ CLAUDE.md
 .codex/
 .playwright*/
 .gitnexus/
+localhost*
+
+# Impeccable
+.impeccable/
+DESIGN.md
+PRODUCT.md
