@@ -34,6 +34,12 @@ return [
     'step_4' => 'Tiền sử',
     'step_5' => 'Kèm theo',
 
+    // Nhịp hành trình trên trang kết quả: năm câu trả lời dẫn tới kết luận, thay vì
+    // nằm gọn trong một <details> phải bấm mới thấy.
+    'journey_title' => 'Hành trình sàng lọc của anh/chị',
+    'journey_aria' => 'Năm bước anh/chị đã trả lời để ra kết luận này',
+    'journey_outcome' => 'Kết luận',
+
     // Outcome labels
     'outcome_emergency' => 'Cần được cấp cứu',
     'outcome_refer_doctor' => 'Nên đi khám',

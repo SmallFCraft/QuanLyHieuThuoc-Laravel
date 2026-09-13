@@ -13,6 +13,16 @@
     // still writing; `unavailable` means one was due but produced nothing.
     $briefingPending = (bool) $briefingJobId;
     $briefingUnavailable = $briefing === null && !$briefingPending && $briefingExpected;
+
+    // The journey rail's closing node reuses these rather than re-deriving a label,
+    // so the page cannot end up disagreeing with its own outcome card.
+    $outcome = $session->outcome ?? 'pharmacist_review';
+    $outcomeLabels = [
+        'emergency' => __('messages.health.outcome_emergency'),
+        'refer_doctor' => __('messages.health.outcome_refer_doctor'),
+        'pharmacist_review' => __('messages.health.outcome_pharmacist_review'),
+        'self_care' => __('messages.health.outcome_self_care'),
+    ];
 @endphp
 
 <div class="health-page py-4 py-md-5">
@@ -61,6 +71,11 @@
                     'suggestedProducts' => $suggestedProducts,
                 ])
             </div>
+
+            @include('health.partials.journey', [
+                'outcome' => $outcome,
+                'outcomeLabel' => $outcomeLabels[$outcome] ?? '',
+            ])
 
             {{-- The detailed explanation. Placed directly under the outcome because it
                  is what the customer came for: the conclusion alone answers "what",
