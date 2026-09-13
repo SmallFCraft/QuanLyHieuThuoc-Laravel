@@ -90,7 +90,7 @@ class HealthProfileController extends Controller
         foreach ($attributes as $field => $value) {
             $current = $profile->{$field};
 
-            if ($field === 'consented_at') {
+            if ($field === 'consented_at' || $field === 'ai_consent_at') {
                 if (($current === null) !== ($value === null)) {
                     $changed[] = $field;
                 }
