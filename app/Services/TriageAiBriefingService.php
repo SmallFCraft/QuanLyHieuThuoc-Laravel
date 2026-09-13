@@ -23,9 +23,10 @@ use Illuminate\Support\Facades\Log;
  *     catalogue. An id outside that list is dropped, so the model cannot name a
  *     medicine the pharmacy does not stock, and every suggestion still goes through
  *     DrugSafetyService on the way to the page.
- *  3. The customer's own words are sent (the "why" needs them) but the health
- *     profile is not: allergies/chronic conditions/current medications stay behind
- *     the purpose limit they were consented under.
+ *  3. The customer's own words are sent (the "why" needs them). Health profile
+ *     fields reach the provider only through TriageAiContextService, which is the
+ *     single gate: they are included only when the profile carries explicit AI
+ *     consent (`ai_consent_at`), never under the general purpose-limited consent.
  */
 class TriageAiBriefingService extends TriageAiService
 {
@@ -57,7 +58,9 @@ class TriageAiBriefingService extends TriageAiService
 
     public function __construct(
         protected AuditLogService $auditLogService,
+        protected TriageAiContextService $contextService,
     ) {
+        parent::__construct($auditLogService);
     }
 
     protected function configFlag(): string
@@ -176,6 +179,12 @@ class TriageAiBriefingService extends TriageAiService
             $lines[] = '';
             $lines[] = 'Ngưỡng cần đi khám đã có (không được đổi con số):';
             $lines[] = (string) $session->safety_net;
+        }
+
+        $context = $this->contextService->buildContext($session);
+        if ($context !== '') {
+            $lines[] = '';
+            $lines[] = "Ngữ cảnh bệnh nhân & lịch sử:\n" . $context;
         }
 
         $lines[] = '';
