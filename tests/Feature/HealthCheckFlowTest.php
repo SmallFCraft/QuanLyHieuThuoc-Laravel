@@ -184,6 +184,42 @@ class HealthCheckFlowTest extends TestCase
             ->assertSee(__('messages.health.outcome_self_care'));
     }
 
+    /**
+     * The flagged card carries the drug-safety warning, so its amber rail has to
+     * outlive both the hover rule and the print block. Two duplicate
+     * `.health-product--flagged` rules in `@media print` used to cancel the rail:
+     * the later `border-width/border-color` pair won and printed a plain grey box.
+     */
+    public function test_flagged_product_keeps_its_rail_on_hover_and_on_paper(): void
+    {
+        $this->stockProduct('Paracetamol 500mg', 'Paracetamol 500mg', 'Giảm đau đầu, hạ sốt');
+
+        $session = $this->runWizard([
+            1 => 'đau đầu',
+            2 => 'hôm nay',
+            3 => 'chưa dùng gì',
+            4 => 'không có',
+            5 => 'không có thêm',
+        ])->fresh();
+
+        $content = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk()
+            ->getContent();
+
+        // Hover is (0,2,0) and would otherwise repaint the rail with .health-product's grey.
+        $this->assertMatchesRegularExpression(
+            '/\.health-product--flagged:hover\s*\{[^}]*border-left-color:\s*var\(--health-refer\)/s',
+            $content
+        );
+
+        // Exactly one `!important` rail declaration: the old print block had a second
+        // `.health-product--flagged` rule whose `border-width` + `border-color` pair
+        // outranked the rail, so the flagged card printed as a plain grey box.
+        $this->assertSame(1, substr_count($content, 'border-left: 6px solid var(--health-refer) !important'));
+        $this->assertStringNotContainsString('border-color: #374151', $content);
+    }
+
     public function test_reloading_mid_wizard_keeps_the_current_step(): void
     {
         $session = $this->startSession();
