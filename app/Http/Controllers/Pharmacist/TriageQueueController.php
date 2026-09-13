@@ -47,8 +47,12 @@ class TriageQueueController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $pendingCount = TriageSession::pendingPharmacist()->count();
-        $oldestPendingAt = TriageSession::pendingPharmacist()->min('created_at');
+        $pendingStats = TriageSession::pendingPharmacist()
+            ->selectRaw('COUNT(*) as total, MIN(created_at) as oldest')
+            ->first();
+
+        $pendingCount = (int) ($pendingStats?->total ?? 0);
+        $oldestPendingAt = $pendingStats?->oldest;
 
         return view('pharmacist.triage.index', [
             'sessions' => $sessions,
