@@ -133,10 +133,9 @@
         overflow: hidden;
     }
 
-    /* 4px gradient hairline on the leading edge — the same motif the storefront cards
-       use, so these pages read as part of the shop rather than a bolted-on tool. */
-    .health-card::before,
-    .health-outcome::before {
+    /* 4px gradient hairline on the leading edge of regular cards. The outcome card
+       instead uses a 6px left rail to carry severity without clashing. */
+    .health-card::before {
         content: '';
         position: absolute;
         inset-inline: 0;
@@ -145,11 +144,10 @@
         background: linear-gradient(90deg, var(--health-selfcare), var(--health-accent));
     }
 
-    .health-outcome { position: relative; overflow: hidden; }
-
-    .health-outcome--emergency::before { background: linear-gradient(90deg, var(--health-emergency), #EF4444); }
-    .health-outcome--refer_doctor::before { background: linear-gradient(90deg, var(--health-refer), #F59E0B); }
-    .health-outcome--pharmacist_review::before { background: linear-gradient(90deg, var(--health-pharmacist), #22D3EE); }
+    .health-outcome {
+        position: relative;
+        overflow: hidden;
+    }
 
     /* Card entrance, matching the storefront's `storefrontRise` idiom. Cheap and
        one-shot: the page has one card, so there is no stagger to orchestrate. */
@@ -433,12 +431,26 @@
 
     .health-btn-danger:hover { background: var(--health-emergency-hover); color: #fff; }
 
-    /* --- Outcome cards --- */
-    .health-outcome { border-radius: 16px; border-width: 2px; border-style: solid; }
-    .health-outcome--emergency { background: var(--health-emergency-bg); border-color: var(--health-emergency-border); }
-    .health-outcome--refer_doctor { background: var(--health-refer-bg); border-color: var(--health-refer-border); }
-    .health-outcome--pharmacist_review { background: var(--health-pharmacist-bg); border-color: var(--health-pharmacist-border); }
-    .health-outcome--self_care { background: var(--health-selfcare-bg); border-color: var(--health-selfcare-border); }
+    /* --- Outcome cards ---
+       White surface with a 6px severity rail on the leading edge instead of a
+       full-bleed tint: a whole panel of #FEF2F2 behind the conclusion put the
+       "what does this mean" copy in competition with the warning itself. The rail is
+       also the one severity cue that survives a photocopy, where the tint and the
+       title colour both flatten to grey. */
+    .health-outcome {
+        background: #fff;
+        border: 1px solid #E2E8F0;
+        border-left-width: 6px;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+    }
+
+    /* The rail is a boundary, not body text, so 3:1 is the bar; all four clear it
+       (emergency #B91C1C is 6.47:1 against the white card). */
+    .health-outcome--emergency { border-left-color: var(--health-emergency); }
+    .health-outcome--refer_doctor { border-left-color: var(--health-refer); }
+    .health-outcome--pharmacist_review { border-left-color: var(--health-pharmacist); }
+    .health-outcome--self_care { border-left-color: var(--health-selfcare); }
 
     .health-outcome__title--emergency { color: var(--health-emergency); }
     .health-outcome__title--refer_doctor { color: var(--health-refer); }
@@ -496,12 +508,12 @@
        relying on the badge alone. --- */
     .health-brief {
         position: relative;
-        border-radius: var(--health-r-lg);
-        border: 1.5px solid var(--health-pharmacist-border);
+        border-radius: 16px;
+        border: 1px solid rgba(14, 116, 144, 0.2);
         background:
-            radial-gradient(120% 100% at 0% 0%, rgba(3, 105, 161, 0.06), transparent 55%),
+            radial-gradient(120% 100% at 0% 0%, rgba(3, 105, 161, 0.05), transparent 55%),
             #fff;
-        box-shadow: var(--health-shadow);
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
         padding: 24px;
         overflow: hidden;
         animation: healthRise 380ms cubic-bezier(.2, .8, .2, 1) both;
@@ -525,7 +537,7 @@
         align-items: flex-start;
         gap: 14px;
         padding-bottom: 20px;
-        border-bottom: 1px solid var(--health-pharmacist-border);
+        border-bottom: 1px solid #E2E8F0;
     }
 
     /* Section rhythm: 24px between sections, 8px inside one. The old result page put
@@ -534,10 +546,11 @@
     .health-brief__section { margin-top: 24px; }
 
     .health-brief__why {
-        padding: 16px 18px;
-        border-radius: var(--health-r-md);
-        background: var(--health-pharmacist-bg);
-        border: 1px solid var(--health-pharmacist-border);
+        padding: 18px 20px;
+        border-radius: 12px;
+        background: #F0FDF4;
+        border: 1px solid #BBF7D0;
+        color: #14532D;
     }
 
     .health-page .health-brief__section-title {
@@ -722,33 +735,87 @@
     }
 
     /* --- Suggested product cards --- */
-    .health-product {        /* #E5E7EB measured 1.24:1; a card boundary that carries the drug-safety flag
-           has to be visible. */
-        border: 1.5px solid var(--health-line);
-        border-radius: var(--health-r-md);
+    .health-product {        /* Off the design system's #E2E8F0 hairline on purpose. Measured on white:
+           #E2E8F0 is 1.23:1 and #CBD5E1 is 1.48:1, both under the 3:1 that a boundary
+           this card carries has to clear — the same drug-safety flag rides on it. #6B7280
+           is 4.83:1 and stays a real edge at a glance and in greyscale. */
+        border: 1px solid var(--health-line);
+        border-radius: 14px;
         padding: 16px;
         background: #fff;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
         overflow-wrap: anywhere;
-        transition: transform var(--health-motion), box-shadow var(--health-motion);
+        transition: transform var(--health-motion), box-shadow var(--health-motion), border-color var(--health-motion);
     }
 
     .health-product:hover {
-        transform: translateY(-3px);
-        box-shadow: var(--health-shadow);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        border-color: #4B5563; /* 7.56:1 — the hover state only ever darkens the edge */
     }
 
     /* Border + icon + text together, so the flag survives greyscale printing and
-       colour-blind viewing. */
+       colour-blind viewing. Keeps its own tint rather than the new white surface: this
+       is the one card whose background is a warning, not decoration. */
     .health-product--flagged {
         border-color: var(--health-refer-border);
-        background: var(--health-refer-bg);
+        border-left: 6px solid var(--health-refer);
+        background: #FFFBEB;
     }
 
     .health-product__price {
-        font-weight: 600;
+        font-size: 1.0625rem;
+        font-weight: 700;
         color: #047857;
         /* Tabular figures so prices line up between the two columns. */
         font-variant-numeric: tabular-nums;
+    }
+
+    /* --- Product usage clamp and disclosure ---
+       `products.usage` is the crawled clinical monograph: 3,000+ characters on a drug
+       like Smecgim, which dwarfed the card it sat in. The summary above the toggle is
+       the dose line; everything after it is reference material the reader opts into.
+       Native <details>, so it works with JavaScript disabled and needs no ARIA. */
+    .health-product__usage-details { margin-top: 4px; }
+
+    .health-product__usage-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--health-selfcare);
+        cursor: pointer;
+        list-style: none;
+        padding: 2px 0;
+        user-select: none;
+        transition: color var(--health-motion);
+    }
+
+    .health-product__usage-toggle::-webkit-details-marker { display: none; }
+
+    .health-product__usage-toggle:hover {
+        color: #065F46;
+        text-decoration: underline;
+    }
+
+    .health-product__usage-chevron {
+        font-size: 0.75rem;
+        transition: transform 200ms ease;
+    }
+
+    .health-product__usage-details[open] .health-product__usage-chevron { transform: rotate(180deg); }
+
+    .health-product__usage-full {
+        max-height: 200px;
+        overflow-y: auto;
+        white-space: pre-line;
+        line-height: 1.6;
+        font-size: 0.8125rem;
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: var(--health-r-sm);
+        padding: 10px;
     }
 
     /* Fixed aspect box: the space is reserved before the photo loads, so a slow image
@@ -1082,6 +1149,36 @@
             border: 1px solid #9CA3AF !important;
             background: #fff !important;
             backdrop-filter: none !important;
+        }
+
+        /* The blanket border above flattens the severity rail. On paper the rail is
+           the only severity cue left once the tint and the title colour are gone, so
+           it comes back — wider, and in its own colour, on the leading edge. */
+        .health-outcome {
+            border-left-width: 8px !important;
+        }
+
+        .health-outcome--emergency { border-left-color: var(--health-emergency) !important; }
+        .health-outcome--refer_doctor { border-left-color: var(--health-refer) !important; }
+        .health-outcome--pharmacist_review { border-left-color: var(--health-pharmacist) !important; }
+        .health-outcome--self_care { border-left-color: var(--health-selfcare) !important; }
+
+        .health-product--flagged {
+            border-left: 6px solid var(--health-refer) !important;
+            background: #fff !important;
+        }
+
+        /* Every disclosure is open on paper: nobody can click a chevron on a printout,
+           and the clinic needs the dosage line and the warnings in full. */
+        .health-product__usage-details { display: block !important; }
+        .health-product__usage-toggle { display: none !important; }
+        .health-product__usage-full {
+            display: block !important;
+            max-height: none !important;
+            overflow: visible !important;
+            border: none !important;
+            padding: 0 !important;
+            background: transparent !important;
         }
 
         /* The briefing's tinted "why" panel prints as a grey slab. */
