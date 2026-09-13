@@ -110,4 +110,63 @@ class HealthCheckResultLayoutTest extends TestCase
         // needs no second rule set.
         $this->assertStringContainsString('.health-journey__dot', $content);
     }
+
+    public function test_the_page_groups_its_sections_into_tabs(): void
+    {
+        $session = $this->completedSession();
+
+        $response = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk();
+
+        $response->assertSee('role="tablist"', false);
+        $response->assertSee('tab-pane', false);
+        $response->assertSee('hub-briefing', false);
+        $response->assertSee('hub-audit', false);
+
+        // The audit trail is still on the page, just inside its own panel.
+        $response->assertSee(__('messages.health.basis_title'));
+    }
+
+    public function test_an_emergency_page_never_hides_content_behind_a_tab(): void
+    {
+        $session = $this->completedSession([
+            'outcome' => 'emergency',
+            'advice_given' => null,
+            'safety_net' => null,
+            'collected_data' => ['raw_symptom_text' => 'Đau ngực dữ dội'],
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk();
+
+        // A red-flag page shows everything at once: the 115 action, the red flags
+        // and the audit trail all in view with no control between them.
+        $response->assertSee('tel:115', false);
+        $response->assertSee(__('messages.health.outcome_emergency'));
+        $response->assertDontSee('role="tablist"', false);
+    }
+
+    public function test_the_products_tab_only_exists_where_products_can(): void
+    {
+        $selfCare = $this->completedSession();
+
+        $this->actingAs($this->user)
+            ->get(route('health.result', $selfCare->MaSL))
+            ->assertOk()
+            ->assertSee('hub-products', false);
+
+        // A referral says outright that no medicine matches, so offering a products
+        // tab would contradict the conclusion directly above it.
+        $referral = $this->completedSession([
+            'outcome' => 'refer_doctor',
+            'collected_data' => ['raw_symptom_text' => 'sốt cao 3 ngày'],
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('health.result', $referral->MaSL))
+            ->assertOk()
+            ->assertDontSee('hub-products', false);
+    }
 }

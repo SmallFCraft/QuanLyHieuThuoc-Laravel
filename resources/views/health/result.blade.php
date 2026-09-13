@@ -77,23 +77,76 @@
                 'outcomeLabel' => $outcomeLabels[$outcome] ?? '',
             ])
 
-            {{-- The detailed explanation. Placed directly under the outcome because it
-                 is what the customer came for: the conclusion alone answers "what",
-                 this answers "why" and "what now". --}}
-            @if ($briefing !== null)
-                @include('health.partials.briefing', [
-                    'briefing' => $briefing,
-                    'flaggedProducts' => $safety['flagged'] ?? [],
-                ])
-            @elseif ($briefingPending)
-                @include('health.partials.briefing-pending')
-                {{-- Pre-rendered hidden: when the poller learns the job died there is
-                     nothing left to fetch, so it unhides this instead of emptying the
-                     slot. --}}
-                @include('health.partials.briefing-unavailable', ['hidden' => true])
-            @elseif ($briefingUnavailable)
-                @include('health.partials.briefing-unavailable')
-            @endif
+            @php
+                // The page used to be one six-screen column: briefing, then two
+                // collapsed details, then the buttons. Grouped here so the reader
+                // stops where they are done rather than where the scroll runs out.
+                //
+                // A tab is only offered when it has content. The products tab is
+                // self-care only, matching outcome.blade.php, which states outright
+                // that no medicine matches for the other outcomes.
+                $hasProductsTab = ($session->outcome ?? '') === 'self_care';
+                $tabs = [['id' => 'briefing', 'icon' => 'bi-stars', 'label' => __('messages.health.briefing_title')]];
+
+                if ($hasProductsTab) {
+                    $tabs[] = ['id' => 'products', 'icon' => 'bi-capsule', 'label' => __('messages.health.hub_tab_products')];
+                }
+
+                $tabs[] = ['id' => 'audit', 'icon' => 'bi-list-check', 'label' => __('messages.health.hub_tab_audit')];
+
+                // An emergency page renders flat. Bootstrap hides every inactive pane,
+                // and a red-flag page must not put the reason behind a control — the
+                // 115 button and the red flags are the whole page.
+                $useTabs = !$session->isEmergency();
+            @endphp
+
+            <div class="health-hub mt-4" @if ($useTabs) data-triage-hub @endif>
+                @if ($useTabs)
+                    <nav class="health-hub__tabbar health-no-print" role="tablist" aria-label="{{ __('messages.health.hub_aria') }}">
+                        @foreach ($tabs as $index => $tab)
+                            <a href="#hub-{{ $tab['id'] }}"
+                               class="health-hub__tab {{ $index === 0 ? 'active' : '' }}"
+                               data-bs-toggle="pill"
+                               role="tab"
+                               aria-selected="{{ $index === 0 ? 'true' : 'false' }}">
+                                <i class="bi {{ $tab['icon'] }}" aria-hidden="true"></i>
+                                <span>{{ $tab['label'] }}</span>
+                            </a>
+                        @endforeach
+                    </nav>
+                @endif
+
+                <div class="health-hub__panels">
+                    <div class="tab-pane {{ $useTabs ? 'fade show active' : '' }}" id="hub-briefing" role="tabpanel">
+                        @if ($briefing !== null)
+                            @include('health.partials.briefing', [
+                                'briefing' => $briefing,
+                                'flaggedProducts' => $safety['flagged'] ?? [],
+                            ])
+                        @elseif ($briefingPending)
+                            @include('health.partials.briefing-pending')
+                            {{-- Pre-rendered hidden: when the poller learns the job died there is
+                                 nothing left to fetch, so it unhides this instead of emptying the
+                                 slot. --}}
+                            @include('health.partials.briefing-unavailable', ['hidden' => true])
+                        @elseif ($briefingUnavailable)
+                            @include('health.partials.briefing-unavailable')
+                        @endif
+                    </div>
+
+                    @if ($hasProductsTab)
+                        <div class="tab-pane {{ $useTabs ? 'fade' : '' }}" id="hub-products" role="tabpanel">
+                            @include('health.partials.outcome-products', [
+                                'session' => $session,
+                                'safety' => $safety,
+                                'hasProfile' => $hasProfile,
+                                'briefing' => $briefing,
+                                'suggestedProducts' => $suggestedProducts,
+                            ])
+                        </div>
+                    @endif
+
+                    <div class="tab-pane {{ $useTabs ? 'fade' : '' }}" id="hub-audit" role="tabpanel">
 
             {{-- Why this conclusion. Every value here is already persisted on the
                  session; nothing is re-derived and no medical content is invented.
@@ -218,6 +271,9 @@
                     </div>
                 </details>
             @endif
+                    </div>
+                </div>
+            </div>
 
             <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mt-4 health-no-print">
                 <button type="button" class="health-btn health-btn-ghost" onclick="window.print()">
