@@ -169,4 +169,39 @@ class HealthCheckResultLayoutTest extends TestCase
             ->assertOk()
             ->assertDontSee('hub-products', false);
     }
+
+    public function test_a_browser_without_javascript_sees_every_panel(): void
+    {
+        $session = $this->completedSession();
+
+        $content = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk()
+            ->getContent();
+
+        // Bootstrap hides a `.tab-pane` without `.show active`, so a visitor whose
+        // script never runs would see one panel and a tab bar that does nothing.
+        // The reading path cannot depend on a click.
+        $this->assertMatchesRegularExpression(
+            '/html:not\(\.js\)[^{]*\.health-hub__panels[^{]*\{[^}]*display:\s*block/s',
+            $content
+        );
+    }
+
+    public function test_the_print_block_shows_every_panel_and_drops_the_tab_bar(): void
+    {
+        $session = $this->completedSession();
+
+        $content = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk()
+            ->getContent();
+
+        $printBlock = substr($content, (int) strrpos($content, '@media print'));
+        $this->assertStringContainsString('.health-hub__tabbar { display: none !important; }', $printBlock);
+        $this->assertMatchesRegularExpression(
+            '/\.health-hub__panels\s+\.tab-pane[^{]*\{[^}]*display:\s*block\s*!important/s',
+            $printBlock
+        );
+    }
 }
