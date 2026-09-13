@@ -763,6 +763,14 @@
         background: #FFFBEB;
     }
 
+    /* `.health-product:hover` is a two-class selector, so it outranks the rule above
+       and would repaint the amber rail grey on pointerover — on the one card whose
+       rail is a drug-safety signal. Restated here at matching weight. */
+    .health-product--flagged:hover {
+        border-color: var(--health-refer);
+        border-left-color: var(--health-refer);
+    }
+
     .health-product__price {
         font-size: 1.0625rem;
         font-weight: 700;
@@ -1128,8 +1136,7 @@
         .health-no-print { display: none !important; }
 
         /* The gradient hairline prints as a grey band across every card. */
-        .health-card::before,
-        .health-outcome::before { display: none !important; }
+        .health-card::before { display: none !important; }
 
         .health-trail-wrap {
             background: #fff !important;
@@ -1164,6 +1171,7 @@
         .health-outcome--self_care { border-left-color: var(--health-selfcare) !important; }
 
         .health-product--flagged {
+            border: 2px solid #374151 !important;
             border-left: 6px solid var(--health-refer) !important;
             background: #fff !important;
         }
@@ -1213,14 +1221,6 @@
             color: #000 !important;
             background: #fff !important;
             border: 2px solid #000 !important;
-        }
-
-        /* Flagged medicines must stay distinguishable on paper, where the tint is
-           printed white. */
-        .health-product--flagged {
-            border-width: 2px !important;
-            border-color: #374151 !important;
-            background: #fff !important;
         }
 
         /* The pharmacist-written original must be on the printout taken to the
