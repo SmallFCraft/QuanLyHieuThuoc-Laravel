@@ -283,12 +283,15 @@
                         fetch(job.url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                             .then((response) => (response.ok ? response.json() : Promise.reject(response.status)))
                             .then((state) => {
-                                if (state.status === 'done') {
+                                if (state.status === 'done' || state.stranded) {
+                                    // A finished job or a worker that never started: reload so the
+                                    // finished columns paint, or so the controller can run the
+                                    // synchronous fallback inline matching triage.js.
                                     window.location.reload();
                                     return;
                                 }
 
-                                if (state.status === 'failed' || state.stranded) {
+                                if (state.status === 'failed') {
                                     stop();
                                     return;
                                 }

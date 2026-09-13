@@ -13,7 +13,14 @@ class AiJob extends Model
     public const KIND_TRIAGE_ADVICE = 'triage_advice';
     public const KIND_TRIAGE_BRIEFING = 'triage_briefing';
 
-    /** Never picked up by a worker after this long means no worker is running. */
+    /**
+     * Never picked up by a worker after this long means no worker is running.
+     *
+     * Measured against pickup, not execution: a worker claims a job within a second
+     * and flips it to `running`, and `isStranded()` returns false for anything not
+     * `queued`. So a job still queued after 12s is one nobody is coming for — however
+     * long the provider call itself then takes.
+     */
     public const SYNC_FALLBACK_SECONDS = 12;
 
     /**
