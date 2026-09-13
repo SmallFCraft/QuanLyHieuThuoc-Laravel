@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\UserHealthProfile;
 use Database\Seeders\MedicalKnowledgeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -290,6 +291,69 @@ class PharmacistQueueTest extends TestCase
             ->assertSessionHasErrors('pharmacist_note');
 
         $this->assertNull($session->fresh()->pharmacist_note);
+    }
+
+    // --- Past sessions on the detail page ---
+
+    public function test_show_loads_recent_sessions_for_same_customer(): void
+    {
+        $past = $this->makeSession('reviewed', ['raw_symptom_text' => 'Triệu chứng cũ']);
+        $current = $this->pendingSession(['raw_symptom_text' => 'Triệu chứng mới']);
+
+        $this->actingAs($this->pharmacist)
+            ->get(route('pharmacist.triage.show', $current->MaSL))
+            ->assertOk()
+            ->assertViewHas('pastSessions', fn ($sessions) => $sessions->contains('MaSL', $past->MaSL));
+    }
+
+    public function test_show_excludes_other_customers_past_sessions(): void
+    {
+        $stranger = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $strangerSession = TriageSession::create([
+            'MaKH' => $stranger->MaKH,
+            'status' => 'reviewed',
+            'collected_data' => ['raw_symptom_text' => 'Ca của người khác'],
+        ]);
+
+        $current = $this->pendingSession();
+
+        $this->actingAs($this->pharmacist)
+            ->get(route('pharmacist.triage.show', $current->MaSL))
+            ->assertOk()
+            ->assertViewHas('pastSessions', fn ($sessions) => !$sessions->contains('MaSL', $strangerSession->MaSL));
+    }
+
+    public function test_show_excludes_sessions_never_handed_to_a_pharmacist(): void
+    {
+        $inProgress = $this->makeSession('in_progress', ['raw_symptom_text' => 'Chưa trả lời xong']);
+        $current = $this->pendingSession();
+
+        $this->actingAs($this->pharmacist)
+            ->get(route('pharmacist.triage.show', $current->MaSL))
+            ->assertOk()
+            ->assertViewHas('pastSessions', fn ($sessions) => !$sessions->contains('MaSL', $inProgress->MaSL));
+    }
+
+    // Note: triage_sessions.MaKH is NOT NULL, so the empty-collection branch of
+    // show() is unreachable through the DB and is left untested.
+
+    // --- Queue metrics ---
+
+    public function test_index_reports_pending_metrics_from_the_queue(): void
+    {
+        $older = $this->pendingSession([], now()->subHours(4));
+        $this->pendingSession([], now()->subMinutes(3));
+        $this->makeSession('reviewed', [], now()->subDay());
+
+        $this->actingAs($this->pharmacist)
+            ->get(route('pharmacist.triage.index'))
+            ->assertOk()
+            ->assertViewHas('pendingCount', 2)
+            ->assertViewHas(
+                'oldestPendingAt',
+                fn ($oldest) => $oldest instanceof Carbon
+                    && $oldest->equalTo($older->created_at)
+            );
     }
 
     // --- Helpers ---

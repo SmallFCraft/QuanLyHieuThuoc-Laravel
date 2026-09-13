@@ -83,8 +83,20 @@ class TriageQueueController extends Controller
             );
         }
 
+        // Same REVIEWABLE_STATUSES as the current case: a session still in progress
+        // was never handed to the pharmacist team, so it is not ours to read here.
+        $pastSessions = $session->MaKH
+            ? TriageSession::where('MaKH', $session->MaKH)
+                ->where('MaSL', '!=', $session->MaSL)
+                ->whereIn('status', self::REVIEWABLE_STATUSES)
+                ->latest('created_at')
+                ->limit(5)
+                ->get()
+            : collect();
+
         return view('pharmacist.triage.show', [
             'session' => $session,
+            'pastSessions' => $pastSessions,
             'answers' => $this->labelledAnswers($session),
             'skipped' => $this->labelledSkips($session),
             'symptomNames' => $this->symptomNames($session),
