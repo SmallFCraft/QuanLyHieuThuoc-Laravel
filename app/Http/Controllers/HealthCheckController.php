@@ -745,6 +745,12 @@ class HealthCheckController extends Controller
      * `ai_status` stays null until the rewrite finishes, so a still-queued job is the
      * only signal that something is coming. Bookmarking or reloading after it lands
      * finds no pending job and renders the finished page.
+     *
+     * A job nobody picked up is retired here and rewritten in this request, the same
+     * way the briefing does it. Both halves are needed together: the result page
+     * reloads when it sees `stranded`, so leaving this job queued would reload
+     * forever, and leaving it to the poller would keep showing the waiting banner for
+     * a worker that is never coming.
      */
     protected function pendingAdviceJob(TriageSession $session): ?AiJob
     {
@@ -752,12 +758,35 @@ class HealthCheckController extends Controller
             return null;
         }
 
-        return AiJob::where('MaKH', $session->MaKH)
+        $job = AiJob::where('MaKH', $session->MaKH)
             ->where('kind', AiJob::KIND_TRIAGE_ADVICE)
             ->whereIn('status', ['queued', 'running'])
             ->where('payload->MaSL', $session->MaSL)
             ->latest('MaAJ')
             ->first();
+
+        if ($job === null || !$job->isStranded()) {
+            return $job;
+        }
+
+        $advice = app(TriageAiAdviceService::class);
+
+        if (!$advice->isEligible($session)) {
+            $this->aiJobs->abandon($job, 'session not eligible for an advice rewrite');
+
+            return null;
+        }
+
+        try {
+            // rewrite() records its own ai_status and swallows provider failures, so
+            // this reports whether the seam ran, matching ProcessTriageAdviceRewrite.
+            $advice->rewrite($session);
+            $this->aiJobs->markDone($job, ['ai_status' => $session->refresh()->ai_status]);
+        } catch (\Throwable $exception) {
+            $this->aiJobs->markFailed($job, $exception->getMessage());
+        }
+
+        return null;
     }
 
     /**
