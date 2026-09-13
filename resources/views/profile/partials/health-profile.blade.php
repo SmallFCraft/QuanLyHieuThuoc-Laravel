@@ -2,6 +2,13 @@
     $healthProfile = $user->healthProfile;
     $tagValue = fn (string $field) => old($field, $healthProfile?->{$field} ?? []);
     $hasConsent = (bool) $healthProfile?->hasConsented();
+
+    // After a validation redirect the ticket is in `_old_input`, and a missing checkbox
+    // key there means the user left it unticked. Falling back to the stored profile
+    // would silently re-tick a box the user just cleared.
+    $hasOldInput = session()->has('_old_input');
+    $consentChecked = old('consent', $hasConsent && ! $hasOldInput);
+    $aiConsentChecked = old('ai_consent', (bool) $healthProfile?->hasAiConsent() && ! $hasOldInput);
 @endphp
 
 <div class="profile-card health-profile-card mb-3" id="health-profile">
@@ -162,7 +169,7 @@
                                id="health_consent"
                                name="consent"
                                value="1"
-                               @checked(old('consent', $hasConsent))
+                               @checked($consentChecked)
                                aria-describedby="health_consent_desc">
                         <label class="form-check-label" for="health_consent">
                             <span class="fw-semibold text-gray-900 d-block mb-1">{{ __('messages.health_profile.consent_title') }}</span>
@@ -184,7 +191,7 @@
                                id="health_ai_consent"
                                name="ai_consent"
                                value="1"
-                               @checked(old('ai_consent', (bool) $healthProfile?->hasAiConsent()))
+                               @checked($aiConsentChecked)
                                aria-describedby="health_ai_consent_desc health_ai_consent_hint">
                         <label class="form-check-label" for="health_ai_consent">
                             <span class="fw-semibold text-gray-900 d-block mb-1">{{ __('messages.health_profile.ai_consent_title') }}</span>
