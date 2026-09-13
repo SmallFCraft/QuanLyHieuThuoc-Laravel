@@ -27,6 +27,12 @@ class HealthProfileController extends Controller
             ? ($profile?->consented_at ?? now())
             : null;
 
+        // Separate from consented_at: an unticked box is a real withdrawal of the
+        // AI consent, even when the safety-warning consent below stays ticked.
+        $attributes['ai_consent_at'] = $request->boolean('ai_consent')
+            ? ($profile?->ai_consent_at ?? now())
+            : null;
+
         $changed = $this->changedFields($profile, $attributes);
 
         if ($profile) {

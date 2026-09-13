@@ -75,6 +75,7 @@ class HealthProfileRequest extends FormRequest
             'weight_kg' => ['nullable', 'numeric', 'min:1', 'max:500'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'consent' => ['nullable', 'boolean'],
+            'ai_consent' => ['nullable', 'boolean'],
         ];
     }
 
