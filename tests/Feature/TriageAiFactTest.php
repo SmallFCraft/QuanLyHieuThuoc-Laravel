@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\TriageSession;
 use App\Models\User;
 use App\Models\UserHealthProfile;
+use App\Services\TriageAiFactService;
 use Database\Seeders\MedicalKnowledgeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -74,7 +75,7 @@ class TriageAiFactTest extends TestCase
     }
 
     /**
-     * @param array<int, string> $answers step => answer
+     * @param  array<int, string>  $answers  step => answer
      */
     protected function runWizard(array $answers): TriageSession
     {
@@ -422,6 +423,223 @@ class TriageAiFactTest extends TestCase
             $this->assertStringNotContainsString('Anh/chị có bệnh nền, dị ứng thuốc', $body);
             // And still no profile values, per test_the_prompt_carries_no_health_profile_data.
             $this->assertStringNotContainsString('tiểu đường', $body);
+
+            return true;
+        });
+    }
+
+    /**
+     * The follow-up round must not ask for what the system already holds.
+     *
+     * Inspected through the stored round, not by counting provider calls: the point is
+     * what a customer would be shown, and that only exists after the service has built
+     * and filtered the questions.
+     */
+    public function test_a_known_birth_date_suppresses_the_age_question(): void
+    {
+        config()->set('chatbot.ai.triage.clarify_round', true);
+        $this->stockProduct();
+
+        $this->fakeFacts([
+            'symptom_codes' => ['headache'],
+            'needs_more_info' => true,
+            'missing_questions' => [
+                'Anh/chị năm nay bao nhiêu tuổi ạ?',
+                'Cơn đau đầu ở vị trí nào ạ?',
+            ],
+        ]);
+
+        $session = $this->runWizard($this->mildAdultAnswers());
+
+        $this->assertSame(['Cơn đau đầu ở vị trí nào ạ?'], $session->pendingClarifyQuestions());
+    }
+
+    /**
+     * A stated patient age outranks the account owner's birth_date
+     * (MedicalTriageService::resolveAge), so when the complaint is about a child the
+     * account age is not a known fact and the question must survive.
+     */
+    /**
+     * Byte-level regression guard for case 4: with nothing on file, the prompt this
+     * seam sends must be exactly what it sent before the suppression feature existed.
+     *
+     * The literal below was captured from the pre-change method; the assertion is
+     * deliberately `assertSame` on the whole string, because "no known-facts block
+     * appears" would still pass if the block were emitted empty.
+     */
+    public function test_the_prompt_for_an_unknown_customer_is_byte_identical(): void
+    {
+        $session = new TriageSession([
+            'collected_data' => [
+                'raw_symptom_text' => 'đau đầu',
+                'duration_days' => 1,
+                'medications_taken' => 'chưa dùng gì',
+                'history' => 'không có',
+                'skipped' => [],
+            ],
+            'ai_clarify_rounds' => 0,
+        ]);
+
+        $method = new \ReflectionMethod(TriageAiFactService::class, 'buildUserMessage');
+        $service = app(TriageAiFactService::class);
+        $built = $method->invoke(
+            $service,
+            $session,
+            'đau đầu từ hôm qua',
+            [['question' => 'Triệu chứng', 'answer' => 'đau đầu']]
+        );
+
+        $this->assertSame(
+            "MÔ TẢ CỦA NGƯỜI DÙNG:\n"
+            ."đau đầu từ hôm qua\n"
+            ."\n"
+            ."CÁC CÂU HỎI CỐ ĐỊNH ĐÃ HỎI VÀ TRẢ LỜI (không hỏi lại những điều này):\n"
+            ."- Hỏi: Triệu chứng\n  Đáp: đau đầu",
+            $built
+        );
+
+        // Anti-vacuity: the same call for a customer whose birth_date IS known must
+        // produce a different string, or the assertion above proves nothing.
+        $session->MaKH = $this->user->MaKH;
+        $known = $method->invoke(
+            $service,
+            $session,
+            'đau đầu từ hôm qua',
+            [['question' => 'Triệu chứng', 'answer' => 'đau đầu']],
+            ['Tuổi người bệnh' => '34 tuổi']
+        );
+
+        $this->assertNotSame($built, $known);
+    }
+
+    public function test_a_child_complaint_still_gets_asked_the_patient_age(): void
+    {
+        config()->set('chatbot.ai.triage.clarify_round', true);
+        $this->stockProduct();
+
+        $this->fakeFacts([
+            'symptom_codes' => ['fever'],
+            'needs_more_info' => true,
+            'missing_questions' => ['Cháu năm nay bao nhiêu tuổi ạ?'],
+        ]);
+
+        $session = $this->runWizard([
+            1 => 'con tôi bị sốt từ tối qua',
+            2 => 'hôm nay',
+            3 => 'chưa dùng gì',
+            4 => 'không có',
+            5 => 'không có thêm',
+        ]);
+
+        $this->assertSame(['Cháu năm nay bao nhiêu tuổi ạ?'], $session->pendingClarifyQuestions());
+    }
+
+    public function test_ai_consented_allergies_suppress_the_allergy_question(): void
+    {
+        config()->set('chatbot.ai.triage.clarify_round', true);
+        $this->stockProduct();
+
+        UserHealthProfile::create([
+            'MaKH' => $this->user->MaKH,
+            'allergies' => ['penicillin'],
+            'consented_at' => now(),
+            'ai_consent_at' => now(),
+        ]);
+
+        $this->fakeFacts([
+            'symptom_codes' => ['headache'],
+            'needs_more_info' => true,
+            'missing_questions' => [
+                'Anh/chị có dị ứng với thuốc nào không ạ?',
+                'Cơn đau kéo dài bao lâu ạ?',
+            ],
+        ]);
+
+        $session = $this->runWizard($this->mildAdultAnswers());
+
+        $this->assertSame(['Cơn đau kéo dài bao lâu ạ?'], $session->pendingClarifyQuestions());
+
+        Http::assertSent(function ($request) {
+            $body = $this->promptBody($request);
+
+            // The topic is announced so the model stops asking, but the encrypted
+            // medical values themselves never leave the app on this seam: TriageAiDraft
+            // and TriageAiBriefingService are where consented values belong.
+            $this->assertStringContainsString('Dị ứng', $body);
+            $this->assertStringNotContainsString('penicillin', $body);
+
+            return true;
+        });
+    }
+
+    public function test_a_profile_without_ai_consent_suppresses_nothing_and_leaks_nothing(): void
+    {
+        config()->set('chatbot.ai.triage.clarify_round', true);
+        $this->stockProduct();
+
+        // consented_at only: that consent is purpose-limited to contraindication
+        // checks, not to steering a third-party model prompt.
+        UserHealthProfile::create([
+            'MaKH' => $this->user->MaKH,
+            'allergies' => ['penicillin'],
+            'chronic_conditions' => ['loét dạ dày'],
+            'consented_at' => now(),
+        ]);
+
+        $this->fakeFacts([
+            'symptom_codes' => ['headache'],
+            'needs_more_info' => true,
+            'missing_questions' => [
+                'Anh/chị có dị ứng với thuốc nào không ạ?',
+                'Anh/chị có bệnh nền gì không ạ?',
+            ],
+        ]);
+
+        $session = $this->runWizard($this->mildAdultAnswers());
+
+        $this->assertSame([
+            'Anh/chị có dị ứng với thuốc nào không ạ?',
+            'Anh/chị có bệnh nền gì không ạ?',
+        ], $session->pendingClarifyQuestions());
+
+        Http::assertSent(function ($request) {
+            $body = $this->promptBody($request);
+
+            $this->assertStringNotContainsString('penicillin', $body);
+            $this->assertStringNotContainsString('loét dạ dày', $body);
+            $this->assertStringNotContainsString('Dị ứng', $body);
+            $this->assertStringNotContainsString('Bệnh nền', $body);
+
+            return true;
+        });
+    }
+
+    public function test_with_nothing_on_file_the_round_is_untouched(): void
+    {
+        config()->set('chatbot.ai.triage.clarify_round', true);
+        $this->stockProduct();
+
+        // No birth_date, no health profile: the suppression feature must be invisible.
+        $this->user->forceFill(['birth_date' => null])->save();
+
+        $questions = [
+            'Anh/chị năm nay bao nhiêu tuổi ạ?',
+            'Anh/chị có dị ứng thuốc gì không ạ?',
+            'Anh/chị đang dùng thuốc gì khác không ạ?',
+        ];
+
+        $this->fakeFacts([
+            'symptom_codes' => ['headache'],
+            'needs_more_info' => true,
+            'missing_questions' => $questions,
+        ]);
+
+        $session = $this->runWizard($this->mildAdultAnswers());
+
+        $this->assertSame($questions, $session->pendingClarifyQuestions());
+
+        Http::assertSent(function ($request) {
+            $this->assertStringNotContainsString('THÔNG TIN ĐÃ CÓ', $this->promptBody($request));
 
             return true;
         });

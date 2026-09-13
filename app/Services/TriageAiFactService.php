@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\TriageSession;
+use App\Models\UserHealthProfile;
+use App\Support\VietnameseText;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -27,6 +29,31 @@ class TriageAiFactService extends TriageAiService
 
     private const MAX_CLARIFY_LENGTH = 200;
 
+    /**
+     * Folded-regex keyword per topic the account may already hold an answer to.
+     *
+     * A pattern per topic rather than a phrase list, because the model words the same
+     * question differently every round ("Anh/chị năm nay bao nhiêu tuổi ạ?" vs "Cho em
+     * biết tuổi của người bệnh"). "đã dùng thuốc gì cho triệu chứng này" is deliberately
+     * NOT the medication topic: profile medications are what the customer takes daily,
+     * not what they took for this complaint.
+     */
+    private const TOPIC_PATTERNS = [
+        'age' => '/(?<![a-z0-9])(tuoi|nam sinh|ngay sinh|sinh nam)(?![a-z0-9])/',
+        'allergies' => '/(?<![a-z0-9])di ung(?![a-z0-9])/',
+        'chronic' => '/(benh nen|benh man tinh|man tinh|benh dai dang)/',
+        'medications' => '/(dang dung thuoc|thuoc dang dung|thuoc gi khac|thuoc nao khac)/',
+    ];
+
+    /**
+     * Asking about a child's age must survive: a stated patient age outranks the
+     * account owner's birth_date (see MedicalTriageService::resolveAge), so when the
+     * complaint is about a child the account age is not a known fact at all.
+     *
+     * "còn" folds to "con" and trips this, which only ever keeps a question.
+     */
+    private const CHILD_MARKERS = '/(?<![a-z0-9])(be|con|em|tre|chau|so sinh)(?![a-z0-9])/';
+
     protected function configFlag(): string
     {
         return 'fact_extraction';
@@ -44,8 +71,8 @@ class TriageAiFactService extends TriageAiService
      * Validated facts proposed by the model, or null when disabled, unavailable, or
      * unusable.
      *
-     * @param array<int, string> $allowedCodes Active `medical_symptoms.code` values.
-     *                                        Passed in so this class adds no query.
+     * @param  array<int, string>  $allowedCodes  Active `medical_symptoms.code` values.
+     *                                            Passed in so this class adds no query.
      * @return array{
      *     symptom_codes: array<int, string>,
      *     duration_days: int|null,
@@ -60,18 +87,24 @@ class TriageAiFactService extends TriageAiService
      */
     public function extract(TriageSession $session, string $text, array $allowedCodes, array $wizardTranscript = []): ?array
     {
-        if (!$this->isEnabled() || trim($text) === '') {
+        if (! $this->isEnabled() || trim($text) === '') {
             return null;
         }
 
         $startedAt = microtime(true);
+
+        // The account facts this seam may reuse, and the wizard answers that must not
+        // be re-asked either. Both are read before the call; the filtering below uses
+        // the same list, so a topic cannot be dropped from the prompt but still asked,
+        // or vice versa.
+        $known = $this->knownFacts($session, $text);
 
         try {
             $provider = $this->provider();
 
             $response = $this->callProvider($provider, [
                 ['role' => 'system', 'content' => $this->systemPrompt()],
-                ['role' => 'user', 'content' => $this->buildUserMessage($session, $text, $wizardTranscript)],
+                ['role' => 'user', 'content' => $this->buildUserMessage($session, $text, $wizardTranscript, $known['prompt'])],
             ], [
                 'functions' => [$this->toolSchema($allowedCodes)],
                 'function_call' => 'auto',
@@ -83,7 +116,7 @@ class TriageAiFactService extends TriageAiService
                 return null;
             }
 
-            $facts = $this->validate($raw, $allowedCodes);
+            $facts = $this->validate($raw, $allowedCodes, $known['topics']);
             $facts['provider'] = $provider->describeLastProvider() ?? [];
 
             $this->audit($session, $facts, (microtime(true) - $startedAt) * 1000);
@@ -109,8 +142,8 @@ class TriageAiFactService extends TriageAiService
      * Numeric values do come from the model when present — that is the point of the
      * extraction — and the safety comes from the two-branch comparison, not here.
      *
-     * @param array<string, mixed> $regexFacts
-     * @param array<string, mixed> $aiFacts
+     * @param  array<string, mixed>  $regexFacts
+     * @param  array<string, mixed>  $aiFacts
      * @return array<string, mixed>
      */
     public function mergeConservatively(array $regexFacts, array $aiFacts): array
@@ -165,15 +198,32 @@ class TriageAiFactService extends TriageAiService
     }
 
     /**
-     * The complaint plus every earlier round's Q&A.
+     * The complaint plus every earlier round's Q&A, plus what the account already
+     * answers — so the model can confirm a known fact instead of asking for it.
      *
      * Without the earlier answers the model re-asks what the customer already told
      * it, which is what made the single-round version feel like a form rather than a
      * consultation.
+     *
+     * @param  array<int, array{question: string, answer: string}>  $wizardTranscript
+     * @param  array<string, string>  $knownFacts  human-readable, already filtered
      */
-    protected function buildUserMessage(TriageSession $session, string $text, array $wizardTranscript = []): string
-    {
+    protected function buildUserMessage(
+        TriageSession $session,
+        string $text,
+        array $wizardTranscript = [],
+        array $knownFacts = []
+    ): string {
         $lines = ['MÔ TẢ CỦA NGƯỜI DÙNG:', $text];
+
+        if ($knownFacts !== []) {
+            $lines[] = '';
+            $lines[] = 'THÔNG TIN ĐÃ CÓ SẴN (tuyệt đối không hỏi lại, chỉ hỏi nếu cần xác nhận):';
+
+            foreach ($knownFacts as $label => $value) {
+                $lines[] = "- {$label}: {$value}";
+            }
+        }
 
         if ($wizardTranscript !== []) {
             $lines[] = '';
@@ -194,19 +244,19 @@ class TriageAiFactService extends TriageAiService
                 $question = trim((string) ($pair['question'] ?? ''));
                 $answer = trim((string) ($pair['answer'] ?? ''));
 
-                $lines[] = ($question !== '' ? "- Hỏi: {$question}\n  " : '- ') . "Đáp: {$answer}";
+                $lines[] = ($question !== '' ? "- Hỏi: {$question}\n  " : '- ')."Đáp: {$answer}";
             }
 
             $round = (int) $session->ai_clarify_rounds + 1;
             $lines[] = '';
-            $lines[] = "Đây là vòng hỏi thêm thứ {$round}/" . TriageSession::MAX_CLARIFY_ROUNDS . '.';
+            $lines[] = "Đây là vòng hỏi thêm thứ {$round}/".TriageSession::MAX_CLARIFY_ROUNDS.'.';
         }
 
         return implode("\n", $lines);
     }
 
     /**
-     * @param array<int, string> $allowedCodes
+     * @param  array<int, string>  $allowedCodes
      * @return array<string, mixed>
      */
     protected function toolSchema(array $allowedCodes): array
@@ -262,13 +312,14 @@ class TriageAiFactService extends TriageAiService
     }
 
     /**
-     * @param array<string, mixed> $raw
-     * @param array<int, string> $allowedCodes
+     * @param  array<string, mixed>  $raw
+     * @param  array<int, string>  $allowedCodes
+     * @param  array<int, string>  $knownTopics  Topics the account already answers.
      * @return array<string, mixed>
      */
-    protected function validate(array $raw, array $allowedCodes): array
+    protected function validate(array $raw, array $allowedCodes, array $knownTopics = []): array
     {
-        $questions = $this->cleanClarifyQuestions($raw['missing_questions'] ?? []);
+        $questions = $this->cleanClarifyQuestions($raw['missing_questions'] ?? [], $knownTopics);
         $wantsMore = $this->nullableBool($raw['needs_more_info'] ?? null);
 
         return [
@@ -294,7 +345,7 @@ class TriageAiFactService extends TriageAiService
      * Months win over years when both are present: this is exactly the ambiguity
      * the regex path gets wrong, and "bé 8 tháng" must not become 8 years old.
      *
-     * @param array<string, mixed> $raw
+     * @param  array<string, mixed>  $raw
      */
     protected function resolveAge(array $raw): ?int
     {
@@ -309,7 +360,7 @@ class TriageAiFactService extends TriageAiService
 
     protected function boundedInt(mixed $value, int $min, int $max): ?int
     {
-        if (!is_numeric($value)) {
+        if (! is_numeric($value)) {
             return null;
         }
 
@@ -332,27 +383,147 @@ class TriageAiFactService extends TriageAiService
     }
 
     /**
-     * @param mixed $questions
+     * @param  array<int, string>  $knownTopics
      * @return array<int, string>
      */
-    protected function cleanClarifyQuestions(mixed $questions): array
+    protected function cleanClarifyQuestions(mixed $questions, array $knownTopics = []): array
     {
+        $patterns = $this->knownTopicPatterns($knownTopics);
+
         return collect(is_array($questions) ? $questions : [])
             ->filter(fn ($question) => is_string($question))
             ->map(fn (string $question) => $this->stripMarkup(trim($question)))
-            ->filter(function (string $question): bool {
+            ->filter(function (string $question) use ($patterns): bool {
                 if ($question === '' || mb_strlen($question) > self::MAX_CLARIFY_LENGTH) {
+                    return false;
+                }
+
+                if ($this->asksKnownTopic($question, $patterns)) {
                     return false;
                 }
 
                 // A question is rendered as a form label, so it must not carry a link
                 // or template syntax.
-                return !preg_match('#https?://|www\.|[{}<>]#u', $question);
+                return ! preg_match('#https?://|www\.|[{}<>]#u', $question);
             })
             ->unique()
             ->take(TriageSession::MAX_CLARIFY_QUESTIONS_PER_ROUND)
             ->values()
             ->all();
+    }
+
+    /**
+     * What the system already knows about this customer, in two shapes: prompt lines
+     * the model can read, and the topic keys whose questions must be discarded.
+     *
+     * Age comes from `users.birth_date` and needs no consent — it is account data the
+     * customer entered for this app, not a health profile field. The profile fields
+     * need the SEPARATE AI consent, not the general `consented_at`: that consent is
+     * purpose-limited to pharmacist-facing contraindication checks, and sending the
+     * same values to a third-party model is a different act.
+     *
+     * Returning an empty `prompt` for a customer the system knows nothing about is
+     * what keeps the untouched path byte-identical.
+     *
+     * @return array{prompt: array<string, string>, topics: array<int, string>}
+     */
+    protected function knownFacts(TriageSession $session, string $text): array
+    {
+        $prompt = [];
+        $topics = [];
+
+        $complaint = VietnameseText::fold($text);
+        $aboutAChild = preg_match(self::CHILD_MARKERS, $complaint) === 1;
+
+        // A child's age is not the account age, so the topic stays open — the model
+        // still has to ask whose symptom it is and how old that person is.
+        $age = $aboutAChild ? null : $session->user?->ageInYears();
+
+        if ($age !== null) {
+            $prompt['Tuổi người bệnh'] = "{$age} tuổi (từ ngày sinh trong hồ sơ tài khoản)";
+            $topics[] = 'age';
+        }
+
+        $profile = $this->consentedAiProfile($session);
+
+        if ($profile !== null) {
+            // Labels only, never the values. Suppressing a question needs the model to
+            // know the topic is covered, not what the answer is — and the encrypted
+            // medical text is not needed to drop a question from a form.
+            $covered = [
+                'allergies' => 'Dị ứng',
+                'chronic' => 'Bệnh nền',
+                'medications' => 'Thuốc đang dùng',
+            ];
+            $columns = [
+                'allergies' => $profile->allergies,
+                'chronic' => $profile->chronic_conditions,
+                'medications' => $profile->current_medications,
+            ];
+
+            foreach ($covered as $topic => $label) {
+                $values = array_filter(array_map(
+                    fn ($value) => trim((string) $value),
+                    (array) ($columns[$topic] ?? [])
+                ));
+
+                if ($values === []) {
+                    continue;
+                }
+
+                $prompt[$label] = 'đã có trong hồ sơ y tế của khách, không hỏi lại';
+                $topics[] = $topic;
+            }
+        }
+
+        return ['prompt' => $prompt, 'topics' => $topics];
+    }
+
+    /**
+     * The health profile this seam may send to the provider, or null.
+     */
+    protected function consentedAiProfile(TriageSession $session): ?UserHealthProfile
+    {
+        if (! $session->MaKH) {
+            return null;
+        }
+
+        $profile = UserHealthProfile::consentedFor((int) $session->MaKH);
+
+        return $profile?->hasAiConsent() ? $profile : null;
+    }
+
+    /**
+     * The patterns for the topics the account already answers.
+     *
+     * @param  array<int, string>  $topics
+     * @return array<string, string>
+     */
+    protected function knownTopicPatterns(array $topics): array
+    {
+        return array_intersect_key(self::TOPIC_PATTERNS, array_flip($topics));
+    }
+
+    /**
+     * True when the question asks about a topic the account already answers.
+     *
+     * @param  array<string, string>  $patterns
+     */
+    protected function asksKnownTopic(string $question, array $patterns): bool
+    {
+        if ($patterns === []) {
+            return false;
+        }
+
+        $folded = VietnameseText::fold($question);
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $folded) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function stripMarkup(string $text): string
@@ -363,7 +534,7 @@ class TriageAiFactService extends TriageAiService
     }
 
     /**
-     * @param array<string, mixed> $facts
+     * @param  array<string, mixed>  $facts
      */
     protected function audit(TriageSession $session, array $facts, float $durationMs): void
     {
