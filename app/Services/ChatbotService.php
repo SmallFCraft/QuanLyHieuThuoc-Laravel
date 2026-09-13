@@ -584,6 +584,7 @@ PROMPT;
         $healthContextMessage = $this->resolveHealthContextMessage($workingMessage, $context);
         $prependWebsiteIntro = $messageRouting['prepend_intro'];
         $userDisplayName = $this->resolveUserDisplayName($message, $context);
+        $userAge = $this->resolveUserAge($userId);
         $isNonCatalogChitchatMessage = $this->isNonCatalogChitchatMessage($workingMessage);
         $isProviderOnlyNonCatalogMessage = $this->isProviderOnlyNonCatalogMessage($workingMessage);
 
@@ -631,7 +632,7 @@ PROMPT;
                 return $triageHandoffResponse;
             }
 
-            $localResponse = $this->tryLocalResponse($healthContextMessage, $context);
+            $localResponse = $this->tryLocalResponse($healthContextMessage, $context, $userAge);
             if ($localResponse !== null) {
                 $responseType = $localResponse['response_type'] ?? 'general';
                 $localResponse['response_type'] = $responseType;
@@ -1497,7 +1498,7 @@ PROMPT;
         ) === 1;
     }
 
-    protected function tryLocalResponse(string $message, array $context = []): ?array
+    protected function tryLocalResponse(string $message, array $context = [], ?int $userAge = null): ?array
     {
         $normalizedMessage = $this->normalizeMessage($message);
 
@@ -1690,7 +1691,7 @@ PROMPT;
         }
 
         if ($this->isSymptomRelatedQuery($message) && !$this->wantsProductSuggestionForSymptom($message)) {
-            return $this->buildSymptomGuidanceResponse($message);
+            return $this->buildSymptomGuidanceResponse($message, $userAge);
         }
 
         if ($this->isCategoryIntent($normalizedMessage)) {
@@ -2936,8 +2937,11 @@ PROMPT;
             : 'Sản phẩm đang có sẵn trong kho để anh/chị tham khảo thêm.';
     }
 
-    protected function buildSymptomGuidanceResponse(string $message): array
+    protected function buildSymptomGuidanceResponse(string $message, ?int $userAge = null): array
     {
+        // The account already knows the age, so asking for it again makes the bot
+        // look like it ignores the profile it holds.
+        $ageKnown = $userAge !== null;
         $normalizedMessage = $this->normalizeIntentText($message);
         $isDiarrheaMessage = Str::contains($normalizedMessage, ['tieu chay', 'ia chay']);
         $isAbdominalPainMessage = Str::contains($normalizedMessage, ['dau bung', 'dau da day']);
@@ -2959,7 +2963,9 @@ PROMPT;
                 '',
                 'Nên đi khám sớm nếu tiêu chảy kéo dài quá 48 giờ, sốt cao, đau bụng tăng, nôn nhiều, khát nhiều, tiểu ít, mệt lả hoặc có máu/nhầy trong phân.',
                 '',
-                'Nếu anh/chị muốn em gợi ý sản phẩm hỗ trợ, hãy cho em biết độ tuổi, đã bị bao lâu, có sốt/nôn/phân máu không và có đang dùng thuốc gì khác không.'
+                $ageKnown
+                    ? 'Nếu anh/chị muốn em gợi ý sản phẩm hỗ trợ, hãy cho em biết đã bị bao lâu, có sốt/nôn/phân máu không và có đang dùng thuốc gì khác không.'
+                    : 'Nếu anh/chị muốn em gợi ý sản phẩm hỗ trợ, hãy cho em biết độ tuổi, đã bị bao lâu, có sốt/nôn/phân máu không và có đang dùng thuốc gì khác không.'
             ]);
         } elseif ($isDiarrheaBowelMovementQuestion) {
             $response = implode("\n", [
@@ -2972,7 +2978,9 @@ PROMPT;
                 '',
                 'Nên đi khám sớm nếu tiêu chảy kéo dài quá 48 giờ, đi quá nhiều lần, có sốt cao, đau bụng tăng, khát nhiều, tiểu ít hoặc phân có máu.',
                 '',
-                'Nếu anh/chị muốn em gợi ý thuốc hỗ trợ phù hợp, hãy cho em biết thêm độ tuổi người dùng, triệu chứng đi kèm và thời gian bị bệnh.'
+                $ageKnown
+                    ? 'Nếu anh/chị muốn em gợi ý thuốc hỗ trợ phù hợp, hãy cho em biết thêm triệu chứng đi kèm và thời gian bị bệnh.'
+                    : 'Nếu anh/chị muốn em gợi ý thuốc hỗ trợ phù hợp, hãy cho em biết thêm độ tuổi người dùng, triệu chứng đi kèm và thời gian bị bệnh.'
             ]);
         } elseif ($isAbdominalPainMessage && ($hasProlongedDuration || $needsPromptMedicalReview)) {
             $response = implode("\n", [
@@ -2986,7 +2994,9 @@ PROMPT;
                 '',
                 'Trong lúc chờ đi khám, anh/chị nên ăn nhẹ, uống đủ nước và tránh tự dùng thuốc giảm đau mạnh, kháng sinh hoặc thuốc cầm tiêu chảy khi chưa rõ nguyên nhân.',
                 '',
-                'Nếu anh/chị muốn em hỗ trợ sát hơn, hãy nói thêm vị trí đau bụng, có tiêu chảy/táo bón/nôn/sốt hay không và độ tuổi người bệnh.'
+                $ageKnown
+                    ? 'Nếu anh/chị muốn em hỗ trợ sát hơn, hãy nói thêm vị trí đau bụng và có tiêu chảy/táo bón/nôn/sốt hay không.'
+                    : 'Nếu anh/chị muốn em hỗ trợ sát hơn, hãy nói thêm vị trí đau bụng, có tiêu chảy/táo bón/nôn/sốt hay không và độ tuổi người bệnh.'
             ]);
         } elseif ($isDiarrheaMessage) {
             $response = implode("\n", [
@@ -2999,7 +3009,9 @@ PROMPT;
                 '- Khát nhiều, tiểu ít, mệt lả (nguy cơ mất nước)',
                 '- Phân có máu hoặc nhầy',
                 '',
-                'Nếu anh/chị muốn em gợi ý thuốc hỗ trợ phù hợp, hãy cho em biết thêm độ tuổi người dùng, triệu chứng đi kèm và thời gian bị bệnh.'
+                $ageKnown
+                    ? 'Nếu anh/chị muốn em gợi ý thuốc hỗ trợ phù hợp, hãy cho em biết thêm triệu chứng đi kèm và thời gian bị bệnh.'
+                    : 'Nếu anh/chị muốn em gợi ý thuốc hỗ trợ phù hợp, hãy cho em biết thêm độ tuổi người dùng, triệu chứng đi kèm và thời gian bị bệnh.'
             ]);
         } else {
             $response = implode("\n", [
@@ -5021,6 +5033,20 @@ PROMPT;
         }
 
         return trim($previousSymptomMessage . '. ' . $message);
+    }
+
+    /**
+     * Age from the customer's own profile, or null when unknown (guest, or no
+     * birth_date on file). Triage rules treat null as unknown, not as an adult.
+     */
+    protected function resolveUserAge(int $userId): ?int
+    {
+        if ($userId <= 0) {
+            return null;
+        }
+
+        // ponytail: direct lookup per turn; add request-scoped caching if profiling shows chatbot turns bound on this read.
+        return User::find($userId)?->ageInYears();
     }
 
     protected function resolveUserDisplayName(string $message, array $context): ?string
