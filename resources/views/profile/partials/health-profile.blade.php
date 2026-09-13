@@ -176,6 +176,29 @@
             </div>
 
             <div class="col-12">
+                <div class="hp-consent-box">
+                    <div class="hp-check-row mb-0">
+                        {{-- Independent of `consent`: unticking this withdraws AI consent only. --}}
+                        <input class="form-check-input hp-check @error('ai_consent') is-invalid @enderror"
+                               type="checkbox"
+                               id="health_ai_consent"
+                               name="ai_consent"
+                               value="1"
+                               @checked(old('ai_consent', (bool) $healthProfile?->hasAiConsent()))
+                               aria-describedby="health_ai_consent_desc health_ai_consent_hint">
+                        <label class="form-check-label" for="health_ai_consent">
+                            <span class="fw-semibold text-gray-900 d-block mb-1">{{ __('messages.health_profile.ai_consent_title') }}</span>
+                            <span id="health_ai_consent_desc" class="text-gray-700 small">{{ __('messages.health_profile.ai_consent_label') }}</span>
+                        </label>
+                    </div>
+                    <small id="health_ai_consent_hint" class="text-gray-600 d-block ms-4 ps-1">{{ __('messages.health_profile.ai_consent_hint') }}</small>
+                    @error('ai_consent')
+                        <div class="invalid-feedback d-block mt-2" role="alert">{{ $message }}</div>
+                    @enderror
+                </div>
+            </div>
+
+            <div class="col-12">
                 <div class="p-3 rounded-3 bg-emerald-50 d-flex gap-2">
                     <i class="bi bi-shield-lock-fill text-emerald-600 flex-shrink-0"></i>
                     <div>

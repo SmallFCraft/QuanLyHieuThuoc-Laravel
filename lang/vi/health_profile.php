@@ -16,6 +16,11 @@ return [
     'consent_active_title' => 'Cảnh báo an toàn thuốc đang bật',
     'consent_active_body' => 'Hệ thống đang dùng hồ sơ này để kiểm tra khi anh/chị thêm thuốc vào giỏ. Đồng ý lúc: :time',
 
+    // AI Consent
+    'ai_consent_title' => 'Đồng ý sử dụng thông tin cho trợ lý AI',
+    'ai_consent_label' => 'Tôi đồng ý cho hệ thống dùng thông tin sức khoẻ này để hỗ trợ trí tuệ nhân tạo (AI) soạn gợi ý tư vấn cho dược sĩ. Thông tin được mã hoá.',
+    'ai_consent_hint' => 'Tuỳ chọn. Không tích ô này thì trợ lý AI sẽ không đọc hồ sơ sức khoẻ; hệ thống vẫn cảnh báo an toàn thuốc bình thường nếu ô phía trên đã bật.',
+
     // Tag inputs
     'allergies_label' => 'Dị ứng thuốc hoặc thành phần',
     'allergies_hint' => 'Gõ tên rồi nhấn Enter hoặc dấu phẩy để thêm. Mỗi mục là một chất riêng.',
