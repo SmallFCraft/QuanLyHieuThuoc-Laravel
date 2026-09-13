@@ -660,6 +660,31 @@ class HealthCheckController extends Controller
             $job = $this->aiJobs->dispatchBriefingIfEligible($session);
         }
 
+        // A queued job nobody picked up: no worker is running, so polling it would
+        // only produce the "not available this time" notice. Write the briefing in
+        // this request instead — the result page already loads once and reloads when
+        // a job lands, so the cost is the first paint, not a second round trip.
+        if ($job !== null && $job->isStranded()) {
+            $briefing = app(TriageAiBriefingService::class);
+
+            if (!$briefing->isEligible($session)) {
+                $this->aiJobs->abandon($job, 'session not eligible for a briefing');
+
+                return null;
+            }
+
+            try {
+                // generate() records its own status and swallows provider failures, so
+                // this reports whether the seam ran, matching ProcessTriageBriefing.
+                $briefing->generate($session);
+                $this->aiJobs->markDone($job, ['ai_briefing_status' => $session->refresh()->ai_briefing_status]);
+            } catch (\Throwable $exception) {
+                $this->aiJobs->markFailed($job, $exception->getMessage());
+            }
+
+            return null;
+        }
+
         // A finished job with a null status means it died before recording one; a
         // stranded one means nobody is consuming. Neither is worth polling.
         return $job !== null && !$job->isFinished() && !$job->isStranded() ? $job : null;
