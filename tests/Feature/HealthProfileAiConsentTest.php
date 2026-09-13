@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\HealthProfileController;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Models\UserHealthProfile;
@@ -75,23 +76,51 @@ class HealthProfileAiConsentTest extends TestCase
         $this->assertStringNotContainsString('Penicillin', $serialized);
     }
 
-    public function test_ai_consent_audit_ignores_same_state_timestamp_differences(): void
+    public function test_ai_consent_changed_fields_track_the_transition_not_the_timestamp(): void
     {
-        // When the user leaves AI consent ticked across updates, the controller's
-        // `ai_consent_at` attribute may be re-instantiated or refreshed.
-        // changedFields() must compare nullness transitions only, not trigger a
-        // false "ai_consent_at changed" entry due to timestamp or object formatting differences.
+        // The HTTP path hands changedFields() the very same Carbon instance it read off
+        // the model, so a string comparison can never differ there. The rule this guards
+        // is the comparison itself: consent is a state (null vs set), not a value.
+        $controller = new HealthProfileController();
+        $changedFields = new \ReflectionMethod($controller, 'changedFields');
+
+        $granted = (new UserHealthProfile())->forceFill(['ai_consent_at' => now()->subDay()]);
+        $revoked = new UserHealthProfile();
+
+        // Two distinct, non-null timestamps: same state, so nothing changed.
+        $this->assertSame([], $changedFields->invoke($controller, $granted, ['ai_consent_at' => now()]));
+
+        // Granting and revoking are real transitions and must be named.
+        $this->assertSame(['ai_consent_at'], $changedFields->invoke($controller, $granted, ['ai_consent_at' => null]));
+        $this->assertSame(['ai_consent_at'], $changedFields->invoke($controller, $revoked, ['ai_consent_at' => now()]));
+    }
+
+    public function test_sibling_form_error_does_not_untick_the_consent_boxes(): void
+    {
+        // The profile page hosts profile-info, password, avatar and health forms. A
+        // validation error in any of them flashes _old_input, but only the health form
+        // may influence the health checkboxes — otherwise a mistyped phone number
+        // silently revokes medical consent on the next save.
         $user = User::factory()->create();
+        UserHealthProfile::create([
+            'MaKH' => $user->MaKH,
+            'consented_at' => now(),
+            'ai_consent_at' => now(),
+        ]);
 
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload(['ai_consent' => '1']));
-        // Cross a second boundary: a refreshed timestamp would string-compare differently
-        // even though the consent state did not change.
-        $this->travel(2)->seconds();
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload(['ai_consent' => '1', 'notes' => 'Updated notes']));
+        $this->actingAs($user)
+            ->from(route('profile.edit'))
+            ->patch(route('profile.update'), [
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => 'not-a-phone',
+            ])
+            ->assertSessionHasErrors('phone');
 
-        $log = AuditLog::where('action', 'health_profile_updated')->latest('MaNK')->firstOrFail();
+        $html = $this->actingAs($user)->get(route('profile.edit'))->getContent();
 
-        $this->assertSame(['notes'], $log->new_values['changed_fields']);
+        $this->assertMatchesRegularExpression('/<input[^>]+id="health_consent"[^>]+checked/', $html);
+        $this->assertMatchesRegularExpression('/<input[^>]+id="health_ai_consent"[^>]+checked/', $html);
     }
 
     public function test_validation_redirect_keeps_both_consent_checkboxes_unticked(): void
