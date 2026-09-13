@@ -19,6 +19,7 @@ class UserHealthProfile extends Model
         'weight_kg',
         'notes',
         'consented_at',
+        'ai_consent_at',
     ];
 
     protected $casts = [
@@ -31,6 +32,7 @@ class UserHealthProfile extends Model
         'is_breastfeeding' => 'boolean',
         'weight_kg' => 'float',
         'consented_at' => 'datetime',
+        'ai_consent_at' => 'datetime',
     ];
 
     protected $hidden = [
@@ -52,6 +54,15 @@ class UserHealthProfile extends Model
     public function hasConsented(): bool
     {
         return $this->consented_at !== null;
+    }
+
+    /**
+     * Separate from hasConsented(): consenting to a pharmacist reading the profile
+     * is not consent to sending it to an AI provider.
+     */
+    public function hasAiConsent(): bool
+    {
+        return $this->ai_consent_at !== null;
     }
 
     /**
