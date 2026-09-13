@@ -3,12 +3,28 @@
     $tagValue = fn (string $field) => old($field, $healthProfile?->{$field} ?? []);
     $hasConsent = (bool) $healthProfile?->hasConsented();
 
-    // After a validation redirect the ticket is in `_old_input`, and a missing checkbox
-    // key there means the user left it unticked. Falling back to the stored profile
-    // would silently re-tick a box the user just cleared.
-    $hasOldInput = session()->has('_old_input');
-    $consentChecked = old('consent', $hasConsent && ! $hasOldInput);
-    $aiConsentChecked = old('ai_consent', (bool) $healthProfile?->hasAiConsent() && ! $hasOldInput);
+    // After a health-form validation redirect the ticket is in `_old_input`, and a missing
+    // checkbox key there means the user left it unticked; falling back to the stored
+    // profile would silently re-tick a box the user just cleared.
+    //
+    // The page hosts the profile-info, password and avatar forms too, and any of their
+    // errors flashes `_old_input` as well. Keying off `_old_input` alone would untick both
+    // consent boxes after a mistyped phone number — and the next health save would then
+    // post neither box and revoke consent the user never touched.
+    $hasHealthOldInput = session()->hasAny([
+        '_old_input.consent',
+        '_old_input.ai_consent',
+        '_old_input.allergies',
+        '_old_input.chronic_conditions',
+        '_old_input.current_medications',
+        '_old_input.is_pregnant',
+        '_old_input.is_breastfeeding',
+        '_old_input.weight_kg',
+        '_old_input.notes',
+    ]);
+
+    $consentChecked = old('consent', $hasConsent && ! $hasHealthOldInput);
+    $aiConsentChecked = old('ai_consent', (bool) $healthProfile?->hasAiConsent() && ! $hasHealthOldInput);
 @endphp
 
 <div class="profile-card health-profile-card mb-3" id="health-profile">
