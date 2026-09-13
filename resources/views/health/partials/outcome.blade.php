@@ -189,12 +189,32 @@
                             @endif
 
                             @if (!empty($product['usage']))
-                                {{-- Full dosage line, not truncated: "uống 1 viên mỗi 4-6 giờ" is the
-                                     part the customer actually needs. --}}
-                                <p class="small text-gray-700 mb-2">
-                                    <span class="text-gray-600">{{ __('messages.health.product_usage_label') }}:</span>
-                                    {{ $product['usage'] }}
-                                </p>
+                                {{-- A crawled product carries up to 3,000+ characters of clinical
+                                     prose, which turns one card into a full screen. The dosage the
+                                     customer needs sits at the top, so the summary keeps that and
+                                     <details> holds the rest. --}}
+                                @php
+                                    $usageText = trim($product['usage']);
+                                    $isLongUsage = mb_strlen($usageText) > 160;
+                                    $usageSummary = $isLongUsage ? \Illuminate\Support\Str::limit($usageText, 140, '...') : $usageText;
+                                @endphp
+                                <div class="health-product__usage mb-2">
+                                    <p class="small text-gray-700 mb-1">
+                                        <span class="fw-medium text-gray-800">{{ __('messages.health.product_usage_label') }}:</span>
+                                        {{ $usageSummary }}
+                                    </p>
+                                    @if ($isLongUsage)
+                                        <details class="health-product__usage-details">
+                                            <summary class="health-product__usage-toggle" aria-label="{{ __('messages.health.product_usage_toggle_open') }}">
+                                                <span class="health-product__usage-toggle-text">{{ __('messages.health.product_usage_toggle_open') }}</span>
+                                                <i class="bi bi-chevron-down health-product__usage-chevron" aria-hidden="true"></i>
+                                            </summary>
+                                            <div class="health-product__usage-full mt-2 p-2 rounded-2 bg-slate-50 border text-gray-700 small">
+                                                {{ $usageText }}
+                                            </div>
+                                        </details>
+                                    @endif
+                                </div>
                             @endif
 
                             @php $stock = (int) ($product['stock_quantity'] ?? 0); @endphp
