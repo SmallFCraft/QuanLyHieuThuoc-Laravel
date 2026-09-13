@@ -3,6 +3,11 @@
 @section('title', __('messages.pharmacist.queue_title'))
 
 @section('content')
+@php
+    // Match the spec's "waiting too long" cue. Behaviour constant, not config.
+    $waitLongMinutes = 15;
+@endphp
+
 <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
     <div>
         <h1 class="h3 fw-bold text-gray-900 mb-1">{{ __('messages.pharmacist.queue_title') }}</h1>
@@ -67,17 +72,29 @@
                             $symptomText = $item->collected_data['raw_symptom_text']
                                 ?? implode(', ', (array) ($item->collected_data['symptoms'] ?? []));
                             $flags = (array) ($item->triggered_red_flags ?? []);
-                            $topSeverity = collect($flags)->pluck('severity')->contains('emergency')
+                            $severities = collect($flags)->pluck('severity');
+                            $topSeverity = $severities->contains('emergency')
                                 ? 'emergency'
-                                : (collect($flags)->pluck('severity')->contains('urgent') ? 'urgent' : 'caution');
+                                : ($severities->contains('urgent') ? 'urgent' : 'caution');
                             $age = $item->user?->ageInYears();
+                            $waited = $item->created_at->locale('vi')->diffForHumans(['parts' => 1]);
+                            $isOverdue = $item->created_at->lt(now()->subMinutes($waitLongMinutes));
+                            // Emergency first in the row's own colour, so the eye lands on it
+                            // before reading anything else on the line.
+                            $rowAccent = ['emergency' => 'emergency', 'urgent' => 'refer', 'caution' => 'pharmacist'][$topSeverity];
                         @endphp
                         <tr>
-                            <td>
-                                <time datetime="{{ $item->created_at->toIso8601String() }}" class="fw-semibold">
-                                    {{ $item->created_at->locale('vi')->diffForHumans(['parts' => 1]) }}
+                            <td style="border-left: 4px solid var(--health-{{ $rowAccent }});">
+                                <time datetime="{{ $item->created_at->toIso8601String() }}" class="fs-5 fw-bold text-gray-900 d-block">
+                                    {{ $waited }}
                                 </time>
                                 <div class="small text-gray-600">{{ $item->created_at->format('d/m/Y H:i') }}</div>
+                                @if ($isOverdue)
+                                    {{-- Icon + text, not colour alone. --}}
+                                    <span class="rx-badge rx-badge--{{ $topSeverity === 'emergency' ? 'emergency' : 'caution' }} mt-1">
+                                        <i class="bi bi-hourglass-bottom" aria-hidden="true"></i>{{ __('messages.pharmacist.wait_long') }}
+                                    </span>
+                                @endif
                             </td>
                             <td>
                                 <div class="fw-medium text-gray-900">
@@ -94,7 +111,7 @@
                                         <i class="bi bi-house-heart-fill" aria-hidden="true"></i>{{ __('messages.pharmacist.no_flags') }}
                                     </span>
                                 @else
-                                    <span class="rx-badge rx-badge--{{ $topSeverity }}">
+                                    <span class="rx-badge rx-badge--{{ $topSeverity }} fw-bold fs-6">
                                         <i class="bi {{ $topSeverity === 'emergency' ? 'bi-exclamation-octagon-fill' : ($topSeverity === 'urgent' ? 'bi-hospital-fill' : 'bi-person-badge-fill') }}" aria-hidden="true"></i>
                                         {{ __('messages.pharmacist.severity_' . $topSeverity) }} ({{ count($flags) }})
                                     </span>

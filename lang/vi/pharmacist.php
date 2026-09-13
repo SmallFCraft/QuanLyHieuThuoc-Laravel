@@ -104,4 +104,12 @@ return [
     'error_claimed_by_other' => 'Ca này đã có dược sĩ khác nhận.',
     'note_required' => 'Anh/chị vui lòng nhập nội dung trả lời.',
     'note_max' => 'Nội dung không được vượt quá 2000 ký tự.',
+
+    // Past sessions & triage redesign
+    'past_sessions_title' => 'Lịch sử sàng lọc trước đó',
+    'past_sessions_empty' => 'Chưa có ca sàng lọc nào trước đây.',
+    'past_session_date' => 'Ngày :date',
+    'status_reviewed' => 'Đã xử lý',
+    'status_pending' => 'Đang chờ',
+    'wait_long' => 'Chờ lâu (>15p)',
 ];

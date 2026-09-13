@@ -4,18 +4,24 @@
 
 @section('content')
 @php
+    // `tone` names the --health-* variable family in health/partials/styles.blade.php,
+    // so the banner reuses the severity scale instead of inventing its own palette.
     $outcomeMeta = [
-        'emergency' => ['icon' => 'bi-exclamation-octagon-fill', 'label' => __('messages.health.outcome_emergency'), 'severity' => 'emergency'],
-        'refer_doctor' => ['icon' => 'bi-hospital-fill', 'label' => __('messages.health.outcome_refer_doctor'), 'severity' => 'urgent'],
-        'pharmacist_review' => ['icon' => 'bi-person-badge-fill', 'label' => __('messages.health.outcome_pharmacist_review'), 'severity' => 'caution'],
-        'self_care' => ['icon' => 'bi-house-heart-fill', 'label' => __('messages.health.outcome_self_care'), 'severity' => 'calm'],
+        'emergency' => ['icon' => 'bi-exclamation-octagon-fill', 'label' => __('messages.health.outcome_emergency'), 'severity' => 'emergency', 'tone' => 'emergency'],
+        'refer_doctor' => ['icon' => 'bi-hospital-fill', 'label' => __('messages.health.outcome_refer_doctor'), 'severity' => 'urgent', 'tone' => 'refer'],
+        'pharmacist_review' => ['icon' => 'bi-person-badge-fill', 'label' => __('messages.health.outcome_pharmacist_review'), 'severity' => 'caution', 'tone' => 'pharmacist'],
+        'self_care' => ['icon' => 'bi-house-heart-fill', 'label' => __('messages.health.outcome_self_care'), 'severity' => 'calm', 'tone' => 'selfcare'],
     ];
-    $outcome = $outcomeMeta[$session->outcome] ?? $outcomeMeta['pharmacist_review'];
+    $outcomeKey = isset($outcomeMeta[$session->outcome]) ? $session->outcome : 'pharmacist_review';
+    $outcome = $outcomeMeta[$outcomeKey];
     $flagIcons = [
         'emergency' => 'bi-exclamation-octagon-fill',
         'urgent' => 'bi-hospital-fill',
         'caution' => 'bi-person-badge-fill',
     ];
+    $allergies = array_filter((array) ($profile->allergies ?? []));
+    $chronic = array_filter((array) ($profile->chronic_conditions ?? []));
+    $medications = array_filter((array) ($profile->current_medications ?? []));
 @endphp
 
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
@@ -28,6 +34,40 @@
     </a>
 </div>
 
+{{-- Decision banner. Outcome, red flags and matched symptoms come before every other
+     fact on the page: a pharmacist has to judge severity in about two seconds, and
+     everything below this block is supporting detail. --}}
+<section class="rx-card health-outcome health-outcome--{{ $outcomeKey }} p-4 mb-4"
+         style="background: var(--health-{{ $outcome['tone'] }}-bg); border-color: var(--health-{{ $outcome['tone'] }}-border);"
+         aria-labelledby="rx-decision-title">
+    <p class="rx-metric-label mb-1">{{ __('messages.pharmacist.system_outcome_title') }}</p>
+    {{-- Colour plus icon plus the outcome text: severity never rests on hue alone. --}}
+    <h2 class="h4 fw-bold mb-3 d-flex flex-wrap align-items-center gap-2"
+        id="rx-decision-title"
+        style="color: var(--health-{{ $outcome['tone'] }});">
+        <i class="bi {{ $outcome['icon'] }}" aria-hidden="true"></i>{{ $outcome['label'] }}
+    </h2>
+
+    @if (!empty($session->triggered_red_flags))
+        <h3 class="small fw-semibold text-gray-700 mb-2">{{ __('messages.pharmacist.red_flags_title') }}</h3>
+        <ul class="list-unstyled d-flex flex-wrap gap-2 mb-3">
+            @foreach ($session->triggered_red_flags as $flag)
+                @php $severity = $flag['severity'] ?? 'caution'; @endphp
+                <li class="rx-badge rx-badge--{{ $severity }}">
+                    <i class="bi {{ $flagIcons[$severity] ?? 'bi-person-badge-fill' }}" aria-hidden="true"></i>
+                    {{ $flag['name_vi'] ?? ($flag['code'] ?? '') }}
+                    <span class="fw-normal">· {{ __('messages.pharmacist.severity_' . $severity) }}</span>
+                </li>
+            @endforeach
+        </ul>
+    @endif
+
+    @if (!empty($symptomNames))
+        <h3 class="small fw-semibold text-gray-700 mb-2">{{ __('messages.pharmacist.matched_symptoms_title') }}</h3>
+        <p class="text-gray-900 mb-0">{{ implode(', ', $symptomNames) }}</p>
+    @endif
+</section>
+
 @error('pharmacist_note')
     <div class="alert alert-danger d-flex align-items-start gap-2" role="alert">
         <i class="bi bi-exclamation-triangle-fill mt-1" aria-hidden="true"></i>
@@ -36,6 +76,8 @@
 @enderror
 
 <div class="row g-4">
+    {{-- Clinical facts, one column: nothing the pharmacist must weigh is split across
+         two panels of equal weight. --}}
     <div class="col-12 col-lg-7">
         <section class="rx-card p-4 mb-4" aria-labelledby="rx-customer-title">
             <h2 class="h6 fw-semibold text-gray-800 mb-3" id="rx-customer-title">
@@ -57,6 +99,133 @@
                 <dd class="col-sm-7 mb-0">{{ $session->created_at->locale('vi')->diffForHumans(['parts' => 1]) }}</dd>
             </dl>
         </section>
+
+        {{-- Health profile. Allergies are the loudest item on the page: missing one is
+             the worst failure this screen can cause, so each gets its own emergency
+             pill instead of one more comma-joined line. --}}
+        <section class="rx-card p-4 mb-4" aria-labelledby="rx-profile-title">
+            <h2 class="h6 fw-semibold text-gray-800 mb-3" id="rx-profile-title">
+                <i class="bi bi-shield-lock me-2" aria-hidden="true"></i>{{ __('messages.pharmacist.profile_title') }}
+            </h2>
+
+            @if (!$profile)
+                <p class="text-gray-700 mb-0">
+                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i>{{ __('messages.pharmacist.profile_no_consent') }}
+                </p>
+            @else
+                <h3 class="small fw-semibold text-gray-700 mb-2">{{ __('messages.pharmacist.profile_allergies') }}</h3>
+                @if ($allergies !== [])
+                    <ul class="list-unstyled d-flex flex-wrap gap-2 mb-4">
+                        @foreach ($allergies as $allergy)
+                            <li class="rx-badge rx-badge--emergency">
+                                <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>{{ $allergy }}
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <p class="small text-gray-600 mb-4">{{ __('messages.pharmacist.answer_empty') }}</p>
+                @endif
+
+                <h3 class="small fw-semibold text-gray-700 mb-2">{{ __('messages.pharmacist.profile_chronic') }}</h3>
+                @if ($chronic !== [])
+                    <ul class="list-unstyled d-flex flex-wrap gap-2 mb-4">
+                        @foreach ($chronic as $condition)
+                            <li class="rx-badge rx-badge--caution">
+                                <i class="bi bi-activity" aria-hidden="true"></i>{{ $condition }}
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <p class="small text-gray-600 mb-4">{{ __('messages.pharmacist.answer_empty') }}</p>
+                @endif
+
+                <h3 class="small fw-semibold text-gray-700 mb-2">{{ __('messages.pharmacist.profile_medications') }}</h3>
+                @if ($medications !== [])
+                    <ul class="list-unstyled d-flex flex-wrap gap-2 mb-4">
+                        @foreach ($medications as $medication)
+                            <li class="rx-badge">
+                                <i class="bi bi-prescription2" aria-hidden="true"></i>{{ $medication }}
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <p class="small text-gray-600 mb-4">{{ __('messages.pharmacist.answer_empty') }}</p>
+                @endif
+
+                <dl class="rx-dl row mb-2">
+                    <dt class="col-sm-5">{{ __('messages.pharmacist.profile_pregnant') }}</dt>
+                    <dd class="col-sm-7">
+                        <span class="rx-badge rx-badge--{{ $profile->is_pregnant ? 'emergency' : 'calm' }}">
+                            <i class="bi {{ $profile->is_pregnant ? 'bi-exclamation-triangle-fill' : 'bi-dash-circle' }}" aria-hidden="true"></i>
+                            {{ $profile->is_pregnant ? __('messages.pharmacist.profile_yes') : __('messages.pharmacist.profile_no') }}
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-5">{{ __('messages.pharmacist.profile_breastfeeding') }}</dt>
+                    <dd class="col-sm-7">
+                        <span class="rx-badge rx-badge--{{ $profile->is_breastfeeding ? 'emergency' : 'calm' }}">
+                            <i class="bi {{ $profile->is_breastfeeding ? 'bi-exclamation-triangle-fill' : 'bi-dash-circle' }}" aria-hidden="true"></i>
+                            {{ $profile->is_breastfeeding ? __('messages.pharmacist.profile_yes') : __('messages.pharmacist.profile_no') }}
+                        </span>
+                    </dd>
+
+                    @if ($profile->weight_kg)
+                        <dt class="col-sm-5">{{ __('messages.pharmacist.profile_weight') }}</dt>
+                        <dd class="col-sm-7">{{ $profile->weight_kg }}</dd>
+                    @endif
+
+                    @if ($profile->notes)
+                        <dt class="col-sm-5">{{ __('messages.pharmacist.profile_notes') }}</dt>
+                        <dd class="col-sm-7 mb-0">{{ $profile->notes }}</dd>
+                    @endif
+                </dl>
+
+                <p class="small text-gray-600 mb-0">
+                    <i class="bi bi-journal-text me-1" aria-hidden="true"></i>{{ __('messages.pharmacist.profile_accessed_note') }}
+                </p>
+            @endif
+        </section>
+
+        {{-- Prior sessions for this customer. Quiet inline empty state, not an empty
+             bordered card: an empty card reads as a card that failed to load. --}}
+        @if ($pastSessions->isNotEmpty())
+            <section class="rx-card p-4 mb-4" aria-labelledby="rx-history-title">
+                <h2 class="h6 fw-semibold text-gray-800 mb-3" id="rx-history-title">
+                    <i class="bi bi-clock-history me-2" aria-hidden="true"></i>{{ __('messages.pharmacist.past_sessions_title') }}
+                </h2>
+                <ul class="list-unstyled mb-0">
+                    @foreach ($pastSessions as $past)
+                        @php
+                            $pastOutcome = $outcomeMeta[$past->outcome] ?? $outcomeMeta['pharmacist_review'];
+                            $pastSymptom = $past->collected_data['raw_symptom_text']
+                                ?? implode(', ', (array) ($past->collected_data['symptoms'] ?? []));
+                            $isReviewed = $past->status === 'reviewed';
+                        @endphp
+                        <li class="{{ $loop->first ? '' : 'border-top pt-3 mt-3' }}">
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                <time datetime="{{ $past->created_at->toIso8601String() }}" class="fw-semibold text-gray-900">
+                                    {{ __('messages.pharmacist.past_session_date', ['date' => $past->created_at->format('d/m/Y')]) }}
+                                </time>
+                                <span class="rx-badge rx-badge--{{ $pastOutcome['severity'] }}">
+                                    <i class="bi {{ $pastOutcome['icon'] }}" aria-hidden="true"></i>{{ $pastOutcome['label'] }}
+                                </span>
+                                <span class="rx-badge rx-badge--{{ $isReviewed ? 'calm' : 'caution' }}">
+                                    <i class="bi {{ $isReviewed ? 'bi-check2-circle' : 'bi-hourglass-split' }}" aria-hidden="true"></i>
+                                    {{ $isReviewed ? __('messages.pharmacist.status_reviewed') : __('messages.pharmacist.status_pending') }}
+                                </span>
+                            </div>
+                            <p class="small text-gray-700 mb-0">
+                                {{ $pastSymptom !== '' ? $pastSymptom : __('messages.pharmacist.no_symptom') }}
+                            </p>
+                        </li>
+                    @endforeach
+                </ul>
+            </section>
+        @else
+            <p class="small text-gray-600 mb-4">
+                <i class="bi bi-clock-history me-1" aria-hidden="true"></i>{{ __('messages.pharmacist.past_sessions_empty') }}
+            </p>
+        @endif
 
         <section class="rx-card p-4 mb-4" aria-labelledby="rx-answers-title">
             <h2 class="h6 fw-semibold text-gray-800 mb-3" id="rx-answers-title">
@@ -82,89 +251,27 @@
             @endif
         </section>
 
-        <section class="rx-card p-4" aria-labelledby="rx-system-title">
-            <h2 class="h6 fw-semibold text-gray-800 mb-3" id="rx-system-title">
-                <i class="bi bi-cpu me-2" aria-hidden="true"></i>{{ __('messages.pharmacist.system_outcome_title') }}
-            </h2>
+        @if ($session->advice_given || $session->safety_net)
+            <section class="rx-card p-4" aria-labelledby="rx-advice-title">
+                <h2 class="h6 fw-semibold text-gray-800 mb-3" id="rx-advice-title">
+                    <i class="bi bi-cpu me-2" aria-hidden="true"></i>{{ __('messages.pharmacist.advice_title') }}
+                </h2>
 
-            <span class="rx-badge rx-badge--{{ $outcome['severity'] }} mb-3">
-                <i class="bi {{ $outcome['icon'] }}" aria-hidden="true"></i>{{ $outcome['label'] }}
-            </span>
+                @if ($session->advice_given)
+                    <div class="text-gray-900 mb-3" style="white-space: pre-line; line-height: 1.7;">{{ $session->advice_given }}</div>
+                @endif
 
-            @if (!empty($session->triggered_red_flags))
-                <h3 class="small fw-semibold text-gray-700 mb-2">{{ __('messages.pharmacist.red_flags_title') }}</h3>
-                <ul class="list-unstyled d-flex flex-wrap gap-2 mb-3">
-                    @foreach ($session->triggered_red_flags as $flag)
-                        @php $severity = $flag['severity'] ?? 'caution'; @endphp
-                        <li class="rx-badge rx-badge--{{ $severity }}">
-                            <i class="bi {{ $flagIcons[$severity] ?? 'bi-person-badge-fill' }}" aria-hidden="true"></i>
-                            {{ $flag['name_vi'] ?? ($flag['code'] ?? '') }}
-                            <span class="fw-normal">· {{ __('messages.pharmacist.severity_' . $severity) }}</span>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-
-            @if (!empty($symptomNames))
-                <h3 class="small fw-semibold text-gray-700 mb-2">{{ __('messages.pharmacist.matched_symptoms_title') }}</h3>
-                <p class="text-gray-900">{{ implode(', ', $symptomNames) }}</p>
-            @endif
-
-            @if ($session->advice_given)
-                <h3 class="small fw-semibold text-gray-700 mb-2">{{ __('messages.pharmacist.advice_title') }}</h3>
-                <div class="text-gray-900 mb-3" style="white-space: pre-line; line-height: 1.7;">{{ $session->advice_given }}</div>
-            @endif
-
-            @if ($session->safety_net)
-                <h3 class="small fw-semibold text-gray-700 mb-2">{{ __('messages.pharmacist.safety_net_title') }}</h3>
-                <p class="text-gray-900 mb-0" style="line-height: 1.7;">{{ $session->safety_net }}</p>
-            @endif
-        </section>
+                @if ($session->safety_net)
+                    <h3 class="small fw-semibold text-gray-700 mb-2">{{ __('messages.pharmacist.safety_net_title') }}</h3>
+                    <p class="text-gray-900 mb-0" style="line-height: 1.7;">{{ $session->safety_net }}</p>
+                @endif
+            </section>
+        @endif
     </div>
 
+    {{-- Action panel, in the order the pharmacist works through it:
+         claim -> AI draft -> reply -> escalate. --}}
     <div class="col-12 col-lg-5">
-        <section class="rx-card p-4 mb-4" aria-labelledby="rx-profile-title">
-            <h2 class="h6 fw-semibold text-gray-800 mb-3" id="rx-profile-title">
-                <i class="bi bi-shield-lock me-2" aria-hidden="true"></i>{{ __('messages.pharmacist.profile_title') }}
-            </h2>
-
-            @if (!$profile)
-                <p class="text-gray-700 mb-0">
-                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i>{{ __('messages.pharmacist.profile_no_consent') }}
-                </p>
-            @else
-                <dl class="rx-dl row mb-2">
-                    <dt class="col-sm-5">{{ __('messages.pharmacist.profile_allergies') }}</dt>
-                    <dd class="col-sm-7">{{ implode(', ', (array) ($profile->allergies ?? [])) ?: __('messages.pharmacist.answer_empty') }}</dd>
-
-                    <dt class="col-sm-5">{{ __('messages.pharmacist.profile_chronic') }}</dt>
-                    <dd class="col-sm-7">{{ implode(', ', (array) ($profile->chronic_conditions ?? [])) ?: __('messages.pharmacist.answer_empty') }}</dd>
-
-                    <dt class="col-sm-5">{{ __('messages.pharmacist.profile_medications') }}</dt>
-                    <dd class="col-sm-7">{{ implode(', ', (array) ($profile->current_medications ?? [])) ?: __('messages.pharmacist.answer_empty') }}</dd>
-
-                    <dt class="col-sm-5">{{ __('messages.pharmacist.profile_pregnant') }}</dt>
-                    <dd class="col-sm-7">{{ $profile->is_pregnant ? __('messages.pharmacist.profile_yes') : __('messages.pharmacist.profile_no') }}</dd>
-
-                    <dt class="col-sm-5">{{ __('messages.pharmacist.profile_breastfeeding') }}</dt>
-                    <dd class="col-sm-7">{{ $profile->is_breastfeeding ? __('messages.pharmacist.profile_yes') : __('messages.pharmacist.profile_no') }}</dd>
-
-                    @if ($profile->weight_kg)
-                        <dt class="col-sm-5">{{ __('messages.pharmacist.profile_weight') }}</dt>
-                        <dd class="col-sm-7">{{ $profile->weight_kg }}</dd>
-                    @endif
-
-                    @if ($profile->notes)
-                        <dt class="col-sm-5">{{ __('messages.pharmacist.profile_notes') }}</dt>
-                        <dd class="col-sm-7 mb-0">{{ $profile->notes }}</dd>
-                    @endif
-                </dl>
-                <p class="small text-gray-600 mb-0">
-                    <i class="bi bi-journal-text me-1" aria-hidden="true"></i>{{ __('messages.pharmacist.profile_accessed_note') }}
-                </p>
-            @endif
-        </section>
-
         @if (!$isPending)
             <div class="alert alert-secondary d-flex align-items-start gap-2" role="status">
                 <i class="bi bi-lock-fill mt-1" aria-hidden="true"></i>
