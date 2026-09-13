@@ -143,7 +143,7 @@
                 @if ($medications !== [])
                     <ul class="list-unstyled d-flex flex-wrap gap-2 mb-4">
                         @foreach ($medications as $medication)
-                            <li class="rx-badge">
+                            <li class="rx-badge rx-badge--calm">
                                 <i class="bi bi-prescription2" aria-hidden="true"></i>{{ $medication }}
                             </li>
                         @endforeach
