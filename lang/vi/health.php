@@ -40,6 +40,12 @@ return [
     'journey_aria' => 'Năm bước anh/chị đã trả lời để ra kết luận này',
     'journey_outcome' => 'Kết luận',
 
+    // Trang kết quả gom phần diễn giải dài vào tab, để người đang lo lắng không phải
+    // cuộn qua sáu màn hình mới tới được phần mình cần.
+    'hub_aria' => 'Các phần chi tiết của kết quả sàng lọc',
+    'hub_tab_products' => 'Thuốc gợi ý',
+    'hub_tab_audit' => 'Căn cứ kết luận',
+
     // Outcome labels
     'outcome_emergency' => 'Cần được cấp cứu',
     'outcome_refer_doctor' => 'Nên đi khám',
