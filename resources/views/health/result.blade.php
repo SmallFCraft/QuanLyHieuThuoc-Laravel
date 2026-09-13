@@ -19,16 +19,20 @@
     <div class="container">
         <div class="health-shell">
 
-            <div class="text-center mb-4">
-                <span class="health-eyebrow mb-3">
-                    <i class="bi bi-clipboard2-check" aria-hidden="true"></i>
-                    {{ __('messages.health.nav_full') }}
-                </span>
-                <h1 class="mb-1">{{ __('messages.health.page_title') }}</h1>
-                <p class="small mb-0" style="color: var(--health-ink-mute);">
-                    <i class="bi bi-clock me-1" aria-hidden="true"></i>{{ $session->created_at->format('d/m/Y H:i') }}
+            {{-- Clinical header: breadcrumb eyebrow + calm title + audit timestamp --}}
+            <header class="text-center mb-4 mb-md-5">
+                <nav aria-label="{{ __('messages.health.nav_full') }}" class="mb-3">
+                    <span class="health-eyebrow">
+                        <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
+                        {{ __('messages.health.nav_full') }}
+                    </span>
+                </nav>
+                <h1 class="mb-2">{{ __('messages.health.page_title') }}</h1>
+                <p class="small mb-0 d-inline-flex align-items-center gap-1" style="color: var(--health-ink-mute);">
+                    <i class="bi bi-clock-history" aria-hidden="true"></i>
+                    <span>{{ $session->created_at->format('d/m/Y H:i') }}</span>
                 </p>
-            </div>
+            </header>
 
             @include('health.partials.disclaimer', ['disclaimerReviewable' => $disclaimerReviewable])
 
