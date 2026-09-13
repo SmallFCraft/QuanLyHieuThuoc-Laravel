@@ -1124,6 +1124,77 @@
         .health-journey__dot { left: 12px; }
     }
 
+    /* --- Result page: tab hub ---
+       Built on Bootstrap's pill plugin, which app.js already bundles, so the tab is
+       an anchor with a real `aria-selected` rather than a div wearing a role. */
+    .health-hub__tabbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 6px;
+        margin-bottom: 16px;
+        border-radius: var(--health-r-md);
+        background: rgba(21, 128, 61, 0.06);
+        border: 1px solid var(--health-selfcare-border);
+    }
+
+    .health-hub__tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1 1 auto;
+        justify-content: center;
+        padding: 9px 16px;
+        border-radius: var(--health-r-sm);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--health-ink-soft);
+        text-decoration: none;
+        transition: background var(--health-motion), color var(--health-motion);
+    }
+
+    .health-hub__tab:hover {
+        background: rgba(255, 255, 255, 0.7);
+        color: var(--health-selfcare);
+    }
+
+    .health-hub__tab.active {
+        background: #fff;
+        color: var(--health-selfcare);
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    .health-hub__tab:focus-visible {
+        outline: none;
+        box-shadow: var(--health-focus-ring);
+    }
+
+    /* Panels settle in on switch: opacity plus a 4px rise, nothing that moves the
+       surrounding layout. */
+    .health-hub__panels .tab-pane.fade {
+        display: none;
+        opacity: 0;
+        transform: translateY(4px);
+        transition: opacity 220ms cubic-bezier(.2, .8, .2, 1), transform 220ms cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .health-hub__panels .tab-pane.fade.show {
+        display: block;
+        opacity: 1;
+        transform: none;
+    }
+
+    /* No script: every panel reads in document order and the tab bar goes away, so
+       nothing on the page looks like a control that does not work. The hub is an
+       enhancement over a page whose default is "show everything". */
+    html:not(.js) .health-hub__panels .tab-pane.fade {
+        display: block;
+        opacity: 1;
+        transform: none;
+    }
+
+    html:not(.js) .health-hub__tabbar { display: none; }
+
     /* --- Step transition. Direction encodes travel: forward enters from the right,
        Back enters from the left. --- */
     .health-stage { position: relative; }
@@ -1274,6 +1345,16 @@
             border: 2px solid #374151 !important;
             border-left: 6px solid var(--health-refer) !important;
             background: #fff !important;
+        }
+
+        /* Tabs are a screen affordance. On paper every panel prints, in order; the
+           bar itself is noise, and an unopened tab would otherwise print blank. */
+        .health-hub__tabbar { display: none !important; }
+        .health-hub__panels .tab-pane,
+        .health-hub__panels .tab-pane.fade {
+            display: block !important;
+            opacity: 1 !important;
+            transform: none !important;
         }
 
         /* Every disclosure is open on paper: nobody can click a chevron on a printout,

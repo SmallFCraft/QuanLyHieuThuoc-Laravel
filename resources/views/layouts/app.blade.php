@@ -197,7 +197,12 @@
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
         <script>
-            window.PharmacyFavorites = {
+            // Tabs hide their inactive panels once Bootstrap takes over; until that script
+        // loads the page has to read top-to-bottom. Set before first paint, so nothing
+        // flashes from all-visible to tabbed.
+        document.documentElement.classList.add('js');
+
+        window.PharmacyFavorites = {
                 authenticated: @json(auth()->check()),
                 idsUrl: @json(route('favorites.ids')),
                 sectionUrl: @json(route('favorites.section')),
