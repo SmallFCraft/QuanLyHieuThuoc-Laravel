@@ -1024,6 +1024,106 @@
         to { opacity: 1; transform: none; }
     }
 
+    /* --- Result page: journey rail ---
+       The five answers that produced the conclusion, as a path rather than a list
+       behind a chevron. Horizontal on wide screens because the sequence reads
+       left-to-right; stacked on phones, where five values cannot share a row
+       without truncating the answers themselves. The connector is a pseudo-element
+       on the step, so the layout swap turns it from horizontal to vertical without
+       a second set of classes. */
+    .health-journey {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 8px 0;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .health-journey__step {
+        position: relative;
+        flex: 1 1 0;
+        min-width: 0;
+        padding: 0 12px 0 22px;
+        /* Entrance draws the path once, in order. Capped at 5 steps x 40ms so the
+           reader never waits on choreography to start reading. */
+        animation: healthRise 320ms cubic-bezier(.2, .8, .2, 1) both;
+        animation-delay: calc(var(--journey-index, 0) * 40ms);
+    }
+
+    /* Connector: a hairline from this dot to the next step's, drawn behind both. */
+    .health-journey__step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 7px;
+        left: 22px;
+        right: 0;
+        height: 1px;
+        background: var(--health-selfcare-border);
+    }
+
+    .health-journey__dot {
+        position: absolute;
+        top: 3px;
+        left: 12px;
+        width: 9px;
+        height: 9px;
+        border-radius: var(--health-r-pill);
+        background: var(--health-selfcare);
+        /* The ring is the card surface showing through, so the connector passes
+           behind the dot instead of touching it. */
+        box-shadow: 0 0 0 3px #fff;
+    }
+
+    /* The outcome node closes the path: the one step that is the conclusion, so it
+       gets the filled ring rather than a bare dot. */
+    .health-journey__step--outcome .health-journey__dot {
+        box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--health-selfcare-border);
+    }
+
+    .health-journey__label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: var(--health-ink-mute);
+        margin-bottom: 2px;
+    }
+
+    .health-journey__value {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        line-height: 1.45;
+        color: var(--health-ink);
+        overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 767.98px) {
+        /* Stacked: the connector turns vertical and runs dot-to-dot down the left. */
+        .health-journey {
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .health-journey__step {
+            flex: 0 0 auto;
+            padding: 0 0 14px 26px;
+        }
+
+        .health-journey__step:not(:last-child)::after {
+            top: 12px;
+            bottom: 0;
+            left: 16px;
+            right: auto;
+            width: 1px;
+            height: auto;
+        }
+
+        .health-journey__dot { left: 12px; }
+    }
+
     /* --- Step transition. Direction encodes travel: forward enters from the right,
        Back enters from the left. --- */
     .health-stage { position: relative; }

@@ -85,4 +85,29 @@ class HealthCheckResultLayoutTest extends TestCase
             $this->assertStringContainsString(__("messages.health.{$key}"), $content);
         }
     }
+
+    public function test_the_rail_has_a_horizontal_and_a_stacked_form(): void
+    {
+        $session = $this->completedSession();
+
+        $content = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk()
+            ->getContent();
+
+        // Horizontal rail on wide screens, stacked on phones: five answers do not
+        // fit across a 375px column as a row.
+        $this->assertMatchesRegularExpression(
+            '/\.health-journey\s*\{[^}]*display:\s*flex/s',
+            $content
+        );
+        $this->assertMatchesRegularExpression(
+            '/@media\s*\(max-width:[^)]*\)\s*\{[^@]*\.health-journey\s*\{[^}]*flex-direction:\s*column/s',
+            $content
+        );
+
+        // The connector lives on the item, not on a wrapper, so the layout swap
+        // needs no second rule set.
+        $this->assertStringContainsString('.health-journey__dot', $content);
+    }
 }
