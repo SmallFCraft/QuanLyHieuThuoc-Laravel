@@ -59,6 +59,10 @@ return [
     'products_note' => 'Anh/chị vui lòng đọc kỹ hướng dẫn sử dụng trước khi dùng.',
     'products_empty' => 'Nhà thuốc hiện chưa có sản phẩm không kê đơn phù hợp với triệu chứng này. Anh/chị hỏi dược sĩ để được chọn đúng thuốc nhé.',
     'product_usage_label' => 'Cách dùng',
+    // Nhãn cho phần hướng dẫn dài. `open` là chữ trên <summary> của <details>;
+    // `close` để dành cho CSS đổi nhãn theo trạng thái [open] (chưa dùng tới).
+    'product_usage_toggle_open' => 'Xem hướng dẫn & liều dùng chi tiết',
+    'product_usage_toggle_close' => 'Thu gọn hướng dẫn',
     'product_stock_in' => 'Còn hàng',
     'no_products' => 'Em không gợi ý thuốc cho tình huống này. Việc gặp bác sĩ hoặc dược sĩ là bước cần thiết.',
 
