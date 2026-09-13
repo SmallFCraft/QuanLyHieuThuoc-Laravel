@@ -13,13 +13,26 @@ use Illuminate\Support\Str;
  * controller only prefills the reply textarea, so a pharmacist still reads,
  * edits and submits it under their own name. That makes the human the validator.
  *
- * Health profile data is never sent, even though the pharmacist is allowed to
- * read it on screen — allergies/chronic conditions/current medications are
- * `encrypted:array` at rest and the consent text is purpose-limited.
+ * Health profile data only reaches the provider through TriageAiContextService,
+ * which gates it on explicit AI consent. The controller's fixed-outcome prompt
+ * remains the safety authority; this context is supporting information only.
  */
 class TriageAiDraftService extends TriageAiService
 {
     private const MAX_DRAFT_LENGTH = 2000;
+
+    /**
+     * Constructor injection mirrors TriageAiBriefingService. Safe here for the same
+     * reason as there: nothing resolves this seam before its config flag is on, and
+     * TriageAiContextService itself has no throwing constructor — AiProviderService,
+     * which throws without AI config, is resolved per call and stays untouched.
+     */
+    public function __construct(
+        protected AuditLogService $auditLogService,
+        protected TriageAiContextService $contextService,
+    ) {
+        parent::__construct($auditLogService);
+    }
 
     protected function configFlag(): string
     {
@@ -38,11 +51,11 @@ class TriageAiDraftService extends TriageAiService
      * A Vietnamese reply draft, or null when the provider is unavailable or the
      * output fails the length check.
      *
-     * @param array<int, string> $symptomNames Vietnamese symptom names, already resolved
+     * @param  array<int, string>  $symptomNames  Vietnamese symptom names, already resolved
      */
     public function draftReply(TriageSession $session, array $symptomNames): ?string
     {
-        if (!$this->isEnabled()) {
+        if (! $this->isEnabled()) {
             return null;
         }
 
@@ -97,8 +110,8 @@ class TriageAiDraftService extends TriageAiService
     }
 
     /**
-     * Only rule-derived material and symptom/red-flag names. No free text from the
-     * customer, no health profile.
+     * Rule-derived material, symptom/red-flag names, and optional patient context
+     * (age, consented health profile, and fenced recent triage history).
      */
     protected function buildPrompt(TriageSession $session, array $symptomNames): string
     {
@@ -106,13 +119,15 @@ class TriageAiDraftService extends TriageAiService
             ->map(fn ($flag) => is_array($flag) ? ($flag['name_vi'] ?? $flag['code'] ?? null) : $flag)
             ->filter()
             ->implode(', ');
+        $context = $this->contextService->buildContext($session);
 
         return implode("\n", array_filter([
-            'Kết luận của hệ thống: ' . ($session->outcome ?? 'chưa có'),
-            $symptomNames !== [] ? 'Triệu chứng hệ thống khớp: ' . implode(', ', $symptomNames) : null,
-            $redFlags !== '' ? 'Dấu hiệu cảnh báo: ' . $redFlags : null,
-            $session->advice_given ? "Lời khuyên hệ thống đã đưa:\n" . $session->advice_given : null,
-            $session->safety_net ? "Ngưỡng cần đi khám:\n" . $session->safety_net : null,
+            $context !== '' ? "Ngữ cảnh bệnh nhân & lịch sử:\n".$context : null,
+            'Kết luận của hệ thống: '.($session->outcome ?? 'chưa có'),
+            $symptomNames !== [] ? 'Triệu chứng hệ thống khớp: '.implode(', ', $symptomNames) : null,
+            $redFlags !== '' ? 'Dấu hiệu cảnh báo: '.$redFlags : null,
+            $session->advice_given ? "Lời khuyên hệ thống đã đưa:\n".$session->advice_given : null,
+            $session->safety_net ? "Ngưỡng cần đi khám:\n".$session->safety_net : null,
             '',
             'Soạn bản nháp trả lời khách dựa đúng trên các thông tin trên.',
         ]));
