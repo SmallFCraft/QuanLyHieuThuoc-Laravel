@@ -221,11 +221,14 @@ class TriageAiAdviceTest extends TestCase
             'reviewed_at' => now(),
         ]));
 
+        // The pharmacist's note is what the customer acts on. The machine rewrite is
+        // no longer printed beside it — two versions of one instruction on one page
+        // read as two different instructions.
         $this->actingAs($this->user)
             ->get(route('health.result', $session->MaSL))
             ->assertOk()
             ->assertSee('dược sĩ Hạnh', false)
-            ->assertSee(__('messages.health.ai_badge'));
+            ->assertDontSee('đo nhiệt độ mỗi 4–6 giờ nhé', false);
     }
 
     public function test_a_provider_failure_is_recorded_and_the_page_is_unchanged(): void
@@ -267,7 +270,12 @@ class TriageAiAdviceTest extends TestCase
         });
     }
 
-    public function test_the_result_page_labels_the_rewrite_and_keeps_the_original(): void
+    /**
+     * The rewrite still lands in the database — the audit trail and the pharmacist
+     * queue read it — but the result page shows only the pharmacist-written advice.
+     * Rendering both put two versions of one instruction on one page.
+     */
+    public function test_the_result_page_shows_the_pharmacist_advice_not_the_rewrite(): void
     {
         $this->fakeProviderReply(implode("\n", [
             'LỜI KHUYÊN:',
@@ -279,14 +287,14 @@ class TriageAiAdviceTest extends TestCase
 
         $session = $this->rewrite($this->selfCareSession());
 
+        $this->assertSame('ok', $session->ai_status);
+        $this->assertStringContainsString('đo nhiệt độ', (string) $session->ai_advice);
+
         $this->actingAs($this->user)
             ->get(route('health.result', $session->MaSL))
             ->assertOk()
-            ->assertSee(__('messages.health.ai_badge'))
-            ->assertSee(__('messages.health.ai_original_toggle'))
-            // Both versions are on the page: the original is one click away and prints.
             ->assertSee('Đo lại nhiệt độ mỗi 4–6 giờ.', false)
-            ->assertSee('đo nhiệt độ mỗi 4–6 giờ nhé', false);
+            ->assertDontSee('đo nhiệt độ mỗi 4–6 giờ nhé', false);
     }
 
     public function test_the_audit_row_records_status_but_no_advice_text(): void

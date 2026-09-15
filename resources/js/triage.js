@@ -85,15 +85,44 @@ function swapStage(html, direction = 'forward') {
     startPolling();
 }
 
-function setBusy(form, busy) {
+/**
+ * Put the form into its waiting state.
+ *
+ * `busy` alone used to change opacity and nothing else, so a customer who pressed
+ * "Gửi và tiếp tục" got no signal at all that anything was happening — the spinning
+ * they saw was the browser's own progress cursor, which reads as "the machine is
+ * slow", not "your answer is being read".
+ *
+ * `pressed` is the button that was actually clicked. Every submit button is disabled
+ * (a second click must not post twice), but only that one spins and swaps its label:
+ * marking them all busy would both lie to a screen reader and turn the whole form
+ * into a row of identical "Đang xử lý…" labels.
+ *
+ * Back and Skip have no label element — they are short enough that the spinner alone
+ * reads as acknowledgement, and swapping "Quay lại" for "Đang xử lý…" would suggest
+ * the wizard is moving forward when it is moving back.
+ */
+function setBusy(form, busy, pressed = null) {
     form.querySelectorAll('button[type="submit"]').forEach((button) => {
         button.disabled = busy;
 
-        if (busy) {
+        const active = busy && (pressed === null || button === pressed);
+
+        if (active) {
             button.setAttribute('aria-busy', 'true');
         } else {
             button.removeAttribute('aria-busy');
         }
+
+        const label = button.querySelector('.health-btn__label');
+
+        if (!label) {
+            return;
+        }
+
+        label.textContent = active
+            ? button.dataset.busyLabel ?? label.textContent
+            : label.dataset.idleLabel ?? label.textContent;
     });
 }
 
@@ -221,7 +250,7 @@ document.addEventListener('submit', async (event) => {
     const body = new FormData(form, event.submitter ?? undefined);
     const direction = form.dataset.triageDirection === 'back' ? 'back' : 'forward';
 
-    setBusy(form, true);
+    setBusy(form, true, event.submitter ?? null);
 
     try {
         const { response, data } = await post(form.action, body);

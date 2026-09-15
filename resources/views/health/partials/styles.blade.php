@@ -117,11 +117,186 @@
         font-weight: 600;
     }
 
+    /* --- Result masthead ---
+       Left-aligned like a clinical record. The four centred lines it replaces stacked
+       the section name, the page title and the conclusion, and set the conclusion —
+       the one line the visitor came for — smallest of the three. */
+    .health-masthead {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .health-masthead .health-eyebrow { margin-bottom: 0; }
+
+    .health-masthead__stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8125rem;
+        color: var(--health-ink-mute);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* --- The verdict ---
+       The answer as the visual anchor of the page. Colour + icon + the literal word
+       "Kết luận", so the level reads in greyscale and to a screen reader without
+       depending on the hue. */
+    .health-verdict {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 14px;
+        padding: 16px 20px;
+        border-radius: 16px;
+        border: 1px solid var(--health-line);
+        border-left-width: 6px;
+        background: #fff;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+    }
+
+    .health-verdict__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 44px;
+        height: 44px;
+        border-radius: var(--health-r-md);
+        font-size: 1.375rem;
+    }
+
+    .health-verdict__body { display: flex; flex-direction: column; min-width: 0; }
+
+    .health-verdict__label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--health-ink-mute);
+    }
+
+    .health-verdict__value {
+        font-family: var(--health-display);
+        font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+        font-weight: 700;
+        line-height: 1.3;
+        letter-spacing: -0.01em;
+    }
+
+    /* The rail, the icon and the words all take the level's colour; the card itself
+       stays white so the conclusion is never read through a tinted pane. */
+    .health-verdict--emergency { border-left-color: var(--health-emergency); }
+    .health-verdict--emergency .health-verdict__icon { background: var(--health-emergency-bg); color: var(--health-emergency); }
+    .health-verdict--emergency .health-verdict__value { color: var(--health-emergency); }
+
+    .health-verdict--refer_doctor { border-left-color: var(--health-refer); }
+    .health-verdict--refer_doctor .health-verdict__icon { background: var(--health-refer-bg); color: var(--health-refer); }
+    .health-verdict--refer_doctor .health-verdict__value { color: var(--health-refer); }
+
+    .health-verdict--pharmacist_review { border-left-color: var(--health-pharmacist); }
+    .health-verdict--pharmacist_review .health-verdict__icon { background: var(--health-pharmacist-bg); color: var(--health-pharmacist); }
+    .health-verdict--pharmacist_review .health-verdict__value { color: var(--health-pharmacist); }
+
+    .health-verdict--self_care { border-left-color: var(--health-selfcare); }
+    .health-verdict--self_care .health-verdict__icon { background: var(--health-selfcare-bg); color: var(--health-selfcare); }
+    .health-verdict--self_care .health-verdict__value { color: var(--health-selfcare); }
+
+    /* --- Start page: the actions under the wizard ---
+       A quiet row of secondary links, and below it the profile offer as its own
+       surface. Flat, the three of them read as one menu and the longest label set
+       the width for all of them. */
+    .health-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .health-actions__group {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    /* Two links of the same weight, separated by a hairline rather than by air, so
+       they read as a pair and not as two unrelated buttons. */
+    .health-actions__group > * + * {
+        position: relative;
+        margin-inline-start: 12px;
+    }
+
+    .health-actions__group > * + *::before {
+        content: '';
+        position: absolute;
+        inset-block: 25%;
+        inset-inline-start: -8px;
+        width: 1px;
+        background: var(--health-selfcare-border);
+    }
+
+    /* The offer. A real surface, because it asks for something rather than just
+       going somewhere: it takes the accent and the icon tile the result page uses. */
+    .health-actions__offer {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        max-width: 100%;
+        padding: 12px 18px 12px 12px;
+        border-radius: var(--health-r-md);
+        border: 1px solid var(--health-selfcare-border);
+        background: linear-gradient(180deg, var(--health-selfcare-bg), rgba(236, 253, 245, 0.35));
+        text-decoration: none;
+        transition: border-color var(--health-motion), box-shadow var(--health-motion), transform var(--health-motion);
+    }
+
+    .health-actions__offer:hover {
+        border-color: var(--health-selfcare);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        transform: translateY(-2px);
+    }
+
+    .health-actions__offer:focus-visible {
+        outline: none;
+        box-shadow: var(--health-focus-ring);
+    }
+
+    .health-actions__offer-tile {
+        width: 38px;
+        height: 38px;
+        font-size: 1.0625rem;
+        background: #fff;
+    }
+
+    .health-actions__offer-title {
+        display: block;
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: var(--health-selfcare);
+    }
+
+    .health-actions__offer-hint {
+        display: block;
+        font-size: 0.8125rem;
+        line-height: 1.45;
+        color: var(--health-ink-soft);
+    }
+
+    @media (max-width: 575.98px) {
+        .health-actions__offer { width: 100%; text-align: start; }
+    }
+
     .health-lede {
-        max-width: 52ch;
-        margin-inline: auto;
         /* 52ch keeps the line inside the 60-75 character band on desktop; without it the
-           lede runs the full 768px shell and reads as a paragraph, not a subtitle. */
+           lede runs the full 768px shell and reads as a paragraph, not a subtitle.
+           Left-aligned with the masthead above it: centring it under a left-aligned
+           title put the two blocks on different axes. */
+        max-width: 52ch;
         color: var(--health-ink-soft);
     }
 
@@ -373,6 +548,14 @@
     .health-link--accent { color: var(--health-selfcare); text-decoration: underline; }
     .health-link--accent:hover { color: #065F46; }
 
+    /* Inside running text, where the 44px tap target would open a hole the height of
+       three lines. Reached by mouse and screen reader here, not by thumb. */
+    .health-link--inline {
+        min-height: 0;
+        padding: 0;
+        display: inline;
+    }
+
     .health-link:focus-visible {
         outline: none;
         box-shadow: var(--health-focus-ring);
@@ -395,9 +578,50 @@
         transition: background-color var(--health-motion), border-color var(--health-motion), color var(--health-motion), transform var(--health-motion), box-shadow var(--health-motion);
     }
 
+    /* The pressed button keeps its colour and instead carries a spinner: dropping
+       opacity on the primary action reads as "disabled", and a disabled-looking
+       button is exactly the ambiguity this state is meant to remove. */
     .health-btn[aria-busy="true"] {
         cursor: progress;
-        opacity: 0.72;
+        opacity: 0.86;
+    }
+
+    /* Hidden until the button is busy. Present in the DOM from first paint so
+       switching it on moves no text. */
+    .health-btn__spinner {
+        display: none;
+        flex-shrink: 0;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.45);
+        border-top-color: #fff;
+        animation: healthSpin 700ms linear infinite;
+    }
+
+    /* Ghost buttons put ink on white, so their spinner needs a dark ring. */
+    .health-btn-ghost .health-btn__spinner {
+        border-color: rgba(4, 120, 87, 0.3);
+        border-top-color: var(--health-selfcare);
+    }
+
+    .health-btn[aria-busy="true"] .health-btn__spinner { display: block; }
+
+    /* A travel arrow promises movement; while the answer is being read there is
+       nowhere to point yet, and the spinner is the honest icon for the moment.
+       Marked on the icon itself so Back's left arrow is covered by the same rule. */
+    .health-btn[aria-busy="true"] .health-btn__arrow,
+    .health-btn[aria-busy="true"] > i.bi { display: none; }
+
+    @keyframes healthSpin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* A frozen spinner still has to say "working", so under reduced motion it stops
+       turning and the label does the talking. The one thing that must not happen is
+       the animation becoming the only signal. */
+    @media (prefers-reduced-motion: reduce) {
+        .health-btn__spinner { animation: none !important; }
     }
 
     /* White on #10b981 measures only 2.54:1. The gradient is darkened so both
@@ -839,6 +1063,64 @@
         overflow: hidden;
     }
 
+    /* --- Product list, inside its own tab ---
+       On its own screen the list is no longer a footnote under a wall of prose, so
+       the cards carry a little more weight: a category chip, the price on its own
+       line, and the action pinned to the card floor so two cards in a row line up
+       even when one has no usage text. */
+    .health-product__category {
+        display: inline-block;
+        align-self: flex-start;
+        padding: 3px 10px;
+        margin-bottom: 8px;
+        border-radius: var(--health-r-pill);
+        background: var(--health-selfcare-bg);
+        color: var(--health-selfcare);
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+    }
+
+    .health-product__name {
+        font-size: 0.9375rem;
+        font-weight: 700;
+        line-height: 1.45;
+        color: var(--health-ink);
+        margin-bottom: 6px;
+    }
+
+    /* The price is the number a customer scans for, so it gets its own row rather
+       than trailing the category on the same line. */
+    .health-product__price {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .health-product__price-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #047857;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.01em;
+    }
+
+    .health-product__stock {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--health-selfcare);
+    }
+
+    /* `margin-top: auto` on the link floor keeps the buttons of a row aligned. */
+    .health-product__action {
+        margin-top: auto;
+        padding-top: 12px;
+    }
+
     .health-product__flag {
         display: inline-flex;
         align-items: flex-start;
@@ -1024,104 +1306,241 @@
         to { opacity: 1; transform: none; }
     }
 
-    /* --- Result page: journey rail ---
-       The five answers that produced the conclusion, as a path rather than a list
-       behind a chevron. Horizontal on wide screens because the sequence reads
-       left-to-right; stacked on phones, where five values cannot share a row
-       without truncating the answers themselves. The connector is a pseudo-element
-       on the step, so the layout swap turns it from horizontal to vertical without
-       a second set of classes. */
-    .health-journey {
+    /* --- Result page: sticky journey sidebar ---
+       Two columns on a wide screen: the rail pinned at the left, everything else in the
+       scrolling column. The shell widens for it because the rail is a diagram, not
+       prose — the reading measure of the content column stays where it was.
+
+       Below 992px the rail is removed, not stacked. A sticky column becomes a long
+       block at the top of the page on a phone, which is exactly the "long rambling
+       column" the tab hub was introduced to end, and the audit tab already lists the
+       same five answers in full. The outcome is the one thing the rail owns that
+       nothing else restates, so it stays in the verdict card above — which never left. */
+    .health-shell--rail { max-width: 1080px; }
+
+    /* A card, not bare text. The rail sat on the page background with no surface at
+       all, while the two tab panels beside it are both bordered white cards — so the
+       right-hand column read as the page and the rail read as a caption that had
+       escaped. Same surface recipe as `.health-card`: translucent white, blur, the
+       shared shadow, so it is recognisably one of the page's blocks.
+
+       The `max-height` + `overflow-y: auto` pair is gone with it. It let a tall rail
+       scroll inside its own box, but the rail is five short nodes (~400px) that fit any
+       laptop viewport, so all it did was put a second scrollbar on a page that is
+       already scrolling. */
+    .health-rail {
+        position: sticky;
+        /* 62px navbar (`fixed-top` in the layout) plus a 16px breath, so the top of the
+           rail never tucks under the header. */
+        top: 78px;
+        padding: 20px;
+        border-radius: 16px;
+        border: 1px solid #E2E8F0;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        box-shadow: var(--health-shadow);
+    }
+
+    .health-rail__flags {
+        margin-bottom: 18px;
+    }
+
+    .health-rail__head {
         display: flex;
-        flex-wrap: wrap;
         align-items: flex-start;
-        gap: 8px 0;
+        gap: 12px;
+        padding-bottom: 16px;
+        margin-bottom: 18px;
+        border-bottom: 1px solid #E2E8F0;
+    }
+
+    /* Sentence case and 15px, not the 12px uppercase eyebrow this had as a bare
+       heading. Uppercase at that size reads as a section label in a long document; here
+       it is the name of a panel, next to two panels that set their names the same way.
+       Tightened leading because the tile beside it fixes the block's height. */
+    .health-rail__title {
+        font-family: var(--health-display);
+        font-size: 0.9375rem;
+        font-weight: 700;
+        line-height: 1.25;
+        letter-spacing: -0.005em;
+        color: var(--health-ink);
+        margin-bottom: 4px;
+    }
+
+    .health-rail__hint {
+        font-size: 0.8125rem;
+        line-height: 1.4;
+        color: var(--health-ink-soft);
+        margin-bottom: 0;
+    }
+
+    @media (min-width: 992px) {
+        .health-shell--rail {
+            display: grid;
+            /* The rail is a fixed track: its labels and the answer fragments under them
+               are short by construction, so a flexible track would only let it drift
+               wider than its content needs. */
+            grid-template-columns: 264px minmax(0, 1fr);
+            gap: 48px;
+            align-items: start;
+        }
+
+        /* Two cells, two explicit placements. The content is one wrapper element and the
+           rail sits beside it in the same row.
+
+           This used to place `.health-rail` with `grid-row: 1 / -1` against an implicit
+           grid and let every other child fall into its own row. There was no explicit
+           row line for `-1` to resolve against, so it resolved to row 1, the rail's
+           382px height stretched that row, and the 182px header left a 200px hole above
+           the disclaimer. One cell per column is the whole fix. */
+        .health-shell__content { grid-column: 2; }
+
+        .health-shell--rail > .health-rail { grid-column: 1; grid-row: 1; }
+    }
+
+    @media (max-width: 991.98px) {
+        /* Removed, not stacked — see the comment above. `display: none` also takes it
+           out of the accessibility tree, so the same five answers are not announced
+           twice on a phone (the audit tab has them). */
+        .health-rail { display: none; }
+    }
+
+    /* --- Result page: journey rail ---
+       The answers that produced the conclusion, as a numbered path rather than a list
+       behind a chevron.
+
+       Three layouts were tried and two were wrong, both for the same reason: a path is
+       one-directional, and any wrap breaks that. One row of six inside the 768px shell
+       left 116px a node, so alternating values wrapped to two lines and the rest read
+       as a cramped table. A 3x2 grid fixed the width but cut the line — node 3 to node 4
+       had no connector, and row two restarted at the left, so the path visibly ran
+       backwards.
+
+       So the rail never wraps and it leaves the document flow: it is a sticky sidebar
+       (`.health-rail`, defined below), the answers run down its single column, and the
+       tab hub scrolls past it. That is the one arrangement where the rail can be both a
+       sequence and permanent — pinned, it stays in view while the reader moves through
+       the content it summarises. Reading order, DOM order and visual order are the same
+       thing; and because nothing here is `:nth-child`-dependent, a five-node rail works
+       exactly as well as a six-node one. */
+    .health-journey {
+        /* Half the dot's width, so the dot sits flush at the step's left edge and the
+           connector, centred on the same x, runs through it rather than beside it. */
+        --journey-rail-x: 14px;
+        --journey-dot: 28px;
+        position: relative;
         margin: 0;
         padding: 0;
         list-style: none;
+        display: grid;
+        gap: 16px;
     }
 
     .health-journey__step {
         position: relative;
-        flex: 1 1 0;
-        min-width: 0;
-        padding: 0 12px 0 22px;
-        /* Entrance draws the path once, in order. Capped at 5 steps x 40ms so the
-           reader never waits on choreography to start reading. */
-        animation: healthRise 320ms cubic-bezier(.2, .8, .2, 1) both;
-        animation-delay: calc(var(--journey-index, 0) * 40ms);
+        padding-left: 40px;
+        /* A node's number rides the rail, so its box is the anchor for both the dot and
+           the connector that leaves it. */
+        min-height: var(--journey-dot);
     }
 
-    /* Connector: a hairline from this dot to the next step's, drawn behind both. */
+    /* A node's number, not a bare dot: the rail asserts a sequence, and a sequence is
+       the one thing six disconnected labels do not say. The number is real text, not a
+       pseudo-element, so it is announced with the step it belongs to. */
+    .health-journey__dot {
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--journey-dot);
+        height: var(--journey-dot);
+        border-radius: var(--health-r-pill);
+        background: var(--health-selfcare-bg);
+        border: 1.5px solid var(--health-selfcare-border);
+        color: var(--health-selfcare);
+        font-size: 0.75rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        /* Nodes pop in order, carrying the sequence down the rail. Delayed past the
+           card's own entrance so the two do not read as one jitter. */
+        animation: healthDotIn 300ms cubic-bezier(.2, .8, .2, 1) both;
+        animation-delay: calc(var(--journey-index, 0) * 60ms + 200ms);
+    }
+
+    @keyframes healthDotIn {
+        from { opacity: 0; transform: scale(.4); }
+        to { opacity: 1; transform: none; }
+    }
+
+    /* Connector: from this node's dot to the next one. Every node but the last, no
+       column arithmetic — which is why the count can change without the path breaking. */
     .health-journey__step:not(:last-child)::after {
         content: '';
         position: absolute;
-        top: 7px;
-        left: 22px;
-        right: 0;
-        height: 1px;
+        top: calc(var(--journey-dot) + 4px);
+        left: var(--journey-rail-x);
+        bottom: -22px;
+        width: 2px;
         background: var(--health-selfcare-border);
     }
 
-    .health-journey__dot {
-        position: absolute;
-        top: 3px;
-        left: 12px;
-        width: 9px;
-        height: 9px;
-        border-radius: var(--health-r-pill);
-        background: var(--health-selfcare);
-        /* The ring is the card surface showing through, so the connector passes
-           behind the dot instead of touching it. */
-        box-shadow: 0 0 0 3px #fff;
+    /* The outcome node closes the path, so it wears the level's colour. Four separate
+       rules rather than one base plus four colour overrides: at (0,3,0) the colour
+       rules would tie the base and win only on source order, which is the exact shape
+       of the bug that made `.health-product--flagged` lose to its own hover. */
+    .health-journey__step--outcome .health-journey__dot--emergency {
+        background: var(--health-emergency-bg);
+        border-color: var(--health-emergency-border);
+        color: var(--health-emergency);
     }
 
-    /* The outcome node closes the path: the one step that is the conclusion, so it
-       gets the filled ring rather than a bare dot. */
-    .health-journey__step--outcome .health-journey__dot {
-        box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--health-selfcare-border);
+    .health-journey__step--outcome .health-journey__dot--refer_doctor {
+        background: var(--health-refer-bg);
+        border-color: var(--health-refer-border);
+        color: var(--health-refer);
+    }
+
+    .health-journey__step--outcome .health-journey__dot--pharmacist_review {
+        background: var(--health-pharmacist-bg);
+        border-color: var(--health-pharmacist-border);
+        color: var(--health-pharmacist);
+    }
+
+    .health-journey__step--outcome .health-journey__dot--self_care {
+        background: var(--health-selfcare-bg);
+        border-color: var(--health-selfcare-border);
+        color: var(--health-selfcare);
     }
 
     .health-journey__label {
         display: block;
         font-size: 0.75rem;
         font-weight: 600;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
         color: var(--health-ink-mute);
-        margin-bottom: 2px;
+        margin-bottom: 3px;
     }
 
     .health-journey__value {
         display: block;
-        font-size: 0.875rem;
+        font-family: var(--health-display);
+        font-size: 0.9375rem;
         font-weight: 600;
         line-height: 1.45;
         color: var(--health-ink);
         overflow-wrap: anywhere;
     }
 
-    @media (max-width: 767.98px) {
-        /* Stacked: the connector turns vertical and runs dot-to-dot down the left. */
-        .health-journey {
-            flex-direction: column;
-            gap: 0;
-        }
-
-        .health-journey__step {
-            flex: 0 0 auto;
-            padding: 0 0 14px 26px;
-        }
-
-        .health-journey__step:not(:last-child)::after {
-            top: 12px;
-            bottom: 0;
-            left: 16px;
-            right: auto;
-            width: 1px;
-            height: auto;
-        }
-
-        .health-journey__dot { left: 12px; }
+    /* The conclusion is the line the visitor came for; the five before it are
+       supporting evidence and are set one step down. */
+    .health-journey__step--outcome .health-journey__value {
+        font-size: 1rem;
+        font-weight: 700;
     }
 
     /* --- Result page: tab hub ---
@@ -1182,6 +1601,12 @@
         display: block;
         opacity: 1;
         transform: none;
+    }
+
+    /* Stacked panels reuse the briefing shell, so they need the same vertical rhythm
+       the briefing gets internally. Without this two panels share an edge. */
+    .health-hub__panels .health-brief + .health-brief {
+        margin-top: 16px;
     }
 
     /* No script: every panel reads in document order and the tab bar goes away, so
@@ -1306,6 +1731,15 @@
         .chatbot-widget-container,
         .health-no-print { display: none !important; }
 
+        /* The rail is a position indicator for a scrolling reader; paper has no scroll
+           position, and A4 is narrower than the sidebar's breakpoint anyway. Hidden
+           unconditionally rather than left to the media query, because a landscape or
+           wide page would otherwise print the two-column shell. Nothing is lost: the
+           audit tab prints every step label with its full answer, which is the same
+           content the rail truncates. */
+        .health-rail { display: none !important; }
+        .health-shell--rail { display: block !important; max-width: none !important; }
+
         /* The gradient hairline prints as a grey band across every card. */
         .health-card::before { display: none !important; }
 
@@ -1335,6 +1769,19 @@
         .health-outcome {
             border-left-width: 8px !important;
         }
+
+        /* The masthead's rail is the same severity cue as the outcome card's, and the
+           blanket border rule would flatten it the same way. */
+        .health-verdict {
+            box-shadow: none !important;
+            border: 1px solid #9CA3AF !important;
+            border-left-width: 8px !important;
+        }
+
+        .health-verdict--emergency { border-left-color: var(--health-emergency) !important; }
+        .health-verdict--refer_doctor { border-left-color: var(--health-refer) !important; }
+        .health-verdict--pharmacist_review { border-left-color: var(--health-pharmacist) !important; }
+        .health-verdict--self_care { border-left-color: var(--health-selfcare) !important; }
 
         .health-outcome--emergency { border-left-color: var(--health-emergency) !important; }
         .health-outcome--refer_doctor { border-left-color: var(--health-refer) !important; }

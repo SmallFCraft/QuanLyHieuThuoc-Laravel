@@ -21,11 +21,17 @@ return [
     'btn_back' => 'Quay lại',
     'btn_skip' => 'Bỏ qua câu này',
     'btn_next' => 'Tiếp tục',
+    // Trạng thái của nút vừa bấm. Chữ này là thứ báo "đang xử lý" — vòng xoay bị
+    // đứng hình khi người dùng bật giảm chuyển động, nên chữ phải tự đứng được.
+    'btn_working' => 'Đang xử lý…',
     'btn_restart' => 'Bắt đầu lại',
     'btn_start' => 'Bắt đầu sàng lọc',
     'btn_history' => 'Lịch sử sàng lọc',
     'profile_hint' => 'Em đã dùng thông tin sức khoẻ anh/chị khai trong hồ sơ nên sẽ bỏ qua vài câu hỏi.',
-    'profile_cta' => 'Khai hồ sơ sức khoẻ để em tư vấn chính xác hơn',
+    // Tiêu đề ngắn vì nó là một lời mời, không phải một câu. Phần giải thích dài nằm
+    // ở dòng dưới (`profile_offer_hint`).
+    'profile_cta' => 'Khai hồ sơ sức khoẻ',
+    'profile_offer_hint' => 'Để em tư vấn chính xác hơn cho trường hợp của anh/chị.',
 
     // Steps
     'step_1' => 'Triệu chứng',
@@ -43,7 +49,7 @@ return [
     // Trang kết quả gom phần diễn giải dài vào tab, để người đang lo lắng không phải
     // cuộn qua sáu màn hình mới tới được phần mình cần.
     'hub_aria' => 'Các phần chi tiết của kết quả sàng lọc',
-    'hub_tab_products' => 'Thuốc gợi ý',
+    'hub_tab_care' => 'Thuốc & chăm sóc',
     'hub_tab_audit' => 'Căn cứ kết luận',
 
     // Outcome labels
@@ -63,6 +69,7 @@ return [
     'red_flags_title' => 'Dấu hiệu em đã ghi nhận',
     'guidance_title' => 'Hướng dẫn',
     'advice_title' => 'Anh/chị nên làm gì',
+    'advice_hint' => 'Dược sĩ nhà thuốc ghi cho trường hợp của anh/chị',
     'safety_net_title' => 'Đi khám ngay nếu có các dấu hiệu sau',
     'condition_group_title' => 'Nhóm nguyên nhân có thể gặp',
     'condition_group_note' => 'Đây là phỏng đoán dựa trên thông tin anh/chị cung cấp, không phải kết luận y khoa.',
