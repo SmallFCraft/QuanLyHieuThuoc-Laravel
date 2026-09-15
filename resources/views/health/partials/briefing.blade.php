@@ -12,20 +12,14 @@
 
     $why = trim((string) ($briefing['why'] ?? ''));
     $filled = collect($sections)->filter(fn ($meta, $key) => !empty($briefing[$key]));
-    $products = collect($briefing['products'] ?? []);
-    $flaggedProducts = array_map('intval', $flaggedProducts ?? []);
+
+    // The briefing's own product picks are rendered by the shared product list in the
+    // "Thuốc & chăm sóc" tab, merged with the rule engine's. Rendering them here as
+    // well put the same medicine on the page twice under two different labels.
 
     // Jump links. Six sections of prose is several screens on a phone, and the whole
     // point of this page is that somebody anxious can find the part they need.
     $toc = $filled->map(fn ($meta, $key) => ['id' => 'briefing-' . str_replace('_', '-', $key)] + $meta);
-
-    if ($products->isNotEmpty()) {
-        $toc = $toc->put('products', [
-            'id' => 'briefing-products',
-            'icon' => 'bi-capsule',
-            'label' => __('messages.health.briefing_products_title'),
-        ]);
-    }
 @endphp
 
 <section class="health-brief mt-4" aria-labelledby="briefing-heading">
@@ -84,88 +78,4 @@
         </div>
     @endforeach
 
-    @if ($products->isNotEmpty())
-        <div class="health-brief__section" id="briefing-products">
-            <h3 class="health-brief__section-title">
-                <i class="bi bi-capsule" aria-hidden="true"></i>{{ __('messages.health.briefing_products_title') }}
-            </h3>
-            <p class="small mb-3" style="color: var(--health-ink-soft);">{{ __('messages.health.briefing_products_note') }}</p>
-
-            <div class="row g-3">
-                @foreach ($products as $product)
-                    @php $isFlagged = in_array((int) ($product['id'] ?? 0), $flaggedProducts, true); @endphp
-                    <div class="col-12 col-sm-6">
-                        <div class="health-product h-100 d-flex flex-column {{ $isFlagged ? 'health-product--flagged' : '' }}">
-                            @include('health.partials.product-media', ['product' => $product])
-
-                            <p class="fw-semibold text-gray-900 mb-1">{{ $product['name'] ?? '' }}</p>
-
-                            <p class="health-product__price mb-2">
-                                {{ number_format((int) ($product['price'] ?? 0), 0, ',', '.') }} ₫
-                                @if (!empty($product['category']))
-                                    <span class="text-gray-600 fw-normal">· {{ $product['category'] }}</span>
-                                @endif
-                            </p>
-
-                            {{-- Icon + text, never colour alone: this must survive greyscale printing. --}}
-                            @if ($isFlagged)
-                                <p class="health-product__flag small mb-2">
-                                    <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
-                                    <span>{{ __('messages.health.product_has_warning') }}</span>
-                                </p>
-                            @endif
-
-                            @if (!empty($product['reason']))
-                                <p class="small text-gray-700 mb-2">
-                                    <span class="text-gray-600">{{ __('messages.health.briefing_product_reason') }}:</span>
-                                    {{ $product['reason'] }}
-                                </p>
-                            @endif
-
-                            @if (!empty($product['usage']))
-                                {{-- Same clamp as the rule engine's cards: a crawled product can
-                                     carry 3,000+ characters here too. --}}
-                                @php
-                                    $usageText = trim($product['usage']);
-                                    $isLongUsage = mb_strlen($usageText) > 160;
-                                    $usageSummary = $isLongUsage ? \Illuminate\Support\Str::limit($usageText, 140, '...') : $usageText;
-                                @endphp
-                                <div class="health-product__usage mb-2">
-                                    <p class="small text-gray-700 mb-1">
-                                        <span class="fw-medium text-gray-800">{{ __('messages.health.product_usage_label') }}:</span>
-                                        {{ $usageSummary }}
-                                    </p>
-                                    @if ($isLongUsage)
-                                        <details class="health-product__usage-details">
-                                            <summary class="health-product__usage-toggle" aria-label="{{ __('messages.health.product_usage_toggle_open') }}">
-                                                <span class="health-product__usage-toggle-text">{{ __('messages.health.product_usage_toggle_open') }}</span>
-                                                <i class="bi bi-chevron-down health-product__usage-chevron" aria-hidden="true"></i>
-                                            </summary>
-                                            <div class="health-product__usage-full mt-2 p-2 rounded-2 bg-slate-50 border text-gray-700 small">
-                                                {{ $usageText }}
-                                            </div>
-                                        </details>
-                                    @endif
-                                </div>
-                            @endif
-
-                            @php $stock = (int) ($product['stock_quantity'] ?? 0); @endphp
-                            @if ($stock > 0)
-                                <p class="small text-gray-600 mb-3">
-                                    <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
-                                    {{ __('messages.health.product_stock_in') }}
-                                </p>
-                            @endif
-
-                            <a href="{{ $product['url'] ?? '#' }}"
-                               class="health-btn health-btn-ghost mt-auto text-center text-decoration-none health-no-print"
-                               aria-label="{{ __('messages.view_details') }}: {{ $product['name'] ?? '' }}">
-                                {{ __('messages.view_details') }}
-                            </a>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    @endif
 </section>

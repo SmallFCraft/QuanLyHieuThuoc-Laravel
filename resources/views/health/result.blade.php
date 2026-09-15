@@ -14,8 +14,8 @@
     $briefingPending = (bool) $briefingJobId;
     $briefingUnavailable = $briefing === null && !$briefingPending && $briefingExpected;
 
-    // The journey rail's closing node reuses these rather than re-deriving a label,
-    // so the page cannot end up disagreeing with its own outcome card.
+    // The conclusion is labelled in exactly one place per surface: the header names
+    // it, the journey rail closes on it. Both read this map so neither can drift.
     $outcome = $session->outcome ?? 'pharmacist_review';
     $outcomeLabels = [
         'emergency' => __('messages.health.outcome_emergency'),
@@ -23,25 +23,76 @@
         'pharmacist_review' => __('messages.health.outcome_pharmacist_review'),
         'self_care' => __('messages.health.outcome_self_care'),
     ];
+
+    // Same four marks outcome.blade.php and the journey rail use. One table, so the
+    // header cannot end up disagreeing with the card about what a level looks like.
+    $outcomeIcons = [
+        'emergency' => 'bi-exclamation-octagon-fill',
+        'refer_doctor' => 'bi-hospital-fill',
+        'pharmacist_review' => 'bi-person-badge-fill',
+        'self_care' => 'bi-house-heart-fill',
+    ];
+
+    $hasProducts = !empty($suggestedProducts) || !empty(data_get($briefing, 'products', []));
+
+    // Three panels hold what the page used to stack: the AI's prose, the medicines,
+    // and the audit trail. An emergency page renders all three flat — Bootstrap hides
+    // an inactive pane, and a red-flag page must not put the reason behind a control.
+    $tabs = [
+        ['id' => 'briefing', 'icon' => 'bi-stars', 'label' => __('messages.health.briefing_title')],
+        ['id' => 'care', 'icon' => 'bi-capsule', 'label' => __('messages.health.hub_tab_care')],
+        ['id' => 'audit', 'icon' => 'bi-list-check', 'label' => __('messages.health.hub_tab_audit')],
+    ];
+    $useTabs = !$session->isEmergency();
 @endphp
 
 <div class="health-page py-4 py-md-5">
     <div class="container">
-        <div class="health-shell">
+        {{-- `health-shell--rail`: the journey rail is a sticky column beside the content
+             on wide screens, so this page's shell is wider than the wizard's. --}}
+        <div class="health-shell health-shell--rail">
+            @include('health.partials.journey', [
+                'outcome' => $outcome,
+                'outcomeLabel' => $outcomeLabels[$outcome] ?? '',
+            ])
 
-            {{-- Clinical header: breadcrumb eyebrow + calm title + audit timestamp --}}
-            <header class="text-center mb-4 mb-md-5">
-                <nav aria-label="{{ __('messages.health.nav_full') }}" class="mb-3">
+            {{-- One cell for everything that is not the rail. Wrapping is not cosmetic:
+                 without it each child is its own implicit grid row, and a rail pinned
+                 across them all stretches row 1 to the rail's height, leaving a hole
+                 under the header. One wrapper, one row, no hole. --}}
+            <div class="health-shell__content">
+            {{-- Clinical masthead. Four centred lines stacked the section name, the page
+                 title and the conclusion on top of each other, and gave the quietest
+                 treatment to the one line the customer came to read. The layout is
+                 left-aligned now, like a record rather than a banner: context, then the
+                 answer at the scale it deserves, then when it was taken. --}}
+            <header class="mb-4">
+                <div class="health-masthead">
                     <span class="health-eyebrow">
                         <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
                         {{ __('messages.health.nav_full') }}
                     </span>
-                </nav>
-                <h1 class="mb-2">{{ __('messages.health.page_title') }}</h1>
-                <p class="small mb-0 d-inline-flex align-items-center gap-1" style="color: var(--health-ink-mute);">
-                    <i class="bi bi-clock-history" aria-hidden="true"></i>
-                    <span>{{ $session->created_at->format('d/m/Y H:i') }}</span>
-                </p>
+                    <span class="health-masthead__stamp">
+                        <i class="bi bi-clock-history" aria-hidden="true"></i>
+                        <time datetime="{{ $session->created_at->toIso8601String() }}">
+                            {{ $session->created_at->format('d/m/Y H:i') }}
+                        </time>
+                    </span>
+                </div>
+
+                <h1 class="mb-0">{{ __('messages.health.page_title') }}</h1>
+
+                {{-- The conclusion, at the scale of a result. Colour, icon and the word
+                     "Kết luận" all carry it, so the severity survives greyscale. --}}
+                <div class="health-verdict health-verdict--{{ $outcome }}">
+                    <span class="health-verdict__icon" aria-hidden="true">
+                        <i class="bi {{ $outcomeIcons[$outcome] ?? 'bi-shield-check' }}"></i>
+                    </span>
+                    <span class="health-verdict__body">
+                        <span class="health-verdict__label">{{ __('messages.health.journey_outcome') }}</span>
+                        <span class="health-verdict__value">{{ $outcomeLabels[$outcome] ?? '' }}</span>
+                    </span>
+                </div>
             </header>
 
             @include('health.partials.disclaimer', ['disclaimerReviewable' => $disclaimerReviewable])
@@ -64,41 +115,10 @@
                 </div>
             @endif
 
-            <div class="mt-4">
-                @include('health.partials.outcome', [
-                    'session' => $session,
-                    'briefing' => $briefing,
-                    'suggestedProducts' => $suggestedProducts,
-                ])
-            </div>
-
-            @include('health.partials.journey', [
-                'outcome' => $outcome,
-                'outcomeLabel' => $outcomeLabels[$outcome] ?? '',
-            ])
-
-            @php
-                // The page used to be one six-screen column: briefing, then two
-                // collapsed details, then the buttons. Grouped here so the reader
-                // stops where they are done rather than where the scroll runs out.
-                //
-                // A tab is only offered when it has content. The products tab is
-                // self-care only, matching outcome.blade.php, which states outright
-                // that no medicine matches for the other outcomes.
-                $hasProductsTab = ($session->outcome ?? '') === 'self_care';
-                $tabs = [['id' => 'briefing', 'icon' => 'bi-stars', 'label' => __('messages.health.briefing_title')]];
-
-                if ($hasProductsTab) {
-                    $tabs[] = ['id' => 'products', 'icon' => 'bi-capsule', 'label' => __('messages.health.hub_tab_products')];
-                }
-
-                $tabs[] = ['id' => 'audit', 'icon' => 'bi-list-check', 'label' => __('messages.health.hub_tab_audit')];
-
-                // An emergency page renders flat. Bootstrap hides every inactive pane,
-                // and a red-flag page must not put the reason behind a control — the
-                // 115 button and the red flags are the whole page.
-                $useTabs = !$session->isEmergency();
-            @endphp
+            {{-- The 115 action and the red flags that justified it render inside the rail
+                 (journey.blade.php), above the journey list. An emergency page is flat
+                 below the header, so nothing sits between a red-flag patient and 115;
+                 the care tab carries no duplicate. --}}
 
             <div class="health-hub mt-4" @if ($useTabs) data-triage-hub @endif>
                 @if ($useTabs)
@@ -121,7 +141,6 @@
                         @if ($briefing !== null)
                             @include('health.partials.briefing', [
                                 'briefing' => $briefing,
-                                'flaggedProducts' => $safety['flagged'] ?? [],
                             ])
                         @elseif ($briefingPending)
                             @include('health.partials.briefing-pending')
@@ -134,143 +153,62 @@
                         @endif
                     </div>
 
-                    @if ($hasProductsTab)
-                        <div class="tab-pane {{ $useTabs ? 'fade' : '' }}" id="hub-products" role="tabpanel">
-                            @include('health.partials.outcome-products', [
-                                'session' => $session,
-                                'safety' => $safety,
-                                'hasProfile' => $hasProfile,
-                                'briefing' => $briefing,
-                                'suggestedProducts' => $suggestedProducts,
-                            ])
-                        </div>
-                    @endif
+                    <div class="tab-pane {{ $useTabs ? 'fade' : '' }}" id="hub-care" role="tabpanel">
+                        @include('health.partials.outcome', [
+                            'session' => $session,
+                            'briefing' => $briefing,
+                            'safety' => $safety,
+                            'hasProfile' => $hasProfile,
+                            'suggestedProducts' => $suggestedProducts,
+                        ])
 
-                    <div class="tab-pane {{ $useTabs ? 'fade' : '' }}" id="hub-audit" role="tabpanel">
-
-            {{-- Why this conclusion. Every value here is already persisted on the
-                 session; nothing is re-derived and no medical content is invented.
-                 Collapsed by default now that the briefing above explains the same
-                 conclusion in prose — this is the audit trail, not the answer. --}}
-            <details class="health-card health-details rounded-4 border-0 mt-4">
-                <summary class="health-details__summary">
-                    <span class="health-details__summary-text">
-                        <i class="bi bi-list-check" aria-hidden="true"></i>{{ __('messages.health.basis_title') }}
-                    </span>
-                    <i class="bi bi-chevron-down health-details__chevron" aria-hidden="true"></i>
-                </summary>
-
-                <div class="health-details__body">
-                    <dl class="health-basis-list mb-3">
-                        @if (!empty($basis['symptoms']))
-                            <div>
-                                <dt>{{ __('messages.health.basis_symptoms') }}</dt>
-                                <dd>{{ implode(', ', $basis['symptoms']) }}</dd>
-                            </div>
-                        @endif
-
-                        @if ($basis['duration_days'] !== null)
-                            <div>
-                                <dt>{{ __('messages.health.basis_duration') }}</dt>
-                                <dd>
-                                    {{ (int) $basis['duration_days'] <= 1
-                                        ? __('messages.health.basis_duration_today')
-                                        : __('messages.health.basis_duration_days', ['days' => (int) $basis['duration_days']]) }}
-                                </dd>
-                            </div>
-                        @endif
-
-                        @if ($basis['age'] !== null)
-                            <div>
-                                <dt>{{ __('messages.health.basis_age') }}</dt>
-                                <dd>{{ __('messages.health.basis_age_years', ['age' => (int) $basis['age']]) }}</dd>
-                            </div>
-                        @endif
-
-                        @if ($basis['clarify_rounds'] > 0)
-                            <div>
-                                <dt>{{ __('messages.health.basis_clarify') }}</dt>
-                                <dd>{{ __('messages.health.basis_clarify_rounds', ['count' => $basis['clarify_rounds']]) }}</dd>
-                            </div>
-                        @endif
-                    </dl>
-
-                    {{-- "No red flag found" is a result, not an empty state: it is the
-                         reason self-care was allowed at all. --}}
-                    @if (!empty($basis['red_flags']))
-                        <p class="small fw-medium text-gray-700 mb-2">{{ __('messages.health.basis_red_flags_found') }}</p>
-                        <ul class="list-unstyled d-flex flex-wrap gap-2 mb-3">
-                            @foreach ($basis['red_flags'] as $flag)
-                                <li class="badge bg-white text-gray-800 border px-3 py-2 rounded-pill fw-normal">
-                                    <i class="bi bi-dot" aria-hidden="true"></i>{{ $flag['name_vi'] ?? '' }}
-                                </li>
-                            @endforeach
-                        </ul>
-                    @else
-                        <p class="small text-gray-700 mb-3">
-                            <i class="bi bi-shield-check me-1" aria-hidden="true"></i>{{ __('messages.health.basis_red_flags_cleared') }}
-                        </p>
-                    @endif
-
-                    <p class="small text-gray-600 mb-0">
-                        <i class="bi bi-info-circle me-1" aria-hidden="true"></i>{{ __('messages.health.basis_note') }}
-                    </p>
-                </div>
-            </details>
-
-            {{-- What the user told us, so the printout stands alone at the clinic --}}
-            @if (!empty($session->collected_data))
-                <details class="health-card health-details rounded-4 border-0 mt-4">
-                    <summary class="health-details__summary">
-                        <span class="health-details__summary-text">
-                            <i class="bi bi-chat-left-text" aria-hidden="true"></i>{{ __('messages.health.answers_title') }}
-                        </span>
-                        <i class="bi bi-chevron-down health-details__chevron" aria-hidden="true"></i>
-                    </summary>
-
-                    <div class="health-details__body">
-                        <dl class="health-answer-list row g-3 mb-0">
-                            @php
-                                $data = $session->collected_data;
-                                $rows = [
-                                    __('messages.health.step_1') => $data['raw_symptom_text'] ?? ($data['symptoms'] ?? null),
-                                    __('messages.health.step_2') => isset($data['duration_days']) && $data['duration_days'] !== null
-                                        ? $data['duration_days'] . ' ngày' : null,
-                                    __('messages.health.step_3') => $data['medications_taken'] ?? null,
-                                    __('messages.health.step_4') => $data['history'] ?? null,
-                                    __('messages.health.step_5') => $data['other_symptoms'] ?? null,
-                                ];
-                            @endphp
-
-                            @foreach ($rows as $label => $value)
-                                @if (!empty($value))
-                                    <div class="col-12 col-sm-6">
-                                        <dt>{{ $label }}</dt>
-                                        <dd class="mb-0">{{ is_array($value) ? implode(', ', $value) : $value }}</dd>
+                        {{-- The grid and its heading share one shell, so the tab has a
+                             second block rather than a heading floating between
+                             paragraphs. Heading only where medicine can appear: a
+                             referral says outright that none matches. --}}
+                        @if ($hasProducts)
+                            <section class="health-brief" aria-labelledby="products-heading">
+                                <div class="health-brief__head">
+                                    <span class="health-icon-tile" aria-hidden="true">
+                                        <i class="bi bi-capsule"></i>
+                                    </span>
+                                    <div>
+                                        <h2 class="mb-1" id="products-heading">{{ __('messages.health.products_title') }}</h2>
+                                        <p class="small mb-0" style="color: var(--health-ink-soft);">
+                                            {{ __('messages.health.products_note') }}
+                                        </p>
                                     </div>
-                                @endif
-                            @endforeach
-                        </dl>
+                                </div>
 
-                        {{-- Follow-up rounds belong on the printout too — they are often the
-                             answers that decided the outcome — but kept in their own group so
-                             they are not mistaken for the five wizard steps. --}}
-                        @if ($session->clarifyHistory() !== [])
-                            <h4 class="small fw-semibold text-gray-700 mt-4 mb-2">
-                                <i class="bi bi-robot me-1" aria-hidden="true"></i>{{ __('messages.health.answers_clarify_title') }}
-                            </h4>
-                            <dl class="health-answer-list row g-3 mb-0">
-                                @foreach ($session->clarifyHistory() as $pair)
-                                    <div class="col-12 col-sm-6">
-                                        <dt>{{ $pair['question'] ?: __('messages.health.clarify_title') }}</dt>
-                                        <dd class="mb-0">{{ $pair['answer'] }}</dd>
-                                    </div>
-                                @endforeach
-                            </dl>
+                                <div class="mt-4">
+                                    @include('health.partials.product-list', [
+                                        'session' => $session,
+                                        'briefing' => $briefing,
+                                        'safety' => $safety,
+                                        'hasProfile' => $hasProfile,
+                                        'suggestedProducts' => $suggestedProducts,
+                                    ])
+                                </div>
+                            </section>
+                        @else
+                            <div class="mt-4">
+                                @include('health.partials.product-list', [
+                                    'session' => $session,
+                                    'briefing' => $briefing,
+                                    'safety' => $safety,
+                                    'hasProfile' => $hasProfile,
+                                    'suggestedProducts' => $suggestedProducts,
+                                ])
+                            </div>
                         @endif
                     </div>
-                </details>
-            @endif
+
+                    <div class="tab-pane {{ $useTabs ? 'fade' : '' }}" id="hub-audit" role="tabpanel">
+                        {{-- Both details open by default inside this panel. Collapsing them
+                             made sense when they were the tail of a long column; here they
+                             ARE the tab's content, and a tab holding two closed chevrons is
+                             a tab that shows nothing. --}}
+                        @include('health.partials.audit-trail', ['session' => $session, 'basis' => $basis])
                     </div>
                 </div>
             </div>
@@ -291,6 +229,7 @@
                     <i class="bi bi-clock-history me-1" aria-hidden="true"></i>{{ __('messages.health.btn_history') }}
                 </a>
             </div>
+            </div>{{-- .health-shell__content --}}
         </div>
     </div>
 </div>

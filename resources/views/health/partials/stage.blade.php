@@ -59,11 +59,17 @@
 
             <div class="d-flex flex-column flex-sm-row gap-2 justify-content-end mt-4">
                 <button type="submit" name="skipped" value="1" class="health-btn health-btn-ghost">
+                    <span class="health-btn__spinner" aria-hidden="true"></span>
                     {{ __('messages.health.clarify_skip') }}
                 </button>
-                <button type="submit" class="health-btn health-btn-primary">
-                    {{ __('messages.health.clarify_submit') }}
-                    <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                <button type="submit"
+                        class="health-btn health-btn-primary"
+                        data-busy-label="{{ __('messages.health.btn_working') }}">
+                    <span class="health-btn__spinner" aria-hidden="true"></span>
+                    <span class="health-btn__label" data-idle-label="{{ __('messages.health.clarify_submit') }}">
+                        {{ __('messages.health.clarify_submit') }}
+                    </span>
+                    <i class="bi bi-arrow-right health-btn__arrow" aria-hidden="true"></i>
                 </button>
             </div>
         </form>
@@ -151,7 +157,8 @@
                         <button type="submit"
                                 class="health-btn health-btn-ghost"
                                 form="triage-back-form">
-                            <i class="bi bi-arrow-left" aria-hidden="true"></i>{{ __('messages.health.btn_back') }}
+                            <span class="health-btn__spinner" aria-hidden="true"></span>
+                            <i class="bi bi-arrow-left health-btn__arrow" aria-hidden="true"></i>{{ __('messages.health.btn_back') }}
                         </button>
                     @endif
                 </div>
@@ -159,13 +166,22 @@
                 <div class="d-flex flex-column flex-sm-row gap-2">
                     @if (!empty($question['allow_skip']))
                         <button type="submit" name="skipped" value="1" class="health-btn health-btn-ghost">
+                            <span class="health-btn__spinner" aria-hidden="true"></span>
                             {{ __('messages.health.btn_skip') }}
                         </button>
                     @endif
 
-                    <button type="submit" class="health-btn health-btn-primary">
-                        {{ __('messages.health.btn_next') }}
-                        <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                    {{-- Two labels, one shown: the busy text is in the DOM from the
+                         start so swapping it costs no layout shift, and `data-label`
+                         carries the idle one for setBusy() to restore. --}}
+                    <button type="submit"
+                            class="health-btn health-btn-primary"
+                            data-busy-label="{{ __('messages.health.btn_working') }}">
+                        <span class="health-btn__spinner" aria-hidden="true"></span>
+                        <span class="health-btn__label" data-idle-label="{{ __('messages.health.btn_next') }}">
+                            {{ __('messages.health.btn_next') }}
+                        </span>
+                        <i class="bi bi-arrow-right health-btn__arrow" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
@@ -195,8 +211,13 @@
             <input type="hidden" name="triage_session_id" value="{{ $session->MaSL }}">
             <input type="hidden" name="step" value="{{ \App\Models\TriageSession::TOTAL_STEPS }}">
             <input type="hidden" name="skipped" value="1">
-            <button type="submit" class="health-btn health-btn-primary">
-                {{ __('messages.health.btn_start') }}
+            <button type="submit"
+                    class="health-btn health-btn-primary"
+                    data-busy-label="{{ __('messages.health.deciding_title') }}">
+                <span class="health-btn__spinner" aria-hidden="true"></span>
+                <span class="health-btn__label" data-idle-label="{{ __('messages.health.btn_start') }}">
+                    {{ __('messages.health.btn_start') }}
+                </span>
             </button>
         </form>
     </div>

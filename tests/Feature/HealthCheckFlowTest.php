@@ -309,7 +309,13 @@ class HealthCheckFlowTest extends TestCase
             ->assertDontSee(__('messages.health.products_title'));
     }
 
-    public function test_self_care_shows_the_safety_net_above_the_product_list(): void
+    /**
+     * The safety-net block and the possible-condition guesses were removed at the
+     * customer's request, and the product list moved with them. The ordering rule
+     * they encoded still holds where it matters: the conclusion and the path to it
+     * come before anything purchasable.
+     */
+    public function test_the_conclusion_comes_before_the_product_list(): void
     {
         $this->stockProduct('Paracetamol 500mg', 'Paracetamol 500mg', 'Giảm đau đầu');
 
@@ -326,15 +332,15 @@ class HealthCheckFlowTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $safetyPos = strpos($html, __('messages.health.safety_net_title'));
+        $journeyPos = strpos($html, __('messages.health.journey_title'));
         $productsPos = strpos($html, __('messages.health.products_title'));
 
-        $this->assertNotFalse($safetyPos);
+        $this->assertNotFalse($journeyPos);
         $this->assertNotFalse($productsPos);
         $this->assertLessThan(
             $productsPos,
-            $safetyPos,
-            'The limits of self-care must be read before anything purchasable.'
+            $journeyPos,
+            'How the conclusion was reached must be read before anything purchasable.'
         );
     }
 
