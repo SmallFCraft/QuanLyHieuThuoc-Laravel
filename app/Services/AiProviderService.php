@@ -583,6 +583,11 @@ class AiProviderService
             $message['function_call'] = $functionCall;
         }
 
+        // Same guard: empty prose + no tool call = dead upstream, throw to trigger failover.
+        if ($message['content'] === '' && !isset($message['function_call'])) {
+            throw new RuntimeException('AI provider returned an empty response: no content and no tool call');
+        }
+
         return [
             'choices' => [
                 [
@@ -739,6 +744,14 @@ class AiProviderService
         }
 
         $message['content'] = $this->extractContentText($message['content'] ?? '');
+
+        // A 200 with neither prose nor a tool call is a dead upstream, not an
+        // answer: some combo routes return `finish_reason: stop` with empty content
+        // when their upstream refuses the tool schema. Throwing here is what sends
+        // the call down the failover path instead of storing a blank.
+        if ($message['content'] === '' && !isset($message['function_call'])) {
+            throw new RuntimeException('AI provider returned an empty response: no content and no tool call');
+        }
 
         return [
             'choices' => [
