@@ -47,6 +47,20 @@ class TriageAiBriefingService extends TriageAiService
     private const MAX_FREE_TEXT = 1200;
     private const MAX_CANDIDATES = 40;
 
+    /**
+     * Per-product caps for the list SENT to the provider. The candidate rows keep
+     * their full text — `cleanProducts()` merges them back into the stored briefing,
+     * so the page still shows the whole usage line. These cut only the prompt.
+     *
+     * Measured 2026-09-15: the catalogue's own `usage` column averages 2.8KB and
+     * peaks at 9.5KB, so 40 products reach 126KB of prompt and the provider needs
+     * 132s before its first byte — past the 90s briefing budget, so the briefing
+     * failed on every call. Trimming these fields took the same call to 16s.
+     */
+    private const MAX_PROMPT_NAME = 120;
+    private const MAX_PROMPT_INGREDIENTS = 160;
+    private const MAX_PROMPT_USAGE = 300;
+
     /** @var array<int, string> Lists the model may fill, in reading order. */
     private const SECTIONS = [
         'possible_causes',
@@ -196,12 +210,16 @@ class TriageAiBriefingService extends TriageAiService
             $lines[] = '';
             $lines[] = 'Thuốc không kê đơn nhà thuốc đang có (chỉ được chọn id trong đây):';
             foreach ($candidates as $candidate) {
+                $name = mb_substr((string) $candidate['name'], 0, self::MAX_PROMPT_NAME);
+                $ingredients = mb_substr((string) ($candidate['ingredients'] ?: ''), 0, self::MAX_PROMPT_INGREDIENTS);
+                $usage = mb_substr((string) ($candidate['usage'] ?: ''), 0, self::MAX_PROMPT_USAGE);
+
                 $lines[] = sprintf(
                     'id=%d | %s | thành phần: %s | công dụng: %s',
                     $candidate['id'],
-                    $candidate['name'],
-                    $candidate['ingredients'] ?: 'không ghi',
-                    $candidate['usage'] ?: 'không ghi'
+                    $name ?: 'không ghi',
+                    $ingredients ?: 'không ghi',
+                    $usage ?: 'không ghi'
                 );
             }
         }

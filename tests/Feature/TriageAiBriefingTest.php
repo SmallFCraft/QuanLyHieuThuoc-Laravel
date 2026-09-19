@@ -298,6 +298,69 @@ class TriageAiBriefingTest extends TestCase
         $this->assertSame('self_care', $session->outcome);
     }
 
+    /**
+     * The candidate block is built from the catalogue's own `usage` column, which
+     * averages 2.8KB per product, so the prompt reached 126KB with 40 candidates.
+     * Measured 2026-09-15 against the live provider: 126KB took 132s to first byte
+     * and 23KB took 16s, against a 90s briefing budget — the briefing could not
+     * succeed at the old size.
+     *
+     * The ceiling is asserted on the body actually sent, so a field that stops being
+     * capped fails here rather than only in production.
+     */
+    public function test_the_candidate_block_sent_to_the_provider_stays_small(): void
+    {
+        // A usage line far longer than any real one, in the shape the catalogue
+        // stores: instructions and warnings run together in one column.
+        $product = $this->stockedProduct('Paracetamol 500mg', 'Paracetamol 500mg');
+        $product->forceFill(['usage' => str_repeat('Uống 1-2 viên mỗi 4-6 giờ. ', 400)])->save();
+
+        $this->fakeToolCall($this->fullBriefing());
+
+        $this->generate($this->triageSession());
+
+        Http::assertSent(function ($request) {
+            $body = json_encode($request->data(), JSON_UNESCAPED_UNICODE);
+
+            $this->assertLessThan(
+                20000,
+                strlen($body),
+                'A single candidate must not push the prompt back into the slow path.'
+            );
+            $this->assertStringNotContainsString(
+                str_repeat('Uống 1-2 viên mỗi 4-6 giờ. ', 40),
+                $body,
+                'The usage line must be cut before it is sent, not after.'
+            );
+
+            return true;
+        });
+    }
+
+    /**
+     * The cap is on the prompt only: `cleanProducts()` merges the full candidate row
+     * into the stored briefing, so the page still renders the catalogue's own text.
+     */
+    public function test_the_stored_briefing_keeps_the_full_usage_text(): void
+    {
+        $product = $this->stockedProduct('Paracetamol 500mg', 'Paracetamol 500mg');
+        $product->forceFill(['usage' => str_repeat('Uống 1-2 viên mỗi 4-6 giờ. ', 40)])->save();
+
+        $this->fakeToolCall($this->fullBriefing(['products' => [
+            ['id' => $product->MaSP, 'reason' => 'Phù hợp với triệu chứng.'],
+        ]]));
+
+        $session = $this->generate($this->triageSession());
+        $stored = $session->ai_briefing['products'][0] ?? null;
+
+        $this->assertNotNull($stored);
+        $this->assertGreaterThan(
+            300,
+            mb_strlen((string) ($stored['usage'] ?? '')),
+            'The stored briefing must keep the catalogue usage text in full.'
+        );
+    }
+
     public function test_the_prompt_carries_the_customers_words_but_never_the_profile(): void
     {
         UserHealthProfile::create([

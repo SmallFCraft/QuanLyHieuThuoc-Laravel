@@ -414,6 +414,97 @@ class AiProviderServiceTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    /**
+     * The incident this guards: the combo route answered 200 with
+     * `finish_reason: stop` and empty content when its upstream refused the tool
+     * schema. Read as a success, the caller stored a blank briefing and the page
+     * showed nothing; as a failure it fails over to the next provider instead.
+     */
+    public function test_an_empty_completion_fails_over_instead_of_reading_as_success(): void
+    {
+        $this->configureProvider('chat_completions');
+        $this->configureFallbackProvider();
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '',
+                        'reasoning_content' => 'suy nghĩ nhưng không trả lời',
+                    ],
+                    'finish_reason' => 'stop',
+                ]],
+            ]),
+            'http://localhost:55598/v1/messages' => Http::response([
+                'content' => [['type' => 'text', 'text' => 'Fallback tra loi.']],
+            ]),
+        ]);
+
+        $service = new AiProviderService();
+        $result = $service->chat([['role' => 'user', 'content' => 'Xin chao']]);
+
+        $this->assertSame('Fallback tra loi.', $result['choices'][0]['message']['content']);
+        $this->assertSame(1, $service->describeLastProvider()['index']);
+        Http::assertSentCount(2);
+    }
+
+    /**
+     * The other half of the same guard: an empty `content` is how every provider
+     * returns a tool call, so the empty check must never fire on one.
+     */
+    public function test_an_empty_content_with_a_tool_call_is_still_a_success(): void
+    {
+        $this->configureProvider('chat_completions');
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '',
+                        'tool_calls' => [[
+                            'id' => 'call_1',
+                            'type' => 'function',
+                            'function' => ['name' => 'ghi_dien_giai', 'arguments' => '{"why":"ok"}'],
+                        ]],
+                    ],
+                    'finish_reason' => 'tool_calls',
+                ]],
+            ]),
+        ]);
+
+        $service = new AiProviderService();
+        $result = $service->chat([['role' => 'user', 'content' => 'Xin chao']]);
+
+        $this->assertSame('ghi_dien_giai', $result['choices'][0]['message']['function_call']['name']);
+        $this->assertSame('{"why":"ok"}', $result['choices'][0]['message']['function_call']['arguments']);
+        Http::assertSentCount(1);
+    }
+
+    /** The anthropic mode stands in front of the same class of dead upstream. */
+    public function test_an_empty_anthropic_response_also_fails_over(): void
+    {
+        $this->configureProvider('anthropic_messages');
+        $this->configureFallbackProvider();
+
+        Http::fake([
+            'http://localhost:55597/v1/messages' => Http::response([
+                'content' => [['type' => 'thinking', 'thinking' => 'khong tra loi']],
+                'stop_reason' => 'end_turn',
+            ]),
+            'http://localhost:55598/v1/messages' => Http::response([
+                'content' => [['type' => 'text', 'text' => 'Fallback tra loi.']],
+            ]),
+        ]);
+
+        $service = new AiProviderService();
+        $result = $service->chat([['role' => 'user', 'content' => 'Xin chao']]);
+
+        $this->assertSame('Fallback tra loi.', $result['choices'][0]['message']['content']);
+        Http::assertSentCount(2);
+    }
+
     public function test_a_fallback_that_repeats_the_primary_endpoint_is_ignored(): void
     {
         $this->configureProvider('chat_completions');
