@@ -396,7 +396,7 @@ class TriageAiBriefingService extends TriageAiService
      */
     protected function sanitize(array $raw, array $candidates, TriageSession $session): ?array
     {
-        $why = $this->cleanText((string) ($raw['why'] ?? ''), self::MAX_WHY_LENGTH);
+        $why = $this->cleanWhy($raw['why'] ?? '');
 
         $briefing = ['why' => $why];
 
@@ -406,8 +406,13 @@ class TriageAiBriefingService extends TriageAiService
 
         $briefing['products'] = $this->cleanProducts($raw['products'] ?? null, $candidates, $session);
 
-        // A briefing with no prose and no list is not a briefing.
-        $hasContent = $why !== '' || collect(self::SECTIONS)->contains(fn (string $s) => $briefing[$s] !== []);
+        // A briefing with only "why" and no guidance sections is thin and incomplete
+        // (session 31 left 5 empty lists and the page rendered a lone heading).
+        // Require why plus at least two filled guidance sections.
+        $filledSectionCount = collect(self::SECTIONS)
+            ->filter(fn (string $s) => $briefing[$s] !== [])
+            ->count();
+        $hasContent = $why !== '' && $filledSectionCount >= 2;
 
         return $hasContent ? $briefing : null;
     }
@@ -477,6 +482,32 @@ class TriageAiBriefingService extends TriageAiService
         $text = preg_replace("/\n{3,}/u", "\n\n", $text) ?? $text;
 
         return mb_substr(trim($text), 0, $limit);
+    }
+
+    /**
+     * The schema asks for one paragraph, but some models answer `why` as an array of
+     * sentences, or as a JSON-encoded array inside the string. Both reach here; casting
+     * an array to string would raise a PHP warning and store the literal word "Array"
+     * (session 31/40 showed the JSON form rendered raw on the page). Flatten to prose —
+     * the view renders white-space: pre-line, so a space join reads as a paragraph.
+     */
+    protected function cleanWhy(mixed $why): string
+    {
+        if (is_string($why) && str_starts_with(trim($why), '[')) {
+            $decoded = json_decode($why, true);
+            if (is_array($decoded)) {
+                $why = $decoded;
+            }
+        }
+
+        if (is_array($why)) {
+            $why = implode(' ', array_filter(array_map(
+                fn (mixed $s): string => is_string($s) ? trim($s) : '',
+                $why
+            )));
+        }
+
+        return $this->cleanText((string) $why, self::MAX_WHY_LENGTH);
     }
 
     /**
