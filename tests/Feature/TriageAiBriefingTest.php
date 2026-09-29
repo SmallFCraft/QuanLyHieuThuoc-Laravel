@@ -187,6 +187,42 @@ class TriageAiBriefingTest extends TestCase
         $this->assertSame('Uống đủ nước và nghỉ ngơi.', $session->ai_briefing['self_care'][0]);
     }
 
+    public function test_why_returned_as_array_or_json_array_is_flattened_into_readable_prose(): void
+    {
+        // Session 31 & 40 regression: some models (e.g. opencode) return `why` as an array
+        // of sentences, which either json_decode leaves as array or gets json-encoded into
+        // a raw JSON string like ["Em tóm lại...", "Anh/chị 41 tuổi..."].
+        $sentences = [
+            'Em tóm lại thông tin anh/chị kể.',
+            'Anh/chị 41 tuổi, đau đầu 1 ngày, từng có đợt đau đầu ngày 13/09/2026 mức tự chăm sóc.',
+            'Hệ thống khớp nhóm đau đầu, buồn nôn.',
+            'Mức hiện tại phù hợp tự chăm sóc tại nhà, theo dõi thêm, chưa thấy dấu hiệu cần đi khám ngay.',
+        ];
+
+        // Case A: model returned raw PHP array for why
+        $this->fakeToolCall($this->fullBriefing([
+            'why' => $sentences,
+        ]));
+
+        $sessionA = $this->generate($this->triageSession());
+        $this->assertSame('ok', $sessionA->ai_briefing_status);
+        $this->assertStringNotContainsString('["', $sessionA->ai_briefing['why']);
+        $this->assertStringNotContainsString('"]', $sessionA->ai_briefing['why']);
+        $this->assertStringContainsString('Em tóm lại thông tin anh/chị kể.', $sessionA->ai_briefing['why']);
+        $this->assertStringContainsString('Mức hiện tại phù hợp tự chăm sóc tại nhà', $sessionA->ai_briefing['why']);
+
+        // Case B: model returned JSON-encoded array string for why
+        $this->fakeToolCall($this->fullBriefing([
+            'why' => json_encode($sentences, JSON_UNESCAPED_UNICODE),
+        ]));
+
+        $sessionB = $this->generate($this->triageSession());
+        $this->assertSame('ok', $sessionB->ai_briefing_status);
+        $this->assertStringNotContainsString('["', $sessionB->ai_briefing['why']);
+        $this->assertStringNotContainsString('"]', $sessionB->ai_briefing['why']);
+        $this->assertStringContainsString('Em tóm lại thông tin anh/chị kể.', $sessionB->ai_briefing['why']);
+    }
+
     public function test_a_product_id_outside_the_catalogue_is_dropped(): void
     {
         $product = $this->stockedProduct();
@@ -285,6 +321,44 @@ class TriageAiBriefingTest extends TestCase
         $this->assertSame('rejected', $session->ai_briefing_status);
         $this->assertNull($session->ai_briefing);
         $this->assertSame(self::SOURCE_ADVICE, $session->advice_given);
+    }
+
+    public function test_a_why_only_briefing_with_all_sections_empty_is_rejected(): void
+    {
+        // Session 31 regression: the model filled "why" but left all 5 guidance
+        // arrays empty, so the page rendered a lone heading with zero content below.
+        $this->fakeToolCall([
+            'why' => 'Em thấy anh/chị 41 tuổi, lần này đau đầu mới 1 ngày kèm buồn nôn.',
+            'possible_causes' => [],
+            'self_care' => [],
+            'watch_for' => [],
+            'see_doctor_when' => [],
+            'ask_pharmacist' => [],
+            'products' => [],
+        ]);
+
+        $session = $this->generate($this->triageSession());
+
+        $this->assertSame('rejected', $session->ai_briefing_status);
+        $this->assertNull($session->ai_briefing);
+    }
+
+    public function test_a_briefing_with_why_and_at_least_two_sections_is_accepted(): void
+    {
+        $this->fakeToolCall([
+            'why' => 'Em kết luận tự chăm sóc vì triệu chứng nhẹ.',
+            'possible_causes' => ['Căng thẳng công việc.'],
+            'self_care' => ['Nghỉ ngơi, uống đủ nước.'],
+            'watch_for' => [],
+            'see_doctor_when' => [],
+            'ask_pharmacist' => [],
+        ]);
+
+        $session = $this->generate($this->triageSession());
+
+        $this->assertSame('ok', $session->ai_briefing_status);
+        $this->assertNotNull($session->ai_briefing);
+        $this->assertSame('Em kết luận tự chăm sóc vì triệu chứng nhẹ.', $session->ai_briefing['why']);
     }
 
     public function test_a_provider_failure_leaves_the_page_unchanged(): void
