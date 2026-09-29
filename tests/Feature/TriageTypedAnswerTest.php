@@ -100,7 +100,7 @@ class TriageTypedAnswerTest extends TestCase
 
         $session->refresh();
 
-        $matched = app(\App\Services\MedicalTriageService::class)
+        $matched = app(\App\Services\Triage\MedicalTriageService::class)
             ->detectSymptoms($session->collected_data['raw_symptom_text'])
             ->pluck('code')
             ->all();

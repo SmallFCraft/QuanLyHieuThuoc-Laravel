@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Triage;
 
 use App\Models\MedicalRedFlag;
 use App\Models\MedicalSymptom;
@@ -9,6 +9,8 @@ use App\Models\Product;
 use App\Models\TriageSession;
 use App\Models\User;
 use App\Models\UserHealthProfile;
+use App\Services\AuditLogService;
+use App\Services\Triage\Ai\TriageAiFactService;
 use App\Support\VietnameseText;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -25,9 +27,13 @@ use Illuminate\Support\Facades\Log;
 class MedicalTriageService
 {
     public const STEP_SYMPTOM = 1;
+
     public const STEP_DURATION = 2;
+
     public const STEP_MEDICATION_TAKEN = 3;
+
     public const STEP_HISTORY = 4;
+
     public const STEP_OTHER_SYMPTOMS = 5;
 
     public const DISCLAIMER = 'Đây là công cụ sàng lọc, không phải chẩn đoán y khoa. Nội dung do hệ thống tạo ra có thể không chính xác, không thay thế việc gặp bác sĩ hoặc dược sĩ.';
@@ -36,13 +42,13 @@ class MedicalTriageService
 
     public function __construct(
         protected AuditLogService $auditLogService,
-    ) {
-    }
+    ) {}
 
     /**
      * Medical dictionaries, read once per request. @see symptomDictionary()
      */
     protected ?Collection $symptomDictionary = null;
+
     protected ?Collection $redFlagDictionary = null;
 
     /**
@@ -104,7 +110,7 @@ class MedicalTriageService
      */
     protected function profileTerms(?UserHealthProfile $profile): array
     {
-        if (!$profile?->hasConsented()) {
+        if (! $profile?->hasConsented()) {
             return [];
         }
 
@@ -125,7 +131,7 @@ class MedicalTriageService
      * nhieu lam", and the adjacent "khong co" cancelled a real emergency. The same
      * adjacency also silenced a profile term sitting right after the last answer.
      *
-     * @param array<int, string> $segments
+     * @param  array<int, string>  $segments
      * @return Collection<int, MedicalRedFlag>
      */
     protected function matchRedFlagSegments(array $segments): Collection
@@ -212,7 +218,7 @@ class MedicalTriageService
         $offersScale = VietnameseText::offersSeverityScale($question);
 
         foreach ($flag->keywords ?? [] as $keyword) {
-            if (!VietnameseText::mentionsAffirmatively($foldedAnswer, (string) $keyword)) {
+            if (! VietnameseText::mentionsAffirmatively($foldedAnswer, (string) $keyword)) {
                 continue;
             }
 
@@ -273,7 +279,7 @@ class MedicalTriageService
     {
         $terms = [$symptom->name_vi, ...($symptom->aliases ?? [])];
 
-        if (!$this->namesAnyTerm($this->normalize((string) ($pair['question'] ?? '')), $terms)) {
+        if (! $this->namesAnyTerm($this->normalize((string) ($pair['question'] ?? '')), $terms)) {
             return false;
         }
 
@@ -284,7 +290,7 @@ class MedicalTriageService
             return false;
         }
 
-        return $this->matchesAnyAlias($folded, $terms) || !VietnameseText::isRestrictive($answer);
+        return $this->matchesAnyAlias($folded, $terms) || ! VietnameseText::isRestrictive($answer);
     }
 
     protected function namesAnyTerm(string $foldedText, array $terms): bool
@@ -302,7 +308,7 @@ class MedicalTriageService
     {
         foreach ($terms as $term) {
             if (VietnameseText::containsWord($foldedText, (string) $term)
-                && !VietnameseText::mentionsAffirmatively($foldedText, (string) $term)) {
+                && ! VietnameseText::mentionsAffirmatively($foldedText, (string) $term)) {
                 return true;
             }
         }
@@ -323,22 +329,22 @@ class MedicalTriageService
 
         return $this->derivableRedFlags()
             ->filter(function (MedicalRedFlag $flag) use ($matched, $transcript, $ownWords, $session, $symptomsByTc): bool {
-                if (!in_array($flag->applies_to_symptom, $matched, true)) {
+                if (! in_array($flag->applies_to_symptom, $matched, true)) {
                     return false;
                 }
 
                 // The flag's own vocabulary must appear somewhere in the transcript, which
                 // means one of OUR questions named it: a hallucinated code anchors nowhere,
                 // and an alias-only mention ("hơi tức ngực") is not a flag keyword.
-                if (!$this->namesAnyTerm($transcript, $flag->keywords ?? [])) {
+                if (! $this->namesAnyTerm($transcript, $flag->keywords ?? [])) {
                     return false;
                 }
 
                 $symptom = $symptomsByTc->get($flag->applies_to_symptom);
                 $terms = $symptom === null ? [] : [$symptom->name_vi, ...($symptom->aliases ?? [])];
 
-                return !$this->isDeniedInText($ownWords, [...$terms, ...($flag->keywords ?? [])])
-                    && !$this->deniedByAnyClarifyAnswer($session, $terms);
+                return ! $this->isDeniedInText($ownWords, [...$terms, ...($flag->keywords ?? [])])
+                    && ! $this->deniedByAnyClarifyAnswer($session, $terms);
             })
             ->values();
     }
@@ -355,7 +361,7 @@ class MedicalTriageService
      * Only an explicit denial counts. A non-committal answer ("Khi nghỉ và vận động")
      * must not veto, because that is precisely the case this tier exists to catch.
      *
-     * @param array<int, string> $terms The symptom's canonical name and its aliases.
+     * @param  array<int, string>  $terms  The symptom's canonical name and its aliases.
      */
     protected function deniedByAnyClarifyAnswer(TriageSession $session, array $terms): bool
     {
@@ -371,8 +377,8 @@ class MedicalTriageService
 
     protected function transcriptText(TriageSession $session): string
     {
-        return $this->collectedText($session) . ' '
-            . collect($session->clarifyHistory())->pluck('question')->implode(' ');
+        return $this->collectedText($session).' '
+            .collect($session->clarifyHistory())->pluck('question')->implode(' ');
     }
 
     /**
@@ -545,7 +551,7 @@ class MedicalTriageService
             }
         }
 
-        if (!$rule) {
+        if (! $rule) {
             return $this->pharmacistFallback($redFlags, $symptoms, $ai);
         }
 
@@ -583,7 +589,7 @@ class MedicalTriageService
      * referral. The value comes from the other direction: a fact the regex missed
      * (e.g. "đã uống mà không đỡ") can raise self_care to pharmacist_review.
      *
-     * @param array<string, mixed> $facts
+     * @param  array<string, mixed>  $facts
      * @return array{rule: ?MedicalTriageRule, symptoms: Collection, ai: ?array<string, mixed>}
      */
     protected function resolveOutcomeWithAi(
@@ -595,7 +601,7 @@ class MedicalTriageService
         $baseRule = $this->resolveRule($symptoms, $facts);
         $factService = app(TriageAiFactService::class);
 
-        if (!$factService->isEnabled()) {
+        if (! $factService->isEnabled()) {
             return ['rule' => $baseRule, 'symptoms' => $symptoms, 'ai' => null];
         }
 
@@ -856,7 +862,7 @@ class MedicalTriageService
     public function isComplete(TriageSession $session, ?UserHealthProfile $profile = null): bool
     {
         foreach (range(1, TriageSession::TOTAL_STEPS) as $step) {
-            if (!$this->isStepAnswered($session, $step) && !$this->isStepCoveredByProfile($step, $profile)) {
+            if (! $this->isStepAnswered($session, $step) && ! $this->isStepCoveredByProfile($step, $profile)) {
                 return false;
             }
         }
@@ -870,7 +876,7 @@ class MedicalTriageService
      */
     protected function isStepCoveredByProfile(int $step, ?UserHealthProfile $profile): bool
     {
-        if ($step !== self::STEP_HISTORY || !$profile?->hasConsented()) {
+        if ($step !== self::STEP_HISTORY || ! $profile?->hasConsented()) {
             return false;
         }
 
@@ -972,7 +978,7 @@ class MedicalTriageService
         // "4 7 ngay" after normalisation — take the largest number present.
         preg_match_all('/(\d+)/', $normalized, $numbers);
 
-        if (!empty($numbers[1])) {
+        if (! empty($numbers[1])) {
             return max(array_map('intval', $numbers[1]));
         }
 
@@ -991,15 +997,15 @@ class MedicalTriageService
      *    be made to answer more questions before being told to call for help,
      *    same rule as nextQuestion().
      *
-     * @param array<string, mixed> $result evaluate() output
+     * @param  array<string, mixed>  $result  evaluate() output
      */
     public function shouldAskClarify(TriageSession $session, array $result): bool
     {
-        if (!config('chatbot.ai.triage.clarify_round', false)) {
+        if (! config('chatbot.ai.triage.clarify_round', false)) {
             return false;
         }
 
-        if (!$session->hasClarifyRoundsLeft()) {
+        if (! $session->hasClarifyRoundsLeft()) {
             return false;
         }
 
@@ -1020,7 +1026,7 @@ class MedicalTriageService
      * Persist the round's questions and advance the counter. The session stays
      * `in_progress`, so the wizard page renders the extra form instead of a step.
      *
-     * @param array<string, mixed> $result
+     * @param  array<string, mixed>  $result
      */
     public function storeClarifyQuestions(TriageSession $session, array $result): TriageSession
     {
@@ -1041,7 +1047,7 @@ class MedicalTriageService
      * feed symptom and red-flag matching exactly like a wizard answer does. The
      * `round` marker lets the next prompt show the model what it already asked.
      *
-     * @param array<int, string> $answers
+     * @param  array<int, string>  $answers
      */
     public function recordClarifyAnswers(TriageSession $session, array $answers): TriageSession
     {
@@ -1159,7 +1165,7 @@ class MedicalTriageService
             $key = $this->answerKeyFor($step);
             $wasSkipped = in_array($key, $skipped, true);
 
-            if (!array_key_exists($key, $data) && !$wasSkipped) {
+            if (! array_key_exists($key, $data) && ! $wasSkipped) {
                 continue;
             }
 
@@ -1171,7 +1177,7 @@ class MedicalTriageService
                 continue;
             }
 
-            if (!$wasSkipped && $step === self::STEP_DURATION) {
+            if (! $wasSkipped && $step === self::STEP_DURATION) {
                 $answer .= ' ngày';
             }
 
@@ -1217,7 +1223,7 @@ class MedicalTriageService
                 || str_contains($historyText, 'co thai'),
             'breastfeeding' => ($consented && $profile->is_breastfeeding)
                 || str_contains($historyText, 'cho con bu'),
-            'has_chronic_disease' => ($consented && !empty($profile->chronic_conditions))
+            'has_chronic_disease' => ($consented && ! empty($profile->chronic_conditions))
                 || str_contains($historyText, 'benh nen'),
             'skipped' => $data['skipped'] ?? [],
         ];
@@ -1229,7 +1235,7 @@ class MedicalTriageService
      */
     protected function resolveAge(array $data, ?User $user): ?int
     {
-        $text = $this->normalize($this->flatten($data['raw_symptom_text'] ?? '') . ' ' . $this->flatten($data['history'] ?? ''));
+        $text = $this->normalize($this->flatten($data['raw_symptom_text'] ?? '').' '.$this->flatten($data['history'] ?? ''));
 
         // "N tháng" only means an age when the sentence is about a person. Bare
         // "3 tháng rồi" is a duration, and reading it as 0 months turns an adult
@@ -1296,7 +1302,7 @@ class MedicalTriageService
                 continue;
             }
 
-            if (!is_array($expected)) {
+            if (! is_array($expected)) {
                 if ($actual != $expected) {
                     return false;
                 }
@@ -1310,7 +1316,7 @@ class MedicalTriageService
             }
 
             foreach ($expected as $operator => $threshold) {
-                if (!$this->compare((float) $actual, $operator, (float) $threshold)) {
+                if (! $this->compare((float) $actual, $operator, (float) $threshold)) {
                     return false;
                 }
             }
@@ -1390,7 +1396,7 @@ class MedicalTriageService
      */
     protected function conditionGroups(MedicalTriageRule $rule, string $outcome): array
     {
-        if (in_array($outcome, ['emergency', 'refer_doctor'], true) || !$rule->condition_group_vi) {
+        if (in_array($outcome, ['emergency', 'refer_doctor'], true) || ! $rule->condition_group_vi) {
             return [];
         }
 
@@ -1452,7 +1458,7 @@ class MedicalTriageService
         $candidates = Product::with('category')
             ->notExpired()
             ->where('stock_quantity', '>', 0)
-            ->when(!empty($categoryIds), fn ($q) => $q->whereIn('MaDM', $categoryIds))
+            ->when(! empty($categoryIds), fn ($q) => $q->whereIn('MaDM', $categoryIds))
             ->get();
 
         return $candidates
@@ -1497,7 +1503,7 @@ class MedicalTriageService
     }
 
     /**
-     * @param array<string, string> $terms
+     * @param  array<string, string>  $terms
      */
     protected function relevanceScore(Product $product, array $terms): int
     {
@@ -1505,7 +1511,7 @@ class MedicalTriageService
             return 0;
         }
 
-        $haystack = $product->name . ' ' . $product->usage . ' ' . $product->ingredients;
+        $haystack = $product->name.' '.$product->usage.' '.$product->ingredients;
         $folded = VietnameseText::fold($haystack);
         $accented = mb_strtolower($haystack);
         $score = 0;

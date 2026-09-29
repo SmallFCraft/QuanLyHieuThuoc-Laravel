@@ -6,7 +6,7 @@ use App\Models\AiJob;
 use App\Models\TriageSession;
 use App\Models\UserHealthProfile;
 use App\Services\AiJobService;
-use App\Services\MedicalTriageService;
+use App\Services\Triage\MedicalTriageService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Auth;

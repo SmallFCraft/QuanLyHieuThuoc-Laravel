@@ -6,7 +6,7 @@ use App\Models\AuditLog;
 use App\Models\TriageSession;
 use App\Models\User;
 use App\Models\UserHealthProfile;
-use App\Services\TriageAiContextService;
+use App\Services\Triage\Ai\TriageAiContextService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

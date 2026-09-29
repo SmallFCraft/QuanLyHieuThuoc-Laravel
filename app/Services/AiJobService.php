@@ -8,9 +8,12 @@ use App\Jobs\ProcessTriageBriefing;
 use App\Jobs\ProcessTriageEvaluation;
 use App\Models\AiJob;
 use App\Models\TriageSession;
+use App\Services\Triage\Ai\TriageAiAdviceService;
+use App\Services\Triage\Ai\TriageAiBriefingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+
 /**
  * Hands AI work to a queue worker and reports its state back to the browser.
  *
@@ -28,15 +31,14 @@ class AiJobService
 {
     public function __construct(
         protected AuditLogService $auditLogService,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $context Already-built chat context. Stored as-is:
-     *        it holds the same message rows that are in `chat_messages` anyway, and
-     *        CleanupAiJobs wipes it after 24h.
-     * @param bool $sync Run the job in this request instead of queueing it. Used when
-     *        the browser detected that no worker picked the previous job up.
+     * @param  array<string, mixed>  $context  Already-built chat context. Stored as-is:
+     *                                         it holds the same message rows that are in `chat_messages` anyway, and
+     *                                         CleanupAiJobs wipes it after 24h.
+     * @param  bool  $sync  Run the job in this request instead of queueing it. Used when
+     *                      the browser detected that no worker picked the previous job up.
      */
     public function dispatchChat(
         int $userId,
@@ -119,7 +121,7 @@ class AiJobService
      */
     public function dispatchAdviceRewriteIfEligible(TriageSession $session): ?AiJob
     {
-        if (!app(TriageAiAdviceService::class)->isEligible($session)) {
+        if (! app(TriageAiAdviceService::class)->isEligible($session)) {
             return null;
         }
 
@@ -163,7 +165,7 @@ class AiJobService
      */
     public function dispatchBriefingIfEligible(TriageSession $session): ?AiJob
     {
-        if (!app(TriageAiBriefingService::class)->isEligible($session)) {
+        if (! app(TriageAiBriefingService::class)->isEligible($session)) {
             return null;
         }
 
@@ -285,7 +287,7 @@ class AiJobService
 
         // The uuid is embedded in the serialized job payload, and it is unique.
         return DB::table((string) config("queue.connections.{$connection}.table", 'jobs'))
-            ->where('payload', 'like', '%' . $uuid . '%')
+            ->where('payload', 'like', '%'.$uuid.'%')
             ->delete();
     }
 
@@ -299,7 +301,7 @@ class AiJobService
     }
 
     /**
-     * @param array<string, mixed> $result
+     * @param  array<string, mixed>  $result
      */
     public function markDone(AiJob $job, array $result): void
     {

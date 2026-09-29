@@ -8,7 +8,7 @@ use App\Models\Category;
 use App\Models\ChatMessage;
 use App\Models\TriageSession;
 use App\Models\User;
-use App\Services\TriageFollowUpService;
+use App\Services\Triage\TriageFollowUpService;
 use Database\Seeders\MedicalKnowledgeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -53,7 +53,7 @@ class TriageFollowUpTest extends TestCase
     public function test_only_self_care_sessions_are_scheduled_for_follow_up(): void
     {
         // Drive the real finalize() so the scheduling rule is asserted, not the fixture.
-        $triage = app(\App\Services\MedicalTriageService::class);
+        $triage = app(\App\Services\Triage\MedicalTriageService::class);
 
         $selfCare = $triage->finalize(
             $this->triageSession(['outcome' => null, 'status' => 'in_progress', 'follow_up_at' => null]),

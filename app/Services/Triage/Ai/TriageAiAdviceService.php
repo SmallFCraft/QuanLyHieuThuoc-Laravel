@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Triage\Ai;
 
 use App\Models\TriageSession;
+use App\Services\AiProviderService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -53,7 +54,7 @@ class TriageAiAdviceService extends TriageAiService
     public function isEligible(TriageSession $session): bool
     {
         return $this->isEnabled()
-            && !in_array($session->outcome, self::VERBATIM_OUTCOMES, true)
+            && ! in_array($session->outcome, self::VERBATIM_OUTCOMES, true)
             && trim((string) $session->advice_given) !== '';
     }
 
@@ -65,7 +66,7 @@ class TriageAiAdviceService extends TriageAiService
      */
     public function rewrite(TriageSession $session): void
     {
-        if (!$this->isEligible($session)) {
+        if (! $this->isEligible($session)) {
             return;
         }
 
@@ -87,7 +88,7 @@ class TriageAiAdviceService extends TriageAiService
             $expected = array_filter([$source, trim((string) $session->safety_net)]);
             $produced = array_filter([$sections['advice'], $sections['safety_net']]);
 
-            if (!$this->passesSafetyChecks($rewrite, $expected, $produced)) {
+            if (! $this->passesSafetyChecks($rewrite, $expected, $produced)) {
                 $this->record($session, 'rejected', null, null, $provider, $startedAt);
 
                 return;
@@ -132,7 +133,7 @@ class TriageAiAdviceService extends TriageAiService
     protected function buildPrompt(TriageSession $session): string
     {
         $lines = [
-            'Kết luận hệ thống: ' . $this->outcomeLabel($session->outcome),
+            'Kết luận hệ thống: '.$this->outcomeLabel($session->outcome),
             '',
             'LỜI KHUYÊN:',
             (string) $session->advice_given,
@@ -188,8 +189,8 @@ class TriageAiAdviceService extends TriageAiService
     }
 
     /**
-     * @param array<int, string> $expected Source strings the rewrite must preserve
-     * @param array<int, string> $produced Rewritten sections
+     * @param  array<int, string>  $expected  Source strings the rewrite must preserve
+     * @param  array<int, string>  $produced  Rewritten sections
      */
     protected function passesSafetyChecks(string $rewrite, array $expected, array $produced): bool
     {
@@ -222,7 +223,7 @@ class TriageAiAdviceService extends TriageAiService
         preg_match_all('/\d+/u', $source, $matches);
 
         foreach (array_unique($matches[0] ?? []) as $number) {
-            if (!str_contains($rewrite, (string) $number)) {
+            if (! str_contains($rewrite, (string) $number)) {
                 return false;
             }
         }

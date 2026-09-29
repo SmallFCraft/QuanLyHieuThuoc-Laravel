@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\TriageSession;
 use App\Models\User;
-use App\Services\MedicalTriageService;
+use App\Services\Triage\MedicalTriageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;

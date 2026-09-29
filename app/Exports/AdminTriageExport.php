@@ -4,7 +4,7 @@ namespace App\Exports;
 
 use App\Models\MedicalSymptom;
 use App\Models\TriageSession;
-use App\Services\TriageReportService;
+use App\Services\Triage\TriageReportService;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;

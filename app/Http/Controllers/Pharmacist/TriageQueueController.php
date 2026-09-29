@@ -8,7 +8,7 @@ use App\Models\MedicalSymptom;
 use App\Models\TriageSession;
 use App\Models\UserHealthProfile;
 use App\Services\AuditLogService;
-use App\Services\TriageAiDraftService;
+use App\Services\Triage\Ai\TriageAiDraftService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

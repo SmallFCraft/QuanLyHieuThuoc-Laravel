@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Triage\Ai;
 
 use App\Models\TriageSession;
 use App\Models\UserHealthProfile;
+use App\Services\MedicalTriageService;
 use App\Support\VietnameseText;
 use Illuminate\Support\Facades\Log;
 

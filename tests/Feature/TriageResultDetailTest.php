@@ -9,7 +9,7 @@ use App\Models\Product;
 use App\Models\TriageSession;
 use App\Models\User;
 use App\Models\UserHealthProfile;
-use App\Services\MedicalTriageService;
+use App\Services\Triage\MedicalTriageService;
 use Database\Seeders\MedicalKnowledgeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

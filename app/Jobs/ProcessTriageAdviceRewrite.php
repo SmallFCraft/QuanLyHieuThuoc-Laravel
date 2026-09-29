@@ -5,7 +5,7 @@ namespace App\Jobs;
 use App\Models\AiJob;
 use App\Models\TriageSession;
 use App\Services\AiJobService;
-use App\Services\TriageAiAdviceService;
+use App\Services\Triage\Ai\TriageAiAdviceService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;

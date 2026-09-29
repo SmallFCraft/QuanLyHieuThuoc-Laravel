@@ -6,7 +6,7 @@ use App\Models\Category;
 use App\Models\TriageSession;
 use App\Models\User;
 use App\Models\UserHealthProfile;
-use App\Services\TriageAiBriefingService;
+use App\Services\Triage\Ai\TriageAiBriefingService;
 use Database\Seeders\MedicalKnowledgeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;

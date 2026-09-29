@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Triage;
 
 use App\Mail\TriageFollowUpMail;
 use App\Models\ChatMessage;
 use App\Models\TriageSession;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -19,8 +20,7 @@ class TriageFollowUpService
 {
     public function __construct(
         protected AuditLogService $auditLogService,
-    ) {
-    }
+    ) {}
 
     /**
      * Ask every due session whether the symptom improved.
@@ -62,7 +62,7 @@ class TriageFollowUpService
                     ? __('messages.reminder.response_improved')
                     : __('messages.reminder.response_not_improved'),
                 'products' => [],
-                'refer_doctor' => !$recorded,
+                'refer_doctor' => ! $recorded,
                 'already_answered' => true,
             ];
         }
@@ -80,7 +80,7 @@ class TriageFollowUpService
         // Only a self-care outcome may be escalated here. An emergency or a
         // pharmacist decision already sits above refer_doctor, so overwriting it
         // would downgrade the advice the patient was given.
-        if (!$improved && $session->outcome === 'self_care') {
+        if (! $improved && $session->outcome === 'self_care') {
             $attributes['outcome'] = 'refer_doctor';
         }
 
@@ -108,7 +108,7 @@ class TriageFollowUpService
             'message' => $message,
             // Hard empty on both branches: follow-up is care, not a sales channel.
             'products' => [],
-            'refer_doctor' => !$improved,
+            'refer_doctor' => ! $improved,
             'already_answered' => false,
         ];
     }

@@ -10,7 +10,7 @@ use App\Models\Product;
 use App\Models\TriageSession;
 use App\Models\User;
 use App\Models\UserHealthProfile;
-use App\Services\MedicalTriageService;
+use App\Services\Triage\MedicalTriageService;
 use App\Services\MedicationReminderService;
 use Database\Seeders\MedicalKnowledgeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -348,7 +348,7 @@ class TriageSafetyRegressionTest extends TestCase
 
         \Illuminate\Support\Facades\Mail::shouldReceive('to')->andThrow(new \RuntimeException('smtp down'));
 
-        $sent = app(\App\Services\TriageFollowUpService::class)->dispatchDue();
+        $sent = app(\App\Services\Triage\TriageFollowUpService::class)->dispatchDue();
 
         $this->assertSame(0, $sent, 'A failed send must not be counted.');
         $this->assertNotNull($session->fresh()->follow_up_at, 'The safety net must survive a mail failure.');
@@ -609,7 +609,7 @@ class TriageSafetyRegressionTest extends TestCase
                 ->update(['created_at' => now()->subMinutes($minutes + 10)]);
         }
 
-        $summary = app(\App\Services\TriageReportService::class)->getSummary([]);
+        $summary = app(\App\Services\Triage\TriageReportService::class)->getSummary([]);
 
         $this->assertSame(3, $summary['reviewed_count']);
         $this->assertSame(90.0, $summary['average_wait_minutes']);
@@ -622,7 +622,7 @@ class TriageSafetyRegressionTest extends TestCase
             $queries++;
         });
 
-        app(\App\Services\TriageReportService::class)->getOutcomeDistribution([]);
+        app(\App\Services\Triage\TriageReportService::class)->getOutcomeDistribution([]);
 
         // Was 4 (the whole getSummary) when only the outcome tally is needed.
         $this->assertSame(1, $queries);

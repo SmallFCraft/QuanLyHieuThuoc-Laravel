@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\AuditLog;
 use App\Models\TriageSession;
 use App\Models\User;
-use App\Services\TriageAiAdviceService;
+use App\Services\Triage\Ai\TriageAiAdviceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
