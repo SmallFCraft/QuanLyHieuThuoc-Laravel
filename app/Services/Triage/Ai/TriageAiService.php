@@ -1,8 +1,10 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Triage\Ai;
 
 use App\Models\TriageSession;
+use App\Services\AiProviderService;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -17,8 +19,7 @@ abstract class TriageAiService
 {
     public function __construct(
         protected AuditLogService $auditLogService,
-    ) {
-    }
+    ) {}
 
     /** The `chatbot.ai.triage.*` key that switches this seam off. */
     abstract protected function configFlag(): string;
@@ -33,7 +34,7 @@ abstract class TriageAiService
      */
     public function isEnabled(): bool
     {
-        return (bool) config('chatbot.ai.triage.' . $this->configFlag(), false);
+        return (bool) config('chatbot.ai.triage.'.$this->configFlag(), false);
     }
 
     /**
@@ -47,8 +48,8 @@ abstract class TriageAiService
     }
 
     /**
-     * @param array<int, array<string, mixed>> $messages
-     * @param array<string, mixed> $options
+     * @param  array<int, array<string, mixed>>  $messages
+     * @param  array<string, mixed>  $options
      * @return array<string, mixed>
      */
     protected function callProvider(AiProviderService $provider, array $messages, array $options = []): array
@@ -60,14 +61,14 @@ abstract class TriageAiService
      * The tool-call arguments the model returned, or null when it answered in prose
      * or with malformed JSON.
      *
-     * @param array<string, mixed> $response
+     * @param  array<string, mixed>  $response
      * @return array<string, mixed>|null
      */
     protected function decodeToolCall(array $response): ?array
     {
         $arguments = $response['choices'][0]['message']['function_call']['arguments'] ?? null;
 
-        if (!is_string($arguments) || trim($arguments) === '') {
+        if (! is_string($arguments) || trim($arguments) === '') {
             return null;
         }
 
@@ -79,8 +80,8 @@ abstract class TriageAiService
     /**
      * Write the subclass's own columns and this seam's `ai_meta` entry in one save.
      *
-     * @param array<string, mixed> $columns
-     * @param array<string, mixed>|null $described
+     * @param  array<string, mixed>  $columns
+     * @param  array<string, mixed>|null  $described
      */
     protected function persistWithProvenance(
         TriageSession $session,
@@ -106,8 +107,8 @@ abstract class TriageAiService
      * customer's own words. Swallows its own failures: a missing audit row must not
      * cost the answer that was already produced.
      *
-     * @param array<string, mixed>|null $described
-     * @param array<string, mixed> $values
+     * @param  array<string, mixed>|null  $described
+     * @param  array<string, mixed>  $values
      */
     protected function auditProvenance(
         TriageSession $session,

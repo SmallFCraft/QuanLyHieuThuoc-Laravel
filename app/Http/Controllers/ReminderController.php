@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\MedicationReminder;
 use App\Models\TriageSession;
 use App\Services\MedicationReminderService;
-use App\Services\TriageFollowUpService;
+use App\Services\Triage\TriageFollowUpService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;

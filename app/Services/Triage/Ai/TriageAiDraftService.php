@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Triage\Ai;
 
 use App\Models\TriageSession;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 

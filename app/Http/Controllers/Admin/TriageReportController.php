@@ -6,7 +6,7 @@ use App\Exports\AdminTriageExport;
 use App\Http\Controllers\Controller;
 use App\Models\MedicalSymptom;
 use App\Models\TriageSession;
-use App\Services\TriageReportService;
+use App\Services\Triage\TriageReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;

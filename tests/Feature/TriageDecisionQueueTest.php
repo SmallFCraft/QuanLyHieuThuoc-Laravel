@@ -179,7 +179,7 @@ class TriageDecisionQueueTest extends TestCase
 
         $job = AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->firstOrFail();
         (new ProcessTriageEvaluation($job->uuid))->handle(
-            app(\App\Services\MedicalTriageService::class),
+            app(\App\Services\Triage\MedicalTriageService::class),
             app(\App\Services\AiJobService::class)
         );
 
@@ -216,7 +216,7 @@ class TriageDecisionQueueTest extends TestCase
 
         $job = AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->firstOrFail();
         (new ProcessTriageEvaluation($job->uuid))->handle(
-            app(\App\Services\MedicalTriageService::class),
+            app(\App\Services\Triage\MedicalTriageService::class),
             app(\App\Services\AiJobService::class)
         );
 

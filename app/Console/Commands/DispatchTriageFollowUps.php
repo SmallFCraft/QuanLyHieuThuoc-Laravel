@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\TriageFollowUpService;
+use App\Services\Triage\TriageFollowUpService;
 use Illuminate\Console\Command;
 
 class DispatchTriageFollowUps extends Command

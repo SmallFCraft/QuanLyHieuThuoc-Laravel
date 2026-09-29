@@ -1,11 +1,13 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Triage\Ai;
 
 use App\Models\MedicalSymptom;
 use App\Models\MedicalTriageRule;
 use App\Models\Product;
 use App\Models\TriageSession;
+use App\Services\AiProviderService;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -41,10 +43,15 @@ class TriageAiBriefingService extends TriageAiService
     private const PRODUCT_OUTCOMES = ['self_care', 'pharmacist_review'];
 
     private const MAX_WHY_LENGTH = 1500;
+
     private const MAX_ITEM_LENGTH = 300;
+
     private const MAX_ITEMS = 8;
+
     private const MAX_PRODUCTS = 4;
+
     private const MAX_FREE_TEXT = 1200;
+
     private const MAX_CANDIDATES = 40;
 
     /**
@@ -58,7 +65,9 @@ class TriageAiBriefingService extends TriageAiService
      * failed on every call. Trimming these fields took the same call to 16s.
      */
     private const MAX_PROMPT_NAME = 120;
+
     private const MAX_PROMPT_INGREDIENTS = 160;
+
     private const MAX_PROMPT_USAGE = 300;
 
     /** @var array<int, string> Lists the model may fill, in reading order. */
@@ -94,7 +103,7 @@ class TriageAiBriefingService extends TriageAiService
     public function isEligible(TriageSession $session): bool
     {
         return $this->isEnabled()
-            && !in_array($session->outcome, self::NO_BRIEFING_OUTCOMES, true)
+            && ! in_array($session->outcome, self::NO_BRIEFING_OUTCOMES, true)
             && $session->status !== 'in_progress';
     }
 
@@ -104,7 +113,7 @@ class TriageAiBriefingService extends TriageAiService
      */
     public function generate(TriageSession $session): void
     {
-        if (!$this->isEligible($session)) {
+        if (! $this->isEligible($session)) {
             return;
         }
 
@@ -165,22 +174,22 @@ class TriageAiBriefingService extends TriageAiService
     /**
      * Rule-derived material plus the customer's own words, clearly fenced.
      *
-     * @param array<int, array<string, mixed>> $candidates
+     * @param  array<int, array<string, mixed>>  $candidates
      */
     protected function buildPrompt(TriageSession $session, array $candidates): string
     {
         $lines = [
-            'Kết luận hệ thống (cố định): ' . $this->outcomeLabel($session->outcome),
+            'Kết luận hệ thống (cố định): '.$this->outcomeLabel($session->outcome),
         ];
 
         $symptoms = $this->symptomNames($session);
         if ($symptoms !== []) {
-            $lines[] = 'Triệu chứng hệ thống khớp: ' . implode(', ', $symptoms);
+            $lines[] = 'Triệu chứng hệ thống khớp: '.implode(', ', $symptoms);
         }
 
         $redFlags = $this->redFlagNames($session);
         if ($redFlags !== []) {
-            $lines[] = 'Dấu hiệu cảnh báo đã ghi nhận: ' . implode(', ', $redFlags);
+            $lines[] = 'Dấu hiệu cảnh báo đã ghi nhận: '.implode(', ', $redFlags);
         }
 
         if (trim((string) $session->advice_given) !== '') {
@@ -198,7 +207,7 @@ class TriageAiBriefingService extends TriageAiService
         $context = $this->contextService->buildContext($session);
         if ($context !== '') {
             $lines[] = '';
-            $lines[] = "Ngữ cảnh bệnh nhân & lịch sử:\n" . $context;
+            $lines[] = "Ngữ cảnh bệnh nhân & lịch sử:\n".$context;
         }
 
         $lines[] = '';
@@ -254,7 +263,7 @@ class TriageAiBriefingService extends TriageAiService
                 continue;
             }
 
-            $lines[] = $label . ': ' . (is_array($value) ? implode(', ', $value) : $value);
+            $lines[] = $label.': '.(is_array($value) ? implode(', ', $value) : $value);
         }
 
         foreach ($session->clarifyHistory() as $pair) {
@@ -262,7 +271,7 @@ class TriageAiBriefingService extends TriageAiService
                 continue;
             }
 
-            $lines[] = 'Hỏi thêm — ' . ($pair['question'] ?? '') . ': ' . $pair['answer'];
+            $lines[] = 'Hỏi thêm — '.($pair['question'] ?? '').': '.$pair['answer'];
         }
 
         return mb_substr(implode("\n", $lines), 0, self::MAX_FREE_TEXT);
@@ -278,7 +287,7 @@ class TriageAiBriefingService extends TriageAiService
      */
     protected function candidateProducts(TriageSession $session): array
     {
-        if (!in_array($session->outcome, self::PRODUCT_OUTCOMES, true)) {
+        if (! in_array($session->outcome, self::PRODUCT_OUTCOMES, true)) {
             return [];
         }
 
@@ -317,7 +326,7 @@ class TriageAiBriefingService extends TriageAiService
     }
 
     /**
-     * @param array<int, array<string, mixed>> $candidates
+     * @param  array<int, array<string, mixed>>  $candidates
      * @return array<string, mixed>
      */
     protected function toolSchema(array $candidates): array
@@ -390,8 +399,8 @@ class TriageAiBriefingService extends TriageAiService
     /**
      * Everything that reaches the page passes through here.
      *
-     * @param array<string, mixed> $raw
-     * @param array<int, array<string, mixed>> $candidates
+     * @param  array<string, mixed>  $raw
+     * @param  array<int, array<string, mixed>>  $candidates
      * @return array<string, mixed>|null null when there is nothing usable left
      */
     protected function sanitize(array $raw, array $candidates, TriageSession $session): ?array
@@ -422,7 +431,7 @@ class TriageAiBriefingService extends TriageAiService
      */
     protected function cleanList(mixed $items): array
     {
-        if (!is_array($items)) {
+        if (! is_array($items)) {
             return [];
         }
 
@@ -441,12 +450,12 @@ class TriageAiBriefingService extends TriageAiService
      * cannot put a medicine on the page. The price, name and stock shown come from
      * the catalogue row, never from the model.
      *
-     * @param array<int, array<string, mixed>> $candidates
+     * @param  array<int, array<string, mixed>>  $candidates
      * @return array<int, array<string, mixed>>
      */
     protected function cleanProducts(mixed $items, array $candidates, TriageSession $session): array
     {
-        if (!is_array($items) || $candidates === []) {
+        if (! is_array($items) || $candidates === []) {
             return [];
         }
 
@@ -460,7 +469,7 @@ class TriageAiBriefingService extends TriageAiService
                 'id' => (int) ($item['id'] ?? 0),
                 'reason' => $this->cleanText((string) ($item['reason'] ?? ''), self::MAX_ITEM_LENGTH),
             ])
-            ->filter(fn (array $item) => $byId->has($item['id']) && !in_array($item['id'], $alreadyShown, true))
+            ->filter(fn (array $item) => $byId->has($item['id']) && ! in_array($item['id'], $alreadyShown, true))
             ->unique('id')
             ->take(self::MAX_PRODUCTS)
             ->map(fn (array $item) => array_merge($byId->get($item['id']), ['reason' => $item['reason']]))
@@ -545,7 +554,7 @@ class TriageAiBriefingService extends TriageAiService
     }
 
     /**
-     * @param array<string, mixed>|null $briefing
+     * @param  array<string, mixed>|null  $briefing
      */
     protected function record(
         TriageSession $session,

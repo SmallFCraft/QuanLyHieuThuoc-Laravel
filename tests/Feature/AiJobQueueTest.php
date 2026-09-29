@@ -659,7 +659,7 @@ class AiJobQueueTest extends TestCase
         $this->assertSame(['MaSL' => $session->MaSL], $job->payload);
 
         (new \App\Jobs\ProcessTriageAdviceRewrite($job->uuid))->handle(
-            app(\App\Services\TriageAiAdviceService::class),
+            app(\App\Services\Triage\Ai\TriageAiAdviceService::class),
             app(\App\Services\AiJobService::class)
         );
 

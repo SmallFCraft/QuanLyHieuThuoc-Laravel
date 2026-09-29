@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Triage\Ai;
 
 use App\Models\TriageSession;
 use App\Models\UserHealthProfile;
+use App\Services\AuditLogService;
 use Illuminate\Support\Carbon;
 
 class TriageAiContextService

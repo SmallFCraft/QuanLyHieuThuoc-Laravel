@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Triage;
 
 use App\Models\MedicalRedFlag;
 use App\Models\MedicalSymptom;
@@ -38,7 +38,7 @@ class TriageReportService
         $wait = $this->applyFilters(TriageSession::query(), $filters)
             ->where('status', 'reviewed')
             ->whereNotNull('reviewed_at')
-            ->selectRaw('COUNT(*) as reviewed_count, AVG(' . $this->waitMinutesExpression() . ') as average_wait')
+            ->selectRaw('COUNT(*) as reviewed_count, AVG('.$this->waitMinutesExpression().') as average_wait')
             ->first();
 
         $reviewedCount = (int) ($wait->reviewed_count ?? 0);
@@ -62,7 +62,7 @@ class TriageReportService
     protected function waitMinutesExpression(): string
     {
         return DB::connection()->getDriverName() === 'sqlite'
-            ? "(julianday(reviewed_at) - julianday(created_at)) * 1440"
+            ? '(julianday(reviewed_at) - julianday(created_at)) * 1440'
             : 'TIMESTAMPDIFF(MINUTE, created_at, reviewed_at)';
     }
 
@@ -95,7 +95,7 @@ class TriageReportService
         foreach (self::OUTCOMES as $outcome) {
             $rows[] = [
                 'outcome' => $outcome,
-                'label' => __('messages.health.outcome_' . $outcome),
+                'label' => __('messages.health.outcome_'.$outcome),
                 'count' => $counts[$outcome],
                 'color' => self::OUTCOME_STYLES[$outcome]['color'],
                 'icon' => self::OUTCOME_STYLES[$outcome]['icon'],
@@ -111,9 +111,9 @@ class TriageReportService
     }
 
     /**
-     * @param array $filters same filters as the rest of the report; the trend must
-     *                       agree with the metric cards instead of always showing
-     *                       every outcome.
+     * @param  array  $filters  same filters as the rest of the report; the trend must
+     *                          agree with the metric cards instead of always showing
+     *                          every outcome.
      */
     public function getDailyTrend(int $days = 30, array $filters = []): array
     {
@@ -155,7 +155,7 @@ class TriageReportService
         $tally = [];
         foreach ($lists as $codes) {
             foreach ((array) $codes as $code) {
-                if (!is_string($code) || $code === '') {
+                if (! is_string($code) || $code === '') {
                     continue;
                 }
                 $tally[$code] = ($tally[$code] ?? 0) + 1;
@@ -196,7 +196,7 @@ class TriageReportService
         foreach ($lists as $flags) {
             foreach ((array) $flags as $flag) {
                 $code = is_array($flag) ? ($flag['code'] ?? null) : (is_string($flag) ? $flag : null);
-                if (!is_string($code) || $code === '') {
+                if (! is_string($code) || $code === '') {
                     continue;
                 }
                 $tally[$code] = ($tally[$code] ?? 0) + 1;
@@ -285,7 +285,7 @@ class TriageReportService
 
     protected function parseDate(mixed $value): ?Carbon
     {
-        if (!is_string($value) || trim($value) === '') {
+        if (! is_string($value) || trim($value) === '') {
             return null;
         }
 
