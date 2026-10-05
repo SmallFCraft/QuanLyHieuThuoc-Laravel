@@ -37,12 +37,20 @@
                 'nhà thuốc, dược phẩm, thuốc chính hãng, chăm sóc sức khỏe, thực phẩm chức năng, Medicare Pharmacy'
             )));
 
+            $defaultMetaImage = asset('images/logo.png');
             $metaImage = trim($__env->yieldContent(
                 'meta_image',
                 request()->routeIs('products.show') && isset($product) && !empty($product->image_url)
                     ? $product->image_url
-                    : asset('images/logo.png')
+                    : $defaultMetaImage
             ));
+
+            /* og:image:width/height must describe the image og:image actually points at, or the
+               preview card gets the wrong aspect ratio. Read from the file rather than written
+               as literals: the literals are what drifted when the asset was replaced. */
+            $metaImageSize = $metaImage === $defaultMetaImage
+                ? @getimagesize(public_path('images/logo.png'))
+                : null;
 
             $metaType = trim($__env->yieldContent(
                 'meta_type',
@@ -157,8 +165,13 @@
         <meta name="application-name" content="{{ $appName }}">
 
         <link rel="canonical" href="{{ $metaCanonical }}">
-        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-        <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}">
+        {{-- ?v=filemtime: browsers cache favicons far longer than normal assets, and this
+             file shipped as 0 bytes for months. The query changes whenever the file does,
+             so a replaced icon shows up without asking anyone to clear their cache.
+             The SVG is offered first where supported; .ico stays for the rest. --}}
+        <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo-icon.svg') }}?v={{ filemtime(public_path('images/logo-icon.svg')) }}">
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v={{ filemtime(public_path('favicon.ico')) }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}?v={{ filemtime(public_path('images/logo.png')) }}">
         <link rel="image_src" href="{{ $metaImage }}">
 
         <meta property="og:locale" content="{{ $metaLocale }}">
@@ -169,8 +182,10 @@
         <meta property="og:url" content="{{ $metaCanonical }}">
         <meta property="og:image" content="{{ $metaImage }}">
         <meta property="og:image:alt" content="{{ $metaImageAlt }}">
-        <meta property="og:image:width" content="2816">
-        <meta property="og:image:height" content="1536">
+        @if ($metaImageSize)
+        <meta property="og:image:width" content="{{ $metaImageSize[0] }}">
+        <meta property="og:image:height" content="{{ $metaImageSize[1] }}">
+        @endif
 
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="{{ $metaTitle }}">
@@ -769,10 +784,13 @@
         <nav class="navbar navbar-expand-lg fixed-top site-header">
             <div class="container-fluid px-3 px-lg-4 d-flex flex-nowrap align-items-center justify-content-between">
                 <!-- Branding -->
-                <a class="navbar-brand d-flex align-items-center overflow-hidden flex-shrink-0" href="{{ route('home') }}" style="white-space: nowrap;">
-                    {{-- logo-nav.png, not logo.png: the source file is 2816x1536 (1,516 KB)
-                         and rendered 115x63 here, which was 51% of the page's bytes. --}}
-                    <img src="{{ asset('images/logo-nav.png') }}" alt="Logo" class="me-2 shadow-sm flex-shrink-0" width="176" height="96" style="height: 40px; width: auto; object-fit: contain; transition: transform 0.3s ease;">
+                <a class="navbar-brand d-flex align-items-center overflow-hidden flex-shrink-0" href="{{ route('home') }}" aria-label="{{ __('messages.app_name') }}" style="white-space: nowrap;">
+                    {{-- The square mark, not the old 2816x1536 lockup: at 40px the letters
+                         inside that artwork were illegible and the file was 1,516 KB. The
+                         name beside it is live text, so it stays selectable and localised.
+                         Below lg the live text is hidden for the search bar, so the link
+                         carries its own aria-label rather than relying on alt text. --}}
+                    <img src="{{ asset('images/logo-icon.svg') }}" alt="" class="me-2 flex-shrink-0" width="40" height="40" style="height: 40px; width: auto; transition: transform 0.3s ease;">
                     {{-- Dưới lg chỉ còn logo: dải 320-991px phải nhường hết chỗ ngang cho ô
                          tìm kiếm, vốn là lối vào chính của cả trang. --}}
                     <span class="text-emerald-700 text-truncate d-none d-lg-inline fw-bold" style="font-size: 1.15rem;">{{ __('messages.app_name') }}</span>
@@ -1044,7 +1062,7 @@
                         <div class="col-lg-4 col-md-6">
                             <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);">
                                 <a class="d-flex align-items-center mb-3 text-decoration-none" href="{{ route('home') }}">
-                                    <img src="{{ asset('images/logo-nav.png') }}" alt="Logo" class="me-2" width="176" height="96" style="height: 40px; width: auto;">
+                                    <img src="{{ asset('images/logo-icon.svg') }}" alt="" class="me-2" width="40" height="40" style="height: 40px; width: auto;">
                                     <span class="fs-5 fw-bold text-emerald-800">{{ __('messages.app_name') }}</span>
                                 </a>
                                 <p class="text-gray-600 mb-4 small lh-lg">

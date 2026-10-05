@@ -110,6 +110,38 @@
             </button>
 
             @if (!empty($question['options']))
+                @php
+                    // Clinical glyph per quick-pick answer. Keyed on the answer text the
+                    // service emits, so a renamed option loses its icon rather than
+                    // silently wearing the wrong one. Icon names verified against
+                    // bootstrap-icons 1.11, the set the layout loads.
+                    $optionIcons = [
+                        'Đau đầu' => 'bi-emoji-dizzy',
+                        'Sốt' => 'bi-thermometer-high',
+                        'Ho' => 'bi-wind',
+                        'Đau bụng' => 'bi-bandaid',
+                        'Tiêu chảy' => 'bi-droplet',
+                        'Đau họng' => 'bi-soundwave',
+                        'Hôm nay' => 'bi-sun',
+                        '2–3 ngày' => 'bi-calendar-check',
+                        '4–7 ngày' => 'bi-calendar-check',
+                        'Hơn 1 tuần' => 'bi-hourglass-split',
+                        'Chưa dùng gì' => 'bi-dash-circle',
+                        'Đã dùng thuốc nhưng không đỡ' => 'bi-capsule',
+                        'Đã dùng và có đỡ' => 'bi-check2-circle',
+                        'Không có' => 'bi-check-circle',
+                        'Không có thêm' => 'bi-check-circle',
+                        'Có bệnh nền' => 'bi-heart-pulse',
+                        'Có dị ứng thuốc' => 'bi-shield-exclamation',
+                        'Đang mang thai' => 'bi-person-heart',
+                        'Đang cho con bú' => 'bi-person-hearts',
+                        'Buồn nôn' => 'bi-slash-circle',
+                        'Chóng mặt' => 'bi-activity',
+                        'Khó thở' => 'bi-lungs',
+                        'Phát ban' => 'bi-virus',
+                    ];
+                @endphp
+
                 <div class="health-options mb-4">
                     @foreach ($question['options'] as $option)
                         {{-- Distinct field name: sharing `answer` with the text input below
@@ -117,7 +149,10 @@
                              formnovalidate so step 1's required text input does not block it. --}}
                         <button type="submit" name="option_answer" value="{{ $option }}"
                                 formnovalidate class="health-option">
-                            {{ $option }}
+                            @isset($optionIcons[$option])
+                                <i class="bi {{ $optionIcons[$option] }} health-option__icon" aria-hidden="true"></i>
+                            @endisset
+                            <span class="health-option__label">{{ $option }}</span>
                         </button>
                     @endforeach
                 </div>

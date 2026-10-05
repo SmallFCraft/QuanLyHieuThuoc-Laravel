@@ -126,20 +126,22 @@
     }
 
     /* --- The verdict ---
-       The answer as the visual anchor of the page, built on DESIGN.md's opaque warning
-       card: solid level tint, a full 1.5px border on all four sides, and the level's own
-       colour on the icon and the word. The 6px left rail it replaces is the single most
-       recognizable signature of a generated card, and a heavier edge on one side says
-       nothing the tint, the icon and the sentence do not already say. */
+       Clinical outcome banner: the visual anchor of the result page.
+       Built on DESIGN.md's opaque warning card — solid level tint, the level's own
+       border, and a soft diffused shadow. The icon is a filled medallion rather than
+       a white tile: a white square on a tinted ground reads as a sticker laid over
+       the card, while a solid disc in the level's colour matches the journey dots
+       in the rail beside it and gives the severity a second, greyscale-safe cue. */
     .health-verdict {
         display: flex;
         align-items: center;
-        gap: 14px;
-        margin-top: 14px;
-        padding: 16px 20px;
-        border-radius: 14px;
-        border: 1.5px solid var(--health-line);
+        gap: 16px;
+        margin-top: 18px;
+        padding: 18px 22px;
+        border-radius: var(--health-r-lg);
+        border: 1px solid var(--health-line);
         background: #fff;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
     }
 
     .health-verdict__icon {
@@ -147,60 +149,75 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        width: 44px;
-        height: 44px;
-        border-radius: 10px;
-        font-size: 1.375rem;
+        width: 52px;
+        height: 52px;
+        border-radius: var(--health-r-pill);
+        font-size: 1.5rem;
+        /* Same idiom as the stepper's current dot: a soft tinted ring, so the disc
+           sits in the card instead of floating on it. */
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.55);
     }
 
-    .health-verdict__body { display: flex; flex-direction: column; min-width: 0; }
+    .health-verdict__body { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; gap: 6px; }
 
+    /* A chip, not floating all-caps: the label belongs to the conclusion, and the
+       pill says so without inventing a second colour for it. */
     .health-verdict__label {
-        font-size: 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 10px;
+        border-radius: var(--health-r-pill);
+        background: rgba(255, 255, 255, 0.7);
+        font-size: 0.6875rem;
         font-weight: 700;
         letter-spacing: 0.06em;
         text-transform: uppercase;
-        color: var(--health-ink-mute);
+        color: var(--health-ink-soft);
     }
 
     .health-verdict__value {
         font-family: var(--health-display);
-        font-size: 1.25rem;
-        font-weight: 700;
-        line-height: 1.3;
-        letter-spacing: -0.01em;
+        font-size: 1.5rem;
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
     }
 
-    /* The border, the surface, the icon and the words all take the level's colour, so
+    /* The border, the surface, the disc and the words all take the level's colour, so
        the card states its severity four ways and survives greyscale. Nothing here is
        blurred: DESIGN.md's Opaque Warning Rule, a warning read through glass is a
-       warning half-read. */
+       warning half-read. White on each of the four level colours measures between
+       4.8:1 and 6.5:1 — well past the 3:1 a glyph needs. */
     .health-verdict--emergency {
-        border-color: var(--health-emergency-border);
+        border-color: var(--health-emergency);
         background: var(--health-emergency-bg);
+        box-shadow: 0 12px 32px rgba(185, 28, 28, 0.08);
     }
-    .health-verdict--emergency .health-verdict__icon { background: #fff; color: var(--health-emergency); }
+    .health-verdict--emergency .health-verdict__icon { background: var(--health-emergency); color: #fff; }
     .health-verdict--emergency .health-verdict__value { color: var(--health-emergency); }
 
     .health-verdict--refer_doctor {
-        border-color: var(--health-refer-border);
+        border-color: var(--health-refer);
         background: var(--health-refer-bg);
+        box-shadow: 0 12px 32px rgba(180, 83, 9, 0.08);
     }
-    .health-verdict--refer_doctor .health-verdict__icon { background: #fff; color: var(--health-refer); }
+    .health-verdict--refer_doctor .health-verdict__icon { background: var(--health-refer); color: #fff; }
     .health-verdict--refer_doctor .health-verdict__value { color: var(--health-refer); }
 
     .health-verdict--pharmacist_review {
-        border-color: var(--health-pharmacist-border);
+        border-color: var(--health-pharmacist);
         background: var(--health-pharmacist-bg);
+        box-shadow: 0 12px 32px rgba(14, 116, 144, 0.08);
     }
-    .health-verdict--pharmacist_review .health-verdict__icon { background: #fff; color: var(--health-pharmacist); }
+    .health-verdict--pharmacist_review .health-verdict__icon { background: var(--health-pharmacist); color: #fff; }
     .health-verdict--pharmacist_review .health-verdict__value { color: var(--health-pharmacist); }
 
     .health-verdict--self_care {
-        border-color: var(--health-selfcare-border);
+        border-color: var(--health-selfcare);
         background: var(--health-selfcare-bg);
+        box-shadow: 0 12px 32px rgba(4, 120, 87, 0.08);
     }
-    .health-verdict--self_care .health-verdict__icon { background: #fff; color: var(--health-selfcare); }
+    .health-verdict--self_care .health-verdict__icon { background: var(--health-selfcare); color: #fff; }
     .health-verdict--self_care .health-verdict__value { color: var(--health-selfcare); }
 
     /* --- Start page: the actions under the wizard ---
@@ -332,9 +349,91 @@
        accessibility tree and still on the printout, so a medical scope note is never
        something only a sighted, non-printing user can reach. */
     .health-disclaimer {
-        background: var(--health-refer-bg);
-        border: 1px solid var(--health-refer-border);
-        color: #78350F;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 14px;
+        border: 1px solid rgba(21, 128, 61, 0.14);
+        border-radius: var(--health-r-md);
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(6px);
+        color: var(--health-ink-soft);
+        font-size: 0.875rem;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    }
+
+    .health-disclaimer__lead {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .health-disclaimer__badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
+        border-radius: var(--health-r-pill);
+        background: rgba(4, 120, 87, 0.08);
+        color: var(--health-selfcare);
+        font-size: 0.8125rem;
+        line-height: 1;
+    }
+
+    .health-disclaimer__title {
+        font-weight: 600;
+        font-size: 0.8125rem;
+        color: var(--health-ink);
+        line-height: 1.35;
+    }
+
+    /* Own pill rather than .health-link: that class carries a 44px min-height for
+       pointer targets, which on a one-line strip widens the notice past its own text
+       and lifts it above the question it introduces. Still a full pill-sized target
+       here — the strip is ~38px — and the same focus ring via :focus-visible. */
+    .health-disclaimer__action {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-height: 28px;
+        padding: 2px 10px;
+        border: 1px solid rgba(4, 120, 87, 0.20);
+        border-radius: var(--health-r-pill);
+        background: rgba(4, 120, 87, 0.05);
+        color: var(--health-selfcare);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: background-color var(--health-motion), color var(--health-motion), border-color var(--health-motion);
+    }
+
+    .health-disclaimer__action:hover {
+        background: rgba(4, 120, 87, 0.12);
+        border-color: rgba(4, 120, 87, 0.35);
+        color: #065F46;
+    }
+
+    .health-disclaimer__action:focus-visible {
+        outline: none;
+        box-shadow: var(--health-focus-ring);
+    }
+
+    /* Emergency variant: popup suppressed so it never covers the 115 call button,
+       so the body renders inline here with emergency tint. */
+    .health-disclaimer--emergency {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 16px;
+        background: var(--health-emergency-bg);
+        border: 1px solid var(--health-emergency-border);
+        color: var(--health-emergency);
     }
 
     /* Off-screen, not display:none: a screen reader must still hear the whole notice.
@@ -389,8 +488,11 @@
         overflow-y: auto;
         padding: 28px 24px 24px;
         border-radius: var(--health-r-lg);
+        /* Near-solid rather than glass: the panel floats over a 55% scrim, and a
+           translucent one would pick the scrim's grey back up through it. Same
+           white-plus-emerald-edge material as .health-card, kept opaque. */
         background: #fff;
-        border: 1px solid var(--health-refer-border);
+        border: 1px solid rgba(21, 128, 61, 0.14);
         box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
         text-align: center;
         animation: healthPopIn 220ms cubic-bezier(.2, .8, .2, 1) both;
@@ -419,15 +521,15 @@
         to { opacity: 1; transform: none; }
     }
 
-    /* Amber, matching the notice it repeats: this is a caution, not an error.
-       Scoped with .health-page because .health-icon-tile is also a single class and sits
-       later in this same <style> block, so an unscoped override would lose the cascade
-       and render the self-care green. */
+    /* Emerald, matching the notice it repeats: a scope note is informational, not a
+       caution. Scoped with .health-page because .health-icon-tile is also a single class
+       and sits later in this same <style> block, so an unscoped override would lose the
+       cascade. */
     .health-page .health-scope-pop__tile {
         margin-inline: auto;
         margin-bottom: 14px;
-        background: var(--health-refer-bg);
-        color: var(--health-refer);
+        background: rgba(4, 120, 87, 0.08);
+        color: var(--health-selfcare);
     }
 
     .health-page .health-scope-pop__title {
@@ -440,9 +542,10 @@
     }
 
     .health-scope-pop__body {
-        /* #78350F on white is 9.07:1; the amber ground is reserved for the icon tile so the
-           body text is not read on a tint at 0.875rem. */
-        color: #78350F;
+        /* --health-ink-soft on white is 7.5:1. The amber ground is gone: this panel
+           repeats the same scope notice the strip carries, so it wears the same
+           material rather than a caution colour. */
+        color: var(--health-ink-soft);
         font-size: 0.875rem;
         line-height: 1.7;
         text-align: start;
@@ -468,45 +571,194 @@
         border-radius: 999px;
     }
 
-    /* --- Option buttons: real buttons, >=44px tall, >=8px apart --- */
-    .health-options {
+    /* --- Wizard stepper: five named nodes under the bar ---
+       The bar alone says how far along; it does not say along what. The nodes name the
+       five questions and mark the ones already answered, so the visitor reads the shape
+       of the intake instead of counting steps in their head. Decorative for assistive
+       tech (aria-hidden) — the track above carries the whole progress announcement, and
+       naming the nodes twice would make a screen reader read the wizard twice. */
+    .health-stepper__badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 4px 12px;
+        border-radius: var(--health-r-pill);
+        background: var(--health-selfcare-bg);
+        border: 1px solid var(--health-selfcare-border);
+        color: var(--health-selfcare);
+        font-size: 0.8125rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .health-stepper__nodes {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
+        margin: 16px 0 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    /* The rail between node centres. Sits behind the dots and stops at the first and
+       last centre, so it reads as a path between stops rather than as an underline
+       running off both ends of the row. */
+    .health-stepper__nodes::before {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 10%;
+        right: 10%;
+        height: 2px;
+        background: linear-gradient(to right, var(--health-selfcare-border), var(--health-selfcare-border));
+        z-index: 0;
+    }
+
+    .health-stepper__node {
+        position: relative;
+        z-index: 1;
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        text-align: center;
+    }
+
+    .health-stepper__dot {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--health-r-pill);
+        border: 2px solid #E2E8F0;
+        background: #fff;
+        color: var(--health-ink-mute);
+        font-size: 0.8125rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+    }
+
+    /* Answered: filled, and marked with a tick rather than only a colour — a visitor
+       who cannot separate the two greens still reads the sequence. */
+    .health-stepper__node.is-done .health-stepper__dot {
+        border-color: var(--health-selfcare);
+        background: var(--health-selfcare);
+        color: #fff;
+    }
+
+    /* Where they are now: the one node with a ring around it. The ring is the state,
+       not a shadow — it survives a greyscale print and forced-colors mode. */
+    .health-stepper__node.is-current .health-stepper__dot {
+        border-color: var(--health-selfcare);
+        background: var(--health-selfcare-bg);
+        color: var(--health-selfcare);
+        box-shadow: 0 0 0 4px rgba(4, 120, 87, 0.14);
+    }
+
+    .health-stepper__node-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1.3;
+        color: var(--health-ink-mute);
+    }
+
+    .health-stepper__node.is-done .health-stepper__node-label,
+    .health-stepper__node.is-current .health-stepper__node-label {
+        color: var(--health-selfcare);
+    }
+
+    .health-stepper__node.is-current .health-stepper__node-label { font-weight: 700; }
+
+    @media (max-width: 575.98px) {
+        /* Five names do not fit across 360px. The dots keep the sense of position and
+           the badge above names the current question in full. */
+        .health-stepper__node-label { display: none; }
+        .health-stepper__nodes::before { top: 15px; }
+    }
+
+    /* --- Option buttons: clinical interactive tiles ---
+       Replaces the raw strip of inline text pills with structured clinical tiles.
+       Each tile has an icon tile, strong label, and clear tactile lift on hover.
+       Responsive: 2-3 columns on tablet/desktop, single/double on narrow phones. */
+    .health-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
     }
 
     .health-option {
-        min-height: 48px;
-        padding: 12px 20px;
-        border-radius: var(--health-r-sm);
-        /* DESIGN.md's glass control at quick-pick scale: a fine emerald edge over a
-           translucent white body, so the row reads as part of the card rather than as
-           a strip of browser-default buttons sitting on it. */
-        border: 1px solid rgba(21, 128, 61, 0.18);
-        background: rgba(255, 255, 255, 0.7);
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 54px;
+        padding: 12px 18px;
+        border-radius: var(--health-r-md);
+        /* DESIGN.md's glass control at clinical card scale: subtle translucent white
+           body with an emerald boundary, lift-not-zoom hover. */
+        border: 1.5px solid rgba(21, 128, 61, 0.18);
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(8px);
         color: #1F2937;
         font-size: 0.9375rem;
         font-weight: 600;
-        box-shadow: 0 1px 2px rgba(15, 63, 52, 0.06);
+        text-align: left;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
         cursor: pointer;
-        /* Lift, never scale: scaling shoves neighbouring buttons around. */
         transition: background-color var(--health-motion), border-color var(--health-motion),
             color var(--health-motion), transform var(--health-motion),
             box-shadow var(--health-motion);
     }
 
-    .health-option:hover {
+    .health-option__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
         background: var(--health-selfcare-bg);
+        border: 1px solid var(--health-selfcare-border);
+        color: var(--health-selfcare);
+        font-size: 1rem;
+        transition: transform var(--health-motion), background-color var(--health-motion);
+    }
+
+    .health-option__label {
+        flex-grow: 1;
+        line-height: 1.35;
+    }
+
+    .health-option:hover {
+        background: #ffffff;
         border-color: var(--health-selfcare);
         color: var(--health-selfcare);
-        transform: translateY(-1px);
-        box-shadow: 0 8px 24px rgba(15, 63, 52, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px rgba(4, 120, 87, 0.12);
+    }
+
+    .health-option:hover .health-option__icon {
+        background: var(--health-selfcare);
+        border-color: var(--health-selfcare);
+        color: #ffffff;
+        transform: scale(1.08);
     }
 
     .health-option:active {
         background: #D1FAE5;
         border-color: #059669;
-        transform: none;
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(4, 120, 87, 0.1);
+    }
+
+    @media (max-width: 480px) {
+        .health-options {
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
     }
 
     .health-option:focus-visible,
@@ -1337,12 +1589,14 @@
         /* 62px navbar (`fixed-top` in the layout) plus a 16px breath, so the top of the
            rail never tucks under the header. */
         top: 78px;
-        padding: 20px;
-        border-radius: 16px;
-        border: 1px solid #E2E8F0;
-        background: rgba(255, 255, 255, 0.85);
+        padding: 22px;
+        border-radius: var(--health-r-lg);
+        /* The same glass recipe as `.health-card`, so the rail is recognisably one of
+           the page's blocks rather than a second, greyer material. */
+        border: 1px solid rgba(21, 128, 61, 0.14);
+        background: rgba(255, 255, 255, 0.94);
         backdrop-filter: blur(20px);
-        box-shadow: var(--health-shadow);
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
     }
 
     .health-rail__flags {
@@ -1429,21 +1683,21 @@
        thing; and because nothing here is `:nth-child`-dependent, a five-node rail works
        exactly as well as a six-node one. */
     .health-journey {
-        /* Half the dot's width, so the dot sits flush at the step's left edge and the
-           connector, centred on the same x, runs through it rather than beside it. */
-        --journey-rail-x: 14px;
-        --journey-dot: 28px;
+        /* Half the dot's width (32px / 2 = 16px), so the dot sits flush at the step's left edge
+           and the connector, centred on the same x, runs through it rather than beside it. */
+        --journey-rail-x: 16px;
+        --journey-dot: 32px;
         position: relative;
         margin: 0;
         padding: 0;
         list-style: none;
         display: grid;
-        gap: 16px;
+        gap: 18px;
     }
 
     .health-journey__step {
         position: relative;
-        padding-left: 40px;
+        padding-left: 48px;
         /* A node's number rides the rail, so its box is the anchor for both the dot and
            the connector that leaves it. */
         min-height: var(--journey-dot);
@@ -1462,13 +1716,14 @@
         width: var(--journey-dot);
         height: var(--journey-dot);
         border-radius: var(--health-r-pill);
-        background: var(--health-selfcare-bg);
-        border: 1.5px solid var(--health-selfcare-border);
+        background: #fff;
+        border: 2px solid var(--health-selfcare-border);
         color: var(--health-selfcare);
-        font-size: 0.75rem;
+        font-size: 0.8125rem;
         font-weight: 700;
         font-variant-numeric: tabular-nums;
         line-height: 1;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
         /* Nodes pop in order, carrying the sequence down the rail. Delayed past the
            card's own entrance so the two do not read as one jitter. */
         animation: healthDotIn 300ms cubic-bezier(.2, .8, .2, 1) both;
@@ -1551,42 +1806,50 @@
        Built on Bootstrap's pill plugin, which app.js already bundles, so the tab is
        an anchor with a real `aria-selected` rather than a div wearing a role.
 
-       The segmented-control chip it used to be — tinted track, raised white active
-       pill, soft shadow — is a mobile-OS idiom that appeared on this page and nowhere
-       else in the product. A rule under the active tab is the same affordance the
-       storefront's own navbar already uses, so the two read as one system. */
+       Segmented glass control instead of an underline rule: the three panels are the
+       page's document sections (interpretation, care, evidence), and a segmented
+       control states that they are peers. It also carries the apothecary-glass surface
+       — a recessed track with one raised member — which the underline rule did not. */
     .health-hub__tabbar {
         display: flex;
         flex-wrap: wrap;
         gap: 4px;
         margin-bottom: 20px;
-        border-bottom: 1px solid var(--health-line);
+        padding: 5px;
+        background: rgba(241, 245, 249, 0.85);
+        border: 1px solid rgba(21, 128, 61, 0.10);
+        border-radius: var(--health-r-md);
+        /* Inset, so the track reads as a recessed channel with the active tab raised
+           out of it — depth from the shadow, not from a second tint. */
+        box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
     }
 
     .health-hub__tab {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 10px 14px 12px;
+        padding: 9px 15px;
         font-size: 0.875rem;
         font-weight: 600;
         color: var(--health-ink-soft);
         text-decoration: none;
-        border-bottom: 2px solid transparent;
-        margin-bottom: -1px;
-        transition: color var(--health-motion), border-color var(--health-motion);
+        border: 1px solid transparent;
+        border-radius: calc(var(--health-r-md) - 4px);
+        transition: color var(--health-motion), background-color var(--health-motion),
+            border-color var(--health-motion), box-shadow var(--health-motion);
     }
 
     .health-hub__tab:hover {
         color: var(--health-selfcare);
-        border-bottom-color: var(--health-selfcare-border);
+        background: rgba(255, 255, 255, 0.7);
+        border-color: rgba(21, 128, 61, 0.12);
     }
 
     .health-hub__tab.active {
-        background: none;
+        background: #ffffff;
         color: var(--health-selfcare);
-        border-bottom-color: var(--health-selfcare);
-        box-shadow: none;
+        border-color: rgba(21, 128, 61, 0.16);
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
     }
 
     .health-hub__tab:focus-visible {

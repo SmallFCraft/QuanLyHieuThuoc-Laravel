@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Soft clinical depth shadow -->
+    <filter id="eco-shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#14532d" flood-opacity="0.14" />
+    </filter>
+
+    <!-- Glass shield glow -->
+    <linearGradient id="shield-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#ecfdf5" />
+    </linearGradient>
+
+    <!-- Medical emerald gradient -->
+    <linearGradient id="cross-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+
+    <!-- Eco vibrant mint gradient -->
+    <linearGradient id="leaf-grad-1" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#047857" />
+      <stop offset="60%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+
+    <linearGradient id="leaf-grad-2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6ee7b7" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+
+    <linearGradient id="capsule-top" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+  </defs>
+
+  <!-- Base shield / circular tile with soft glass border -->
+  <rect x="10" y="10" width="180" height="180" rx="48"
+        fill="url(#shield-grad)"
+        stroke="rgba(21, 128, 61, 0.16)"
+        stroke-width="2"
+        filter="url(#eco-shadow)" />
+
+  <!-- The Medical Cross (Rounded, friendly, solid clinical foundation) -->
+  <!-- Cross geometry: Center (100, 100), Arm width = 42, Arm length extends to 154 (offset 54) -->
+  <path d="
+    M 79 38
+    C 79 32 85 26 91 26
+    L 109 26
+    C 115 26 121 32 121 38
+    L 121 79
+    L 162 79
+    C 168 79 174 85 174 91
+    L 174 109
+    C 174 115 168 121 162 121
+    L 121 121
+    L 121 162
+    C 121 168 115 174 109 174
+    L 91 174
+    C 85 174 79 168 79 162
+    L 79 121
+    L 38 121
+    C 32 121 26 115 26 109
+    L 26 91
+    C 26 85 32 79 38 79
+    L 79 79
+    Z"
+    fill="url(#cross-grad)" />
+
+  <!-- Eco Leaf Overlay (Flows dynamically from bottom-left to top-right across the cross) -->
+  <!-- Primary sweeping leaf -->
+  <path d="
+    M 42 142
+    C 42 142 58 88 108 72
+    C 138 62 166 66 166 66
+    C 166 66 156 102 124 122
+    C 88 144 42 142 42 142
+    Z"
+    fill="url(#leaf-grad-1)"
+    opacity="0.95" />
+
+  <!-- Secondary accent leaf (wrapping curve) -->
+  <path d="
+    M 68 152
+    C 86 166 118 168 136 152
+    C 142 146 146 138 148 130
+    C 134 140 114 142 98 136
+    C 82 130 72 142 68 152
+    Z"
+    fill="url(#leaf-grad-2)"
+    opacity="0.85" />
+
+  <!-- Central Capsule Glyph (Pure white clinical precision) -->
+  <!-- Angled capsule at -45 deg -->
+  <g transform="translate(100, 100) rotate(-45)">
+    <!-- Capsule body outline / back glow -->
+    <rect x="-14" y="-28" width="28" height="56" rx="14"
+          fill="#ffffff"
+          stroke="#047857"
+          stroke-width="3"
+          filter="drop-shadow(0 2px 4px rgba(4, 120, 87, 0.25))" />
+
+    <!-- Capsule top half (colored) -->
+    <path d="
+      M -14 0
+      A 14 14 0 0 1 14 0
+      L 14 -14
+      A 14 14 0 0 0 -14 -14
+      Z"
+      fill="url(#cross-grad)" />
+
+    <!-- Capsule divider line -->
+    <line x1="-14" y1="0" x2="14" y2="0" stroke="#047857" stroke-width="2.5" />
+
+    <!-- Capsule shine/reflection highlight -->
+    <path d="M -8 -20 A 8 8 0 0 1 -2 -26 L -2 -6 A 8 8 0 0 1 -8 0 Z" fill="#ffffff" opacity="0.4" />
+  </g>
+
+  <!-- Leaf vein highlight (delicate organic detail) -->
+  <path d="M 64 128 C 92 108 126 86 156 72"
+        fill="none"
+        stroke="#ffffff"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        opacity="0.55" />
+</svg>
