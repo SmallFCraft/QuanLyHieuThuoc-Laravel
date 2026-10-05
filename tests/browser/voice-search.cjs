@@ -19,7 +19,7 @@
  * đi tìm -1223. Đo 2026-09-02.
  */
 const CHROMIUM_EXE = process.env.PW_CHROMIUM
-    || 'E:/Apps/Browsers/Playwright/chromium_headless_shell-1237/chrome-headless-shell-win64/chrome-headless-shell.exe';
+    || 'E:/Apps/Browsers/Playwright/chromium_headless_shell-1243/chrome-headless-shell-win64/chrome-headless-shell.exe';
 
 function loadChromium() {
     try {
@@ -467,6 +467,78 @@ const MOCK = () => {
     const headerTransition = await rp.evaluate(() => getComputedStyle(document.querySelector('.site-header')).transitionProperty);
     check('L4 reduced-motion tắt transition của header ở 375px', !headerTransition.includes('padding'), `transition=${headerTransition}`);
     await reduced.close();
+
+    // --- P1: quyền micro đổi sang granted thì đặt cờ rồi reload --------------------
+    // addInitScript chạy TRƯỚC mọi script của trang. Stub gắn sau `load` là quá muộn:
+    // watchMicrophonePermission() đã query() đối tượng permissions thật của trình
+    // duyệt ở DOMContentLoaded rồi, nên đổi state trên stub không ai nghe.
+    await context.addInitScript(() => {
+        const perm = { state: 'prompt', listeners: [] };
+        const status = {
+            get state() { return perm.state; },
+            addEventListener(type, fn) { if (type === 'change') perm.listeners.push(fn); },
+        };
+
+        Object.defineProperty(navigator, 'permissions', {
+            value: { query: () => Promise.resolve(status) },
+            configurable: true,
+        });
+
+        window.__grant = () => {
+            perm.state = 'granted';
+            perm.listeners.forEach((fn) => fn());
+        };
+
+        // Trang mới xóa cờ ngay khi đọc, nên init script là thời điểm duy nhất còn
+        // thấy nó sau khi tải lại.
+        window.__flagSeen = sessionStorage.getItem('pharmacy_voice_autostart');
+        window.__log = window.__log || [];
+    });
+
+    await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector(MIC);
+    await E(() => { sessionStorage.removeItem('pharmacy_voice_autostart'); });
+
+    const afterReload = page.waitForEvent('framenavigated');
+    await E(() => window.__grant());
+    await afterReload;
+    await page.waitForSelector(MIC);
+
+    const flagSeen = await E(() => window.__flagSeen);
+    check('P1 cấp quyền micro xong đặt cờ rồi tải lại trang', flagSeen === '1', `flag lúc tải lại=${flagSeen}`);
+
+    // --- P1b: cờ chỉ dùng một lần --------------------------------------------------
+    const clearedAfterRead = await E(() => sessionStorage.getItem('pharmacy_voice_autostart'));
+    check('P1b đọc cờ xong thì xóa ngay (không tự bật lại ở lần tải sau)', clearedAfterRead === null, `flag=${clearedAfterRead}`);
+
+    // --- P1c: reload rồi thì cú click đầu tiên mở mic ------------------------------
+    await E(() => { window.__log = []; });
+    await page.click('body');
+    check(
+        'P1c sau reload, cú click đầu tiên mở mic luôn',
+        (await log()).includes('start'),
+        `log=${JSON.stringify(await log())}`
+    );
+
+    // --- P1d: bấm thẳng nút mic thì không start hai lần ----------------------------
+    // Listener kickstart nằm ở document (bubble) nên nút mic chạy toggle() trước;
+    // tới lượt nó thì this.recognition đã có và nó phải đứng yên.
+    await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector(MIC);
+    await E(() => { sessionStorage.setItem('pharmacy_voice_autostart', '1'); });
+    await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector(MIC);
+    await E(() => { window.__log = []; });
+    await page.click(MIC);
+    const startCount = (await log()).filter((entry) => entry === 'start').length;
+    check('P1d bấm thẳng nút mic sau reload không start hai lần', startCount === 1, `start=${startCount}`);
+
+    // --- P2: trang thường không đụng cờ --------------------------------------------
+    await E(() => { sessionStorage.removeItem('pharmacy_voice_autostart'); });
+    await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector(MIC);
+    const untouched = await E(() => sessionStorage.getItem('pharmacy_voice_autostart'));
+    check('P2 trang thường không tự đặt cờ autostart', untouched === null, `flag=${untouched}`);
 
     await browser.close();
 

@@ -3,12 +3,11 @@
      colour alone (WCAG: don't convey info by colour only).
      Tones chosen to clear 4.5:1 against their own background. --}}
 
-{{-- Lexend for headings on the triage pages only. It is not decoration: Lexend was
-     designed and tested to improve reading proficiency, and this is the one place in
-     the shop where an anxious person has to read carefully and get it right. Same
-     provider as the site's Inter, so no new origin. --}}
-<link rel="preconnect" href="https://fonts.bunny.net">
-<link href="https://fonts.bunny.net/css?family=lexend:500,600,700,800&display=swap" rel="stylesheet">
+{{-- No second webfont. Lexend was pulled in here for headings, but DESIGN.md's
+     Weight-Not-Family rule holds for these pages too: the triage screens are the
+     ones a worried person reads, and a page that swaps faces mid-product is the
+     tell that it was assembled rather than built. Inter is already loaded by the
+     layout, so this file adds no origin and no request. --}}
 
 <style>
     .health-page {
@@ -55,24 +54,26 @@
         --health-shadow-hover: 0 22px 54px rgba(20, 83, 45, 0.16);
         --health-motion: 220ms cubic-bezier(.2, .8, .2, 1);
 
-        --health-display: 'Lexend', 'Inter', system-ui, sans-serif;
+        --health-display: 'Inter', system-ui, sans-serif;
     }
 
-    /* Headings only. Body text stays Inter so the pages still read as this shop. */
+    /* Inter throughout, headings included. DESIGN.md's Weight-Not-Family rule: rank
+       comes from weight and size, and this is the one surface where a second face
+       would show as a seam. Weight runs high — a heading here is 700, a verdict 800. */
     .health-page h1,
     .health-page h2,
     .health-page .health-outcome__title,
     .health-page .health-display {
         font-family: var(--health-display);
-        letter-spacing: -0.015em;
+        letter-spacing: -0.02em;
     }
 
-    /* One fluid step instead of Bootstrap's fixed h2/h5: on a 375px screen the old
-       h2 wrapped to three lines and pushed the disclaimer off-screen. */
+    /* DESIGN.md's headline step, not a page-local clamp: the ramp is shared, and an
+       h1 that only exists on two templates is how a type system stops being one. */
     .health-page h1 {
-        font-size: clamp(1.5rem, 1.15rem + 1.6vw, 2rem);
-        font-weight: 800;
-        line-height: 1.2;
+        font-size: clamp(1.35rem, 2.5vw + 0.6rem, 2rem);
+        font-weight: 700;
+        line-height: 1.25;
     }
 
     .health-page .health-card h2,
@@ -94,27 +95,12 @@
         margin-inline: auto;
     }
 
-    /* The page tint was an inline gradient on two templates. Here it can also carry a
-       soft radial wash, which is what stops the shell reading as a form on a white
-       sheet without adding any element to the page. */
+    /* DESIGN.md's page wash, verbatim: the horizontal mint-to-slate band the storefront
+       sits on. The radial glow and the vertical fade that used to live here were a
+       second lighting system on a page that already has one, and three layers of tint
+       behind frosted cards read as haze rather than as depth. */
     .health-page {
-        background:
-            radial-gradient(1100px 420px at 50% -8%, rgba(21, 128, 61, 0.10), transparent 62%),
-            linear-gradient(180deg, #F0FDF4 0%, #FFFFFF 340px);
-    }
-
-    .health-eyebrow {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 14px;
-        border-radius: var(--health-r-pill);
-        background: #fff;
-        border: 1px solid var(--health-selfcare-border);
-        box-shadow: var(--health-shadow);
-        color: var(--health-selfcare);
-        font-size: 0.8125rem;
-        font-weight: 600;
+        background: linear-gradient(to right, #f0fdf4 0%, #f8fafc 50%, #ecfdf5 100%);
     }
 
     /* --- Result masthead ---
@@ -130,8 +116,6 @@
         margin-bottom: 16px;
     }
 
-    .health-masthead .health-eyebrow { margin-bottom: 0; }
-
     .health-masthead__stamp {
         display: inline-flex;
         align-items: center;
@@ -142,20 +126,20 @@
     }
 
     /* --- The verdict ---
-       The answer as the visual anchor of the page. Colour + icon + the literal word
-       "Kết luận", so the level reads in greyscale and to a screen reader without
-       depending on the hue. */
+       The answer as the visual anchor of the page, built on DESIGN.md's opaque warning
+       card: solid level tint, a full 1.5px border on all four sides, and the level's own
+       colour on the icon and the word. The 6px left rail it replaces is the single most
+       recognizable signature of a generated card, and a heavier edge on one side says
+       nothing the tint, the icon and the sentence do not already say. */
     .health-verdict {
         display: flex;
         align-items: center;
         gap: 14px;
         margin-top: 14px;
         padding: 16px 20px;
-        border-radius: 16px;
-        border: 1px solid var(--health-line);
-        border-left-width: 6px;
+        border-radius: 14px;
+        border: 1.5px solid var(--health-line);
         background: #fff;
-        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
     }
 
     .health-verdict__icon {
@@ -165,7 +149,7 @@
         flex-shrink: 0;
         width: 44px;
         height: 44px;
-        border-radius: var(--health-r-md);
+        border-radius: 10px;
         font-size: 1.375rem;
     }
 
@@ -173,7 +157,7 @@
 
     .health-verdict__label {
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 700;
         letter-spacing: 0.06em;
         text-transform: uppercase;
         color: var(--health-ink-mute);
@@ -181,28 +165,42 @@
 
     .health-verdict__value {
         font-family: var(--health-display);
-        font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+        font-size: 1.25rem;
         font-weight: 700;
         line-height: 1.3;
         letter-spacing: -0.01em;
     }
 
-    /* The rail, the icon and the words all take the level's colour; the card itself
-       stays white so the conclusion is never read through a tinted pane. */
-    .health-verdict--emergency { border-left-color: var(--health-emergency); }
-    .health-verdict--emergency .health-verdict__icon { background: var(--health-emergency-bg); color: var(--health-emergency); }
+    /* The border, the surface, the icon and the words all take the level's colour, so
+       the card states its severity four ways and survives greyscale. Nothing here is
+       blurred: DESIGN.md's Opaque Warning Rule, a warning read through glass is a
+       warning half-read. */
+    .health-verdict--emergency {
+        border-color: var(--health-emergency-border);
+        background: var(--health-emergency-bg);
+    }
+    .health-verdict--emergency .health-verdict__icon { background: #fff; color: var(--health-emergency); }
     .health-verdict--emergency .health-verdict__value { color: var(--health-emergency); }
 
-    .health-verdict--refer_doctor { border-left-color: var(--health-refer); }
-    .health-verdict--refer_doctor .health-verdict__icon { background: var(--health-refer-bg); color: var(--health-refer); }
+    .health-verdict--refer_doctor {
+        border-color: var(--health-refer-border);
+        background: var(--health-refer-bg);
+    }
+    .health-verdict--refer_doctor .health-verdict__icon { background: #fff; color: var(--health-refer); }
     .health-verdict--refer_doctor .health-verdict__value { color: var(--health-refer); }
 
-    .health-verdict--pharmacist_review { border-left-color: var(--health-pharmacist); }
-    .health-verdict--pharmacist_review .health-verdict__icon { background: var(--health-pharmacist-bg); color: var(--health-pharmacist); }
+    .health-verdict--pharmacist_review {
+        border-color: var(--health-pharmacist-border);
+        background: var(--health-pharmacist-bg);
+    }
+    .health-verdict--pharmacist_review .health-verdict__icon { background: #fff; color: var(--health-pharmacist); }
     .health-verdict--pharmacist_review .health-verdict__value { color: var(--health-pharmacist); }
 
-    .health-verdict--self_care { border-left-color: var(--health-selfcare); }
-    .health-verdict--self_care .health-verdict__icon { background: var(--health-selfcare-bg); color: var(--health-selfcare); }
+    .health-verdict--self_care {
+        border-color: var(--health-selfcare-border);
+        background: var(--health-selfcare-bg);
+    }
+    .health-verdict--self_care .health-verdict__icon { background: #fff; color: var(--health-selfcare); }
     .health-verdict--self_care .health-verdict__value { color: var(--health-selfcare); }
 
     /* --- Start page: the actions under the wizard ---
@@ -300,23 +298,18 @@
         color: var(--health-ink-soft);
     }
 
+    /* DESIGN.md's product card exactly: the surface the storefront's goods sit on, at
+       its sturdier 0.94 reading for a block of form content. The 4px emerald-to-blue
+       hairline that used to crown every card carried no information and printed as a
+       bar — a colored rule across the top of a card is a decoration, not a boundary. */
     .health-card {
         position: relative;
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(20px);
-        box-shadow: var(--health-shadow);
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(21, 128, 61, 0.14);
+        border-radius: var(--health-r-lg);
+        backdrop-filter: blur(6px);
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
         overflow: hidden;
-    }
-
-    /* 4px gradient hairline on the leading edge of regular cards. The outcome card
-       instead uses a 6px left rail to carry severity without clashing. */
-    .health-card::before {
-        content: '';
-        position: absolute;
-        inset-inline: 0;
-        inset-block-start: 0;
-        height: 4px;
-        background: linear-gradient(90deg, var(--health-selfcare), var(--health-accent));
     }
 
     .health-outcome {
@@ -457,20 +450,22 @@
     }
 
     /* --- Progress --- */
+    /* Track is a control boundary, not decoration: #E2E8F0 measures 1.19:1 against
+       the page, so the unfilled part carries a hairline and the filled part carries
+       the emerald. No transition — the bar is re-rendered between steps, not swept
+       within one, and animating width here is layout work for no visible gain. */
     .health-progress-track {
         height: 6px;
         background: #E5E7EB;
+        border: 1px solid #E2E8F0;
         border-radius: 999px;
         overflow: hidden;
     }
 
     .health-progress-fill {
         height: 100%;
-        /* #10b981→#059669 measured 2.05/3.04:1 against the #E5E7EB track; a progress
-           indicator is a control boundary and needs 3:1. */
-        background: linear-gradient(90deg, #047857, #065F46);
+        background: var(--health-selfcare);
         border-radius: 999px;
-        transition: width 250ms ease-out;
     }
 
     /* --- Option buttons: real buttons, >=44px tall, >=8px apart --- */
@@ -482,28 +477,36 @@
 
     .health-option {
         min-height: 48px;
-        padding: 12px 18px;
-        border-radius: var(--health-r-md);
-        /* #D1D5DB measured 1.47:1; a control boundary needs 3:1. */
-        border: 1.5px solid var(--health-line);
-        background: #fff;
+        padding: 12px 20px;
+        border-radius: var(--health-r-sm);
+        /* DESIGN.md's glass control at quick-pick scale: a fine emerald edge over a
+           translucent white body, so the row reads as part of the card rather than as
+           a strip of browser-default buttons sitting on it. */
+        border: 1px solid rgba(21, 128, 61, 0.18);
+        background: rgba(255, 255, 255, 0.7);
         color: #1F2937;
         font-size: 0.9375rem;
-        font-weight: 500;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(15, 63, 52, 0.06);
         cursor: pointer;
-        /* Colour/border only: scaling would shove neighbouring buttons around. */
-        transition: background-color var(--health-motion), border-color var(--health-motion), color var(--health-motion);
+        /* Lift, never scale: scaling shoves neighbouring buttons around. */
+        transition: background-color var(--health-motion), border-color var(--health-motion),
+            color var(--health-motion), transform var(--health-motion),
+            box-shadow var(--health-motion);
     }
 
     .health-option:hover {
-        background: #ECFDF5;
-        border-color: #6EE7B7;
-        color: #047857;
+        background: var(--health-selfcare-bg);
+        border-color: var(--health-selfcare);
+        color: var(--health-selfcare);
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(15, 63, 52, 0.1);
     }
 
     .health-option:active {
         background: #D1FAE5;
         border-color: #059669;
+        transform: none;
     }
 
     .health-option:focus-visible,
@@ -518,10 +521,12 @@
         min-height: 48px;
         /* 16px stops iOS Safari auto-zooming the viewport on focus. */
         font-size: 1rem;
-        border-radius: var(--health-r-md);
-        border: 1.5px solid var(--health-line);
+        border-radius: var(--health-r-sm);
+        border: 1px solid rgba(21, 128, 61, 0.22);
+        background: #fff;
         padding: 12px 16px;
         width: 100%;
+        box-shadow: inset 0 1px 2px rgba(15, 63, 52, 0.04);
         transition: border-color var(--health-motion), box-shadow var(--health-motion);
     }
 
@@ -624,18 +629,22 @@
         .health-btn__spinner { animation: none !important; }
     }
 
-    /* White on #10b981 measures only 2.54:1. The gradient is darkened so both
-       stops clear 4.5:1 for white text: #047857 = 5.48:1, #065F46 = 7.68:1. */
+    /* DESIGN.md's CTA button: solid #047857 emerald, matching the storefront's
+       primary actions. The diagonal gradient that was here belonged to the admin
+       panel, where gradients are explicitly permitted; storefront CTA is solid,
+       with text measuring 5.48:1 on #047857 and 7.68:1 on hover #065F46. */
     .health-btn-primary {
-        background: linear-gradient(135deg, #047857, #065F46);
+        background: var(--health-selfcare);
+        border-color: var(--health-selfcare);
         color: #fff;
     }
 
     .health-btn-primary:hover {
         background: #065F46;
+        border-color: #065F46;
         color: #fff;
         transform: translateY(-2px);
-        box-shadow: var(--health-shadow-hover);
+        box-shadow: 0 12px 24px rgba(5, 150, 105, 0.2);
     }
 
     .health-btn-ghost {
@@ -656,25 +665,32 @@
     .health-btn-danger:hover { background: var(--health-emergency-hover); color: #fff; }
 
     /* --- Outcome cards ---
-       White surface with a 6px severity rail on the leading edge instead of a
-       full-bleed tint: a whole panel of #FEF2F2 behind the conclusion put the
-       "what does this mean" copy in competition with the warning itself. The rail is
-       also the one severity cue that survives a photocopy, where the tint and the
-       title colour both flatten to grey. */
+       DESIGN.md's opaque warning card: the level's own tint across the whole surface,
+       a full 1.5px border in the level's border colour, and the level's colour on the
+       title. Three signals — tint, icon, words — so the level survives greyscale, and
+       a solid border rather than a heavier edge on one side, because a card weighted
+       left says nothing a full border does not say and reads as a template. */
     .health-outcome {
-        background: #fff;
-        border: 1px solid #E2E8F0;
-        border-left-width: 6px;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+        border: 1.5px solid var(--health-line);
+        border-radius: var(--health-r-lg);
     }
 
-    /* The rail is a boundary, not body text, so 3:1 is the bar; all four clear it
-       (emergency #B91C1C is 6.47:1 against the white card). */
-    .health-outcome--emergency { border-left-color: var(--health-emergency); }
-    .health-outcome--refer_doctor { border-left-color: var(--health-refer); }
-    .health-outcome--pharmacist_review { border-left-color: var(--health-pharmacist); }
-    .health-outcome--self_care { border-left-color: var(--health-selfcare); }
+    .health-outcome--emergency {
+        background: var(--health-emergency-bg);
+        border-color: var(--health-emergency-border);
+    }
+    .health-outcome--refer_doctor {
+        background: var(--health-refer-bg);
+        border-color: var(--health-refer-border);
+    }
+    .health-outcome--pharmacist_review {
+        background: var(--health-pharmacist-bg);
+        border-color: var(--health-pharmacist-border);
+    }
+    .health-outcome--self_care {
+        background: var(--health-selfcare-bg);
+        border-color: var(--health-selfcare-border);
+    }
 
     .health-outcome__title--emergency { color: var(--health-emergency); }
     .health-outcome__title--refer_doctor { color: var(--health-refer); }
@@ -726,18 +742,17 @@
         overflow-wrap: anywhere;
     }
 
-    /* --- AI briefing: the long-form answer, and the largest block on the result page.
-       Given its own surface rather than another .health-card so the reader can tell
-       machine-written prose from the rule engine's conclusion at a glance, without
-       relying on the badge alone. --- */
+    /* --- Briefing / Guidance card ---
+       DESIGN.md's glass card: clean frosted white, fine emerald-tinted border,
+       and soft shadow. The cyan hairline and radial tint that sat here were a
+       tell of machine-generated card decoration. */
     .health-brief {
         position: relative;
-        border-radius: 16px;
-        border: 1px solid rgba(14, 116, 144, 0.2);
-        background:
-            radial-gradient(120% 100% at 0% 0%, rgba(3, 105, 161, 0.05), transparent 55%),
-            #fff;
-        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+        border-radius: var(--health-r-lg);
+        border: 1px solid rgba(21, 128, 61, 0.14);
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(6px);
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
         padding: 24px;
         overflow: hidden;
         animation: healthRise 380ms cubic-bezier(.2, .8, .2, 1) both;
@@ -745,15 +760,6 @@
 
     @media (min-width: 768px) {
         .health-brief { padding: 32px; }
-    }
-
-    .health-brief::before {
-        content: '';
-        position: absolute;
-        inset-inline: 0;
-        inset-block-start: 0;
-        height: 4px;
-        background: linear-gradient(90deg, var(--health-accent), #22D3EE);
     }
 
     .health-brief__head {
@@ -983,16 +989,14 @@
        is the one card whose background is a warning, not decoration. */
     .health-product--flagged {
         border-color: var(--health-refer-border);
-        border-left: 6px solid var(--health-refer);
-        background: #FFFBEB;
+        background: var(--health-refer-bg);
     }
 
     /* `.health-product:hover` is a two-class selector, so it outranks the rule above
-       and would repaint the amber rail grey on pointerover — on the one card whose
-       rail is a drug-safety signal. Restated here at matching weight. */
+       and would repaint the amber edge grey on pointerover — on the one card whose
+       border is a drug-safety signal. Restated here at matching weight. */
     .health-product--flagged:hover {
         border-color: var(--health-refer);
-        border-left-color: var(--health-refer);
     }
 
     .health-product__price {
@@ -1545,42 +1549,44 @@
 
     /* --- Result page: tab hub ---
        Built on Bootstrap's pill plugin, which app.js already bundles, so the tab is
-       an anchor with a real `aria-selected` rather than a div wearing a role. */
+       an anchor with a real `aria-selected` rather than a div wearing a role.
+
+       The segmented-control chip it used to be — tinted track, raised white active
+       pill, soft shadow — is a mobile-OS idiom that appeared on this page and nowhere
+       else in the product. A rule under the active tab is the same affordance the
+       storefront's own navbar already uses, so the two read as one system. */
     .health-hub__tabbar {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
-        padding: 6px;
-        margin-bottom: 16px;
-        border-radius: var(--health-r-md);
-        background: rgba(21, 128, 61, 0.06);
-        border: 1px solid var(--health-selfcare-border);
+        gap: 4px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--health-line);
     }
 
     .health-hub__tab {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        flex: 1 1 auto;
-        justify-content: center;
-        padding: 9px 16px;
-        border-radius: var(--health-r-sm);
+        padding: 10px 14px 12px;
         font-size: 0.875rem;
         font-weight: 600;
         color: var(--health-ink-soft);
         text-decoration: none;
-        transition: background var(--health-motion), color var(--health-motion);
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        transition: color var(--health-motion), border-color var(--health-motion);
     }
 
     .health-hub__tab:hover {
-        background: rgba(255, 255, 255, 0.7);
         color: var(--health-selfcare);
+        border-bottom-color: var(--health-selfcare-border);
     }
 
     .health-hub__tab.active {
-        background: #fff;
+        background: none;
         color: var(--health-selfcare);
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+        border-bottom-color: var(--health-selfcare);
+        box-shadow: none;
     }
 
     .health-hub__tab:focus-visible {
@@ -1763,34 +1769,27 @@
             backdrop-filter: none !important;
         }
 
-        /* The blanket border above flattens the severity rail. On paper the rail is
-           the only severity cue left once the tint and the title colour are gone, so
-           it comes back — wider, and in its own colour, on the leading edge. */
-        .health-outcome {
-            border-left-width: 8px !important;
-        }
-
-        /* The masthead's rail is the same severity cue as the outcome card's, and the
-           blanket border rule would flatten it the same way. */
+        /* The blanket border above flattens the severity cue. On paper the level's own
+           border colour is what is left once the tint and the surface are gone, so it
+           comes back — thicker, in the level's colour, and evenly on all four sides. */
+        .health-outcome,
         .health-verdict {
+            border-width: 2px !important;
             box-shadow: none !important;
-            border: 1px solid #9CA3AF !important;
-            border-left-width: 8px !important;
         }
 
-        .health-verdict--emergency { border-left-color: var(--health-emergency) !important; }
-        .health-verdict--refer_doctor { border-left-color: var(--health-refer) !important; }
-        .health-verdict--pharmacist_review { border-left-color: var(--health-pharmacist) !important; }
-        .health-verdict--self_care { border-left-color: var(--health-selfcare) !important; }
+        .health-verdict--emergency { border-color: var(--health-emergency) !important; }
+        .health-verdict--refer_doctor { border-color: var(--health-refer) !important; }
+        .health-verdict--pharmacist_review { border-color: var(--health-pharmacist) !important; }
+        .health-verdict--self_care { border-color: var(--health-selfcare) !important; }
 
-        .health-outcome--emergency { border-left-color: var(--health-emergency) !important; }
-        .health-outcome--refer_doctor { border-left-color: var(--health-refer) !important; }
-        .health-outcome--pharmacist_review { border-left-color: var(--health-pharmacist) !important; }
-        .health-outcome--self_care { border-left-color: var(--health-selfcare) !important; }
+        .health-outcome--emergency { border-color: var(--health-emergency) !important; }
+        .health-outcome--refer_doctor { border-color: var(--health-refer) !important; }
+        .health-outcome--pharmacist_review { border-color: var(--health-pharmacist) !important; }
+        .health-outcome--self_care { border-color: var(--health-selfcare) !important; }
 
         .health-product--flagged {
-            border: 2px solid #374151 !important;
-            border-left: 6px solid var(--health-refer) !important;
+            border: 2px solid var(--health-refer) !important;
             background: #fff !important;
         }
 

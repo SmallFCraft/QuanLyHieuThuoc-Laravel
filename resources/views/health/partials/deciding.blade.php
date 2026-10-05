@@ -2,7 +2,7 @@
      Not a spinner: the provider call takes 11-30s, so this screen says what is
      happening and shows the answers back while it works. Progressive enhancement —
      with JavaScript off the reload link does the same job. --}}
-<div class="health-card rounded-4 border-0 p-4 p-md-5"
+<div class="health-card p-4 p-md-5"
      data-triage-deciding
      data-poll-url="{{ route('health.decision', $pendingJobId) }}"
      data-slow-notice="{{ __('messages.health.deciding_slow') }}">

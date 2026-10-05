@@ -288,12 +288,31 @@ function chatbotWidget() {
         
         toggleWidget() {
             this.isOpen = !this.isOpen;
-            
+
             if (this.isOpen) {
                 this.$nextTick(() => {
                     this.scrollToBottom();
                 });
             }
+        },
+
+        /**
+         * Escape closes one layer per press, innermost first: the checkout keeps
+         * whatever the customer already typed, so a stray Escape is not what costs
+         * them their delivery details.
+         */
+        handleEscape() {
+            if (!this.isOpen) {
+                return;
+            }
+
+            if (this.showCheckout || this.showCartDetail) {
+                this.showCheckout = false;
+                this.showCartDetail = false;
+                return;
+            }
+
+            this.isOpen = false;
         },
         
         acceptDisclaimer() {

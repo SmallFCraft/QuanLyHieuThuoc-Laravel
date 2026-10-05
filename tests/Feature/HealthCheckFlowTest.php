@@ -185,10 +185,12 @@ class HealthCheckFlowTest extends TestCase
     }
 
     /**
-     * The flagged card carries the drug-safety warning, so its amber rail has to
+     * The flagged card carries the drug-safety warning, so its amber level has to
      * outlive both the hover rule and the print block. Two duplicate
-     * `.health-product--flagged` rules in `@media print` used to cancel the rail:
-     * the later `border-width/border-color` pair won and printed a plain grey box.
+     * `.health-product--flagged` rules in `@media print` used to cancel the severity
+     * border: the later `border-width`/`border-color` pair outranked it and printed a
+     * plain grey box. The level was a left rail then and is a full border now, but
+     * the guarantee is the same one: hover and print must not drain the colour.
      */
     public function test_flagged_product_keeps_its_rail_on_hover_and_on_paper(): void
     {
@@ -207,16 +209,17 @@ class HealthCheckFlowTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        // Hover is (0,2,0) and would otherwise repaint the rail with .health-product's grey.
+        // Hover outranks the base rule (two classes over one) and would otherwise
+        // repaint the border with .health-product's grey.
         $this->assertMatchesRegularExpression(
-            '/\.health-product--flagged:hover\s*\{[^}]*border-left-color:\s*var\(--health-refer\)/s',
+            '/\.health-product--flagged:hover\s*\{[^}]*border-color:\s*var\(--health-refer\)/s',
             $content
         );
 
-        // Exactly one `!important` rail declaration: the old print block had a second
-        // `.health-product--flagged` rule whose `border-width` + `border-color` pair
-        // outranked the rail, so the flagged card printed as a plain grey box.
-        $this->assertSame(1, substr_count($content, 'border-left: 6px solid var(--health-refer) !important'));
+        // Exactly one `!important` level declaration in the print block: the old block
+        // had a second `.health-product--flagged` rule whose border pair won, so the
+        // flagged card printed as a plain grey box.
+        $this->assertSame(1, substr_count($content, 'border: 2px solid var(--health-refer) !important'));
         $this->assertStringNotContainsString('border-color: #374151', $content);
     }
 

@@ -8,7 +8,7 @@
     // reader has already seen.
 @endphp
 
-<div class="health-card rounded-4 border-0 p-4">
+<div class="health-card p-4">
     <h2 class="h6 fw-semibold text-gray-800 mb-3">
         <i class="bi bi-list-check me-1" aria-hidden="true"></i>{{ __('messages.health.basis_title') }}
     </h2>
@@ -71,7 +71,7 @@
 
 {{-- What the user told us, so the printout stands alone at the clinic --}}
 @if (!empty($session->collected_data))
-    <div class="health-card rounded-4 border-0 p-4 mt-4">
+    <div class="health-card p-4 mt-4">
         <h2 class="h6 fw-semibold text-gray-800 mb-3">
             <i class="bi bi-chat-left-text me-1" aria-hidden="true"></i>{{ __('messages.health.answers_title') }}
         </h2>
@@ -107,7 +107,7 @@
              mistaken for the five wizard steps. --}}
         @if ($session->clarifyHistory() !== [])
             <h3 class="small fw-semibold text-gray-700 mt-4 mb-2">
-                <i class="bi bi-robot me-1" aria-hidden="true"></i>{{ __('messages.health.answers_clarify_title') }}
+                <i class="bi bi-question-circle me-1" aria-hidden="true"></i>{{ __('messages.health.answers_clarify_title') }}
             </h3>
             <dl class="health-answer-list row g-3 mb-0">
                 @foreach ($session->clarifyHistory() as $pair)

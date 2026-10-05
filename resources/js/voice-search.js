@@ -23,6 +23,9 @@ const SILENCE_MS = 8000;
  */
 const NORMALIZE_TIMEOUT_MS = 10000;
 
+/** Khóa sessionStorage để tự động nghe sau khi reload vì vừa cấp quyền micro. */
+const AUTOSTART_KEY = 'pharmacy_voice_autostart';
+
 function lang(key, fallback = '') {
     return window.PharmacyVoiceLang?.[key] ?? fallback;
 }
@@ -69,6 +72,8 @@ class VoiceSearch {
         this.keyBound = (event) => this.handleKeydown(event);
         document.addEventListener('click', this.dismissBound);
         document.addEventListener('keydown', this.keyBound);
+
+        this.watchMicrophonePermission();
 
         // Dải nằm ở cuối <body> nên thứ tự Tab tự nhiên đặt nó sau cả trang — đo
         // 2026-09-02: 60 lần Tab không tới được nút trong dải. KHÔNG chuyển nó vào
@@ -329,10 +334,76 @@ class VoiceSearch {
         this.setState('idle');
     }
 
-    /** Một chỗ duy nhất nhả tài nguyên của một session, gọi được nhiều lần. */
+    /**
+     * Một chỗ duy nhất nhả tài nguyên của một session, gọi được nhiều lần. */
     release() {
         clearTimeout(this.silenceTimer);
         this.silenceTimer = null;
+    }
+
+    /**
+     * Tự bắt đầu nghe sau khi trang tải lại.
+     *
+     * Cờ trong sessionStorage chỉ sống trong tab này và chỉ một lần: xóa ngay khi
+     * đọc. Không xóa thì mọi lần tải lại sau (F5, back/forward) cũng bật mic, và một
+     * trang bán thuốc tự mở micro là hành vi khách không đồng ý.
+     *
+     * Chờ cú click đầu tiên thay vì start() ngay: Chrome đòi user gesture, nên lời
+     * gọi ngay sau reload chỉ nhận not-allowed — vừa khoá nút vừa bày dải lỗi "cần
+     * cho phép micro" cho một quyền khách vừa cấp. Click đầu tiên là gesture hợp lệ
+     * và cũng là lúc khách thật sự muốn dùng.
+     */
+    autostartFromSession() {
+        if (sessionStorage.getItem(AUTOSTART_KEY) !== '1') {
+            return;
+        }
+
+        sessionStorage.removeItem(AUTOSTART_KEY);
+
+        const kickstart = () => {
+            // Bấm thẳng vào nút mic thì toggle() đã lo xong trước đó.
+            if (this.recognition || this.button.dataset.state === 'working') {
+                return;
+            }
+
+            this.denied = false;
+            this.start();
+        };
+
+        document.addEventListener('click', kickstart, { once: true });
+    }
+
+    /**
+     * Cấp quyền micro xong thì tải lại trang rồi tự nghe.
+     *
+     * Quyền đổi ở hai đường: prompt của trình duyệt lúc bấm mic (Chrome hay trả
+     * `not-allowed` cho chính session vừa được cấp, và trang đã khoá nút vì lỗi đó),
+     * hoặc khách mở ổ khoá trên thanh địa chỉ để bỏ Chặn. Cả hai chỉ hết kẹt sau khi
+     * trang tải lại, nên đổi sang 'granted' là reload. Chỉ lần đổi mới reload —
+     * trang mới đọc lại quyền đã 'granted' nên không có vòng lặp.
+     */
+    watchMicrophonePermission() {
+        if (!navigator.permissions?.query) {
+            return;
+        }
+
+        navigator.permissions.query({ name: 'microphone' }).then((status) => {
+            if (status.state === 'granted') {
+                return;
+            }
+
+            status.addEventListener('change', () => {
+                if (status.state !== 'granted') {
+                    return;
+                }
+
+                sessionStorage.setItem(AUTOSTART_KEY, '1');
+                window.location.reload();
+            });
+        }).catch(() => {
+            // Safari/Firefox cũ ném TypeError cho 'microphone'. Không quan sát được thì
+            // khách bấm mic như trước, không có gì hỏng.
+        });
     }
 
     armSilenceTimer() {
@@ -499,7 +570,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.documentElement.setAttribute('data-voice-ready', 'true');
 
-    new VoiceSearch(button, input);
+    const voice = new VoiceSearch(button, input);
+    voice.autostartFromSession();
 });
 
 export default VoiceSearch;

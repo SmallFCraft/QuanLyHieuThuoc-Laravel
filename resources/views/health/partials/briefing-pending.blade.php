@@ -7,7 +7,7 @@
          aria-labelledby="briefing-pending-heading">
     <div class="health-brief__head">
         <span class="health-icon-tile health-icon-tile--accent" aria-hidden="true">
-            <i class="bi bi-stars health-deciding__glyph"></i>
+            <i class="bi bi-journal-medical health-deciding__glyph"></i>
         </span>
         <div>
             <h2 class="mb-1" id="briefing-pending-heading">{{ __('messages.health.briefing_title') }}</h2>

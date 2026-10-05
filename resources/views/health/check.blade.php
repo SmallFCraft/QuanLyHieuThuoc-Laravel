@@ -11,17 +11,11 @@
     <div class="container">
         <div class="health-shell">
 
-            {{-- Same masthead as the result page: the two are the same journey at
-                 either end, and a shared block is what makes them read as one product.
-                 The result page adds a verdict under it; this one adds the lede. --}}
+            {{-- No eyebrow, no masthead. The label above the heading said "Sàng lọc
+                 sức khỏe", which is also the page title and the nav item — three
+                 renderings of one fact stacked vertically. The h1 is the section
+                 name; the lede under it says what the five steps are for. --}}
             <header class="mb-4">
-                <div class="health-masthead">
-                    <span class="health-eyebrow">
-                        <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
-                        {{ __('messages.health.nav_full') }}
-                    </span>
-                </div>
-
                 <h1 class="mb-2">{{ __('messages.health.page_title') }}</h1>
                 <p class="mb-0 health-lede">{{ __('messages.health.page_subtitle') }}</p>
             </header>

@@ -140,7 +140,7 @@
         <i class="bi bi-shield-exclamation me-1" aria-hidden="true"></i>{{ __('messages.health.no_products') }}
     </p>
 @else
-    <div class="health-card rounded-4 border-0 p-4">
+    <div class="health-card p-4">
         <p class="small text-gray-600 mb-0">
             <i class="bi bi-info-circle me-1" aria-hidden="true"></i>{{ __('messages.health.products_empty') }}
         </p>
