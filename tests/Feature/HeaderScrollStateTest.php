@@ -72,4 +72,34 @@ class HeaderScrollStateTest extends TestCase
             strpos($html, 'id="header-search"'),
         );
     }
+
+    public function test_the_og_image_dimensions_match_the_asset_it_describes(): void
+    {
+        // Literal (2816, 1536) đã sai lần đầu logo bị nén còn 512x512: scraper đọc
+        // đúng con số sai và cắt tỉa card sai tỷ lệ. Chốt con số thật lấy từ file.
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $size = getimagesize(public_path('images/logo.png'));
+        $this->assertNotFalse($size, 'assets/images/logo.png phải tồn tại');
+        $this->assertStringContainsString(
+            'property="og:image:width" content="' . $size[0] . '"',
+            $html,
+        );
+        $this->assertStringContainsString(
+            'property="og:image:height" content="' . $size[1] . '"',
+            $html,
+        );
+    }
+
+    public function test_the_brand_link_always_carries_an_accessible_name(): void
+    {
+        // Dưới lg chữ tên brand bị d-none, ảnh thì alt="": nếu link không tự
+        // aria-label thì trình đọc màn hình chỉ nghe một <a> trống trên mobile.
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertStringContainsString(
+            'class="navbar-brand d-flex align-items-center overflow-hidden flex-shrink-0" href="' . route('home') . '" aria-label="' . __('messages.app_name') . '"',
+            $html,
+        );
+    }
 }

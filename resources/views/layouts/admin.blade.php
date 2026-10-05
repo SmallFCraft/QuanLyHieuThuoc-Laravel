@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo-icon.svg') }}?v={{ filemtime(public_path('images/logo-icon.svg')) }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v={{ filemtime(public_path('favicon.ico')) }}">
     @vite(['resources/css/admin.css', 'resources/js/admin.js'])
     @stack('styles')
 </head>
@@ -18,7 +20,7 @@
 
         <aside class="admin-sidebar" id="adminSidebar" aria-label="Điều hướng quản trị">
             <div class="admin-sidebar__brand">
-                <img src="{{ asset('images/logo-nav.png') }}" alt="Nhà Thuốc Sinh Thái" width="176" height="96">
+                <img src="{{ asset('images/logo-icon.svg') }}" alt="" width="40" height="40">
                 <div>
                     <p class="admin-sidebar__brand-title">Nhà Thuốc</p>
                     <span class="admin-sidebar__brand-subtitle">Bảng điều khiển</span>

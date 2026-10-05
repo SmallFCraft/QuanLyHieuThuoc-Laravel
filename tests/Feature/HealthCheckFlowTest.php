@@ -66,6 +66,76 @@ class HealthCheckFlowTest extends TestCase
             ->assertSee('role="progressbar"', false);
     }
 
+    /**
+     * The stepper names all five questions up front, so a visitor reads the shape of the
+     * intake instead of counting steps. Node count is pinned at the same table the
+     * service walks (`questionFor`), because a stepper that silently drops a node reads
+     * as a shorter intake than the one the visitor is actually being asked through.
+     */
+    public function test_the_stepper_names_every_step_of_the_intake(): void
+    {
+        $html = $this->actingAs($this->user)
+            ->get(route('health.check'))
+            ->assertOk()
+            ->getContent();
+
+        $stepper = substr($html, (int) strpos($html, 'class="health-stepper'));
+        $this->assertNotFalse(strpos($html, 'class="health-stepper'));
+
+        foreach (range(1, 5) as $step) {
+            $this->assertStringContainsString(__("messages.health.step_{$step}"), $stepper);
+        }
+
+        // Five dots for five steps. On `health-stepper__dot` rather than the class name
+        // alone: the stylesheet ships into <head> first and would answer for the markup.
+        $this->assertSame(5, substr_count($stepper, 'health-stepper__dot'));
+    }
+
+    /**
+     * The first question is answered on step 1 and nothing yet on step 2, so exactly one
+     * node is current. Pinned because "current" is carried by a CSS class, not by
+     * `aria-current`: nothing else would notice the stepper drifting to step 1 on every
+     * question, which is the same thing on every page the visitor ever sees.
+     */
+    public function test_only_one_stepper_node_is_current_and_it_is_the_step_being_asked(): void
+    {
+        $html = $this->actingAs($this->user)
+            ->get(route('health.check'))
+            ->assertOk()
+            ->getContent();
+
+        $stepper = substr($html, (int) strpos($html, 'class="health-stepper'));
+        $this->assertNotFalse(strpos($html, 'class="health-stepper'));
+
+        $this->assertSame(1, substr_count($stepper, 'health-stepper__node is-current'));
+        $this->assertSame(0, substr_count($stepper, 'health-stepper__node is-done'));
+    }
+
+    /**
+     * Quick-pick answers carry a clinical glyph, and the glyph comes from a table keyed
+     * on the answer text. A renamed option loses its icon rather than wearing the wrong
+     * one, so the failure mode worth catching is a hit with no icon — which would leave
+     * a bare word with no visual anchor on the one control most visitors reach for.
+     */
+    public function test_quick_pick_answers_carry_a_clinical_icon(): void
+    {
+        $html = $this->actingAs($this->user)
+            ->get(route('health.check'))
+            ->assertOk()
+            ->getContent();
+
+        $options = substr($html, (int) strpos($html, 'class="health-options'));
+        $this->assertNotFalse(strpos($html, 'class="health-options'));
+
+        // Six options on step 1, six icons: the map covers the step it ships with.
+        $this->assertSame(6, substr_count($options, '<button type="submit" name="option_answer"'));
+        $this->assertSame(6, substr_count($options, 'health-option__icon'));
+
+        // The icon is decorative: the label beside it is the answer, and a screen reader
+        // reading "Đau đầu, bi-emoji-dizzy" is worse than reading the words alone.
+        $this->assertSame(6, substr_count($options, 'health-option__icon" aria-hidden="true"'));
+    }
+
     public function test_the_scope_notice_is_always_present_in_full_and_has_no_dismiss_control(): void
     {
         $html = $this->actingAs($this->user)
