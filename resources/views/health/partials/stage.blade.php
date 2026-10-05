@@ -13,7 +13,7 @@
     {{-- Bounded AI follow-up rounds. Deliberately NOT extra wizard steps:
          TOTAL_STEPS stays 5 and the progress bar keeps its meaning.
          Plain form POST, so this works with JavaScript off like the rest. --}}
-    <div class="health-card rounded-4 border-0 p-4 p-md-5">
+    <div class="health-card p-4 p-md-5">
         <div class="d-flex gap-3 align-items-start mb-3">
             <span class="health-icon-tile health-icon-tile--accent" aria-hidden="true">
                 <i class="bi bi-chat-square-dots"></i>
@@ -75,7 +75,7 @@
         </form>
     </div>
 @elseif ($question)
-    <div class="health-card rounded-4 border-0 p-4 p-md-5">
+    <div class="health-card p-4 p-md-5">
         @include('health.partials.progress', ['question' => $question])
 
         @if ($hasProfile && $question['step'] === 1)
@@ -201,7 +201,7 @@
     </form>
 @else
     {{-- Reachable when the profile answered everything: send them straight to evaluation --}}
-    <div class="health-card rounded-4 border-0 p-4 p-md-5 text-center">
+    <div class="health-card p-4 p-md-5 text-center">
         <h2 class="h5 fw-bold text-gray-900 mb-2" id="triage-question" tabindex="-1">
             {{ __('messages.health.page_title') }}
         </h2>

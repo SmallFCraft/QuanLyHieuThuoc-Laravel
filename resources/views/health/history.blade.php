@@ -26,7 +26,7 @@
             </div>
 
             @if ($sessions->isEmpty())
-                <div class="health-card rounded-4 border-0 p-5 text-center">
+                <div class="health-card p-5 text-center">
                     <i class="bi bi-clipboard2-x text-gray-300 d-block mb-3" style="font-size: 3rem;" aria-hidden="true"></i>
                     <p class="text-gray-600 mb-4">{{ __('messages.health.history_empty') }}</p>
                     <a href="{{ route('health.check') }}" class="health-btn health-btn-primary text-decoration-none">
@@ -42,7 +42,7 @@
                                 ?? implode(', ', (array) ($item->collected_data['symptoms'] ?? []));
                         @endphp
                         <a href="{{ route('health.result', $item->MaSL) }}"
-                           class="health-card rounded-4 border-0 p-4 text-decoration-none d-block">
+                           class="health-card p-4 text-decoration-none d-block">
                             <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                                 <div class="flex-grow-1" style="min-width: 200px;">
                                     <p class="fw-semibold text-gray-900 mb-1">

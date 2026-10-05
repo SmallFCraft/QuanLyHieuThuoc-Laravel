@@ -24,15 +24,17 @@
 
 <section class="health-brief mt-4" aria-labelledby="briefing-heading">
     <div class="health-brief__head">
-        <span class="health-icon-tile health-icon-tile--accent" aria-hidden="true">
-            <i class="bi bi-stars"></i>
+        <span class="health-icon-tile" aria-hidden="true">
+            <i class="bi bi-journal-text"></i>
         </span>
         <div>
             <h2 class="mb-1" id="briefing-heading">{{ __('messages.health.briefing_title') }}</h2>
             {{-- One AI label for the whole block, at the top: repeating a badge per
-                 section turns the provenance notice into wallpaper. --}}
+                 section turns the provenance notice into wallpaper. The robot glyph is
+                 gone — a mascot on a medical page invites trust the badge's plain words
+                 earn; the shield-and-check alone states the caution. --}}
             <p class="health-ai-badge small mb-1">
-                <i class="bi bi-robot" aria-hidden="true"></i>
+                <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
                 <span>{{ __('messages.health.ai_badge') }}</span>
             </p>
             <p class="small mb-0" style="color: var(--health-ink-soft);">{{ __('messages.health.briefing_notice') }}</p>

@@ -39,7 +39,7 @@
     // and the audit trail. An emergency page renders all three flat — Bootstrap hides
     // an inactive pane, and a red-flag page must not put the reason behind a control.
     $tabs = [
-        ['id' => 'briefing', 'icon' => 'bi-stars', 'label' => __('messages.health.briefing_title')],
+        ['id' => 'briefing', 'icon' => 'bi-journal-medical', 'label' => __('messages.health.briefing_title')],
         ['id' => 'care', 'icon' => 'bi-capsule', 'label' => __('messages.health.hub_tab_care')],
         ['id' => 'audit', 'icon' => 'bi-list-check', 'label' => __('messages.health.hub_tab_audit')],
     ];
@@ -61,26 +61,19 @@
                  across them all stretches row 1 to the rail's height, leaving a hole
                  under the header. One wrapper, one row, no hole. --}}
             <div class="health-shell__content">
-            {{-- Clinical masthead. Four centred lines stacked the section name, the page
-                 title and the conclusion on top of each other, and gave the quietest
-                 treatment to the one line the customer came to read. The layout is
-                 left-aligned now, like a record rather than a banner: context, then the
-                 answer at the scale it deserves, then when it was taken. --}}
+            {{-- Clinical masthead. One heading, then the answer at the scale it
+                 deserves, then when the visit took place: context, answer, time.
+                 The eyebrow pill that used to open this header is gone — it repeated
+                 the page title, and a label above a heading is a heading that gave up. --}}
             <header class="mb-4">
-                <div class="health-masthead">
-                    <span class="health-eyebrow">
-                        <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
-                        {{ __('messages.health.nav_full') }}
-                    </span>
-                    <span class="health-masthead__stamp">
-                        <i class="bi bi-clock-history" aria-hidden="true"></i>
-                        <time datetime="{{ $session->created_at->toIso8601String() }}">
-                            {{ $session->created_at->format('d/m/Y H:i') }}
-                        </time>
-                    </span>
-                </div>
+                <h1 class="mb-2">{{ __('messages.health.page_title') }}</h1>
 
-                <h1 class="mb-0">{{ __('messages.health.page_title') }}</h1>
+                <span class="health-masthead__stamp">
+                    <i class="bi bi-clock-history" aria-hidden="true"></i>
+                    <time datetime="{{ $session->created_at->toIso8601String() }}">
+                        {{ $session->created_at->format('d/m/Y H:i') }}
+                    </time>
+                </span>
 
                 {{-- The conclusion, at the scale of a result. Colour, icon and the word
                      "Kết luận" all carry it, so the severity survives greyscale. --}}
