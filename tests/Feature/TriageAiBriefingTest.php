@@ -154,6 +154,25 @@ class TriageAiBriefingTest extends TestCase
         $this->assertNull($session->ai_briefing);
     }
 
+    /**
+     * Only an emergency is excluded. A referral still gets its briefing written in
+     * the background — the result page opens on the advice tab while this runs, so
+     * dropping the briefing would silently remove content from the page.
+     */
+    public function test_a_referral_outcome_still_gets_its_briefing(): void
+    {
+        $this->fakeToolCall($this->fullBriefing());
+
+        $session = $this->generate($this->triageSession([
+            'outcome' => 'refer_doctor',
+            'advice_given' => 'Anh/chị nên đi khám trong hôm nay.',
+        ]));
+
+        Http::assertSentCount(1);
+        $this->assertNotNull($session->ai_briefing);
+        $this->assertSame('ok', $session->ai_briefing_status);
+    }
+
     public function test_a_full_briefing_is_stored_without_touching_the_conclusion(): void
     {
         $this->fakeToolCall($this->fullBriefing());

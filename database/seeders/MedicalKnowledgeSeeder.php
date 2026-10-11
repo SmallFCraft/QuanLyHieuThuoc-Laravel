@@ -274,7 +274,7 @@ class MedicalKnowledgeSeeder extends Seeder
                 'guidance_vi' => 'Trẻ nhỏ dưới 2 tuổi cần được bác sĩ nhi khám trực tiếp, không nên tự dùng thuốc vì liều và chống chỉ định khác người lớn. Anh/chị vui lòng đưa bé đến cơ sở y tế.',
             ],
             [
-                'code' => 'pregnancy_symptom', 'name_vi' => 'Đang mang thai', 'severity' => 'urgent',
+                'code' => 'pregnancy_symptom', 'name_vi' => 'Đang mang thai hoặc cho con bú', 'severity' => 'urgent',
                 'symptom' => null, 'chat_short_circuit' => false,
                 'keywords' => ['mang thai', 'co thai', 'thai ky', 'dang bau', 'dang mang bau', 'dang cho con bu'],
                 'guidance_vi' => 'Khi đang mang thai hoặc cho con bú, phần lớn thuốc cần được bác sĩ sản khoa hoặc dược sĩ xác nhận trước khi dùng. Anh/chị vui lòng hỏi ý kiến bác sĩ đang theo dõi thai.',
