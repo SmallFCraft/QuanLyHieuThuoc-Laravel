@@ -15,6 +15,7 @@ use App\Services\Triage\Ai\TriageAiBriefingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -601,6 +602,31 @@ class HealthCheckController extends Controller
             'safety' => $this->safetyCheck($session, $profile),
             'basis' => $this->decisionBasis($session),
         ]);
+    }
+
+    /**
+     * The briefing panel on its own, for the result page to swap in when the job lands.
+     *
+     * 202 while the worker is still writing, so the poller keeps waiting; 200 with the
+     * panel once it is written, or once it has definitively failed. Emergency sessions
+     * are never due a briefing and get 404.
+     */
+    public function briefingPane(int $MaSL): Response
+    {
+        $session = TriageSession::where('MaKH', (int) auth()->id())
+            ->where('MaSL', $MaSL)
+            ->firstOrFail();
+
+        abort_if($session->isEmergency(), 404);
+
+        $briefing = $this->briefingFor($session);
+        $pending = $briefing === null && $session->ai_briefing_status === null;
+
+        return response()->view('health.partials.briefing-pane', [
+            'briefing' => $briefing,
+            'pending' => $pending,
+            'unavailable' => $briefing === null && ! $pending,
+        ], $pending ? 202 : 200);
     }
 
     /**
