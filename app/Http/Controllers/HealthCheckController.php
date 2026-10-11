@@ -865,10 +865,12 @@ class HealthCheckController extends Controller
 
     public function history(Request $request): View
     {
-        $sessions = TriageSession::where('MaKH', (int) auth()->id())
-            ->where('status', '!=', 'in_progress')
-            ->latest('MaSL')
-            ->paginate(10);
+        $sessions = $this->paginateOr404(
+            TriageSession::where('MaKH', (int) auth()->id())
+                ->where('status', '!=', 'in_progress')
+                ->latest('MaSL'),
+            10
+        );
 
         return view('health.history', ['sessions' => $sessions]);
     }

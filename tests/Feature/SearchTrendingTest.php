@@ -86,7 +86,11 @@ class SearchTrendingTest extends TestCase
     public function test_paging_through_results_does_not_inflate_the_count(): void
     {
         $this->search('vitamin c');
-        $this->search('vitamin c', ['page' => 2]);
+
+        // Trang 2 vượt trang cuối (1 kết quả / 10 mỗi trang) nên là 404, và cũng
+        // không được đếm — một request không render kết quả thì không phải lượt tìm.
+        $this->get(route('products.search', ['q' => 'vitamin c', 'page' => 2]))
+            ->assertNotFound();
 
         $this->assertSame(1, SearchQuery::sole()->hits);
     }

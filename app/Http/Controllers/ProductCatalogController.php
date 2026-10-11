@@ -19,7 +19,25 @@ class ProductCatalogController extends Controller
      */
     public function index(Request $request)
     {
+        // Array query (?q[]=x, ?category[]=1) không phải do link nào trong app sinh, và
+        // ép mảng sang chuỗi là TypeError (500). 400, không phải 404. Phải đứng trước
+        // mọi phép đọc tham số.
+        abort_if(
+            is_array($request->query('q')) || is_array($request->query('category')),
+            400
+        );
+
         $searchTerm = trim((string) $request->input('q', ''));
+
+        // where('MaDM', ...) im lặng trả một danh sách rỗng 200 cho id không tồn tại,
+        // nên mỗi số tự đặt là một URL indexable. byCategory() dùng findOrFail nên
+        // chỉ cần chặn ở đây. ?category= có tác dụng, không phải junk query.
+        if ($request->filled('category')) {
+            abort_unless(
+                Category::whereKey($request->input('category'))->exists(),
+                404
+            );
+        }
 
         $query = Product::with('category')
             ->notExpired()
@@ -31,7 +49,9 @@ class ProductCatalogController extends Controller
             $query->where('MaDM', $request->input('category'));
         }
 
-        $products = $query->paginate(self::PER_PAGE)->withQueryString();
+        // Trang vượt quá trang cuối là 404, không phải một trang rỗng 200. Trả về
+        // đúng paginator cho cả nhánh ajax bên dưới.
+        $products = $this->paginateOr404($query, self::PER_PAGE);
 
         $categories = $this->getFilterCategories();
 
@@ -75,11 +95,13 @@ class ProductCatalogController extends Controller
     {
         $category = Category::findOrFail($MaDM);
 
-        $products = Product::with('category')
-            ->notExpired()
-            ->where('MaDM', $MaDM)
-            ->where('stock_quantity', '>', 0)
-            ->paginate(self::PER_PAGE);
+        $products = $this->paginateOr404(
+            Product::with('category')
+                ->notExpired()
+                ->where('MaDM', $MaDM)
+                ->where('stock_quantity', '>', 0),
+            self::PER_PAGE
+        );
 
         $categories = $this->getFilterCategories();
 
@@ -95,15 +117,18 @@ class ProductCatalogController extends Controller
      */
     public function search(Request $request)
     {
+        abort_if(is_array($request->query('q')), 400);
+
         $searchTerm = trim((string) $request->input('q', ''));
 
-        $products = Product::with('category')
-            ->notExpired()
-            ->where('stock_quantity', '>', 0)
-            ->storefrontSearch($searchTerm)
-            ->orderBySearchRelevance($searchTerm)
-            ->paginate(self::PER_PAGE)
-            ->withQueryString();
+        $products = $this->paginateOr404(
+            Product::with('category')
+                ->notExpired()
+                ->where('stock_quantity', '>', 0)
+                ->storefrontSearch($searchTerm)
+                ->orderBySearchRelevance($searchTerm),
+            self::PER_PAGE
+        );
 
         $categories = $this->getFilterCategories();
 

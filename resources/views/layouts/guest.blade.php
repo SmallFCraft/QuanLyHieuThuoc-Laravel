@@ -5,6 +5,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
+        {{-- Trang đăng nhập, đăng ký, quên mật khẩu: không có gì để công cụ thu thập. --}}
+        <meta name="robots" content="noindex, nofollow">
+
         <title>{{ config('app.name', 'Nhà Thuốc') }}</title>
 
         <!-- Fonts -->
