@@ -173,6 +173,34 @@ class TriageAiBriefingFallbackTest extends TestCase
         $this->assertNull($session->refresh()->ai_briefing_status);
     }
 
+    public function test_a_previously_failed_briefing_recovers_on_second_view_when_provider_recovers(): void
+    {
+        $session = $this->completedSession();
+        $session->forceFill(['ai_briefing_status' => 'failed'])->save();
+
+        // One recorded failed job from the first attempt.
+        AiJob::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'MaKH' => $session->MaKH,
+            'kind' => AiJob::KIND_TRIAGE_BRIEFING,
+            'status' => 'failed',
+            'error' => 'provider timeout',
+            'payload' => ['MaSL' => $session->MaSL],
+        ]);
+
+        // Provider now succeeds.
+        $this->fakeGhiDienGiaiResponse();
+
+        $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk();
+
+        // Second job dispatched and finished via sync driver.
+        $this->assertSame(2, AiJob::where('kind', AiJob::KIND_TRIAGE_BRIEFING)->count());
+        $this->assertSame('ok', $session->refresh()->ai_briefing_status);
+        $this->assertIsArray($session->ai_briefing);
+    }
+
     protected function strandedBriefing(TriageSession $session, int $ageSeconds = 30): AiJob
     {
         $job = AiJob::create([

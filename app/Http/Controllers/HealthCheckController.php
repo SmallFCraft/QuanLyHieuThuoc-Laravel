@@ -646,7 +646,18 @@ class HealthCheckController extends Controller
      */
     protected function ensureBriefingJob(TriageSession $session): ?AiJob
     {
-        if ($session->ai_briefing_status !== null) {
+        // Success never reruns. A failed attempt is retried once if the previous job
+        // completed without producing a usable briefing.
+        if ($session->ai_briefing_status === 'ok') {
+            return null;
+        }
+
+        $briefingAttempts = AiJob::where('MaKH', $session->MaKH)
+            ->where('kind', AiJob::KIND_TRIAGE_BRIEFING)
+            ->where('payload->MaSL', $session->MaSL)
+            ->count();
+
+        if ($session->ai_briefing_status !== null && $briefingAttempts >= 2) {
             return null;
         }
 
@@ -656,7 +667,11 @@ class HealthCheckController extends Controller
             ->latest('MaAJ')
             ->first();
 
-        if ($job === null) {
+        // Previous job finished with failure and we have not exhausted retries.
+        if ($job !== null && $job->isFinished() && $session->ai_briefing_status === 'failed' && $briefingAttempts < 2) {
+            $session->forceFill(['ai_briefing_status' => null])->save();
+            $job = $this->aiJobs->dispatchBriefingIfEligible($session);
+        } elseif ($job === null) {
             $job = $this->aiJobs->dispatchBriefingIfEligible($session);
         }
 
@@ -679,6 +694,7 @@ class HealthCheckController extends Controller
                 $briefing->generate($session);
                 $this->aiJobs->markDone($job, ['ai_briefing_status' => $session->refresh()->ai_briefing_status]);
             } catch (\Throwable $exception) {
+                $session->forceFill(['ai_briefing_status' => 'failed'])->save();
                 $this->aiJobs->markFailed($job, $exception->getMessage());
             }
 
@@ -754,19 +770,32 @@ class HealthCheckController extends Controller
      */
     protected function pendingAdviceJob(TriageSession $session): ?AiJob
     {
-        if ($session->ai_status !== null) {
+        if ($session->ai_status === 'ok') {
+            return null;
+        }
+
+        $adviceAttempts = AiJob::where('MaKH', $session->MaKH)
+            ->where('kind', AiJob::KIND_TRIAGE_ADVICE)
+            ->where('payload->MaSL', $session->MaSL)
+            ->count();
+
+        if ($session->ai_status !== null && $adviceAttempts >= 2) {
             return null;
         }
 
         $job = AiJob::where('MaKH', $session->MaKH)
             ->where('kind', AiJob::KIND_TRIAGE_ADVICE)
-            ->whereIn('status', ['queued', 'running'])
             ->where('payload->MaSL', $session->MaSL)
             ->latest('MaAJ')
             ->first();
 
+        if ($job !== null && $job->isFinished() && $session->ai_status === 'failed' && $adviceAttempts < 2) {
+            $session->forceFill(['ai_status' => null])->save();
+            $job = $this->aiJobs->dispatchAdviceRewriteIfEligible($session);
+        }
+
         if ($job === null || !$job->isStranded()) {
-            return $job;
+            return $job !== null && in_array($job->status, ['queued', 'running'], true) ? $job : null;
         }
 
         $advice = app(TriageAiAdviceService::class);
@@ -783,6 +812,7 @@ class HealthCheckController extends Controller
             $advice->rewrite($session);
             $this->aiJobs->markDone($job, ['ai_status' => $session->refresh()->ai_status]);
         } catch (\Throwable $exception) {
+            $session->forceFill(['ai_status' => 'failed'])->save();
             $this->aiJobs->markFailed($job, $exception->getMessage());
         }
 
