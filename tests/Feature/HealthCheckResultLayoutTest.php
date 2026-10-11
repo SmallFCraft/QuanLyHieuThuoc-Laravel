@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\AiJob;
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Support\Str;
 use App\Models\TriageSession;
 use App\Models\User;
 use Database\Seeders\MedicalKnowledgeSeeder;
@@ -636,5 +638,82 @@ class HealthCheckResultLayoutTest extends TestCase
             '/\.health-hub__panels\s+\.tab-pane[^{]*\{[^}]*display:\s*block\s*!important/s',
             $printBlock
         );
+    }
+
+    /**
+     * A finished briefing lands in place. A reload would drop the tab the reader has
+     * open and the scroll position they have built up while waiting.
+     *
+     * The reload stays only on the `stranded` branch, which needs the full page to run
+     * the controller's inline fallback; the `done` branch must not reach it.
+     *
+     * Scoped from `function swapPane()` on purpose: the chatbot widget ships its own
+     * poller in the same page and it also tests `state.status === 'done'`.
+     */
+    public function test_the_poller_swaps_the_briefing_pane_instead_of_reloading(): void
+    {
+        $session = $this->completedSession(['ai_briefing_status' => null]);
+        $this->queuedBriefing($session);
+
+        $content = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk()
+            ->getContent();
+
+        $poller = substr($content, (int) strpos($content, 'function swapPane()'));
+        $doneAt = strpos($poller, "state.status === 'done'");
+        $strandedAt = strpos($poller, 'state.stranded');
+
+        $this->assertNotFalse($doneAt, 'The briefing poller must handle a finished job.');
+        $this->assertNotFalse($strandedAt, 'The briefing poller must handle a stranded job.');
+        $this->assertLessThan($strandedAt, $doneAt);
+
+        $doneBranch = substr($poller, $doneAt, $strandedAt - $doneAt);
+
+        $this->assertStringContainsString('swapPane()', $doneBranch);
+        $this->assertStringNotContainsString('window.location.reload()', $doneBranch);
+    }
+
+    /**
+     * The endpoint that renders the panel travels with the poll job, so the script
+     * does not have to rebuild the route from the id it was given.
+     */
+    public function test_the_poller_carries_the_briefing_pane_url(): void
+    {
+        $session = $this->completedSession(['ai_briefing_status' => null]);
+        $this->queuedBriefing($session);
+
+        $content = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk()
+            ->getContent();
+
+        // The jobs are embedded by @json, which escapes slashes, so this asserts on
+        // the decoded payload rather than the raw markup.
+        preg_match('/const jobs = (\[.*?\]);/s', $content, $matches);
+        $this->assertNotEmpty($matches, 'The result page must embed its poll jobs.');
+
+        $briefing = collect(json_decode($matches[1], true))
+            ->firstWhere('banner', 'triage-briefing-pending');
+
+        $this->assertNotNull($briefing, 'The briefing job must be among the poll jobs.');
+        $this->assertSame(
+            route('health.result.briefing-pane', $session->MaSL),
+            $briefing['paneUrl'] ?? null
+        );
+    }
+
+    /**
+     * A queued briefing job, so the page renders a poller for it.
+     */
+    protected function queuedBriefing(TriageSession $session): AiJob
+    {
+        return AiJob::create([
+            'uuid' => (string) Str::uuid(),
+            'MaKH' => $this->user->MaKH,
+            'kind' => AiJob::KIND_TRIAGE_BRIEFING,
+            'status' => 'queued',
+            'payload' => ['MaSL' => $session->MaSL],
+        ]);
     }
 }
