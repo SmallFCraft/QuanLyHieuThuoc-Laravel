@@ -264,11 +264,12 @@ class HealthCheckResultLayoutTest extends TestCase
     }
 
     /**
-     * A red flag must not sit behind a control. The 115 action and the flag list render
-     * in the pinned rail, above the journey list — they were inside the "care" tab
-     * before that, one click away from the patient who needs them most.
+     * The 115 action must not sit behind a control, and must not sit inside the rail.
+     * The rail is `display:none` below 992px, so a call button in there is invisible on
+     * the phone of the patient who needs it most — the exact bug this pins. It renders
+     * in the page body, above the disclaimer, exactly once.
      */
-    public function test_the_red_flags_and_115_render_in_the_rail_not_a_tab(): void
+    public function test_the_emergency_call_action_renders_outside_the_rail(): void
     {
         $session = $this->completedSession([
             'outcome' => 'emergency',
@@ -290,12 +291,20 @@ class HealthCheckResultLayoutTest extends TestCase
 
         $rail = substr($content, $railOpen, $railClose - $railOpen);
 
-        $this->assertStringContainsString('tel:115', $rail);
-        $this->assertStringContainsString(__('messages.health.red_flags_title'), $rail);
-        $this->assertStringContainsString('Đau ngực dữ dội', $rail);
+        // The 115 action is NOT in the rail: the rail is display:none below 992px, so a
+        // call button there is invisible on the phone of the patient who needs it most.
+        $this->assertStringNotContainsString('tel:115', $rail);
 
-        // And only there: the care tab must not render a second copy.
+        // Exactly one call action on the page, and it precedes the notice. Anchored on
+        // the element, not the string: the class name also appears in the inline block
+        // in <head>, which sits earlier in the document than everything.
         $this->assertSame(1, substr_count($content, 'tel:115'));
+        $this->assertLessThan(
+            strpos($content, 'class="health-disclaimer'),
+            strpos($content, 'tel:115'),
+        );
+
+        // The red flags still render once, in the emergency banner.
         $this->assertSame(1, substr_count($content, __('messages.health.red_flags_title')));
     }
 
@@ -410,6 +419,28 @@ class HealthCheckResultLayoutTest extends TestCase
         $response->assertDontSee('role="tablist"', false);
     }
 
+    /**
+     * A red-flag referral has one thing the patient must read first: what to do now.
+     * The AI briefing is still being written at that moment, so opening it first
+     * shows a loading skeleton above the advice. Advice tab opens by default; the
+     * briefing job still runs in the background.
+     */
+    public function test_a_red_flag_referral_opens_the_care_tab_while_the_briefing_is_pending(): void
+    {
+        $session = $this->completedSession([
+            'outcome' => 'refer_doctor',
+            'triggered_red_flags' => [['code' => 'pregnancy_symptom', 'name_vi' => 'Đang mang thai', 'severity' => 'urgent']],
+            'ai_briefing_status' => null,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk();
+
+        $response->assertSee('class="tab-pane fade show active" id="hub-care"', false);
+        $response->assertSee('class="tab-pane fade" id="hub-briefing"', false);
+    }
+
     public function test_the_hub_holds_three_panels(): void
     {
         $session = $this->completedSession();
@@ -496,6 +527,96 @@ class HealthCheckResultLayoutTest extends TestCase
         // The reading path cannot depend on a click.
         $this->assertMatchesRegularExpression(
             '/html:not\(\.js\)[^{]*\.health-hub__panels[^{]*\{[^}]*display:\s*block/s',
+            $content
+        );
+    }
+
+    /** An emergency result shows the no-products conclusion in its own outcome surface. */
+    public function test_the_no_products_notice_is_a_conclusion_not_a_bare_paragraph(): void
+    {
+        $session = $this->completedSession([
+            'outcome' => 'emergency',
+            'suggested_products' => [],
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk()
+            ->assertSee('class="health-no-products health-no-products--emergency"', false)
+            ->assertSee(__('messages.health.no_products_title'))
+            ->assertSee(__('messages.health.no_products'));
+    }
+
+    /**
+     * On an emergency page the tabs are off, so the three panes stack flat in the page.
+     * Nothing separated them: the conclusion card in the care pane and the "Em dựa vào
+     * đâu" card in the audit pane met at 0px, while cards inside a pane sit 24px (`mt-4`)
+     * apart. The break is a flat-stack gap rule missing. Two things pin it: the hub
+     * carries `health-hub--flat`, and that rule moves a pane 24px off its predecessor
+     * only when the pane actually holds an element (`:has(*)`), so an empty briefing
+     * pane cannot pull a phantom margin under the hub edge.
+     */
+    public function test_flat_panes_on_an_emergency_page_keep_a_gap_between_them(): void
+    {
+        $session = $this->completedSession([
+            'outcome' => 'emergency',
+            'suggested_products' => [],
+        ]);
+
+        $content = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('health-hub--flat', $content);
+        $this->assertMatchesRegularExpression(
+            '/\.health-hub--flat \.health-hub__panels > \.tab-pane:has\(\*\) ~ \.tab-pane:has\(\*\)\s*\{[^}]*margin-top:\s*24px/s',
+            $content
+        );
+    }
+
+    /**
+     * The flat class is a layout statement, not a severity one: a non-emergency page
+     * keeps its tab bar, so it must not carry it. Pinning the negative side stops the
+     * selector above from being "fixed" by tagging every page flat.
+     */
+    public function test_a_tabbed_page_is_not_marked_flat(): void
+    {
+        // Anchored on the element: the selector for the rule is inline CSS in <head>,
+        // and a bare substring check would find it on every page.
+        $this->actingAs($this->user)
+            ->get(route('health.result', $this->completedSession()->MaSL))
+            ->assertOk()
+            ->assertDontSee('class="health-hub mt-4 health-hub--flat"', false);
+    }
+
+    /**
+     * The emergency notice is a two-child strip — the ⓘ, then the text — but the base
+     * rule is a `space-between` wrapping row built for the reopenable shape, where the
+     * badge+title sit left and "Xem lại" sits right. Inherited, it pushes the icon onto
+     * a line of its own: an ⓘ floating above the paragraph with nothing to attach to,
+     * measured at 375px as an icon whose top sits 2px above the text block it should
+     * share a line with. Both properties have to be overridden — `flex-start` alone
+     * still wraps once the text column grows.
+     */
+    public function test_the_emergency_notice_keeps_its_icon_on_the_first_line(): void
+    {
+        $session = $this->completedSession([
+            'outcome' => 'emergency',
+            'suggested_products' => [],
+        ]);
+
+        $content = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '/\.health-disclaimer--emergency\s*\{[^}]*justify-content:\s*flex-start/s',
+            $content
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.health-disclaimer--emergency\s*\{[^}]*flex-wrap:\s*nowrap/s',
             $content
         );
     }

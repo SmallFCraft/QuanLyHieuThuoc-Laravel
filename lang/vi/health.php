@@ -83,6 +83,10 @@ return [
     'product_usage_toggle_open' => 'Xem hướng dẫn & liều dùng chi tiết',
     'product_stock_in' => 'Còn hàng',
     'no_products' => 'Em không gợi ý thuốc cho tình huống này. Việc gặp bác sĩ hoặc dược sĩ là bước cần thiết.',
+    // Tiêu đề khối khi không có thuốc nào phù hợp. Trước đây câu no_products nằm trơ
+    // giữa hai card trắng nên đọc như chú thích lỗi; giờ nó là một kết luận có tiêu đề.
+    'no_products_title' => 'Không có thuốc phù hợp để tự dùng',
+    'no_products_lead' => 'Tình huống anh/chị mô tả nằm ngoài nhóm thuốc không kê đơn.',
 
     // Cơ sở của kết luận: chỉ hiện dữ liệu đã lưu, không sinh nội dung y khoa mới.
     'basis_title' => 'Em dựa vào đâu để kết luận',

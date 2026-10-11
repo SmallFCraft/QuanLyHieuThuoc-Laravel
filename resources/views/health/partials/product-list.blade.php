@@ -135,10 +135,29 @@
     @endif
 @elseif (!$isSelfCare)
     {{-- Nothing matched the symptom, and no medicine is a decision. Saying so beats
-         the old behaviour, which quietly offered the four highest-stock items. --}}
-    <p class="small text-gray-600 mb-0">
-        <i class="bi bi-shield-exclamation me-1" aria-hidden="true"></i>{{ __('messages.health.no_products') }}
-    </p>
+         the old behaviour, which quietly offered the four highest-stock items.
+         Rendered as an outcome card with the level's own border and tint, so it reads
+         as a deliberate conclusion rather than an empty state. Keeps the exact phrase
+         __('messages.health.no_products') so existing tests and screen readers find it. --}}
+    <section class="health-no-products health-no-products--{{ $session->outcome ?? 'refer_doctor' }}"
+             aria-labelledby="no-products-heading">
+        <div class="health-no-products__head">
+            <span class="health-no-products__icon" aria-hidden="true">
+                <i class="bi bi-shield-slash"></i>
+            </span>
+            <div>
+                <h3 class="health-no-products__title mb-1" id="no-products-heading">
+                    {{ __('messages.health.no_products_title') }}
+                </h3>
+                <p class="health-no-products__lead mb-0">
+                    {{ __('messages.health.no_products_lead') }}
+                </p>
+            </div>
+        </div>
+        <p class="health-no-products__body mb-0">
+            <i class="bi bi-shield-exclamation me-1" aria-hidden="true"></i>{{ __('messages.health.no_products') }}
+        </p>
+    </section>
 @else
     <div class="health-card p-4">
         <p class="small text-gray-600 mb-0">
