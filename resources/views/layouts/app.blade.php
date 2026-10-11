@@ -69,10 +69,26 @@
                 'products.search',
             ]) ? 'noindex, nofollow' : 'index, follow';
 
+            // Trang 2 trở đi của một danh sách chỉ là lát cắt của cùng một tài liệu.
+            // noindex để công cụ không thu thập lại, nhưng vẫn follow để crawler đi
+            // ngược về trang gốc — không dùng nofollow vì sẽ cắt luôn đường tới sản phẩm.
+            // Chỉ chỉnh mặc định: yieldContent('meta_robots') của view vẫn thắng.
+            // filter_var, không phải (int): paginator nhận "2" nhưng từ chối "2.5",
+            // "02", "1e1", còn (int) ép cả nhóm đó sang 2 — trang 1 mà bị noindex.
+            $pageParam = request()->query('page');
+            if ($defaultRobots === 'index, follow'
+                && is_string($pageParam)
+                && filter_var($pageParam, FILTER_VALIDATE_INT, ['options' => ['min_range' => 2]]) !== false
+            ) {
+                $defaultRobots = 'noindex, follow';
+            }
+
             $metaRobots = trim($__env->yieldContent('meta_robots', $defaultRobots));
+            // `q` cũng gập về: mỗi chuỗi tìm trên /products là một URL indexable mới.
+            // Trang kết quả thật nằm ở /search, nơi đã noindex; /products?q= chỉ là bản sao.
             $metaCanonical = trim($__env->yieldContent(
                 'meta_canonical',
-                request()->fullUrlWithoutQuery(['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid'])
+                request()->fullUrlWithoutQuery(['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'page', 'q'])
             ));
             $metaLocale = app()->getLocale() === 'vi' ? 'vi_VN' : app()->getLocale();
             $metaImageAlt = trim($__env->yieldContent(
