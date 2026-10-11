@@ -96,6 +96,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/health-check/result/{MaSL}', [HealthCheckController::class, 'result'])
         ->whereNumber('MaSL')
         ->name('health.result');
+    Route::get('/health-check/result/{MaSL}/briefing-pane', [HealthCheckController::class, 'briefingPane'])
+        ->middleware('throttle:60,1')
+        ->whereNumber('MaSL')
+        ->name('health.result.briefing-pane');
     // Opt-in side channel: the AI/rule answer is the primary result, and the queue is
     // only entered when the customer asks for a human.
     Route::post('/health-check/result/{MaSL}/pharmacist', [HealthCheckController::class, 'requestPharmacist'])
