@@ -275,6 +275,7 @@
             ? [
                 'url' => route('ai-jobs.poll', $briefingJobId),
                 'banner' => 'triage-briefing-pending',
+                'paneUrl' => route('health.result.briefing-pane', $session->MaSL),
                 // Unhidden instead of just dropping the skeleton: this banner is the
                 // content, so an empty slot would read as a stalled page.
                 'fallback' => 'triage-briefing-unavailable',
@@ -286,9 +287,9 @@
 @if ($pollJobs !== [])
     @push('scripts')
         <script>
-            // Poll for the deferred AI writes and reload once they land. Progressive
-            // enhancement: with JavaScript off the page shows the pharmacist-written
-            // advice, which is the authoritative text anyway.
+            // Poll for the deferred AI writes and swap the finished HTML in place.
+            // Progressive enhancement: with JavaScript off the page shows the
+            // pharmacist-written advice, which is the authoritative text anyway.
             (function () {
                 const jobs = @json($pollJobs);
 
@@ -311,6 +312,37 @@
                         }
                     }
 
+                    function swapPane() {
+                        fetch(job.paneUrl, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' })
+                            .then((response) => {
+                                if (response.status === 202) {
+                                    window.setTimeout(check, 1500);
+                                    return null;
+                                }
+
+                                return response.ok ? response.text() : Promise.reject(response.status);
+                            })
+                            .then((html) => {
+                                if (html === null) {
+                                    return;
+                                }
+
+                                const pane = document.getElementById('hub-briefing');
+
+                                if (pane) {
+                                    // innerHTML only: the pane element keeps its own classes
+                                    // (`tab-pane fade show active` or `tab-pane fade`), so the open
+                                    // tab and the reading state are preserved.
+                                    pane.innerHTML = html;
+                                }
+
+                                if (banner) {
+                                    banner.remove();
+                                }
+                            })
+                            .catch(stop);
+                    }
+
                     function check() {
                         if (attempts++ > 90) {
                             stop();
@@ -320,10 +352,18 @@
                         fetch(job.url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                             .then((response) => (response.ok ? response.json() : Promise.reject(response.status)))
                             .then((state) => {
-                                if (state.status === 'done' || state.stranded) {
-                                    // A finished job or a worker that never started: reload so the
-                                    // finished columns paint, or so the controller can run the
-                                    // synchronous fallback inline matching triage.js.
+                                if (state.status === 'done') {
+                                    if (job.paneUrl) {
+                                        swapPane();
+                                    } else if (banner) {
+                                        banner.remove();
+                                    }
+                                    return;
+                                }
+
+                                if (state.stranded) {
+                                    // A worker that never started: only the full page runs the
+                                    // synchronous fallback inline matching triage.js (ensureBriefingJob).
                                     window.location.reload();
                                     return;
                                 }
