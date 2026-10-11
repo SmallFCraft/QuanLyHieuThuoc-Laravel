@@ -33,8 +33,6 @@
         'self_care' => 'bi-house-heart-fill',
     ];
 
-    $hasProducts = !empty($suggestedProducts) || !empty(data_get($briefing, 'products', []));
-
     // Three panels hold what the page used to stack: the AI's prose, the medicines,
     // and the audit trail. An emergency page renders all three flat — Bootstrap hides
     // an inactive pane, and a red-flag page must not put the reason behind a control.
@@ -189,45 +187,19 @@
                             'suggestedProducts' => $suggestedProducts,
                         ])
 
-                        {{-- The grid and its heading share one shell, so the tab has a
-                             second block rather than a heading floating between
-                             paragraphs. Heading only where medicine can appear: a
-                             referral says outright that none matches. --}}
-                        @if ($hasProducts)
-                            <section class="health-brief" aria-labelledby="products-heading">
-                                <div class="health-brief__head">
-                                    <span class="health-icon-tile" aria-hidden="true">
-                                        <i class="bi bi-capsule"></i>
-                                    </span>
-                                    <div>
-                                        <h2 class="mb-1" id="products-heading">{{ __('messages.health.products_title') }}</h2>
-                                        <p class="small mb-0" style="color: var(--health-ink-soft);">
-                                            {{ __('messages.health.products_note') }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div class="mt-4">
-                                    @include('health.partials.product-list', [
-                                        'session' => $session,
-                                        'briefing' => $briefing,
-                                        'safety' => $safety,
-                                        'hasProfile' => $hasProfile,
-                                        'suggestedProducts' => $suggestedProducts,
-                                    ])
-                                </div>
-                            </section>
-                        @else
-                            <div class="mt-4">
-                                @include('health.partials.product-list', [
-                                    'session' => $session,
-                                    'briefing' => $briefing,
-                                    'safety' => $safety,
-                                    'hasProfile' => $hasProfile,
-                                    'suggestedProducts' => $suggestedProducts,
-                                ])
-                            </div>
-                        @endif
+                        {{-- Owned by its own id so the poller can replace just the grid
+                             when the briefing lands: the AI's own picks are unknown at
+                             first paint, so without this the tab would keep showing the
+                             rule engine's list alone until a reload. --}}
+                        <div id="hub-care-products">
+                            @include('health.partials.care-products', [
+                                'session' => $session,
+                                'briefing' => $briefing,
+                                'safety' => $safety,
+                                'hasProfile' => $hasProfile,
+                                'suggestedProducts' => $suggestedProducts,
+                            ])
+                        </div>
                     </div>
 
                     <div class="tab-pane {{ $useTabs ? 'fade' : '' }}" id="hub-audit" role="tabpanel">
@@ -334,6 +306,17 @@
                                     // (`tab-pane fade show active` or `tab-pane fade`), so the open
                                     // tab and the reading state are preserved.
                                     pane.innerHTML = html;
+
+                                    // The briefing carried its own product picks. Spread them
+                                    // into the medicines tab: those rows did not exist at first
+                                    // paint, and a reload was the only way they ever appeared.
+                                    const products = pane.querySelector('#briefing-care-products');
+                                    const target = document.getElementById('hub-care-products');
+
+                                    if (products && target) {
+                                        target.innerHTML = products.innerHTML;
+                                        products.remove();
+                                    }
                                 }
 
                                 if (banner) {

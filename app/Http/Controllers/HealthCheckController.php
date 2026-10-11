@@ -609,23 +609,40 @@ class HealthCheckController extends Controller
      *
      * 202 while the worker is still writing, so the poller keeps waiting; 200 with the
      * panel once it is written, or once it has definitively failed. Emergency sessions
-     * are never due a briefing and get 404.
+     * are never due a briefing and get 404, and an unfinished session has no result
+     * page to be a pane of.
+     *
+     * The care grid rides along in a <template>: the briefing's own product picks are
+     * unknown when the page first paints, so the tab would otherwise keep showing the
+     * rule engine's list alone until a reload.
      */
     public function briefingPane(int $MaSL): Response
     {
-        $session = TriageSession::where('MaKH', (int) auth()->id())
+        $userId = (int) auth()->id();
+        $session = TriageSession::where('MaKH', $userId)
             ->where('MaSL', $MaSL)
             ->firstOrFail();
 
         abort_if($session->isEmergency(), 404);
+        abort_if($session->status === 'in_progress', 404);
 
         $briefing = $this->briefingFor($session);
         $pending = $briefing === null && $session->ai_briefing_status === null;
+
+        // Care products only render when the briefing actually arrived: a pending
+        // poll discards the 202 body, and a failed attempt drops to the unavailable
+        // notice. Calculating the snapshot for every poll tick would re-run the rule
+        // picks 60+ times while waiting.
+        $profile = $briefing !== null ? $this->profileFor($userId) : null;
 
         return response()->view('health.partials.briefing-pane', [
             'briefing' => $briefing,
             'pending' => $pending,
             'unavailable' => $briefing === null && ! $pending,
+            'session' => $session,
+            'safety' => $briefing !== null ? $this->safetyCheck($session, $profile) : [],
+            'hasProfile' => $profile !== null,
+            'suggestedProducts' => $briefing !== null ? $this->suggestedProductsFor($session) : [],
         ], $pending ? 202 : 200);
     }
 

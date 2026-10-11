@@ -675,6 +675,48 @@ class HealthCheckResultLayoutTest extends TestCase
     }
 
     /**
+     * The AI briefing picks its own medicines, and those rows do not exist when the
+     * page first paints. The swap has to carry them into the medicines tab, or the
+     * tab keeps showing the rule engine's list alone until the reader reloads.
+     */
+    public function test_the_poller_moves_the_briefing_products_into_the_care_tab(): void
+    {
+        $session = $this->completedSession(['ai_briefing_status' => null]);
+        $this->queuedBriefing($session);
+
+        $content = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk()
+            ->getContent();
+
+        $poller = substr($content, (int) strpos($content, 'function swapPane()'));
+
+        $this->assertStringContainsString("pane.querySelector('#briefing-care-products')", $poller);
+        $this->assertStringContainsString("document.getElementById('hub-care-products')", $poller);
+        $this->assertMatchesRegularExpression(
+            '/target\.innerHTML\s*=\s*products\.innerHTML/s',
+            $poller,
+            'The briefing products must be copied into the medicines tab.'
+        );
+    }
+
+    /**
+     * The medicines tab owns its grid under its own id, so the swap has one target to
+     * write to and the heading travels with the rows it introduces.
+     */
+    public function test_the_medicines_grid_sits_in_its_own_swap_target(): void
+    {
+        $session = $this->completedSession();
+
+        $content = $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('<div id="hub-care-products">', $content);
+    }
+
+    /**
      * The endpoint that renders the panel travels with the poll job, so the script
      * does not have to rebuild the route from the id it was given.
      */
