@@ -146,4 +146,33 @@ class TriageAdviceFallbackTest extends TestCase
         // No pending job id reaches the page, so the poller never starts.
         $this->assertNull($second->viewData('aiJobId'));
     }
+
+    public function test_a_previously_failed_advice_job_retries_once_and_caps_at_two_attempts(): void
+    {
+        $session = $this->selfCareSession(['ai_status' => 'failed']);
+
+        AiJob::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'MaKH' => $session->MaKH,
+            'kind' => AiJob::KIND_TRIAGE_ADVICE,
+            'status' => 'failed',
+            'error' => 'timeout',
+            'payload' => ['MaSL' => $session->MaSL],
+        ]);
+
+        $this->fakeRewrite();
+
+        // Second load triggers the single retry.
+        $this->actingAs($this->user)->get(route('health.result', $session->MaSL))->assertOk();
+
+        $this->assertSame('ok', $session->refresh()->ai_status);
+        $this->assertSame(2, AiJob::where('kind', AiJob::KIND_TRIAGE_ADVICE)->count());
+
+        // Subsequent loads never retry further even if forced back to failed.
+        $session->forceFill(['ai_status' => 'failed'])->save();
+        Http::fake();
+        $this->actingAs($this->user)->get(route('health.result', $session->MaSL))->assertOk();
+        Http::assertNothingSent();
+        $this->assertSame(2, AiJob::where('kind', AiJob::KIND_TRIAGE_ADVICE)->count());
+    }
 }

@@ -524,20 +524,21 @@ class TriageAiBriefingTest extends TestCase
         $this->assertSame(1, AiJob::where('kind', AiJob::KIND_TRIAGE_BRIEFING)->count());
     }
 
-    public function test_a_failed_briefing_is_not_retried_on_every_reload(): void
+    public function test_a_failed_briefing_is_retried_once_and_not_on_every_reload(): void
     {
-        // One dead attempt is enough evidence. Retrying per page view would hammer the
-        // provider for as long as the customer keeps the tab open.
+        // One dead attempt is transient; a second is a pattern. Retrying per page view
+        // would hammer the provider for as long as the customer keeps the tab open, so
+        // the budget is two attempts and no more.
         Http::fake(['*' => Http::response('gateway down', 502)]);
 
         $session = $this->triageSession();
 
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < 4; $i++) {
             $this->actingAs($this->user)->get(route('health.result', $session->MaSL))->assertOk();
         }
 
         $this->assertSame('failed', $session->refresh()->ai_briefing_status);
-        $this->assertSame(1, AiJob::where('kind', AiJob::KIND_TRIAGE_BRIEFING)->count());
+        $this->assertSame(2, AiJob::where('kind', AiJob::KIND_TRIAGE_BRIEFING)->count());
     }
 
     public function test_the_page_shows_the_waiting_state_while_a_worker_is_writing(): void
