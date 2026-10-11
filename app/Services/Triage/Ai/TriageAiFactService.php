@@ -2,6 +2,7 @@
 
 namespace App\Services\Triage\Ai;
 
+use App\Models\MedicalSymptom;
 use App\Models\TriageSession;
 use App\Models\UserHealthProfile;
 use App\Services\MedicalTriageService;
@@ -51,9 +52,38 @@ class TriageAiFactService extends TriageAiService
      * account owner's birth_date (see MedicalTriageService::resolveAge), so when the
      * complaint is about a child the account age is not a known fact at all.
      *
-     * "còn" folds to "con" and trips this, which only ever keeps a question.
+     * Matched against lowercased text WITH its accents, never the folded form:
+     * folding turns "còn sốt" into "con sot", so a customer's own round-1 answer
+     * read as a child's complaint, the account age was dropped as not applicable,
+     * and the model re-asked a birth date the profile already held.
      */
-    private const CHILD_MARKERS = '/(?<![a-z0-9])(be|con|em|tre|chau|so sinh)(?![a-z0-9])/';
+    private const CHILD_MARKERS = '/(?<![\p{L}\d])(bé|be|con|trẻ|tre|cháu|chau|sơ sinh|so sinh)(?![\p{L}\d])/iu';
+
+    /**
+     * A question about what the customer took FOR THIS COMPLAINT, on folded text.
+     *
+     * Deliberately separate from TOPIC_PATTERNS['medications']: that one covers the
+     * profile's daily medication list, this one covers "what did you take and did it
+     * help" — asked in all three rounds of session 52 against three answers all
+     * saying nothing was taken.
+     */
+    private const MEDICATION_QUESTION = '/(?<![a-z0-9])(uong thuoc|dung thuoc|thuoc gi|thuoc nao)(?![a-z0-9])/';
+
+    /** Stand-in topic in the denied set; a symptom term can never equal it. */
+    private const MEDICATION_TOPIC = '@medication';
+
+    /**
+     * Signs the model asks about by their bare name. The dictionary carries
+     * "buồn nôn" / "nôn ói" / "nôn ra máu" but not bare "nôn", and nothing at all
+     * for "lừ đừ", so a denied "Có kèm nôn không ạ?" recorded no term and the next
+     * round asked it again.
+     *
+     * @var array<int, string>
+     */
+    private const BARE_DANGER_SIGNS = ['nôn', 'lừ đừ'];
+
+    /** @var array<int, string>|null */
+    protected ?array $clarifySymptomTerms = null;
 
     protected function configFlag(): string
     {
@@ -117,7 +147,7 @@ class TriageAiFactService extends TriageAiService
                 return null;
             }
 
-            $facts = $this->validate($raw, $allowedCodes, $known['topics']);
+            $facts = $this->validate($raw, $allowedCodes, $known['topics'], $this->deniedSymptomTerms($session));
             $facts['provider'] = $provider->describeLastProvider() ?? [];
 
             $this->audit($session, $facts, (microtime(true) - $startedAt) * 1000);
@@ -318,9 +348,9 @@ class TriageAiFactService extends TriageAiService
      * @param  array<int, string>  $knownTopics  Topics the account already answers.
      * @return array<string, mixed>
      */
-    protected function validate(array $raw, array $allowedCodes, array $knownTopics = []): array
+    protected function validate(array $raw, array $allowedCodes, array $knownTopics = [], array $deniedTerms = []): array
     {
-        $questions = $this->cleanClarifyQuestions($raw['missing_questions'] ?? [], $knownTopics);
+        $questions = $this->cleanClarifyQuestions($raw['missing_questions'] ?? [], $knownTopics, $deniedTerms);
         $wantsMore = $this->nullableBool($raw['needs_more_info'] ?? null);
 
         return [
@@ -387,19 +417,26 @@ class TriageAiFactService extends TriageAiService
      * @param  array<int, string>  $knownTopics
      * @return array<int, string>
      */
-    protected function cleanClarifyQuestions(mixed $questions, array $knownTopics = []): array
+    protected function cleanClarifyQuestions(mixed $questions, array $knownTopics = [], array $deniedTerms = []): array
     {
         $patterns = $this->knownTopicPatterns($knownTopics);
 
         return collect(is_array($questions) ? $questions : [])
             ->filter(fn ($question) => is_string($question))
             ->map(fn (string $question) => $this->stripMarkup(trim($question)))
-            ->filter(function (string $question) use ($patterns): bool {
+            ->filter(function (string $question) use ($patterns, $deniedTerms): bool {
                 if ($question === '' || mb_strlen($question) > self::MAX_CLARIFY_LENGTH) {
                     return false;
                 }
 
                 if ($this->asksKnownTopic($question, $patterns)) {
+                    return false;
+                }
+
+                // Measured: the model re-asked "sốt" in three consecutive rounds after
+                // the customer answered "không" to a question naming it. The prompt
+                // instruction against it was ignored, so the server enforces it.
+                if ($this->asksDeniedTerm($question, $deniedTerms)) {
                     return false;
                 }
 
@@ -409,6 +446,111 @@ class TriageAiFactService extends TriageAiService
             })
             ->unique()
             ->take(TriageSession::MAX_CLARIFY_QUESTIONS_PER_ROUND)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Symptom vocabulary the customer has already ruled out.
+     *
+     * A question is only discarded when every symptom it names has been denied —
+     * "có thấy khó thở hoặc đau ngực không?" survives when only "khó thở" was denied,
+     * because the chest-pain half is still new information. Similarity scoring was
+     * measured against real rounds and rejected: token overlap put the genuinely
+     * repeated "có bị sốt không?" (0.33) below two unrelated questions (0.50), so no
+     * threshold separates them. Dictionary terms do.
+     *
+     * @return array<int, string>
+     */
+    protected function deniedSymptomTerms(TriageSession $session): array
+    {
+        $terms = [];
+
+        foreach ($session->clarifyHistory() as $pair) {
+            $answer = (string) ($pair['answer'] ?? '');
+
+            // "nhưng" makes the denial cover only part of the answer ("Không, nhưng có
+            // sốt"); recording its symptoms as ruled out would suppress a real question.
+            if ($answer === '' || ! VietnameseText::isDenial($answer)
+                || VietnameseText::containsWord(VietnameseText::fold($answer), 'nhung')) {
+                continue;
+            }
+
+            $foldedQuestion = VietnameseText::fold((string) ($pair['question'] ?? ''));
+
+            // An answered medication question needs no symptom to match: "chưa
+            // uống ạ" settles it without saying what was NOT taken.
+            if (preg_match(self::MEDICATION_QUESTION, $foldedQuestion) === 1) {
+                $terms[self::MEDICATION_TOPIC] = self::MEDICATION_TOPIC;
+            }
+
+            foreach ($this->clarifySymptomTerms() as $term) {
+                if (VietnameseText::containsWord($foldedQuestion, $term)) {
+                    $terms[$term] = $term;
+                }
+            }
+        }
+
+        return array_values($terms);
+    }
+
+    /**
+     * The every-name-must-match half of deniedSymptomTerms(): a question is skipped
+     * only when it names a denied term and names nothing else the customer could
+     * still be asked about.
+     *
+     * @param  array<int, string>  $deniedTerms
+     */
+    protected function asksDeniedTerm(string $question, array $deniedTerms): bool
+    {
+        if ($deniedTerms === []) {
+            return false;
+        }
+
+        $folded = VietnameseText::fold($question);
+
+        // Medication is one whole topic, not a term the question can list alongside
+        // symptoms: a question about it is a repeat of the denied one, full stop.
+        if (in_array(self::MEDICATION_TOPIC, $deniedTerms, true)
+            && preg_match(self::MEDICATION_QUESTION, $folded) === 1) {
+            return true;
+        }
+
+        foreach ($this->clarifySymptomTerms() as $term) {
+            if (VietnameseText::containsWord($folded, $term) && ! in_array($term, $deniedTerms, true)) {
+                // A symptom the customer has not spoken to yet: the question still
+                // has something to ask.
+                return false;
+            }
+        }
+
+        foreach ($deniedTerms as $term) {
+            if (VietnameseText::containsWord($folded, $term)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Symptom names and aliases, comfortably longer than the generic WWHAM vocabulary
+     * a question is built from. Read once per request.
+     *
+     * @return array<int, string>
+     */
+    protected function clarifySymptomTerms(): array
+    {
+        return $this->clarifySymptomTerms ??= MedicalSymptom::active()
+            ->select(['name_vi', 'aliases'])
+            ->get()
+            ->flatMap(fn (MedicalSymptom $symptom) => array_merge(
+                [(string) $symptom->name_vi],
+                (array) $symptom->aliases
+            ))
+            ->filter(fn ($term) => is_string($term) && trim($term) !== '' && mb_strlen($term) >= 2)
+            ->push(...self::BARE_DANGER_SIGNS)
+            ->unique()
             ->values()
             ->all();
     }
@@ -433,8 +575,7 @@ class TriageAiFactService extends TriageAiService
         $prompt = [];
         $topics = [];
 
-        $complaint = VietnameseText::fold($text);
-        $aboutAChild = preg_match(self::CHILD_MARKERS, $complaint) === 1;
+        $aboutAChild = preg_match(self::CHILD_MARKERS, $text) === 1;
 
         // A child's age is not the account age, so the topic stays open — the model
         // still has to ask whose symptom it is and how old that person is.

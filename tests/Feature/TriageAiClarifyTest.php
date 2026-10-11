@@ -228,6 +228,172 @@ class TriageAiClarifyTest extends TestCase
         $this->assertCount(2, $session->collected_data['ai_clarify_answers']);
     }
 
+    /**
+     * Measured on a live session: the model re-asked "sốt" in rounds 1, 2 and 3 and
+     * "đờm hay khan" in rounds 1 and 3, even though the customer had already answered
+     * "không". Three rounds spent re-asking what was answered is what made the
+     * consultation feel like a broken form.
+     *
+     * A compound question answered with a single "không" denies every symptom it
+     * names, so a later question naming only those symptoms has nothing left to ask.
+     * A question naming a symptom never asked about survives — "đau ngực" was new in
+     * round 2 above and was kept.
+     */
+    public function test_a_symptom_the_customer_already_denied_is_not_asked_again(): void
+    {
+        $this->fakeFactSequence([
+            [
+                'symptom_codes' => ['cough'],
+                'needs_more_info' => true,
+                'missing_questions' => ['Anh/chị có sốt hoặc khó thở không ạ?', 'Cơn ho đã mấy ngày rồi ạ?'],
+            ],
+            [
+                'symptom_codes' => ['cough'],
+                'needs_more_info' => true,
+                'missing_questions' => [
+                    'Hiện tại anh/chị có bị sốt không ạ?',
+                    'Anh/chị có thấy khó thở hoặc đau ngực không ạ?',
+                    'Anh/chị đã uống thuốc gì cho cơn ho chưa ạ?',
+                ],
+            ],
+            ['symptom_codes' => ['cough'], 'needs_more_info' => false, 'missing_questions' => []],
+        ]);
+
+        $session = $this->runWizard([
+            1 => 'ho',
+            2 => 'hôm nay',
+            3 => 'chưa uống gì',
+            4 => 'không có',
+            5 => 'không có thêm',
+        ]);
+
+        $this->assertSame(
+            ['Anh/chị có sốt hoặc khó thở không ạ?', 'Cơn ho đã mấy ngày rồi ạ?'],
+            $session->pendingClarifyQuestions()
+        );
+
+        $session = $this->answerClarify($session, ['không', 'mấy hôm nay rồi']);
+
+        // "sốt" was denied outright. "đau ngực" was never asked, so that half of the
+        // compound question is new information and must survive.
+        $this->assertSame(
+            [
+                'Anh/chị có thấy khó thở hoặc đau ngực không ạ?',
+                'Anh/chị đã uống thuốc gì cho cơn ho chưa ạ?',
+            ],
+            $session->pendingClarifyQuestions()
+        );
+    }
+
+    /**
+     * Session 52, round 3 asked "Anh/chị bao nhiêu tuổi ạ?" although the account
+     * birth_date already answered it. The customer's own round-1 answer was
+     * "còn sốt.", which folds to "con" and trips CHILD_MARKERS, so knownFacts()
+     * read the complaint as a child's and dropped the age topic entirely.
+     */
+    public function test_the_account_age_is_not_reasked_when_an_answer_contains_con(): void
+    {
+        $this->fakeFactSequence([
+            ['symptom_codes' => ['fever'], 'needs_more_info' => true, 'missing_questions' => ['Hiện tại anh/chị còn sốt không ạ?']],
+            [
+                'symptom_codes' => ['fever'],
+                'needs_more_info' => true,
+                'missing_questions' => ['Anh/chị bao nhiêu tuổi ạ?', 'Cơn tiêu chảy đã mấy ngày rồi ạ?'],
+            ],
+            ['symptom_codes' => ['fever'], 'needs_more_info' => false, 'missing_questions' => []],
+        ]);
+
+        $session = $this->runWizard([
+            1 => 'tiêu chảy',
+            2 => 'hôm nay',
+            3 => 'chưa uống gì',
+            4 => 'không có',
+            5 => 'không có thêm',
+        ]);
+
+        $this->assertSame(['Hiện tại anh/chị còn sốt không ạ?'], $session->pendingClarifyQuestions());
+
+        $session = $this->answerClarify($session, ['còn sốt.']);
+
+        // The age question is already answered by the profile; the fever follow-up
+        // is not.
+        $this->assertSame(['Cơn tiêu chảy đã mấy ngày rồi ạ?'], $session->pendingClarifyQuestions());
+    }
+
+    /**
+     * Session 52 asked what medication the customer had taken in all three rounds —
+     * "đã uống thuốc gì", "đã dùng thuốc gì, uống bao lâu rồi", "uống thuốc gì
+     * không" — against three answers that all said they had taken nothing.
+     *
+     * The symptom vocabulary cannot catch this: "thuốc" is not a symptom, so
+     * deniedSymptomTerms() has nothing to match.
+     */
+    public function test_a_medication_question_is_not_reasked_after_a_denial(): void
+    {
+        $this->fakeFactSequence([
+            ['symptom_codes' => ['headache'], 'needs_more_info' => true, 'missing_questions' => ['Anh/chị đã uống thuốc gì cho chứng này chưa ạ?']],
+            [
+                'symptom_codes' => ['headache'],
+                'needs_more_info' => true,
+                'missing_questions' => ['Anh/chị đã dùng thuốc gì, uống bao lâu rồi ạ?', 'Cơn đau đầu ở vị trí nào ạ?'],
+            ],
+            ['symptom_codes' => ['headache'], 'needs_more_info' => false, 'missing_questions' => []],
+        ]);
+
+        $session = $this->runWizard([
+            1 => 'đau đầu',
+            2 => 'hôm nay',
+            3 => 'Đã dùng và có đỡ',
+            4 => 'không có',
+            5 => 'không có thêm',
+        ]);
+
+        $this->assertSame(['Anh/chị đã uống thuốc gì cho chứng này chưa ạ?'], $session->pendingClarifyQuestions());
+
+        $session = $this->answerClarify($session, ['chưa uống ạ.']);
+
+        // Only the location question survives: the medication one was answered.
+        $this->assertSame(['Cơn đau đầu ở vị trí nào ạ?'], $session->pendingClarifyQuestions());
+    }
+
+    /**
+     * Session 52 round 1 asked "Hiện tại còn sốt hoặc đi ngoài ra máu không ạ?" and
+     * the customer answered "còn sốt." — affirming fever only. Round 2 asked "Có kèm
+     * nôn hoặc đi ngoài ra máu không ạ?", repeating "đi ngoài ra máu" which the
+     * customer had just left unchosen, and the customer answered "không".
+     *
+     * Also covers the standalone "nôn" vocabulary gap: the symptom dictionary holds
+     * "buồn nôn" / "nôn ói" / "nôn ra máu", not bare "nôn", so after "Có kèm nôn
+     * không ạ?" is denied, a later question asking "Có nôn không ạ?" would slip
+     * past unless bare "nôn" is recognised.
+     */
+    public function test_a_denied_bare_vomiting_question_is_not_asked_again(): void
+    {
+        $this->fakeFactSequence([
+            ['symptom_codes' => ['diarrhea'], 'needs_more_info' => true, 'missing_questions' => ['Có kèm nôn không ạ?']],
+            [
+                'symptom_codes' => ['diarrhea'],
+                'needs_more_info' => true,
+                'missing_questions' => ['Hiện tại anh/chị có nôn không ạ?', 'Anh/chị đi ngoài mấy lần một ngày ạ?'],
+            ],
+            ['symptom_codes' => ['diarrhea'], 'needs_more_info' => false, 'missing_questions' => []],
+        ]);
+
+        $session = $this->runWizard([
+            1 => 'tiêu chảy',
+            2 => 'hôm nay',
+            3 => 'chưa uống gì',
+            4 => 'không có',
+            5 => 'không có thêm',
+        ]);
+
+        $this->assertSame(['Có kèm nôn không ạ?'], $session->pendingClarifyQuestions());
+
+        $session = $this->answerClarify($session, ['không']);
+
+        $this->assertSame(['Anh/chị đi ngoài mấy lần một ngày ạ?'], $session->pendingClarifyQuestions());
+    }
+
     public function test_the_second_round_prompt_carries_the_first_answer(): void
     {
         $this->fakeFactSequence([

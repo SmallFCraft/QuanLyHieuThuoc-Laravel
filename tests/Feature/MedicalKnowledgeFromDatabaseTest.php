@@ -183,6 +183,20 @@ class MedicalKnowledgeFromDatabaseTest extends TestCase
     }
 
     /**
+     * The row fires on "đang cho con bú" as well as on pregnancy — its own keyword list
+     * says so, and session 53 reached refer_doctor on exactly that answer. A label
+     * naming only pregnancy leaves the customer reading a flag that does not describe
+     * them.
+     */
+    public function test_the_pregnancy_flag_names_both_states_it_fires_on(): void
+    {
+        $name = (string) MedicalRedFlag::where('code', 'pregnancy_symptom')->value('name_vi');
+
+        $this->assertStringContainsString('mang thai', $name);
+        $this->assertStringContainsString('cho con bú', $name);
+    }
+
+    /**
      * Symptom aliases are matched on word boundaries, and short ones like "sot"
      * collide with everyday Vietnamese. Ordinary shopping phrases must stay clean.
      */
