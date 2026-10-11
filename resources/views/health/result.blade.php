@@ -44,6 +44,11 @@
         ['id' => 'audit', 'icon' => 'bi-list-check', 'label' => __('messages.health.hub_tab_audit')],
     ];
     $useTabs = !$session->isEmergency();
+
+    // A red flag means the referral text is the answer, and the briefing is still
+    // being written when the page first paints — opening the briefing shows a loading
+    // skeleton on top of it. The care tab opens instead; the job still runs.
+    $openTab = !empty($session->triggered_red_flags) ? 'care' : 'briefing';
 @endphp
 
 <div class="health-page py-4 py-md-5">
@@ -88,6 +93,35 @@
                 </div>
             </header>
 
+            {{-- 115 sits above everything on an emergency page, on every breakpoint. It used
+                 to live in the journey sidebar, which is display:none below 992px, so on a
+                 phone the page had no call button at all. Two pulses, then still: the
+                 motion draws the eye once and then gets out of the way. --}}
+            @if ($session->isEmergency())
+                <section class="health-emergency mb-4" aria-label="{{ __('messages.health.outcome_emergency') }}">
+                    <a href="tel:115"
+                       class="health-btn health-btn-danger health-emergency__call text-decoration-none"
+                       aria-label="{{ __('messages.health.call_emergency_aria') }}">
+                        <i class="bi bi-telephone-fill" aria-hidden="true"></i>
+                        <span>{{ __('messages.health.call_emergency') }}</span>
+                    </a>
+
+                    @if (!empty($session->triggered_red_flags))
+                        <div class="health-emergency__flags mt-3">
+                            <p class="small fw-semibold mb-2" style="color: var(--health-emergency);">{{ __('messages.health.red_flags_title') }}</p>
+                            <ul class="list-unstyled mb-0 d-flex flex-wrap gap-2">
+                                @foreach ($session->triggered_red_flags as $flag)
+                                    <li class="badge bg-white text-gray-800 border px-3 py-2 rounded-pill fw-normal"
+                                        style="white-space: normal; text-align: start; border-color: var(--health-emergency-border) !important;">
+                                        <i class="bi bi-dot" aria-hidden="true"></i>{{ $flag['name_vi'] ?? '' }}
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                </section>
+            @endif
+
             @include('health.partials.disclaimer', ['disclaimerReviewable' => $disclaimerReviewable])
 
             @if ($showDisclaimerPopup ?? false)
@@ -113,15 +147,15 @@
                  below the header, so nothing sits between a red-flag patient and 115;
                  the care tab carries no duplicate. --}}
 
-            <div class="health-hub mt-4" @if ($useTabs) data-triage-hub @endif>
+            <div class="health-hub mt-4{{ $useTabs ? '' : ' health-hub--flat' }}" @if ($useTabs) data-triage-hub @endif>
                 @if ($useTabs)
                     <nav class="health-hub__tabbar health-no-print" role="tablist" aria-label="{{ __('messages.health.hub_aria') }}">
                         @foreach ($tabs as $index => $tab)
                             <a href="#hub-{{ $tab['id'] }}"
-                               class="health-hub__tab {{ $index === 0 ? 'active' : '' }}"
+                               class="health-hub__tab {{ $tab['id'] === $openTab ? 'active' : '' }}"
                                data-bs-toggle="pill"
                                role="tab"
-                               aria-selected="{{ $index === 0 ? 'true' : 'false' }}">
+                               aria-selected="{{ $tab['id'] === $openTab ? 'true' : 'false' }}">
                                 <i class="bi {{ $tab['icon'] }}" aria-hidden="true"></i>
                                 <span>{{ $tab['label'] }}</span>
                             </a>
@@ -130,7 +164,7 @@
                 @endif
 
                 <div class="health-hub__panels">
-                    <div class="tab-pane {{ $useTabs ? 'fade show active' : '' }}" id="hub-briefing" role="tabpanel">
+                    <div class="tab-pane {{ $useTabs ? ($openTab === 'briefing' ? 'fade show active' : 'fade') : '' }}" id="hub-briefing" role="tabpanel">
                         @if ($briefing !== null)
                             @include('health.partials.briefing', [
                                 'briefing' => $briefing,
@@ -146,7 +180,7 @@
                         @endif
                     </div>
 
-                    <div class="tab-pane {{ $useTabs ? 'fade' : '' }}" id="hub-care" role="tabpanel">
+                    <div class="tab-pane {{ $useTabs ? ($openTab === 'care' ? 'fade show active' : 'fade') : '' }}" id="hub-care" role="tabpanel">
                         @include('health.partials.outcome', [
                             'session' => $session,
                             'briefing' => $briefing,

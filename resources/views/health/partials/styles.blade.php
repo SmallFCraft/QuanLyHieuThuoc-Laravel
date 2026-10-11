@@ -428,6 +428,12 @@
        so the body renders inline here with emergency tint. */
     .health-disclaimer--emergency {
         display: flex;
+        /* The base rule's space-between + wrap pushes the icon onto its own line when
+           the text column is too wide to share one — an ⓘ floating above the notice
+           with no line to belong to. This shape has two children, so they start
+           together and never wrap. */
+        justify-content: flex-start;
+        flex-wrap: nowrap;
         align-items: flex-start;
         gap: 12px;
         padding: 14px 16px;
@@ -915,6 +921,108 @@
     }
 
     .health-btn-danger:hover { background: var(--health-emergency-hover); color: #fff; }
+
+    /* --- Emergency banner ---
+       The one block that must never be missed. Opaque ground, not glass: DESIGN.md's
+       Opaque Warning Rule forbids a translucent surface on anything carrying
+       safety information, and this carries the most of it. Three signals, so the
+       level survives greyscale — the tint, the octagon, and the words. */
+    .health-emergency {
+        padding: 18px 20px;
+        border: 1.5px solid var(--health-emergency);
+        border-radius: var(--health-r-lg);
+        background: var(--health-emergency-bg);
+    }
+
+    .health-emergency__call {
+        display: flex;
+        width: 100%;
+        /* Ring in the level's own red, not a black halo: DESIGN.md's Tinted Shadow
+           Rule, and the hue that already means "call now" on this page. */
+        animation: healthEmergencyPulse 1600ms ease-out 2;
+    }
+
+    /* Twice, then still. A pulsing button reads as an emergency; a button that
+       pulses forever reads as a broken page and fights the reading of the advice
+       underneath it. Both iterations land back on the resting state, so the
+       animation can be cut at any frame without leaving a visual artifact. */
+    @keyframes healthEmergencyPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(185, 28, 28, 0); }
+        45% { box-shadow: 0 0 0 10px rgba(185, 28, 28, 0.22); }
+    }
+
+    /* --- No suitable medicine ---
+       A referral is a decision, not an empty state. The old line was a bare grey
+       paragraph between two white cards, which read as a rendering fault; this sits
+       on the level's own tint with the level's own border, so it reads as the
+       conclusion it is. Border and tint come from the outcome, never a fixed red. */
+    .health-no-products {
+        padding: 18px 20px;
+        border: 1.5px solid var(--health-line);
+        border-radius: var(--health-r-lg);
+        background: #fff;
+    }
+
+    .health-no-products--emergency {
+        border-color: var(--health-emergency-border);
+        background: var(--health-emergency-bg);
+    }
+
+    .health-no-products--refer_doctor {
+        border-color: var(--health-refer-border);
+        background: var(--health-refer-bg);
+    }
+
+    .health-no-products--pharmacist_review {
+        border-color: var(--health-pharmacist-border);
+        background: var(--health-pharmacist-bg);
+    }
+
+    .health-no-products__head {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .health-no-products__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        border-radius: var(--health-r-pill);
+        background: rgba(255, 255, 255, 0.75);
+        font-size: 1.0625rem;
+    }
+
+    .health-no-products--emergency .health-no-products__icon { color: var(--health-emergency); }
+    .health-no-products--refer_doctor .health-no-products__icon { color: var(--health-refer); }
+    .health-no-products--pharmacist_review .health-no-products__icon { color: var(--health-pharmacist); }
+    .health-no-products--self_care .health-no-products__icon { color: var(--health-selfcare); }
+
+    .health-no-products__title {
+        font-family: var(--health-display);
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--health-ink);
+    }
+
+    .health-no-products__lead {
+        font-size: 0.875rem;
+        color: var(--health-ink-soft);
+    }
+
+    /* The sentence itself, set apart from the lead by a rule rather than another
+       card: nesting a second surface here would put a card inside a card. */
+    .health-no-products__body {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(15, 23, 42, 0.08);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--health-ink);
+    }
 
     /* --- Outcome cards ---
        DESIGN.md's opaque warning card: the level's own tint across the whole surface,
@@ -1878,6 +1986,16 @@
         margin-top: 16px;
     }
 
+    /* Flat stack: an emergency page drops the tab bar (`--flat`), so all three panes
+       render at once and sit inline. Nothing separated them — the care pane's last card
+       and the audit pane's first card met at 0px, while cards inside a pane sit 24px
+       (`mt-4`) apart. `:has(*)` skips a pane that holds nothing but Blade's own
+       whitespace (`#hub-briefing` when no briefing was ever due), which would otherwise
+       pull a phantom 24px between the hub edge and the first real card. */
+    .health-hub--flat .health-hub__panels > .tab-pane:has(*) ~ .tab-pane:has(*) {
+        margin-top: 24px;
+    }
+
     /* No script: every panel reads in document order and the tab bar goes away, so
        nothing on the page looks like a control that does not work. The hub is an
        enhancement over a page whose default is "show everything". */
@@ -1963,6 +2081,12 @@
 
         .health-btn-primary:hover,
         .health-product:hover { transform: none; }
+
+        /* The pulse is a spatial effect and has no business under reduce. It carries
+           no information the red border and the words do not already carry, so it is
+           removed rather than slowed — unlike the transitions above, which only lose
+           their easing. */
+        .health-emergency__call { animation: none; }
     }
 
     /* Result page must survive Ctrl+P: users take this to an appointment. */

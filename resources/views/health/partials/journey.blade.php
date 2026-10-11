@@ -68,36 +68,25 @@
      leaves (see `.health-rail` in the stylesheet) rather than reflowing into a second
      long block at the top — the audit tab already carries the same answers in full. --}}
 <aside class="health-rail" aria-labelledby="journey-heading">
-    {{-- Above the journey, because it is the one thing on the page that can be urgent.
-         Moved here from outcome.blade.php, which is inside the "care" tab: a red flag
-         that only appears once you open a tab is a red flag the patient may never read,
-         and the rail is pinned, so this stays in sight for the whole page.
-         The 115 button and the flag list were also duplicated in outcome.blade.php;
-         this is now the single copy — nothing else on the page renders them. --}}
-    @if ($session->isEmergency() || !empty($session->triggered_red_flags))
+    {{-- Red flags stay in the pinned rail when not emergency (e.g. refer_doctor
+         cases that carry a caution). The 115 call action itself moved to the top of
+         the main content (result.blade.php): the rail is display:none on mobile, and an
+         emergency call button that disappears on a phone is an emergency defect.
+         Red flags on an emergency page are also listed there; the rail keeps them
+         when emergency is false but red flags were triggered. --}}
+    @if (!$session->isEmergency() && !empty($session->triggered_red_flags))
         <div class="health-rail__flags">
-            @if ($session->isEmergency())
-                <a href="tel:115"
-                   class="health-btn health-btn-danger d-flex align-items-center justify-content-center gap-2 text-decoration-none w-100 mb-3"
-                   aria-label="{{ __('messages.health.call_emergency_aria') }}">
-                    <i class="bi bi-telephone-fill" aria-hidden="true"></i>
-                    <span>{{ __('messages.health.call_emergency') }}</span>
-                </a>
-            @endif
-
-            @if (!empty($session->triggered_red_flags))
-                <h2 class="h6 fw-semibold text-gray-800 mb-2">{{ __('messages.health.red_flags_title') }}</h2>
-                <ul class="list-unstyled mb-0 d-flex flex-wrap gap-2">
-                    @foreach ($session->triggered_red_flags as $flag)
-                        {{-- white-space: normal — a long red-flag name has no headroom in
-                             a pill inside the sidebar's 264px track. --}}
-                        <li class="badge bg-white text-gray-800 border px-3 py-2 rounded-pill fw-normal"
-                            style="white-space: normal; text-align: start;">
-                            <i class="bi bi-dot" aria-hidden="true"></i>{{ $flag['name_vi'] ?? '' }}
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
+            <h2 class="h6 fw-semibold text-gray-800 mb-2">{{ __('messages.health.red_flags_title') }}</h2>
+            <ul class="list-unstyled mb-0 d-flex flex-wrap gap-2">
+                @foreach ($session->triggered_red_flags as $flag)
+                    {{-- white-space: normal — a long red-flag name has no headroom in
+                         a pill inside the sidebar's 264px track. --}}
+                    <li class="badge bg-white text-gray-800 border px-3 py-2 rounded-pill fw-normal"
+                        style="white-space: normal; text-align: start;">
+                        <i class="bi bi-dot" aria-hidden="true"></i>{{ $flag['name_vi'] ?? '' }}
+                    </li>
+                @endforeach
+            </ul>
         </div>
     @endif
 
