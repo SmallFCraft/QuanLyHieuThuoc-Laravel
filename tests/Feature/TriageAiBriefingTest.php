@@ -206,6 +206,66 @@ class TriageAiBriefingTest extends TestCase
         $this->assertSame('Uống đủ nước và nghỉ ngơi.', $session->ai_briefing['self_care'][0]);
     }
 
+    public function test_tool_call_markup_leaked_into_a_field_is_stripped(): void
+    {
+        // Session 64 (opencode): the model prefixed `why` with the tool-call
+        // argument tag (`<parameter>why>...`) instead of emitting clean prose.
+        // Transport noise from the provider, not content — it must not reach
+        // the customer's screen. Closing tags ride the same wire.
+        $product = $this->stockedProduct('Paracetamol 500mg', 'Paracetamol 500mg');
+
+        $this->fakeToolCall($this->fullBriefing([
+            'why' => '<parameter>why>Em ghi lại triệu chứng: đau đầu ngày thứ nhất, mức độ bình thường.',
+            'watch_for' => ['<parameter name="watch_for">Sốt cao hoặc nôn nhiều.'],
+            'products' => [
+                ['id' => $product->MaSP, 'reason' => '<parameter name="reason">Hạ sốt tại nhà, an toàn cho ca này.</parameter>'],
+            ],
+        ]));
+
+        $session = $this->generate($this->triageSession());
+
+        $this->assertSame('ok', $session->ai_briefing_status);
+        $this->assertStringNotContainsString('<parameter', $session->ai_briefing['why']);
+        $this->assertStringNotContainsString('why>', $session->ai_briefing['why']);
+        $this->assertStringContainsString('đau đầu ngày thứ nhất', $session->ai_briefing['why']);
+        $this->assertStringNotContainsString('<parameter', $session->ai_briefing['watch_for'][0]);
+
+        $reason = (string) ($session->ai_briefing['products'][0]['reason'] ?? '');
+        $this->assertStringContainsString('Hạ sốt tại nhà', $reason);
+        $this->assertStringNotContainsString('<parameter', $reason);
+        $this->assertStringNotContainsString('</parameter>', $reason);
+    }
+
+    public function test_tool_call_markup_mid_text_is_stripped(): void
+    {
+        $this->fakeToolCall($this->fullBriefing([
+            'why' => "Đoạn một bình thường.\n<parameter>why>Đoạn hai cần lưu ý.",
+        ]));
+
+        $session = $this->generate($this->triageSession());
+
+        $this->assertSame('ok', $session->ai_briefing_status);
+        $this->assertStringNotContainsString('why>', $session->ai_briefing['why']);
+        $this->assertStringNotContainsString('<parameter', $session->ai_briefing['why']);
+        $this->assertStringContainsString('Đoạn hai cần lưu ý.', $session->ai_briefing['why']);
+    }
+
+    public function test_legitimate_prose_starting_with_a_word_and_greater_than_survives(): void
+    {
+        // Clinical prose like "pH>7 cần theo dõi" or "dose>2 viên" must not lose its
+        // leading token just because it matches `word>`. The orphan strip is only for
+        // the residue of a stripped tool-argument tag (`why>`, `watch_for>`).
+        $this->fakeToolCall($this->fullBriefing([
+            'why' => "pH>7 là ngưỡng kiềm.\ndose>2 viên mỗi ngày là quá liều.",
+        ]));
+
+        $session = $this->generate($this->triageSession());
+
+        $this->assertSame('ok', $session->ai_briefing_status);
+        $this->assertStringContainsString('pH>7 là ngưỡng kiềm.', $session->ai_briefing['why']);
+        $this->assertStringContainsString('dose>2 viên mỗi ngày', $session->ai_briefing['why']);
+    }
+
     public function test_why_returned_as_array_or_json_array_is_flattened_into_readable_prose(): void
     {
         // Session 31 & 40 regression: some models (e.g. opencode) return `why` as an array

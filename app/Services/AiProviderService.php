@@ -566,10 +566,10 @@ class AiProviderService
             if ($type === 'tool_use' && $functionCall === null) {
                 $functionCall = [
                     'name' => (string) ($block['name'] ?? ''),
-                    'arguments' => json_encode(
+                    'arguments' => $this->scrubToolArgumentMarkup(json_encode(
                         is_array($block['input'] ?? null) ? $block['input'] : [],
                         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-                    ),
+                    )),
                 ];
             }
         }
@@ -731,6 +731,86 @@ class AiProviderService
         }, $functions));
     }
 
+    /**
+     * Tool-call argument tags are transport noise, not content. opencode (session 64)
+     * prefixed a value with the tag it was asked to fill — `<parameter>why>Sốt cao` or
+     * `<parameter name="why">Sốt cao` — and every consumer decodes these arguments
+     * (chatbot queries, triage briefing, triage facts), so the scrub belongs here
+     * rather than in each service that happens to display the value.
+     *
+     * Scrub the decoded values, never the encoded blob: a regex over the JSON text can
+     * run past the end of an unterminated tag and eat the fields in between (a dosage
+     * note like "Dùng <param 500mg" swallowed everything up to the next `>`), and the
+     * result is still valid JSON, so the loss is silent.
+     *
+     * Always returns a string, because that is the shape every consumer expects:
+     * TriageAiService::decodeToolCall rejects a non-string, and ChatbotService hands the
+     * value straight to json_decode. A payload with nothing to scrub is returned
+     * byte-identical.
+     */
+    protected function scrubToolArgumentMarkup(mixed $arguments): string
+    {
+        if (is_string($arguments)) {
+            $decoded = json_decode($arguments, true);
+
+            if (! is_array($decoded)) {
+                // Not a JSON object: scrub the text as-is rather than dropping it.
+                return $this->scrubTagMarkup($arguments);
+            }
+
+            [$scrubbed, $changed] = $this->scrubArgumentValues($decoded);
+
+            return $changed
+                ? json_encode($scrubbed, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                : $arguments;
+        }
+
+        // Some providers send arguments as an object/array rather than a JSON string.
+        // Consumers down the wire expect a string (TriageAiService rejects non-strings,
+        // ChatbotService passes it straight to json_decode). Normalize to a JSON string.
+        if (is_array($arguments)) {
+            [$scrubbed] = $this->scrubArgumentValues($arguments);
+
+            return (string) json_encode($scrubbed, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        return is_scalar($arguments) ? (string) $arguments : '{}';
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $values
+     * @return array{0: array<array-key, mixed>, 1: bool} the scrubbed values and whether anything changed
+     */
+    private function scrubArgumentValues(array $values): array
+    {
+        $changed = false;
+
+        array_walk_recursive($values, function (&$value) use (&$changed): void {
+            if (! is_string($value)) {
+                return;
+            }
+
+            $scrubbed = $this->scrubTagMarkup($value);
+
+            if ($scrubbed !== $value) {
+                $value = $scrubbed;
+                $changed = true;
+            }
+        });
+
+        return [$values, $changed];
+    }
+
+    /**
+     * The tag itself, then the orphaned `why>` the model leaves behind once the opening
+     * tag is gone. Runs on a plain value, where a `<param` with no closing `>` is just
+     * text and cannot match.
+     */
+    protected function scrubTagMarkup(string $text): string
+    {
+        return preg_replace('/<\/?(?:parameter|param|arg|tool_call|function_call)\b[^>]*>\s*(?:[a-z_]+>)?/iu', '', $text) ?? $text;
+    }
+
     protected function normalizeChatCompletionsResponse(array $data): array
     {
         $message = $data['choices'][0]['message'] ?? [];
@@ -739,7 +819,7 @@ class AiProviderService
             $function = $message['tool_calls'][0]['function'];
             $message['function_call'] = [
                 'name' => $function['name'] ?? '',
-                'arguments' => $function['arguments'] ?? '{}',
+                'arguments' => $this->scrubToolArgumentMarkup($function['arguments'] ?? '{}'),
             ];
         }
 
@@ -810,7 +890,7 @@ class AiProviderService
 
             return [
                 'name' => $item['name'] ?? '',
-                'arguments' => $item['arguments'] ?? '{}',
+                'arguments' => $this->scrubToolArgumentMarkup($item['arguments'] ?? '{}'),
             ];
         }
 
