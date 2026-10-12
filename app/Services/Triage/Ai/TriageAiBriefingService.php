@@ -481,9 +481,16 @@ class TriageAiBriefingService extends TriageAiService
      * Markdown is stripped rather than rejected: every display site renders with
      * {{ }} and white-space: pre-line, so markers would show as literal characters,
      * and one stray asterisk is not a reason to lose a whole briefing.
+     *
+     * Tool-call markup leaks in on the same terms. opencode (session 64) prefixes a
+     * field with the argument tag it was asked to fill — `<parameter>why>text` or
+     * `<parameter name="why">text` — which is transport noise, not content.
      */
     protected function cleanText(string $text, int $limit): string
     {
+        // The orphan name (`why>`) is only residue when it directly follows a stripped
+        // tag. A bare `pH>7` or `dose>2` is clinical prose and must survive.
+        $text = preg_replace('/<\/?(?:parameter|param|arg|tool_call|function_call)\b[^>]*>\s*(?:[a-z_]+>)?/i', '', $text) ?? $text;
         $text = preg_replace('/^\s{0,3}#{1,6}\s*/mu', '', $text) ?? $text;
         $text = preg_replace('/(\*\*|__|`)/u', '', $text) ?? $text;
         $text = preg_replace('/\[([^\]]*)\]\([^)]*\)/u', '$1', $text) ?? $text;

@@ -357,6 +357,35 @@ class AiProviderServiceTest extends TestCase
         $this->assertSame(['query' => 'vitamin c'], json_decode($functionCall['arguments'] ?? '{}', true));
     }
 
+    public function test_anthropic_tool_use_arguments_are_scrubbed_of_parameter_markup(): void
+    {
+        $this->configureProvider('anthropic_messages');
+
+        Http::fake([
+            'http://localhost:55597/v1/messages' => Http::response([
+                'content' => [
+                    ['type' => 'text', 'text' => ''],
+                    [
+                        'type' => 'tool_use',
+                        'id' => 'toolu_1',
+                        'name' => 'ghi_dien_giai',
+                        'input' => ['why' => '<parameter>why>Sốt cao hoặc nôn nhiều.'],
+                    ],
+                ],
+                'stop_reason' => 'tool_use',
+            ]),
+        ]);
+
+        $result = (new AiProviderService())->chat(
+            [['role' => 'user', 'content' => 'Xin chao']],
+            ['functions' => [['name' => 'ghi_dien_giai', 'description' => '', 'parameters' => []]]]
+        );
+
+        $functionCall = $result['choices'][0]['message']['function_call'] ?? [];
+        $this->assertStringNotContainsString('<parameter', $functionCall['arguments'] ?? '');
+        $this->assertSame(['why' => 'Sốt cao hoặc nôn nhiều.'], json_decode($functionCall['arguments'] ?? '{}', true));
+    }
+
     public function test_anthropic_messages_mode_posts_vision_payload(): void
     {
         $this->configureProvider('anthropic_messages');
@@ -480,6 +509,126 @@ class AiProviderServiceTest extends TestCase
         $this->assertSame('ghi_dien_giai', $result['choices'][0]['message']['function_call']['name']);
         $this->assertSame('{"why":"ok"}', $result['choices'][0]['message']['function_call']['arguments']);
         Http::assertSentCount(1);
+    }
+
+    /**
+     * The scrub runs over the JSON-encoded blob, so its character class must not run
+     * past the end of the offending tag. `<param` with no closing `>` is a substring a
+     * provider can legitimately return (a dosage note like "Dùng <param 500mg"), and
+     * swallowing to the next `>` in the payload deletes every field in between —
+     * silently, because the result is still valid JSON.
+     */
+    public function test_the_scrub_cannot_eat_a_neighbouring_field(): void
+    {
+        $this->configureProvider('chat_completions');
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '',
+                        'tool_calls' => [[
+                            'id' => 'call_1',
+                            'type' => 'function',
+                            'function' => [
+                                'name' => 'ghi_dien_giai',
+                                'arguments' => '{"why":"Dùng <param 500mg","reason":"a>b"}',
+                            ],
+                        ]],
+                    ],
+                    'finish_reason' => 'tool_calls',
+                ]],
+            ]),
+        ]);
+
+        $service = new AiProviderService();
+        $result = $service->chat([['role' => 'user', 'content' => 'Xin chao']]);
+        $decoded = json_decode((string) $result['choices'][0]['message']['function_call']['arguments'], true);
+
+        $this->assertIsArray($decoded);
+        $this->assertSame('Dùng <param 500mg', $decoded['why'] ?? null);
+        $this->assertSame('a>b', $decoded['reason'] ?? null);
+    }
+
+    /**
+     * A chat-completions-compatible provider may return `arguments` as an object rather
+     * than a JSON string. Casting it to string yields the literal "Array" plus a PHP
+     * warning, so every field of the tool call is lost. A non-string value must pass
+     * through unchanged.
+     */
+    public function test_arguments_returned_as_an_object_pass_through_unchanged(): void
+    {
+        $this->configureProvider('chat_completions');
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '',
+                        'tool_calls' => [[
+                            'id' => 'call_1',
+                            'type' => 'function',
+                            'function' => [
+                                'name' => 'ghi_dien_giai',
+                                'arguments' => ['why' => 'Sốt cao hoặc nôn nhiều.'],
+                            ],
+                        ]],
+                    ],
+                    'finish_reason' => 'tool_calls',
+                ]],
+            ]),
+        ]);
+
+        $service = new AiProviderService();
+        $result = $service->chat([['role' => 'user', 'content' => 'Xin chao']]);
+        $decoded = json_decode((string) $result['choices'][0]['message']['function_call']['arguments'], true);
+
+        $this->assertIsArray($decoded, 'An object-shaped payload must survive as decodable JSON, not become "Array".');
+        $this->assertSame('Sốt cao hoặc nôn nhiều.', $decoded['why'] ?? null);
+    }
+
+    /**
+     * Tool-call argument tags are transport noise, not content (session 64: opencode
+     * prefixed the `why` value with `<parameter>why>`). Every consumer decodes these
+     * arguments — chatbot queries, triage briefing, triage facts — so the scrub
+     * belongs here, once, rather than in each service that happens to display them.
+     */
+    public function test_tool_call_arguments_are_scrubbed_of_parameter_markup(): void
+    {
+        $this->configureProvider('chat_completions');
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '',
+                        'tool_calls' => [[
+                            'id' => 'call_1',
+                            'type' => 'function',
+                            'function' => [
+                                'name' => 'ghi_dien_giai',
+                                'arguments' => '{"why":"<parameter>why>Sốt cao hoặc nôn nhiều.","watch_for":["<parameter name=\"watch_for\">Đau đầu dữ dội."]}',
+                            ],
+                        ]],
+                    ],
+                    'finish_reason' => 'tool_calls',
+                ]],
+            ]),
+        ]);
+
+        $service = new AiProviderService();
+        $result = $service->chat([['role' => 'user', 'content' => 'Xin chao']]);
+        $arguments = $result['choices'][0]['message']['function_call']['arguments'];
+
+        $this->assertStringNotContainsString('<parameter', $arguments);
+        $this->assertStringNotContainsString('why>', $arguments);
+        $decoded = json_decode($arguments, true);
+        $this->assertIsArray($decoded);
+        $this->assertSame('Sốt cao hoặc nôn nhiều.', $decoded['why']);
+        $this->assertSame('Đau đầu dữ dội.', $decoded['watch_for'][0]);
     }
 
     /** The anthropic mode stands in front of the same class of dead upstream. */
