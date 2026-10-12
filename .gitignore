@@ -28,6 +28,7 @@ yarn-error.log
 /.agent
 *.zip
 /MonHoc/
+/output/
 Diagram/
 AGENTS.md
 CLAUDE.md
