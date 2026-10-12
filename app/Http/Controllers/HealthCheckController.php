@@ -627,7 +627,18 @@ class HealthCheckController extends Controller
         abort_if($session->status === 'in_progress', 404);
 
         $briefing = $this->briefingFor($session);
-        $pending = $briefing === null && $session->ai_briefing_status === null;
+
+        // A finished job is not pending, whatever the columns say. A worker that died
+        // before recording its status leaves both null while the job is `done`; reading
+        // pending off the columns alone answered 202 to every poll tick from then on,
+        // and the poller looped to its 90-attempt cap before showing the notice.
+        $jobFinished = AiJob::where('MaKH', $userId)
+            ->where('kind', AiJob::KIND_TRIAGE_BRIEFING)
+            ->where('payload->MaSL', $MaSL)
+            ->whereIn('status', ['done', 'failed', 'cancelled'])
+            ->exists();
+
+        $pending = $briefing === null && $session->ai_briefing_status === null && ! $jobFinished;
 
         // Care products only render when the briefing actually arrived: a pending
         // poll discards the 202 body, and a failed attempt drops to the unavailable
