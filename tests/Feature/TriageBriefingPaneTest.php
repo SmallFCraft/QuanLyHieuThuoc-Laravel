@@ -85,6 +85,27 @@ class TriageBriefingPaneTest extends TestCase
             ->assertSee('health-skeleton', false);
     }
 
+    public function test_a_finished_job_without_status_returns_200_unavailable_instead_of_looping_202(): void
+    {
+        // A worker that finished without recording a status (or where generate failed
+        // to write columns) leaves status null while the job itself is done. The poller
+        // sees `done` and hits the pane; if the pane returned 202 it would loop until
+        // the 90-attempt cap. It must treat a finished job as definitively done.
+        $session = $this->completedSession(['ai_briefing' => null, 'ai_briefing_status' => null]);
+        \App\Models\AiJob::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'MaKH' => $this->user->MaKH,
+            'kind' => \App\Models\AiJob::KIND_TRIAGE_BRIEFING,
+            'status' => 'done',
+            'payload' => ['MaSL' => $session->MaSL],
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('health.result.briefing-pane', $session->MaSL))
+            ->assertOk()
+            ->assertSee(__('messages.health.briefing_unavailable'), false);
+    }
+
     public function test_a_finished_briefing_returns_200_with_its_sections(): void
     {
         $session = $this->completedSession([

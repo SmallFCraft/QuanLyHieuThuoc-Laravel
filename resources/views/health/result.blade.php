@@ -323,7 +323,13 @@
                                     banner.remove();
                                 }
                             })
-                            .catch(stop);
+                            .catch(() => {
+                                // A transient failure (throttle, dropped connection) is
+                                // not "no briefing": the briefing may be written and
+                                // waiting. Keep polling; `check()` stops at the attempt
+                                // cap and only then unhides the unavailable notice.
+                                window.setTimeout(check, 1500);
+                            });
                     }
 
                     function check() {
