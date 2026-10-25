@@ -244,7 +244,7 @@ class TriageAiContextServiceTest extends TestCase
     public function test_returns_empty_string_when_nothing_is_known(): void
     {
         $session = TriageSession::create([
-            'MaKH' => User::factory()->create(['birth_date' => null])->MaKH,
+            'MaKH' => User::factory()->create(['birth_date' => null, 'gender' => null])->MaKH,
             'status' => 'pending_pharmacist',
         ]);
 

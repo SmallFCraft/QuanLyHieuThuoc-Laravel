@@ -9,6 +9,22 @@ use Illuminate\Support\Carbon;
 
 class TriageAiContextService
 {
+    /**
+     * How the customer is addressed in AI-written Vietnamese.
+     *
+     * The profile stores `male` / `female` / `other`; anything else (null, a value
+     * added later) falls back to the neutral pair the prompts already used, so a
+     * missing gender can never produce a wrong address.
+     */
+    public static function honorificFor(?string $gender): string
+    {
+        return match ($gender) {
+            'male' => 'anh',
+            'female' => 'chị',
+            default => 'anh/chị',
+        };
+    }
+
     public function __construct(
         protected AuditLogService $auditLogService,
     ) {}
@@ -21,6 +37,14 @@ class TriageAiContextService
         $age = $user?->ageInYears();
         if ($age !== null) {
             $lines[] = "- Độ tuổi bệnh nhân: {$age} tuổi (từ hồ sơ tài khoản, không hỏi lại).";
+        }
+
+        // Gender decides the honorific. Stated only when known (male/female) so a
+        // user with no profile or unknown gender gets the neutral fallback without noise.
+        $gender = $user?->gender;
+        if ($gender === 'male' || $gender === 'female') {
+            $honorific = self::honorificFor($gender);
+            $lines[] = "- Cách xưng hô với người bệnh: gọi là \"{$honorific}\".";
         }
 
         // Gate on explicit AI consent only: general profile consent is purpose-limited to
