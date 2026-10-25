@@ -78,7 +78,7 @@ class TriageAiAdviceService extends TriageAiService
             $provider = $this->provider();
 
             $response = $this->callProvider($provider, [
-                ['role' => 'system', 'content' => $this->systemPrompt()],
+                ['role' => 'system', 'content' => $this->systemPrompt(TriageAiContextService::honorificFor($session->user?->gender))],
                 ['role' => 'user', 'content' => $this->buildPrompt($session)],
             ]);
 
@@ -112,11 +112,11 @@ class TriageAiAdviceService extends TriageAiService
         }
     }
 
-    protected function systemPrompt(): string
+    protected function systemPrompt(string $honorific = 'anh/chị'): string
     {
         return implode("\n", [
             'Bạn diễn giải lại lời khuyên tự chăm sóc do dược sĩ viết, cho nhà thuốc Việt Nam.',
-            'Viết ngôi "em", gọi người đọc là "anh/chị", giọng nhẹ nhàng và rõ ràng.',
+            'Viết ngôi "em", gọi người đọc là "'.$honorific.'", giọng nhẹ nhàng và rõ ràng.',
             'TUYỆT ĐỐI KHÔNG thêm lời khuyên mới, không thêm tên thuốc, không thêm liều,',
             'không bỏ bất kỳ nội dung nào, không đổi bất kỳ con số hay ngưỡng nào.',
             'Giữ nguyên mọi con số như "39 độ", "3 ngày", "4–6 giờ".',

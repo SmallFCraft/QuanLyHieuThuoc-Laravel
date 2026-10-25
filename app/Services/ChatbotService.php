@@ -98,7 +98,9 @@ Capability policy:
 Grounding policy:
 1. Chỉ dùng dữ liệu hệ thống đã được cung cấp để trả lời về sản phẩm, danh mục, giá, tồn kho, liên kết và mô tả.
 2. Không bịa thêm giá, tồn kho, công dụng, thành phần, danh mục, link, địa chỉ hay thông tin sản phẩm khi hệ thống chưa trả về.
-3. Nếu chưa có dữ liệu phù hợp, hãy nói rõ là hiện chưa thấy trong hệ thống và gợi ý người dùng đổi từ khóa, tên thuốc, hoạt chất, công dụng hoặc danh mục.
+3. Khi nhắc đến sản phẩm, hãy giữ NGUYÊN VĂN tên đầy đủ từ hệ thống (trường name), không được tự ý rút ngắn, bỏ từ "Thuốc" hay bỏ quy cách đóng gói.
+4. TUYỆT ĐỐI KHÔNG tự viết đường link (URL) dẫn tới sản phẩm trong câu trả lời (kể cả dạng markdown [Tên](http://.../products/...)). Hệ thống sẽ tự động gắn thẻ sản phẩm có nút xem chi tiết ngay bên dưới; bạn viết link sẽ bị hỏng giao diện.
+5. Nếu chưa có dữ liệu phù hợp, hãy nói rõ là hiện chưa thấy trong hệ thống và gợi ý người dùng đổi từ khóa, tên thuốc, hoạt chất, công dụng hoặc danh mục.
 
 Safety policy:
 1. Tư vấn sức khỏe cơ bản và triệu chứng nhẹ theo cách an toàn.
@@ -685,6 +687,8 @@ PROMPT;
                 ? $this->extractSymptomQueriesFromMessage($catalogLookupMessage)
                 : [];
 
+            $context['user_id'] ??= $userId;
+
             $messages = $this->buildConversationMessages($workingMessage, $context);
             if ($isNonCatalogChitchatMessage) {
                 $messages = $this->appendNonCatalogChitchatInstruction($messages);
@@ -903,6 +907,14 @@ PROMPT;
             $responseText = $this->sanitizeAssistantResponse($responseText);
             $responseText = $this->enforceMetaResponsePolicy($workingMessage, $responseText);
             $responseText = $this->formatFriendlyProductLinks($responseText, $products);
+
+            // A turn that retrieved nothing has no product link to offer. Anything the
+            // model wrote in that shape came from its memory of an earlier turn, with a
+            // host and a label it made up.
+            if (empty($products)) {
+                $responseText = $this->stripInventedProductLinks($responseText);
+            }
+
             $responseText = $this->personalizeResponseText($responseText, $userDisplayName);
 
             if ($prependWebsiteIntro) {
@@ -1244,6 +1256,47 @@ PROMPT;
         }
 
         return $responseText;
+    }
+
+    /**
+     * Remove product links the model wrote on its own.
+     *
+     * A turn that never called the catalogue tool gets an empty product list, but the
+     * model still remembers ids from earlier turns and writes its own links:
+     * "[Sản phẩm 322](http://localhost/products/322)" — a host without the dev port,
+     * a label that is an id rather than a name, and a product this answer never
+     * looked up. Only real product cards carry a link, and they are rendered from
+     * `$products` after this runs.
+     *
+     * A `/products?category=` listing URL is not a product and is left alone.
+     */
+    protected function stripInventedProductLinks(string $responseText): string
+    {
+        if ($responseText === '' || ! str_contains($responseText, '/products/')) {
+            return $responseText;
+        }
+
+        // Markdown link whose target is a single product: drop the whole link.
+        $responseText = preg_replace(
+            '/\[([^\]]*)\]\((?:https?:\/\/[^\s)]*)?\/products\/\d+[^\s)]*\)/u',
+            '',
+            $responseText
+        ) ?? $responseText;
+
+        // Bare or parenthesised product URL the model printed as plain text.
+        $responseText = preg_replace(
+            '/\(?\s*(?:https?:\/\/[^\s)]*)?\/products\/\d+[^\s)]*\s*\)?/u',
+            '',
+            $responseText
+        ) ?? $responseText;
+
+        // Tidy what the removal left behind: empty bullets, doubled spaces, blank runs.
+        $responseText = preg_replace('/^[ \t]*[-*•]\s*$/mu', '', $responseText) ?? $responseText;
+        $responseText = preg_replace('/[ \t]{2,}/u', ' ', $responseText) ?? $responseText;
+        $responseText = preg_replace('/[ \t]+\n/u', "\n", $responseText) ?? $responseText;
+        $responseText = preg_replace("/\n{3,}/u", "\n\n", $responseText) ?? $responseText;
+
+        return trim($responseText);
     }
 
     protected function sanitizeAssistantResponse(string $responseText): string
@@ -4881,7 +4934,7 @@ PROMPT;
         $patterns = [
             '/(?:^|\s)(?:tôi|toi|mình|minh|em|anh|chị|chi|tui|tao)\s+(?:tên|ten)\s+(?:là|la)\s+(.+)$/u',
             '/(?:^|\s)(?:tôi|toi|mình|minh|em|anh|chị|chi|tui|tao)\s+(?:là|la)\s+(.+)$/u',
-            '/(?:^|\s)(?:tên|ten)\s+(?:tôi|toi|mình|minh|em)?\s*(?:là|la)?\s*(.+)$/u',
+            '/(?:^|\s)(?:tên|ten)(?:\s+(?:tôi|toi|mình|minh|em))?(?:\s+(?:là|la))?\s+(.+)$/u',
         ];
 
         $name = '';
@@ -4893,6 +4946,15 @@ PROMPT;
             $name = trim((string) ($matches[1] ?? ''));
             $name = preg_replace('/\s+/u', ' ', (string) $name);
             $name = trim((string) $name);
+
+            // "tôi là nam hay nữ?" is a question about gender, not a self-introduction:
+            // the capture is the whole clause and must not become a name. Same for a
+            // bare gender word, an occupation, or a question the customer asked.
+            if ($this->isNotAPersonName($name)) {
+                $name = '';
+                continue;
+            }
+
             $name = $this->truncateSelfIntroductionNameCandidate($name);
             if ($name !== '') {
                 break;
@@ -4906,7 +4968,8 @@ PROMPT;
         $invalidNameTokens = [
             'tôi', 'toi', 'tao', 'tui', 'mình', 'minh', 'em', 'anh', 'chị', 'chi', 'bạn', 'ban', 'mày', 'may',
             'tên', 'ten', 'là', 'la', 'đây', 'day', 'đó', 'do', 'rồi', 'roi', 'nhé', 'nhe', 'nha', 'bot', 'ai',
-            'thuốc', 'thuoc', 'sản', 'san', 'phẩm', 'pham', 'có', 'co', 'gì', 'gi'
+            'thuốc', 'thuoc', 'sản', 'san', 'phẩm', 'pham', 'có', 'co', 'gì', 'gi',
+            'và',
         ];
 
         $cleanTokens = [];
@@ -4927,6 +4990,49 @@ PROMPT;
         }
 
         return mb_convert_case(implode(' ', $cleanTokens), MB_CASE_TITLE, 'UTF-8');
+    }
+
+    /**
+     * Reject captures that are clearly not a customer's personal name.
+     *
+     * "tôi là nam hay nữ?" matches `(?:tôi là)\s+(.+)` and captures `nam hay nữ?`.
+     * Without this check, "nam" was extracted as the customer's name, so the assistant
+     * addressed them as "Nam" from then on. Same for occupations and questions.
+     */
+    protected function isNotAPersonName(string $name): bool
+    {
+        $normalized = $this->normalizeIntentText($name);
+        // Trailing particles ("nữ ạ", "nam nhé") are politeness, not part of the word.
+        $trimmed = trim(preg_replace('/\s+(?:a|ạ|à|nhe|nhé|nha|da|dạ|vay|vậy)$/u', '', $normalized) ?? $normalized);
+
+        if ($trimmed === '') {
+            return true;
+        }
+
+        // A question mark is decisive. So is a question word — but "hay" is NOT one:
+        // folding turns the imperative "hãy cho mình biết" into "hay cho minh biet",
+        // and a name capture that contains it would be dropped for the wrong reason.
+        // Gender questions are matched as the whole phrase instead.
+        if (str_contains($name, '?')
+            || preg_match('/\b(?:ai|gi|sao|khong|phai khong|dung khong)\b/u', $trimmed) === 1
+        ) {
+            return true;
+        }
+
+        if (preg_match('/^(?:nam|nu)\s+hay\s+(?:nam|nu)$/u', $trimmed) === 1) {
+            return true;
+        }
+
+        // Occupations, roles and pure-gender terms that are not common given names.
+        // "nu" (nữ) is blocked; "nam" is allowed because it is a very common given name.
+        $occupations = [
+            'nu', 'gioi tinh',
+            'bac si', 'duoc si', 'y ta', 'dieu duong', 'nhan vien', 'sinh vien',
+            'hoc sinh', 'giao vien', 'ky su', 'khach', 'khach hang', 'benh nhan',
+            'nguoi dung', 'con nguoi', 'robot', 'tro ly',
+        ];
+
+        return in_array($trimmed, $occupations, true);
     }
 
     protected function truncateSelfIntroductionNameCandidate(string $name): string
@@ -5424,6 +5530,22 @@ PROMPT;
                 'role' => 'system',
                 'content' => 'Tên người dùng trong cuộc trò chuyện này là ' . $userDisplayName . '. Khi xưng hô, hãy ưu tiên gọi đúng tên này thay vì dùng "anh/chị" nếu phù hợp với ngữ cảnh.'
             ];
+        }
+
+        $userId = (int) ($context['user_id'] ?? 0);
+        if ($userId > 0) {
+            $gender = User::where('MaKH', $userId)->value('gender');
+            if ($gender === 'male') {
+                $messages[] = [
+                    'role' => 'system',
+                    'content' => 'Người dùng là Nam. Trong suốt cuộc trò chuyện, hãy gọi người dùng là "anh" (không dùng "anh/chị") và xưng "em".'
+                ];
+            } elseif ($gender === 'female') {
+                $messages[] = [
+                    'role' => 'system',
+                    'content' => 'Người dùng là Nữ. Trong suốt cuộc trò chuyện, hãy gọi người dùng là "chị" (không dùng "anh/chị") và xưng "em".'
+                ];
+            }
         }
 
         if (isset($context['previous_messages']) && is_array($context['previous_messages'])) {
