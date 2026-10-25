@@ -1201,6 +1201,39 @@
     text-decoration: none;
     transform: translateY(-1px);
 }
+.markdown-body .chatbot-table-wrapper {
+    margin: 8px 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 8px;
+}
+.markdown-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    line-height: 1.4;
+}
+.markdown-body table th,
+.markdown-body table td {
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+    white-space: nowrap;
+}
+.markdown-body table th {
+    background: rgba(16, 185, 129, 0.1);
+    font-weight: 650;
+    color: #0f766e;
+    white-space: nowrap;
+}
+.markdown-body table tbody tr:last-child td {
+    border-bottom: none;
+}
+.markdown-body table tbody tr:nth-child(even) {
+    background: rgba(148, 163, 184, 0.08);
+}
 
 .message-actions {
     display: flex;

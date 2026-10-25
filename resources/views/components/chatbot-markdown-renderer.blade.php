@@ -132,6 +132,20 @@
             }
         });
 
+        // The chat panel is ~360px wide and a product table is 5 columns. Without a
+        // scroll container the table is squeezed until the columns collapse into each
+        // other; wrapping keeps the row height and lets the reader swipe sideways.
+        container.querySelectorAll('table').forEach((table) => {
+            if (table.parentElement && table.parentElement.classList.contains('chatbot-table-wrapper')) {
+                return;
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'chatbot-table-wrapper';
+            table.parentNode.insertBefore(wrapper, table);
+            wrapper.appendChild(table);
+        });
+
         return container.innerHTML;
     }
 
