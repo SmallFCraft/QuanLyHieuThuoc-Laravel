@@ -53,4 +53,20 @@ class ChatbotFollowUpTopicTest extends TestCase
         $this->assertFalse($this->isElliptical('cho tôi xem link paracetamol'));
         $this->assertFalse($this->isElliptical('giá thuốc ho bao nhiêu'));
     }
+
+    /**
+     * "tóm tắt lại theo dạng table" names a format, not a product.
+     *
+     * Searched as its own query it became "tóm tắt", which the catalogue matched
+     * against seven unrelated products (Photomit, a baby formula, a sheet mask), and
+     * the PHP answer builder replied before the model was ever called — so a request
+     * for a table got a numbered list.
+     */
+    public function test_a_request_to_reformat_as_a_table_is_a_follow_up(): void
+    {
+        $this->assertTrue($this->isElliptical('tóm tắt lại theo dạng table giúp tôi nhé'));
+        $this->assertTrue($this->isElliptical('tóm tắt lại thành bảng'));
+        $this->assertTrue($this->isElliptical('cho tôi xin bảng tóm tắt'));
+        $this->assertTrue($this->isElliptical('dạng bảng đi'));
+    }
 }
