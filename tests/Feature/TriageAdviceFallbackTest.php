@@ -79,9 +79,9 @@ class TriageAdviceFallbackTest extends TestCase
         return $job->refresh();
     }
 
-    public function test_a_stranded_advice_job_is_rewritten_in_the_request(): void
+    public function test_a_stranded_advice_job_is_retired_without_blocking_the_page(): void
     {
-        $this->fakeRewrite();
+        Http::preventStrayRequests();
 
         $session = $this->selfCareSession();
         $job = $this->strandedAdvice($session);
@@ -90,13 +90,18 @@ class TriageAdviceFallbackTest extends TestCase
             ->get(route('health.result', $session->MaSL))
             ->assertOk();
 
-        $session->refresh();
-        $this->assertSame('ok', $session->ai_status);
-        $this->assertNotNull($session->ai_advice);
-        $this->assertStringContainsString('nghỉ ngơi', $session->ai_advice);
-        $this->assertSame('done', $job->refresh()->status);
+        // No provider call: the rewrite never runs inside the request.
+        Http::assertNothingSent();
 
-        // The authoritative rule text is never overwritten by the rewrite.
+        $session->refresh();
+        $this->assertNull($session->ai_status);
+        $this->assertNull($session->ai_advice);
+
+        // The job is retired rather than polled forever for a worker that never comes.
+        $this->assertSame('failed', $job->refresh()->status);
+        $this->assertStringContainsString('no worker picked', $job->error);
+
+        // The pharmacist's authoritative text still renders.
         $this->assertSame(self::SOURCE_ADVICE, $session->advice_given);
     }
 
@@ -121,13 +126,12 @@ class TriageAdviceFallbackTest extends TestCase
     }
 
     /**
-     * The key regression: once the fallback has retired the job, a second page load
-     * must not re-run it. Without this the result page reload-on-stranded change
-     * becomes an infinite reload loop.
+     * The key regression: once retired for being stranded, a second page load
+     * does not retry or block. The advice job stays failed and the page loads immediately.
      */
     public function test_a_second_load_after_the_fallback_does_not_re_run_it(): void
     {
-        $this->fakeRewrite();
+        Http::preventStrayRequests();
 
         $session = $this->selfCareSession();
         $this->strandedAdvice($session);
@@ -135,9 +139,8 @@ class TriageAdviceFallbackTest extends TestCase
         $this->actingAs($this->user)->get(route('health.result', $session->MaSL))->assertOk();
 
         $session->refresh();
-        $this->assertSame('ok', $session->ai_status);
+        $this->assertNull($session->ai_status);
 
-        Http::fake();
         $second = $this->actingAs($this->user)->get(route('health.result', $session->MaSL));
 
         $second->assertOk();
