@@ -257,6 +257,10 @@ PROMPT;
         // message was searched as the literal query "cho link sản phẩm đi", found
         // nothing, and the model invented product links instead.
         'link', 'xem', 'xin', 'chi', 'tiet', 'them', 'gui', 'cho', 'dua', 'di',
+        // A request to change the presentation of what was just listed: "tóm tắt lại
+        // theo dạng table", "tóm tắt lại thành bảng". Without these the message was
+        // searched as the query "tóm tắt", which matched unrelated products.
+        'tom', 'tat', 'lai', 'table', 'bang', 'dang', 'giup', 'nhé', 'theo', 'thanh',
     ];
 
     /**
@@ -1761,7 +1765,12 @@ PROMPT;
             return null;
         }
 
-        if (!$this->isSymptomRelatedQuery($message)) {
+        // A follow-up ("tóm tắt lại theo dạng table") names a format, not a product.
+        // Resolved as a query it became "tóm tắt", which the catalogue's substring
+        // search matched against seven unrelated products, and this builder answered
+        // in PHP before the model was ever reached — so a request for a table came
+        // back as a numbered list. Hand it to the model instead.
+        if (!$this->isSymptomRelatedQuery($message) && !$this->isEllipticalFollowUpMessage($message)) {
             $query = $this->resolveCatalogQuery($message);
 
             if ($query !== '') {
@@ -5746,7 +5755,11 @@ PROMPT;
         }
 
         $tokens = $this->tokenizeNormalizedIntentText($normalized);
-        if (empty($tokens) || count($tokens) > 6) {
+        // Ten, not six: a politely phrased follow-up ("tóm tắt lại theo dạng table
+        // giúp tôi nhé") carries eight tokens, every one of them topic-free. The
+        // allow-list below is what actually decides, so the cap only guards against
+        // scanning a long paragraph.
+        if (empty($tokens) || count($tokens) > 10) {
             return false;
         }
 
