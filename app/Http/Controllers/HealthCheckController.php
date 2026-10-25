@@ -734,23 +734,12 @@ class HealthCheckController extends Controller
         // this request instead — the result page already loads once and reloads when
         // a job lands, so the cost is the first paint, not a second round trip.
         if ($job !== null && $job->isStranded()) {
-            $briefing = app(TriageAiBriefingService::class);
-
-            if (!$briefing->isEligible($session)) {
-                $this->aiJobs->abandon($job, 'session not eligible for a briefing');
-
-                return null;
-            }
-
-            try {
-                // generate() records its own status and swallows provider failures, so
-                // this reports whether the seam ran, matching ProcessTriageBriefing.
-                $briefing->generate($session);
-                $this->aiJobs->markDone($job, ['ai_briefing_status' => $session->refresh()->ai_briefing_status]);
-            } catch (\Throwable $exception) {
-                $session->forceFill(['ai_briefing_status' => 'failed'])->save();
-                $this->aiJobs->markFailed($job, $exception->getMessage());
-            }
+            // Retire, never generate here. This runs inside the result-page request on a
+            // single-process dev server with no queue worker, so an inline generate()
+            // holds every other request for the ~90s provider budget. The page renders
+            // without a briefing and the pane shows the unavailable notice; the poller
+            // still swaps one in when a worker does land.
+            $this->aiJobs->abandon($job, 'no worker picked the briefing up; result page loaded without it');
 
             return null;
         }
@@ -852,23 +841,10 @@ class HealthCheckController extends Controller
             return $job !== null && in_array($job->status, ['queued', 'running'], true) ? $job : null;
         }
 
-        $advice = app(TriageAiAdviceService::class);
-
-        if (!$advice->isEligible($session)) {
-            $this->aiJobs->abandon($job, 'session not eligible for an advice rewrite');
-
-            return null;
-        }
-
-        try {
-            // rewrite() records its own ai_status and swallows provider failures, so
-            // this reports whether the seam ran, matching ProcessTriageAdviceRewrite.
-            $advice->rewrite($session);
-            $this->aiJobs->markDone($job, ['ai_status' => $session->refresh()->ai_status]);
-        } catch (\Throwable $exception) {
-            $session->forceFill(['ai_status' => 'failed'])->save();
-            $this->aiJobs->markFailed($job, $exception->getMessage());
-        }
+        // Same rule as the briefing: retire, never rewrite here. Running the provider
+        // call inside this request holds the single-process dev server for its whole
+        // timeout, so the page renders the pharmacist's text and stops polling.
+        $this->aiJobs->abandon($job, 'no worker picked the advice rewrite up; result page loaded without it');
 
         return null;
     }

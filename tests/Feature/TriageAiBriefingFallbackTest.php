@@ -75,7 +75,7 @@ class TriageAiBriefingFallbackTest extends TestCase
         ], $attributes));
     }
 
-    public function test_stranded_briefing_job_triggers_synchronous_generation_fallback(): void
+    public function test_a_stranded_briefing_job_is_retired_and_the_page_loads_without_it(): void
     {
         $this->fakeGhiDienGiaiResponse();
 
@@ -96,26 +96,28 @@ class TriageAiBriefingFallbackTest extends TestCase
             ->get(route('health.result', $session->MaSL))
             ->assertOk();
 
+        // No provider call at all: the generation is not run in this request.
+        Http::assertNothingSent();
+
         $session->refresh();
-        $this->assertSame('ok', $session->ai_briefing_status);
-        $this->assertNotNull($session->ai_briefing);
-        $this->assertIsArray($session->ai_briefing);
-        $this->assertStringContainsString('Em kết luận tự chăm sóc', $session->ai_briefing['why']);
+        $this->assertNull($session->ai_briefing_status);
+        $this->assertNull($session->ai_briefing);
 
+        // The job is retired, not left polling forever.
         $strandedJob->refresh();
-        $this->assertSame('done', $strandedJob->status);
-        $this->assertSame('ok', $strandedJob->result['ai_briefing_status'] ?? null);
+        $this->assertSame('failed', $strandedJob->status);
+        $this->assertStringContainsString('no worker picked', $strandedJob->error);
 
-        $response->assertDontSee(__('messages.health.briefing_unavailable'), false);
-        $response->assertSee(__('messages.health.briefing_title'), false);
+        // The result page still renders; the briefing pane falls back to the notice
+        // instead of holding the request open for the provider.
+        $response->assertSee(__('messages.health.briefing_unavailable'), false);
     }
 
     /**
-     * A provider that is down must still retire the job, not leave it polled forever.
-     * The job reads `done` with a `failed` session status, exactly as the worker
-     * leaves it: the seam ran, the model was the thing that failed.
+     * A stranded job is retired without calling the provider, so even if the provider
+     * is down, the request completes immediately with the unavailable notice.
      */
-    public function test_a_provider_failure_retires_the_stranded_job(): void
+    public function test_a_stranded_job_retires_without_hitting_a_down_provider(): void
     {
         Http::fake(['*/v1/chat/completions' => Http::response('gateway down', 502)]);
 
@@ -127,8 +129,10 @@ class TriageAiBriefingFallbackTest extends TestCase
             ->assertOk()
             ->assertSee(__('messages.health.briefing_unavailable'), false);
 
-        $this->assertSame('done', $job->refresh()->status);
-        $this->assertSame('failed', $session->refresh()->ai_briefing_status);
+        // The job failed for lack of a worker, not because of the down provider.
+        $this->assertSame('failed', $job->refresh()->status);
+        $this->assertStringContainsString('no worker picked', $job->error);
+        $this->assertNull($session->refresh()->ai_briefing_status);
     }
 
     /** An emergency page was never due a briefing, so the stale job is retired outright. */
@@ -149,7 +153,6 @@ class TriageAiBriefingFallbackTest extends TestCase
 
         Http::assertNothingSent();
         $this->assertSame('failed', $job->refresh()->status);
-        $this->assertStringContainsString('not eligible', (string) $job->error);
     }
 
     /**
