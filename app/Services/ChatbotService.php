@@ -252,6 +252,11 @@ PROMPT;
         'duoc', 'chu', 'nhi', 'nhe', 'nha', 'a', 'ha', 'u', 'uh', 'oke', 'ok',
         'roi', 'thi', 'ma', 'day', 'do', 'nua', 'that', 'toi', 'minh', 'em',
         'anh', 'chi', 'ban', 'ai', 'la',
+        // "cho xem link sản phẩm đi" / "xem chi tiết đi" name no product of their
+        // own: they point at whatever the previous turn listed. Without these the
+        // message was searched as the literal query "cho link sản phẩm đi", found
+        // nothing, and the model invented product links instead.
+        'link', 'xem', 'xin', 'chi', 'tiet', 'them', 'gui', 'cho', 'dua', 'di',
     ];
 
     /**
@@ -5717,6 +5722,22 @@ PROMPT;
      * A short message that carries no topic of its own once filler is removed, so
      * it can only be read against the previous turn.
      */
+    /**
+     * QUERY_NOISE_TOKENS folded, so a token list compared against folded text matches.
+     *
+     * The constant holds accented and unaccented spellings; tokenizeNormalizedIntentText
+     * folds, so "sản"/"phẩm" arrive as "san"/"pham" and would never match the raw entry.
+     *
+     * @return array<int, string>
+     */
+    protected function normalizedNoiseTokens(): array
+    {
+        return array_values(array_unique(array_map(
+            fn (string $token): string => $this->normalizeIntentText($token),
+            self::QUERY_NOISE_TOKENS
+        )));
+    }
+
     protected function isEllipticalFollowUpMessage(string $message): bool
     {
         $normalized = $this->normalizeIntentText($message);
@@ -5729,7 +5750,13 @@ PROMPT;
             return false;
         }
 
-        return $this->onlyContainsTokens($tokens, self::ELLIPTICAL_FOLLOW_UP_TOKENS);
+        // Noise words ("sản phẩm", "cho", "xem") carry no topic either, and are already
+        // excluded from search queries for the same reason. Allowed here so
+        // "cho xem link sản phẩm đi" resolves as the follow-up it is.
+        return $this->onlyContainsTokens(
+            $tokens,
+            array_merge(self::ELLIPTICAL_FOLLOW_UP_TOKENS, $this->normalizedNoiseTokens())
+        );
     }
 
     /**
