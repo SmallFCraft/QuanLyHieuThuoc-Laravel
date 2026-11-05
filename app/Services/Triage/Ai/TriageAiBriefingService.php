@@ -79,6 +79,9 @@ class TriageAiBriefingService extends TriageAiService
         'ask_pharmacist',
     ];
 
+    /** Max lines the model may write into `data_analysis`. */
+    private const MAX_ANALYSIS_LINES = 4;
+
     public function __construct(
         protected AuditLogService $auditLogService,
         protected TriageAiContextService $contextService,
@@ -218,6 +221,16 @@ class TriageAiBriefingService extends TriageAiService
         $lines[] = $this->answerBlock($session);
         $lines[] = '--- HẾT MÔ TẢ ---';
 
+        $metrics = $session->analysisMetrics();
+        if ($metrics !== []) {
+            $lines[] = '';
+            $lines[] = '--- BẢNG SỐ LIỆU CA (chỉ được dùng đúng các số trong bảng này, không được thêm số khác) ---';
+            foreach ($metrics as $label => $value) {
+                $lines[] = $label.': '.$value;
+            }
+            $lines[] = '--- HẾT BẢNG SỐ LIỆU ---';
+        }
+
         if ($candidates !== []) {
             $lines[] = '';
             $lines[] = 'Thuốc không kê đơn nhà thuốc đang có (chỉ được chọn id trong đây):';
@@ -339,6 +352,11 @@ class TriageAiBriefingService extends TriageAiService
                 'type' => 'string',
                 'description' => 'Vì sao hệ thống kết luận như vậy, dựa trên đúng thông tin khách đã kể. 3-6 câu.',
             ],
+            'data_analysis' => [
+                'type' => 'array',
+                'items' => ['type' => 'string'],
+                'description' => 'Đọc lại BẢNG SỐ LIỆU CA thành 2-3 câu phân tích định lượng. CHỈ được dùng đúng các con số có trong bảng, không được tự thêm hay suy ra số khác (khoảng cách, phần trăm, thống kê đều cấm).',
+            ],
             'possible_causes' => [
                 'type' => 'array',
                 'items' => ['type' => 'string'],
@@ -418,6 +436,12 @@ class TriageAiBriefingService extends TriageAiService
 
         $briefing['products'] = $this->cleanProducts($raw['products'] ?? null, $candidates, $session);
 
+        // Optional and additive: stored only when the model produced a usable reading,
+        // so the stored shape of older briefings is unchanged.
+        if (($analysis = $this->cleanAnalysis($raw['data_analysis'] ?? null, $session)) !== []) {
+            $briefing['data_analysis'] = $analysis;
+        }
+
         // A briefing with only "why" and no guidance sections is thin and incomplete
         // (session 31 left 5 empty lists and the page rendered a lone heading).
         // Require why plus at least two filled guidance sections.
@@ -444,6 +468,41 @@ class TriageAiBriefingService extends TriageAiService
             ->filter(fn (string $item) => mb_strlen($item) >= 4)
             ->unique()
             ->take(self::MAX_ITEMS)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * A number the model writes that is not in the metric table is invented — the
+     * line is dropped rather than shown, the same way a hallucinated product id is.
+     *
+     * @return array<int, string>
+     */
+    protected function cleanAnalysis(mixed $items, TriageSession $session): array
+    {
+        if (! is_array($items)) {
+            return [];
+        }
+
+        $allowed = collect($session->analysisMetrics())
+            ->map(fn (mixed $value) => (string) $value)
+            ->values();
+
+        return collect($items)
+            ->filter(fn ($item) => is_string($item))
+            ->map(fn (string $item) => $this->cleanText($item, self::MAX_ITEM_LENGTH))
+            ->filter(function (string $item) use ($allowed) {
+                preg_match_all('/\d+/u', $item, $matches);
+
+                foreach (array_unique($matches[0] ?? []) as $number) {
+                    if (! $allowed->contains(fn (string $v) => str_contains($v, $number))) {
+                        return false;
+                    }
+                }
+
+                return mb_strlen($item) >= 4;
+            })
+            ->take(self::MAX_ANALYSIS_LINES)
             ->values()
             ->all();
     }

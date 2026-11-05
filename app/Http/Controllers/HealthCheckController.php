@@ -10,6 +10,7 @@ use App\Models\UserHealthProfile;
 use App\Services\AiJobService;
 use App\Services\DrugSafetyService;
 use App\Services\Triage\MedicalTriageService;
+use App\Services\Triage\TriageReportService;
 use App\Services\Triage\Ai\TriageAiAdviceService;
 use App\Services\Triage\Ai\TriageAiBriefingService;
 use Illuminate\Http\JsonResponse;
@@ -601,7 +602,79 @@ class HealthCheckController extends Controller
             'hasProfile' => $profile !== null,
             'safety' => $this->safetyCheck($session, $profile),
             'basis' => $this->decisionBasis($session),
+            'metrics' => $this->analysisMetrics($session),
         ]);
+    }
+
+    /**
+     * The result page's numeric analysis block: a rule-based risk score with its
+     * per-factor contribution bars.
+     *
+     * Computed from persisted columns only — the chart must be able to render with
+     * no AI at all, and every number the briefing's `data_analysis` writes is checked
+     * against this same table.
+     *
+     * The score is a scoring rule, not a probability: the outcome's own band anchors
+     * it (self-care 0-24 … emergency 75-100), so the number can never contradict the
+     * conclusion banner, and the label says so. Contributions are the weights the
+     * factors actually carried — this is the only place on the page those numbers
+     * exist.
+     *
+     * @return array<string, mixed>|null null when the session has no outcome yet
+     */
+    protected function analysisMetrics(TriageSession $session): ?array
+    {
+        $rank = array_search((string) $session->outcome, array_reverse(TriageReportService::OUTCOMES), true);
+
+        if ($rank === false) {
+            return null;
+        }
+
+        // Band anchor + weights are one deliberate scale, kept next to the code that
+        // applies it. Raising a weight is a clinical decision, not a tweak.
+        $bandBase = [0, 25, 50, 75][$rank];
+        $bandTop = $bandBase + 24;
+        $bandWidth = $bandTop - $bandBase + 1;
+
+        $redFlags = collect($session->triggered_red_flags ?? []);
+        $bySeverity = fn (string $severity) => $redFlags
+            ->filter(fn ($flag) => is_array($flag) && ($flag['severity'] ?? '') === $severity)
+            ->count();
+
+        $duration = (int) ($session->answerFor('duration_days') ?? 0);
+        $symptomCount = count(array_filter((array) $session->matched_symptoms));
+        $age = data_get($session->ai_meta, 'age');
+
+        $contributions = [
+            ['key' => 'redflags', 'label' => __('messages.health.analysis_factor_redflags'), 'points' => min(30, $bySeverity('emergency') * 15 + $bySeverity('urgent') * 8 + $bySeverity('caution') * 3)],
+            ['key' => 'duration', 'label' => __('messages.health.analysis_factor_duration'), 'points' => min(20, max(0, $duration - 1) * 4)],
+            ['key' => 'symptoms', 'label' => __('messages.health.analysis_factor_symptoms'), 'points' => min(15, max(0, $symptomCount - 1) * 5)],
+            ['key' => 'age', 'label' => __('messages.health.analysis_factor_age'), 'points' => $age !== null && ((int) $age >= 65 || (int) $age <= 2) ? 10 : 0],
+        ];
+        $factorTotal = array_sum(array_column($contributions, 'points'));
+
+        // Everything above the base came from measurable factors, so the position in
+        // the band is proportional to what those factors actually carried. The label
+        // shows the anchor reading: a self-care case reads low whatever the spread.
+        $score = $bandBase + (int) round($factorTotal / 75 * ($bandWidth - 1));
+        $score = min($bandTop, $score);
+
+        $barMax = max(10, $factorTotal);
+        foreach ($contributions as &$bar) {
+            $bar['width'] = $bar['points'] === 0 ? 0 : max(8, (int) round($bar['points'] / $barMax * 100));
+        }
+        unset($bar);
+
+        return [
+            'score' => $score,
+            'band_base' => $bandBase,
+            'band_top' => $bandTop,
+            'level_label' => __('messages.health.outcome_' . $session->outcome),
+            // Bars for everything: a factor that read zero shows as an empty track,
+            // because "cờ đỏ = 0" IS a measured result, not an absence of data.
+            'contributions' => $contributions,
+            'zero_contributions' => array_values(array_filter($contributions, fn (array $bar) => $bar['points'] === 0)),
+        ];
     }
 
     /**
@@ -654,6 +727,7 @@ class HealthCheckController extends Controller
             'safety' => $briefing !== null ? $this->safetyCheck($session, $profile) : [],
             'hasProfile' => $profile !== null,
             'suggestedProducts' => $briefing !== null ? $this->suggestedProductsFor($session) : [],
+            'metrics' => $this->analysisMetrics($session),
         ], $pending ? 202 : 200);
     }
 
@@ -740,6 +814,14 @@ class HealthCheckController extends Controller
             // without a briefing and the pane shows the unavailable notice; the poller
             // still swaps one in when a worker does land.
             $this->aiJobs->abandon($job, 'no worker picked the briefing up; result page loaded without it');
+
+            // Record the attempt as failed, not leave the column null: the retry gate
+            // above only opens on a non-null status, so an abandoned attempt with a
+            // null column never reached it — the session was stranded forever with a
+            // retry still in budget.
+            if (app(TriageAiBriefingService::class)->isEligible($session)) {
+                $session->forceFill(['ai_briefing_status' => 'failed'])->save();
+            }
 
             return null;
         }

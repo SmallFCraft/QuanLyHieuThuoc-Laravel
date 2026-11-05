@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
+use App\Services\Triage\TriageReportService;
 use Illuminate\Database\Eloquent\Model;
 
 class TriageSession extends Model
-{
-    protected $primaryKey = 'MaSL';
+{    protected $primaryKey = 'MaSL';
 
     protected $fillable = [
         'MaKH',
@@ -94,6 +94,55 @@ class TriageSession extends Model
     public function isEmergency(): bool
     {
         return $this->outcome === 'emergency';
+    }
+
+    /**
+     * The measured facts behind this session, for the briefing prompt's number
+     * allow-list. The controller's analysisMetrics() computes the same score for the
+     * chart; this copy keeps the numbers the model may quote.
+     *
+     * Every value is read from persisted columns — nothing re-runs the rule engine,
+     * nothing is derived from the model's output.
+     *
+     * @return array<string, int|string> label => display value; keys are Vietnamese
+     *                                      because the strings go into the model's
+     *                                      prompt as the number allow-list.
+     */
+    public function analysisMetrics(): array
+    {
+        $rank = array_search((string) $this->outcome, array_reverse(TriageReportService::OUTCOMES), true);
+        $bandBase = [0, 25, 50, 75][$rank] ?? 0;
+
+        $redFlags = collect($this->triggered_red_flags ?? []);
+        $bySeverity = fn (string $severity) => $redFlags
+            ->filter(fn ($flag) => is_array($flag) && ($flag['severity'] ?? '') === $severity)
+            ->count();
+
+        $duration = (int) ($this->answerFor('duration_days') ?? 0);
+        $symptomCount = count(array_filter((array) $this->matched_symptoms));
+        $age = data_get($this->ai_meta, 'age');
+
+        $redPoints = min(30, $bySeverity('emergency') * 15 + $bySeverity('urgent') * 8 + $bySeverity('caution') * 3);
+        $durationPoints = min(20, max(0, $duration - 1) * 4);
+        $symptomPoints = min(15, max(0, $symptomCount - 1) * 5);
+        $agePoints = $age !== null && ((int) $age >= 65 || (int) $age <= 2) ? 10 : 0;
+        $factorTotal = $redPoints + $durationPoints + $symptomPoints + $agePoints;
+        $score = min($bandBase + 24, $bandBase + (int) round($factorTotal / 75 * 24));
+
+        $metrics = [
+            'Điểm nguy cơ (thang 0-100, dải của mức này bắt đầu từ '.$bandBase.')' => $score,
+            'Cờ đỏ cấp cứu' => $bySeverity('emergency'),
+            'Cờ đỏ cần đi khám' => $bySeverity('urgent'),
+            'Cờ đỏ thận trọng' => $bySeverity('caution'),
+            'Số triệu chứng chính' => $symptomCount,
+            'Số ngày đã có triệu chứng' => $duration,
+        ];
+
+        if ($age !== null) {
+            $metrics['Tuổi người bệnh'] = (int) $age;
+        }
+
+        return $metrics;
     }
 
     public function answerFor(string $key): mixed

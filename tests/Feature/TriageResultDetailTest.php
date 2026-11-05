@@ -245,16 +245,20 @@ class TriageResultDetailTest extends TestCase
 
         $session = $this->runWizard($this->headacheAnswers());
 
-        $this->actingAs($this->user)
+        $content = $this->actingAs($this->user)
             ->get(route('health.result', $session->MaSL))
             ->assertOk()
-            ->assertSee(__('messages.health.basis_title'))
-            // Symptom shown by its Vietnamese name, never the internal code.
-            ->assertSee('đau đầu', false)
-            ->assertDontSee('headache')
-            ->assertSee(__('messages.health.basis_duration'))
-            // "No red flag" is why self-care was allowed, so it is stated.
-            ->assertSee(__('messages.health.basis_red_flags_cleared'));
+            ->getContent();
+
+        // The recorded facts live in the analysis block (score + contribution bars)
+        // inside the basis tab; the symptom name must be Vietnamese, never the code.
+        $this->assertStringContainsString(__('messages.health.analysis_title'), $content);
+        $this->assertStringContainsString(__('messages.health.analysis_factor_symptoms'), $content);
+        $this->assertStringContainsString(__('messages.health.analysis_factor_duration'), $content);
+        $this->assertStringContainsString('đau đầu', $content);
+        $this->assertStringNotContainsString('headache', $content);
+        // "No red flag" is why self-care was allowed, so it is stated.
+        $this->assertStringContainsString(__('messages.health.basis_red_flags_cleared'), $content);
     }
 
     public function test_a_triggered_red_flag_is_named_in_the_basis(): void

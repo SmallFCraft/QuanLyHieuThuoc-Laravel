@@ -1190,6 +1190,167 @@
 
     .health-brief--pending .health-brief__head { border-bottom: none; padding-bottom: 0; }
 
+    /* --- Numeric analysis block ---
+       Rule-based risk score (0-100, banded by outcome) + contribution bars.
+       Pure CSS: no chart library, no JS. The band anchors the score so the number
+       can never contradict the conclusion banner; the note says it is a scoring
+       rule, not a probability. */
+    .health-analysis {
+        margin-top: 24px;
+        padding: 16px 18px;
+        border-radius: var(--health-r-md);
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+    }
+
+    .health-analysis__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 4px 16px;
+        margin-bottom: 16px;
+    }
+
+    .health-analysis__source { color: var(--health-ink-mute); }
+
+    .health-gauge-row {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+    }
+
+    .health-gauge { position: relative; width: 128px; flex-shrink: 0; }
+
+    .health-gauge svg { display: block; width: 100%; transform: rotate(-90deg); }
+
+    .health-gauge__bg {
+        fill: none;
+        stroke: #E9EEF5;
+        stroke-width: 11;
+    }
+
+    .health-gauge__arc {
+        fill: none;
+        stroke-width: 11;
+        stroke-linecap: round;
+        transition: stroke-dashoffset var(--health-motion);
+    }
+
+    .health-gauge__arc--selfcare { stroke: var(--health-selfcare); }
+    .health-gauge__arc--pharmacist { stroke: var(--health-pharmacist); }
+    .health-gauge__arc--refer { stroke: var(--health-refer); }
+    .health-gauge__arc--emergency { stroke: var(--health-emergency); }
+
+    .health-gauge__center {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        align-content: center;
+        flex-wrap: wrap;
+        padding: 0 18px;
+    }
+
+    .health-gauge__value {
+        font-family: var(--health-display);
+        font-size: 2.375rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: var(--health-ink);
+        line-height: 1;
+    }
+
+    .health-gauge__max { font-size: 0.8125rem; font-weight: 600; color: var(--health-ink-mute); }
+
+    .health-gauge__level { font-weight: 700; color: var(--health-ink); }
+
+    .health-bands {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+    }
+
+    .health-band {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        border-radius: var(--health-r-pill);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--health-ink-mute);
+        background: #fff;
+        border: 1px solid #E2E8F0;
+    }
+
+    .health-band__range { font-weight: 500; color: var(--health-ink-mute); font-size: 0.75rem; }
+
+    .health-band.is-active { border: 1.5px solid; }
+
+    .health-band--selfcare.is-active { background: var(--health-selfcare-bg); border-color: var(--health-selfcare); color: var(--health-selfcare); }
+    .health-band--pharmacist.is-active { background: var(--health-pharmacist-bg); border-color: var(--health-pharmacist); color: var(--health-pharmacist); }
+    .health-band--refer.is-active { background: var(--health-refer-bg); border-color: var(--health-refer); color: var(--health-refer); }
+    .health-band--emergency.is-active { background: var(--health-emergency-bg); border-color: var(--health-emergency); color: var(--health-emergency); }
+
+    .health-band.is-active .health-band__range { color: inherit; opacity: 0.75; }
+
+    .health-contribution { display: grid; gap: 10px; margin-top: 18px; }
+
+    .health-contribution__row {
+        display: grid;
+        grid-template-columns: minmax(130px, 42%) 1fr 3ch;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .health-contribution__label { font-size: 0.8125rem; color: var(--health-ink-soft); }
+
+    .health-contribution__track {
+        height: 12px;
+        border-radius: 6px;
+        background: #E9EEF5;
+        overflow: hidden;
+    }
+
+    .health-contribution__fill {
+        display: block;
+        height: 100%;
+        border-radius: 6px;
+        background: linear-gradient(90deg, var(--health-accent), #0891b2);
+    }
+
+    .health-contribution__points {
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: var(--health-ink);
+        text-align: end;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* A zero factor keeps its row at full opacity for the label but mutes the
+       numbers, so "0" reads as measured-and-calm, not as missing data. */
+    .health-contribution__row.is-zero .health-contribution__label,
+    .health-contribution__row.is-zero .health-contribution__points { color: var(--health-ink-mute); font-weight: 500; }
+
+    .health-analysis__reading {
+        margin-top: 18px;
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: #fff;
+        border: 1px dashed #CBD5E1;
+    }
+
+    .health-analysis__note { margin-top: 16px; color: var(--health-ink-mute); }
+
+    @media (max-width: 575.98px) {
+        .health-gauge-row { flex-direction: column; text-align: center; gap: 12px; }
+        .health-bands { justify-content: center; }
+        .health-contribution__row { grid-template-columns: minmax(110px, 46%) 1fr 3ch; }
+    }
+
     /* --- Jump links. Six sections of prose is several screens on a phone, and this is
        the page where somebody worried has to find one specific part. --- */
     .health-brief__toc {
@@ -1933,6 +2094,9 @@
     }
 
     .health-hub__tab {
+        /* flex: 1 — three tabs share the full bar width, no dead tail on the right. */
+        flex: 1 1 0;
+        justify-content: center;
         display: inline-flex;
         align-items: center;
         gap: 8px;

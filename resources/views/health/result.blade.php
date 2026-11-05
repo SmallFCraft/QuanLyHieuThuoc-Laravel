@@ -203,10 +203,11 @@
                     </div>
 
                     <div class="tab-pane {{ $useTabs ? 'fade' : '' }}" id="hub-audit" role="tabpanel">
-                        {{-- Both details open by default inside this panel. Collapsing them
-                             made sense when they were the tail of a long column; here they
-                             ARE the tab's content, and a tab holding two closed chevrons is
-                             a tab that shows nothing. --}}
+                        {{-- The analysis IS the conclusion's basis: score + contributions
+                             first, then the recorded facts. Renders without AI. --}}
+                        @if ($metrics !== null)
+                            @include('health.partials.analysis', ['metrics' => $metrics, 'briefing' => $briefing])
+                        @endif
                         @include('health.partials.audit-trail', ['session' => $session, 'basis' => $basis])
                     </div>
                 </div>
