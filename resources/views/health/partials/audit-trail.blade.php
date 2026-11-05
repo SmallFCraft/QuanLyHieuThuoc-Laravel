@@ -13,39 +13,9 @@
         <i class="bi bi-list-check me-1" aria-hidden="true"></i>{{ __('messages.health.basis_title') }}
     </h2>
 
-    <dl class="health-basis-list mb-3">
-        @if (!empty($basis['symptoms']))
-            <div>
-                <dt>{{ __('messages.health.basis_symptoms') }}</dt>
-                <dd>{{ implode(', ', $basis['symptoms']) }}</dd>
-            </div>
-        @endif
-
-        @if ($basis['duration_days'] !== null)
-            <div>
-                <dt>{{ __('messages.health.basis_duration') }}</dt>
-                <dd>
-                    {{ (int) $basis['duration_days'] <= 1
-                        ? __('messages.health.basis_duration_today')
-                        : __('messages.health.basis_duration_days', ['days' => (int) $basis['duration_days']]) }}
-                </dd>
-            </div>
-        @endif
-
-        @if ($basis['age'] !== null)
-            <div>
-                <dt>{{ __('messages.health.basis_age') }}</dt>
-                <dd>{{ __('messages.health.basis_age_years', ['age' => (int) $basis['age']]) }}</dd>
-            </div>
-        @endif
-
-        @if ($basis['clarify_rounds'] > 0)
-            <div>
-                <dt>{{ __('messages.health.basis_clarify') }}</dt>
-                <dd>{{ __('messages.health.basis_clarify_rounds', ['count' => $basis['clarify_rounds']]) }}</dd>
-            </div>
-        @endif
-    </dl>
+    {{-- The score block above already reads the counts (symptoms, duration, age,
+         clarify rounds); this card keeps what the numbers cannot show: the red flags
+         by name, and the note about where the conclusion comes from. --}}
 
     {{-- "No red flag found" is a result, not an empty state: it is the reason
          self-care was allowed at all. --}}

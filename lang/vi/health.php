@@ -102,6 +102,24 @@ return [
     'basis_red_flags_cleared' => 'Em không thấy dấu hiệu nguy hiểm nào trong phần anh/chị mô tả.',
     'basis_note' => 'Kết luận đến từ bộ quy tắc y khoa của nhà thuốc, dựa trên đúng những thông tin trên. Thiếu thông tin nào thì kết luận sẽ dè dặt hơn.',
 
+    // Khối phân tích số liệu trên trang kết quả: điểm nguy cơ theo thang quy tắc
+    // (bị chặn trong dải của kết luận) + thanh đóng góp từng yếu tố. Số do app tính,
+    // AI chỉ được đọc lại đúng các số đó.
+    'analysis_title' => 'Phân tích số liệu ca sàng lọc',
+    'analysis_source' => 'Dựa trên :count dữ kiện đã ghi nhận của ca',
+    'analysis_score_aria' => 'Điểm nguy cơ :score trên 100 theo thang quy tắc, mức :level',
+    'analysis_score_level' => 'Mức: :level',
+    'analysis_band_note' => 'Dải điểm của mức này: :from–:to điểm',
+    'analysis_contribution_title' => 'Yếu tố đóng góp vào điểm',
+    'analysis_zero_factors' => 'Yếu tố chưa đóng góp: :factors',
+    'analysis_all_zero' => 'Không có yếu tố nào làm tăng điểm: ca này nằm ở đáy dải của mức kết luận.',
+    'analysis_factor_symptoms' => 'Số triệu chứng',
+    'analysis_factor_duration' => 'Thời gian triệu chứng',
+    'analysis_factor_redflags' => 'Cờ đỏ',
+    'analysis_factor_age' => 'Tuổi dễ tổn thương',
+    'analysis_reading_label' => 'AI đọc lại số liệu',
+    'analysis_note' => 'Điểm theo thang quy tắc của nhà thuốc, không phải xác suất y khoa. Mức kết luận vẫn do bộ quy tắc quyết định.',
+
     // Kiểm tra an toàn thuốc theo hồ sơ sức khoẻ đã khai.
     'safety_check_title' => 'Lưu ý an toàn theo hồ sơ của anh/chị',
     'safety_check_intro' => 'Em đối chiếu thành phần các thuốc gợi ý ở trên với hồ sơ sức khoẻ anh/chị đã khai:',

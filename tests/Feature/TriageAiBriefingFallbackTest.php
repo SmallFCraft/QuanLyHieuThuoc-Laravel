@@ -100,7 +100,9 @@ class TriageAiBriefingFallbackTest extends TestCase
         Http::assertNothingSent();
 
         $session->refresh();
-        $this->assertNull($session->ai_briefing_status);
+        // Recorded as failed, not left null: a null status never enters the retry
+        // gate, so an abandoned attempt was stranded forever with attempts left.
+        $this->assertSame('failed', $session->ai_briefing_status);
         $this->assertNull($session->ai_briefing);
 
         // The job is retired, not left polling forever.
@@ -111,6 +113,30 @@ class TriageAiBriefingFallbackTest extends TestCase
         // The result page still renders; the briefing pane falls back to the notice
         // instead of holding the request open for the provider.
         $response->assertSee(__('messages.health.briefing_unavailable'), false);
+    }
+
+    /** An abandoned attempt counts against the retry budget, so a later view retries once. */
+    public function test_an_abandoned_briefing_retries_on_the_next_view_when_a_worker_is_back(): void
+    {
+        $session = $this->completedSession();
+        $this->strandedBriefing($session);
+
+        // First view: no worker, the job is retired and recorded failed.
+        $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk();
+        $this->assertSame('failed', $session->refresh()->ai_briefing_status);
+
+        // Provider is up now (sync driver runs the retried job in-request).
+        $this->fakeGhiDienGiaiResponse();
+
+        $this->actingAs($this->user)
+            ->get(route('health.result', $session->MaSL))
+            ->assertOk();
+
+        $this->assertSame(2, AiJob::where('kind', AiJob::KIND_TRIAGE_BRIEFING)->count());
+        $this->assertSame('ok', $session->refresh()->ai_briefing_status);
+        $this->assertIsArray($session->ai_briefing);
     }
 
     /**
@@ -132,7 +158,7 @@ class TriageAiBriefingFallbackTest extends TestCase
         // The job failed for lack of a worker, not because of the down provider.
         $this->assertSame('failed', $job->refresh()->status);
         $this->assertStringContainsString('no worker picked', $job->error);
-        $this->assertNull($session->refresh()->ai_briefing_status);
+        $this->assertSame('failed', $session->refresh()->ai_briefing_status);
     }
 
     /** An emergency page was never due a briefing, so the stale job is retired outright. */

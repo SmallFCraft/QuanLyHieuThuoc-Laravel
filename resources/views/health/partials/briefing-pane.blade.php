@@ -1,4 +1,5 @@
 @if ($briefing !== null)
+    @include('health.partials.analysis', ['metrics' => $metrics, 'briefing' => $briefing])
     @include('health.partials.briefing', ['briefing' => $briefing])
     {{-- Rides along in the response so the poller can update the medicines tab in the
          same tick without a second round-trip: the AI briefing picks its own products,
