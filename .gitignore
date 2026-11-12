@@ -51,3 +51,18 @@ PRODUCT.md
 # Working notes and local backup
 .superpowers/
 MonHoc - Copy/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fls
+*.loa
+*.lof
+*.log
+*.lot
+*.out
+*.toc
+*.xdv
+*.fdb_latexmk
+*.synctex.gz
