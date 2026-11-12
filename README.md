@@ -12,6 +12,7 @@
 [![Tiếng Việt](https://img.shields.io/badge/Giao%20di%E1%BB%87n-Ti%E1%BA%BFng%20Vi%E1%BB%87t-E01E5A?logo=translate&logoColor=white)](#)
 
 **Repository:** [github.com/SmallFCraft/QuanLyHieuThuoc-Laravel](https://github.com/SmallFCraft/QuanLyHieuThuoc-Laravel)
+**📄 Báo cáo đồ án:** [Báo cáo đầy đủ (PDF)](docs/Bao-cao-Triage/do-an.pdf)
 
 </div>
 
@@ -24,6 +25,7 @@
 | [✨ Tính năng chính](#-tính-năng-chính) | [🚀 Cài đặt từ đầu](#-cài-đặt-từ-đầu) | [⏰ Tác vụ định kỳ](#-tác-vụ-định-kỳ) |
 | [🧰 Công nghệ sử dụng](#-công-nghệ-sử-dụng) | [⚙️ Cấu hình môi trường](#️-cấu-hình-môi-trường-env) | [🧪 Chạy kiểm thử](#-chạy-kiểm-thử) |
 | [📋 Yêu cầu môi trường](#-yêu-cầu-môi-trường) | [▶️ Chạy ứng dụng](#️-chạy-ứng-dụng) | [🛠️ Xử lý sự cố](#️-xử-lý-sự-cố-thường-gặp) |
+| [📄 Báo cáo đồ án](#-báo-cáo-đồ-an) | | |
 
 ---
 
@@ -368,6 +370,15 @@ Index phiên âm chưa dựng hoặc catalog vừa thay đổi:
 ```bash
 php artisan voice:build-phonetics
 ```
+
+---
+
+## 📄 Báo cáo đồ án
+
+> [!NOTE]
+> Đồ án học phần **AIP202 — Trí tuệ Nhân tạo** (2 tín chỉ), Khoa Công nghệ Thông tin, ĐH Kiến trúc Đà Nẵng. Đề tài: *"Xây dựng hệ thống hỗ trợ sàng lọc và phân tầng nguy cơ y tế kết hợp trí tuệ nhân tạo"*. Sinh viên: Phạm Trường Huy, Lê Văn Trung (23CT5). GVHD: TS. Đỗ Phúc Hảo.
+
+Báo cáo đầy đủ: **[docs/Bao-cao-Triage/do-an.pdf](docs/Bao-cao-Triage/do-an.pdf)** — kiến trúc Hybrid AI: bộ máy luật tất định (31 triệu chứng, 22 dấu hiệu cờ đỏ theo Manchester, 44 luật) quyết định, LLM chỉ trích xuất sự kiện và sinh nội dung diễn giải. Thực nghiệm 26 ca bệnh: không ca cấp cứu nào bị xếp xuống nhóm tự chăm sóc, xử trí an toàn lâm sàng 88,5%. Nguồn LaTeX tại [docs/Bao-cao-Triage/](docs/Bao-cao-Triage/).
 
 ---
 
