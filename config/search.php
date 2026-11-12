@@ -62,7 +62,7 @@ return [
     |
     | Nhận diện chạy trong browser (Web Speech API) — server chỉ nhận text. Đo
     | 2026-09-01: cả hai AI provider của repo đều không có STT tiếng Việt dùng
-    | được, xem docs/superpowers/specs/2026-09-01-voice-search-design.md §1.1.
+    | được, nên mọi truy vấn điều khiển bằng giọng nói chỉ gửi văn bản lên.
     */
     'voice' => [
         // Tắt thì nút mic không render và route trả 404.

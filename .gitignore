@@ -7,7 +7,6 @@
 /storage/pail
 /storage/backups
 /vendor
-/docs
 .env
 .env.backup
 .env.production
@@ -29,7 +28,12 @@ yarn-error.log
 *.zip
 /MonHoc/
 /output/
-Diagram/
+# docs/ là ghi chú nội bộ; chỉ báo cáo đồ án được public
+/docs/*
+!/docs/Bao-cao-Triage/
+!/docs/Bao-cao-Triage/**
+# zip 2MB để import Overleaf — thừa khi repo đã chứa toàn bộ nguồn LaTeX
+docs/Bao-cao-Triage/*.zip
 AGENTS.md
 CLAUDE.md
 .claude/
@@ -43,3 +47,7 @@ localhost*
 .impeccable/
 DESIGN.md
 PRODUCT.md
+
+# Working notes and local backup
+.superpowers/
+MonHoc - Copy/

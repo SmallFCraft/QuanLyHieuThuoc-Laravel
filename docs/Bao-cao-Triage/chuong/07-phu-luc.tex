@@ -1,0 +1,138 @@
+% ---------------------------------------------------------------------
+%  PHỤ LỤC
+% ---------------------------------------------------------------------
+\chapter{Phụ lục}
+\label{ch:phuluc}
+\markboth{Phụ lục}{}
+
+% Bảng/hình trong phụ lục đánh số C.1 thay vì 6.1 để rõ đây là bảng phụ lục
+\renewcommand{\thetable}{C.\arabic{table}}
+\setcounter{table}{0}
+
+\section*{A. Hướng dẫn cài đặt và chạy chương trình}
+\phantomsection
+\addcontentsline{toc}{section}{A. Hướng dẫn cài đặt và chạy chương trình}
+
+Các bước dưới đây đủ để hội đồng chạy lại toàn bộ hệ thống sàng lọc sức khỏe
+trên một máy Windows sạch, chưa từng cài đồ án.
+
+\begin{lstlisting}[language=bash, caption={Cài đặt và khởi chạy hệ thống sàng lọc sức khỏe.}]
+# Clone và cài đặt
+ git clone https://github.com/SmallFCraft/QuanLyHieuThuoc-Laravel.git pharmacy-laravel
+ cd pharmacy-laravel
+ composer install
+ npm ci && npm run build
+
+# Cấu hình PowerShell + SQLite mặc định
+ Copy-Item .env.example .env
+ php artisan key:generate
+ New-Item -ItemType File -Force database/database.sqlite
+ php artisan migrate --seed
+
+# AI tùy chọn: điền AI\_BASE\_URL / AI\_API\_KEY / AI\_MODEL trong .env
+# Không có AI, động cơ luật vẫn phân tầng; Briefing chuyển sang chờ.
+
+# Mở hai terminal để chạy app và worker
+ php artisan serve --port=8123
+ php artisan queue:work --tries=1 --timeout=120
+
+# Mở http://127.0.0.1:8123/health-check và chạy test
+ php artisan test tests/Feature/TriageAiBriefingTest.php
+# Xem README gốc để biết đầy đủ cấu hình và bộ kiểm thử.
+\end{lstlisting}
+
+\begin{luuy}
+Nếu không cấu hình khóa API, hệ thống vẫn phân tầng an toàn bằng động cơ luật
+tất định; chỉ mô-đun diễn giải AI Briefing chuyển sang trạng thái chờ.
+\end{luuy}
+
+\section*{B. Bảng tự kiểm trước khi nộp}
+\phantomsection
+\addcontentsline{toc}{section}{B. Bảng tự kiểm trước khi nộp}
+
+\begin{tukiem}
+  \item Sản phẩm chạy được trên máy khác, không chỉ trên máy của nhóm.
+  \item Đã chạy thử demo sàng lọc trên đúng môi trường sẽ dùng khi bảo vệ.
+  \item Mã nguồn nằm trên kho \code{git}, lịch sử commit trải đều tiến độ.
+  \item Có tệp \code{README}, \code{composer.json} và \code{package.json} để chạy lại.
+  \item Mọi hình, bảng đều có chú thích, có nhãn, và được nhắc tới trong thân bài.
+  \item Mọi mục tiêu ở phần Mở đầu đều được đối chiếu ở
+        Chương~\ref{ch:ketluan}.
+  \item Mọi con số trùng khớp với kết quả chạy thật tại Chương~\ref{ch:ketqua}.
+  \item Mọi tài liệu trong \code{refs.bib} đều được trích dẫn ít nhất một lần.
+  \item Đã khai báo phần có dùng công cụ AI hỗ trợ và giải thích được toàn bộ hệ thống.
+\end{tukiem}
+
+\section*{C. Chi tiết kết quả thực nghiệm 26 ca bệnh mẫu}
+\phantomsection
+\addcontentsline{toc}{section}{C. Chi tiết kết quả thực nghiệm 26 ca bệnh mẫu}
+
+Bảng~\ref{tab:bench_detail} liệt kê toàn bộ 26 ca bệnh kiểm thử, nhóm mong đợi
+và nhóm thực tế do hệ thống đưa ra ở lượt chạy thực nghiệm chính thức. Dữ liệu
+thô của cả ba lượt chạy (26 ca kiến trúc lai, 26 ca chỉ luật, 6 ca diễn giải)
+được lưu dạng JSON tại thư mục \code{benchmarks/} kèm theo báo cáo, kèm câu
+lệnh tái lập: \code{php storage/app/bench\_runner.php} (kiến trúc lai),
+\code{AI\_TRIAGE\_FACTS=false php storage/app/bench\_runner.php} (chỉ luật),
+\code{php storage/app/brief\_runner.php} (diễn giải).
+
+\begin{table}[H]
+\centering
+\caption{Chi tiết kết quả phân tầng 26 ca thực nghiệm}
+\label{tab:bench_detail}
+\small
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{|l|p{4.2cm}|l|l|l|}
+\toprule
+\textbf{Mã ca} & \textbf{Bệnh cảnh} & \textbf{Mong đợi} & \textbf{Thực tế} & \textbf{Đánh giá} \\
+\midrule
+EM\_01 & Tim mạch & Cấp cứu & Cấp cứu & Đúng \\
+EM\_02 & Đột quỵ & Cấp cứu & Dược sĩ & Thiếu hụt \\
+EM\_03 & Nhi khoa & Cấp cứu & Cấp cứu & Đúng \\
+EM\_04 & Xuất huyết tiêu hoá & Cấp cứu & Cấp cứu & Đúng \\
+EM\_05 & Phản vệ & Cấp cứu & Cấp cứu & Đúng \\
+EM\_06 & Rối loạn ý thức & Cấp cứu & Cấp cứu & Đúng \\
+\midrule
+RD\_01 & Nhiễm trùng dai dẳng & Đi khám & Đi khám & Đúng \\
+RD\_02 & Nhi khoa dưới 1 tuổi & Đi khám & Đi khám & Đúng \\
+RD\_03 & Mất nước & Đi khám & Tự chăm sóc & Thiếu hụt \\
+RD\_04 & Thần kinh kéo dài & Đi khám & Cấp cứu & Bảo thủ \\
+RD\_05 & Sản phụ khoa & Đi khám & Đi khám & Đúng \\
+\midrule
+PR\_01 & Thuốc không đáp ứng & Dược sĩ & Dược sĩ & Đúng \\
+PR\_02 & Thai kỳ & Dược sĩ & Đi khám & Bảo thủ \\
+PR\_03 & Cho con bú & Dược sĩ & Đi khám & Bảo thủ \\
+PR\_04 & Bệnh nền & Dược sĩ & Tự chăm sóc & Thiếu hụt \\
+PR\_05 & Không đặc hiệu & Dược sĩ & Dược sĩ & Đúng \\
+\midrule
+SC\_01 & Đau đầu căng thẳng & Tự chăm sóc & Tự chăm sóc & Đúng \\
+SC\_02 & Viêm họng nhẹ & Tự chăm sóc & Tự chăm sóc & Đúng \\
+SC\_03 & Cảm lạnh & Tự chăm sóc & Tự chăm sóc & Đúng \\
+SC\_04 & Khó tiêu & Tự chăm sóc & Tự chăm sóc & Đúng \\
+SC\_05 & Đau cơ & Tự chăm sóc & Dược sĩ & Bảo thủ \\
+SC\_06 & Ợ chua & Tự chăm sóc & Tự chăm sóc & Đúng \\
+SC\_07 & Khó ngủ & Tự chăm sóc & Tự chăm sóc & Đúng \\
+SC\_08 & Đau răng & Tự chăm sóc & Đi khám & Bảo thủ \\
+SC\_09 & Ngứa da & Tự chăm sóc & Tự chăm sóc & Đúng \\
+SC\_10 & Mỏi khớp & Tự chăm sóc & Tự chăm sóc & Đúng \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{D. Nhận xét của giảng viên hướng dẫn}
+\phantomsection
+\addcontentsline{toc}{section}{D. Nhận xét của giảng viên hướng dẫn}
+
+\khungnhanxet[7.5cm]
+
+\vspace{0.8em}
+\noindent\begin{minipage}[t]{0.5\textwidth}
+\color{daunavy}
+{\color{daumaroon}\bfseries Điểm số}
+
+\vspace{0.7em}
+\dongchamnhan{Bằng số:}
+
+\vspace{0.9em}
+\dongchamnhan{Bằng chữ:}
+\end{minipage}\hfill
+\okyten{\dauGVHD}{Giảng viên hướng dẫn}

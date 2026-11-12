@@ -1,0 +1,183 @@
+% ---------------------------------------------------------------------
+%  CHƯƠNG 2 — CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ
+% ---------------------------------------------------------------------
+\chapter{Cơ sở lý thuyết và công nghệ}
+\label{ch:coso}
+
+\begin{muctieu}
+Chương này trình bày các lý thuyết nền tảng về hệ chuyên gia y tế, hệ thống
+phân tầng nguy cơ lâm sàng, mô hình ngôn ngữ lớn và kỹ thuật gọi hàm có cấu
+trúc, đồng thời giới thiệu hệ sinh thái công nghệ được sử dụng để xây dựng giải pháp.
+\end{muctieu}
+
+\section{Hệ chuyên gia và suy diễn dựa trên luật}
+
+Hệ chuyên gia \en{(Expert System)} là một trong những nhánh phát triển thành
+công sớm nhất của trí tuệ nhân tạo mang tính biểu tượng \en{(Symbolic AI)}
+\cite{RussellNorvig2021, HoangKiem}. Trong y khoa, các hệ thống như MYCIN \cite{Buchanan1984}
+đã chứng minh khả năng hỗ trợ bác sĩ chẩn đoán bệnh nhiễm trùng huyết thông qua
+các luật suy diễn logic dạng \code{IF <tiền đề> THEN <kết luận>}.
+
+\begin{dinhnghia}[Hệ chuyên gia dựa trên luật]
+Hệ chuyên gia dựa trên luật \en{(Rule-based Expert System)} gồm ba thành phần cơ bản:
+\begin{enumerate}[leftmargin=1.5em, itemsep=2pt]
+  \item \textbf{Cơ sở tri thức \en{(Knowledge Base)}:} Chứa các sự kiện \en{(facts)}
+        và tập luật \en{(rules)} do chuyên gia y tế biên soạn.
+  \item \textbf{Động cơ suy diễn \en{(Inference Engine)}:} Áp dụng các thuật toán
+        suy diễn xuôi \en{(forward-chaining)} hoặc suy diễn ngược
+        \en{(backward-chaining)} để tìm lời giải từ dữ liệu đầu vào.
+  \item \textbf{Bộ nhớ làm việc \en{(Working Memory)}:} Lưu trữ trạng thái tạm thời,
+        các sự kiện đã được kích hoạt trong phiên làm việc.
+\end{enumerate}
+\end{dinhnghia}
+
+Ưu điểm tuyệt đối của hệ chuyên gia trong y tế là \textbf{tính tất định
+\en{(Determinism)}}, \textbf{tính minh bạch có thể giải thích \en{(Explainability)}}
+và \textbf{an toàn tuyệt đối}: một khi tập luật được thẩm định bởi hội đồng y khoa,
+hệ thống sẽ không bao giờ tự ý đưa ra kết luận nằm ngoài tri thức đã nạp \cite{Musen2014}.
+
+\section{Phân tầng nguy cơ y tế và giao thức Manchester}
+
+Phân loại bệnh nhân \en{(Medical Triage)} là quy trình sắp xếp thứ tự ưu tiên
+chăm sóc y tế dựa trên mức độ nghiêm trọng của bệnh nhân nhằm tối ưu hóa thời
+gian cứu chữa và sử dụng nguồn lực hiệu quả.
+
+Hệ thống phân loại Manchester \en{(Manchester Triage System - MTS)}
+\cite{Mackway2014} là tiêu chuẩn lâm sàng quốc tế phổ biến hàng đầu. MTS vận
+hành theo nguyên tắc tìm kiếm các yếu tố chỉ điểm phân biệt \en{(discriminators)},
+đặc biệt là các \textbf{dấu hiệu cờ đỏ \en{(Red Flags)}}. Trong đồ án này, quy
+chuẩn phân tầng được chuẩn hóa thành 4 nhóm kết quả:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \term{Cấp cứu \en{(Emergency)}:} Xuất hiện các dấu hiệu đe dọa tính mạng
+        như đau ngực lan toả, khó thở cấp, dấu hiệu đột quỵ FAST, sốt cao co
+        giật. Bệnh nhân cần gọi cấp cứu 115 ngay lập tức.
+  \item \term{Đi khám bác sĩ \en{(Refer Doctor)}:} Tình trạng bệnh dai dẳng hoặc có
+        nguy cơ chuyển biến nặng, cần can thiệp cận lâm sàng tại phòng khám.
+  \item \term{Tư vấn dược sĩ \en{(Pharmacist Review)}:} Các ca bệnh không rõ ràng,
+        bệnh nhân có tiền sử đặc biệt (mang thai, đang dùng nhiều thuốc), cần
+        dược sĩ chuyên môn thẩm định trực tiếp.
+  \item \term{Tự chăm sóc \en{(Self-care)}:} Các triệu chứng nhẹ, mới khởi phát,
+        có thể tự theo dõi và dùng các thuốc không kê đơn \en{(OTC)} thông thường.
+\end{itemize}
+
+Bảng~\ref{tab:manchester} tổng hợp bốn mức xử trí cùng thời gian đích tham
+chiếu theo tinh thần phân loại Manchester: mức càng nghiêm trọng thì đáp ứng
+càng phải tức thì.
+
+\begin{table}[H]
+\centering
+\caption{Bốn mức phân tầng nguy cơ và thời gian đích tham chiếu}
+\label{tab:manchester}
+\small
+\begin{tabular}{|l|l|p{5.6cm}|}
+\toprule
+\textbf{Mức xử trí} & \textbf{Thời gian đích} & \textbf{Đặc điểm nhận diện} \\
+\midrule
+Cấp cứu & Ngay lập tức (115) & Dấu hiệu đe dọa tính mạng: đau ngực dữ dội,
+khó thở cấp, đột quỵ, co giật, mất ý thức. \\
+Đi khám & Trong ngày & Bệnh dai dẳng, sốt kéo dài, dấu hiệu mất nước nặng,
+triệu chứng ở trẻ nhỏ. \\
+Tư vấn dược sĩ & Trong ngày tại nhà thuốc & Ca không rõ ràng hoặc có yếu tố
+bối cảnh: mang thai, cho con bú, đang dùng nhiều thuốc. \\
+Tự chăm sóc & Theo dõi tại nhà & Triệu chứng nhẹ mới khởi phát, đáp ứng tốt
+với thuốc OTC và nghỉ ngơi. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Các công trình liên quan}
+
+\subsection{Hệ kiểm tra triệu chứng thương mại}
+
+Lĩnh vực sàng lọc triệu chứng tự động đã có nhiều sản phẩm thương mại và nhiều
+nghiên cứu đo lường độc lập. Semigran và cộng sự \cite{Semigran2015} kiểm tra
+23 hệ kiểm tra triệu chứng trực tuyến trên 45 ca bệnh chuẩn hoá và cho thấy
+chỉ 57\% lời tư vấn phân tầng là phù hợp; đáng chú ý, xu hướng chung là
+\emph{thiên về bảo thủ} — khuyến cáo người dùng đi khám cả ở những ca vốn có
+thể tự chăm sóc. Gilbert và cộng sự \cite{Gilbert2020} so sánh 8 ứng dụng phổ
+biến (Ada, Babylon, K Health, Your.MD \dots) với 7 bác sĩ đa khoa trên 200 ca:
+không ứng dụng nào vượt được bác sĩ về độ chính xác chẩn đoán, nhưng một số ít
+ứng dụng đạt độ an toàn tư vấn ngang bác sĩ. Các tổng quan gần đây cũng nhấn mạnh
+rằng độ chính xác và độ an toàn của symptom checker phụ thuộc mạnh vào thiết kế
+bộ ca, nhãn chuẩn và cách tính over-triage/under-triage
+\cite{RiboliSasco2023, Painter2022}. Bảng~\ref{tab:related} tổng hợp so sánh
+với đồ án này.
+
+\begin{table}[H]
+\centering
+\caption{So sánh các công trình liên quan với hệ thống của đồ án}
+\label{tab:related}
+\small
+\setlength{\tabcolsep}{3.0pt}
+\begin{tabular}{|p{2.6cm}|p{3.2cm}|p{3.2cm}|p{4.6cm}|}
+\toprule
+\textbf{Hệ thống} & \textbf{Kiến trúc} & \textbf{Điểm mạnh} & \textbf{Hạn chế đồ án không kế thừa} \\
+\midrule
+MYCIN \cite{Buchanan1984} & Hệ chuyên gia luật, suy diễn ngược & Minh bạch,
+truy vết được từng luật & Giao diện hội thoại thô; không hiểu ngôn ngữ tự nhiên. \\
+Semigran 2015 \cite{Semigran2015} (23 hệ) & Đa dạng: luật hoặc ML & Tận dụng
+tri thức y khoa tĩnh & Độ chính xác tư vấn thấp (57\%); không hỗ trợ tiếng Việt. \\
+Ada, Babylon \cite{Gilbert2020} & Suy luận xác suất + tri thức lớn & Độ phủ
+bệnh học rộng, kiểm chứng lâm sàng & Hộp đen với người dùng; không thể truy
+vết về luật cụ thể. \\
+LLM y tế trực tiếp \cite{Singhal2023} & Mô hình ngôn ngữ lớn tinh chỉnh & Hiểu
+văn phong tự nhiên đa ngôn ngữ & Ảo giác; không xác định được ranh giới an toàn. \\
+\midrule
+\textbf{Đồ án này} & \textbf{Lai: luật tất định + LLM ngoại vi} & Quyết định
+truy vết về luật; kiểm duyệt đầu ra AI; tiếng Việt & Độ phủ tri thức 31 triệu
+chứng còn hẹp. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Điểm khác biệt của đồ án}
+
+Từ đối chiếu trên, đồ án chọn điểm đón đầu khác các hệ đã có: \textbf{(1)}
+mọi quyết định sinh tử đều nằm trong động cơ luật minh bạch, mỗi kết luận
+truy vết được về \code{rule\_id} cụ thể — khắc phục điểm yếu hộp đen của
+nhóm ứng dụng thương mại; \textbf{(2)} mô hình ngôn ngữ lớn chỉ đứng ở hai
+vị trí ngoại vi (đọc hiểu đầu vào, diễn giải đầu ra) và bị khoá bằng kiểm
+duyệt ở tầng mã nguồn — khắc phục rủi ro ảo giác của hướng LLM thuần;
+\textbf{(3)} hướng thẳng người dùng tiếng Việt, vốn là đối tượng chưa có hệ
+kiểm tra triệu chứng nào được kiểm chứng bài bản.
+
+\section{Mô hình ngôn ngữ lớn và kỹ thuật Tool-calling}
+
+Các mô hình ngôn ngữ lớn \en{(LLMs)} như GPT-4 hay Claude \cite{Singhal2023}
+sở hữu năng lực vượt trội trong việc hiểu văn phong tiếng Việt đời thường,
+chuyển đổi ngôn ngữ miêu tả mơ hồ của người bệnh thành các thuật ngữ khoa học.
+
+Tuy nhiên, do bản chất thống kê xác suất tiếp theo của từ \en{(next-token
+prediction)}, LLM dễ bị ảo giác \cite{Thirunavukarasu2023}. Để giải quyết hạn
+chế này, kỹ thuật \term{Gọi công cụ \en{(Tool/Function Calling)}}
+\cite{Schick2023} được áp dụng. Thay vì để LLM tự do sinh văn bản, hệ thống
+cung cấp một lược đồ JSON \en{(JSON Schema)} định nghĩa nghiêm ngặt cấu trúc đầu ra:
+
+\begin{vidu}[Lược đồ công cụ trích xuất sự kiện y tế]
+Mô hình bị ràng buộc phải trả về các tham số khớp với schema:
+\begin{itemize}[leftmargin=1.5em, itemsep=1pt]
+  \item \code{symptom\_codes}: Danh sách mã triệu chứng chuẩn hoá (\code{sot},
+        \code{dau\_dau}, \dots).
+  \item \code{duration\_days}: Số ngày khởi phát (kiểu số nguyên).
+  \item \code{has\_red\_flag}: Cờ nhị phân biểu thị sự hiện diện dấu hiệu nguy kịch.
+\end{itemize}
+\end{vidu}
+
+Nhờ kỹ thuật này, đầu ra của AI trở thành dữ liệu có cấu trúc, cho phép mã nguồn
+kiểm định tính hợp lệ \en{(validation)} và đưa vào bộ suy diễn luật một cách tin cậy.
+
+\section{Hệ sinh thái công nghệ và kiến trúc triển khai}
+
+Hệ thống được xây dựng trên nền tảng các công nghệ web hiện đại, ổn định:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Laravel 13 Framework (PHP 8.2):} Cung cấp kiến trúc MVC mạnh mẽ,
+        hệ thống Object-Relational Mapping (Eloquent ORM) tối ưu, hàng đợi tác
+        vụ bất đồng bộ \en{(Database Queue)} và bảo mật cao.
+  \item \textbf{MySQL Database:} Quản lý cơ sở dữ liệu quan hệ, hỗ trợ kiểu dữ liệu
+        JSON hiện đại và lập chỉ mục tối ưu cho các truy vấn tra cứu luật nhanh.
+  \item \textbf{OpenAI-compatible AI Service API:} Giao tiếp linh hoạt với các
+        nhà cung cấp mô hình ngôn ngữ lớn thông qua chuẩn API mở, hỗ trợ cơ chế
+        chuyển đổi dự phòng \en{(Failover Provider)} khi mất kết nối.
+  \item \textbf{Tailwind CSS:} Xây dựng giao diện hướng người dùng theo phong cách
+        Tin cậy Y tế \en{(Clinical Trust)}, trực quan và đáp ứng đa thiết bị.
+\end{itemize}

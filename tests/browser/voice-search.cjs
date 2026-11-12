@@ -5,7 +5,9 @@
  * repo này không có JS test runner và plan này không thêm dependency nào.
  *
  *   php artisan serve --port=8123      (hoặc preview_start config "pharmacy")
- *   NODE_PATH="E:/Apps/npm-global/node_modules" node tests/browser/voice-search.cjs
+ *   node tests/browser/voice-search.cjs
+ *
+ * Chi tiết cấu hình: tests/browser/README.md
  *
  * Vì sao mock SpeechRecognition: Web Speech cần mic thật và người nói thật, nên
  * các nhánh lỗi (từ chối quyền, start() ném, hết 8s im lặng) không kiểm được bằng
@@ -13,20 +15,56 @@
  */
 
 /**
- * playwright-core + executablePath tường minh: máy này không có `playwright` nào
- * resolve được (không có node_modules cục bộ, npx --package cũng trượt), còn
- * PLAYWRIGHT_BROWSERS_PATH đang giữ chromium-1237 trong khi playwright-core 1.60.0
- * đi tìm -1223. Đo 2026-09-02.
+ * playwright-core + executablePath tường minh: một số máy không có `playwright`
+ * resolve được (node_modules cục bộ vắng, npx --package trượt). Tự dò bản
+ * chromium_headless_shell mới nhất trong PLAYWRIGHT_BROWSERS_PATH (hoặc thư mục
+ * mặc định của Playwright); PW_CHROMIUM override khi browser binary nằm chỗ khác.
  */
-const CHROMIUM_EXE = process.env.PW_CHROMIUM
-    || 'E:/Apps/Browsers/Playwright/chromium_headless_shell-1243/chrome-headless-shell-win64/chrome-headless-shell.exe';
+const fs = require('fs');
+const path = require('path');
+
+function findChromium() {
+    const home = require('os').homedir();
+    const roots = [
+        process.env.PLAYWRIGHT_BROWSERS_PATH,
+        path.join(process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local'), 'ms-playwright'),
+        path.join(home, '.cache', 'ms-playwright'), // mặc định Linux/macOS
+    ].filter(Boolean);
+    for (const root of roots) {
+        if (!fs.existsSync(root)) continue;
+        const versions = fs.readdirSync(root)
+            .filter((d) => d.startsWith('chromium_headless_shell-'))
+            .sort((a, b) => Number(b.split('-')[1]) - Number(a.split('-')[1]));
+        for (const v of versions) {
+            for (const exe of [
+                path.join(root, v, 'chrome-headless-shell-win64', 'chrome-headless-shell.exe'),
+                path.join(root, v, 'chrome-linux', 'headless_shell'),
+                path.join(root, v, 'chrome-mac', 'chrome-headless-shell'),
+            ]) {
+                if (fs.existsSync(exe)) return exe;
+            }
+        }
+    }
+    return undefined; // playwright tự resolve khi cài chuẩn
+}
+
+const CHROMIUM_EXE = process.env.PW_CHROMIUM || findChromium();
 
 function loadChromium() {
     try {
         return require('playwright-core').chromium;
-    } catch {
-        // Máy có bản cài bình thường thì dùng nó.
+    } catch { /* thử nguồn tiếp theo */ }
+    try {
         return require('playwright').chromium;
+    } catch { /* thử nguồn tiếp theo */ }
+    // Cài toàn cục (npm i -g): require() không thấy, phải hỏi npm root -g.
+    try {
+        const globalRoot = require('child_process').execSync('npm root -g', { encoding: 'utf8' }).trim();
+        return require(require('path').join(globalRoot, 'playwright-core')).chromium;
+    } catch (e) {
+        throw new Error(
+            'Không resolve được playwright-core/playwright. Cài vào repo: npm install --no-save playwright-core\n' + e.message
+        );
     }
 }
 
@@ -81,7 +119,9 @@ const MOCK = () => {
 };
 
 (async () => {
-    const browser = await loadChromium().launch({ executablePath: CHROMIUM_EXE });
+    const browser = await loadChromium().launch(
+        CHROMIUM_EXE ? { executablePath: CHROMIUM_EXE } : {}
+    );
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     await context.addInitScript(MOCK);
     const page = await context.newPage();

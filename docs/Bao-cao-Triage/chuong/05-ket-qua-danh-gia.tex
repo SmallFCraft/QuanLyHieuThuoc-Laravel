@@ -1,0 +1,265 @@
+% ---------------------------------------------------------------------
+%  CHƯƠNG 5 — KẾT QUẢ VÀ ĐÁNH GIÁ
+% ---------------------------------------------------------------------
+\chapter{Kết quả và đánh giá}
+\label{ch:ketqua}
+
+\begin{muctieu}
+Chương này công bố các số liệu thực nghiệm đo lường định lượng trên tập ca
+bệnh lâm sàng thực tế, phân tích hiệu năng thời gian đáp ứng, đánh giá chất
+lượng diễn giải của mô-đun AI và bàn luận sâu sắc về các trường hợp biên an toàn.
+\end{muctieu}
+
+\section{Kết quả đạt được theo mục tiêu}
+
+Đối chiếu trực tiếp với 4 mục tiêu nghiên cứu đã xác lập ở phần Mở đầu:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Mục tiêu 1 — Chuẩn hóa tri thức}: Đã xây dựng hoàn chỉnh cơ sở
+        tri thức gồm 31 triệu chứng, 22 dấu hiệu cờ đỏ cấp cứu và 44 luật phân
+        tầng trong cơ sở dữ liệu quan hệ, phân định rành mạch 4 cấp độ xử trí.
+  \item \textbf{Mục tiêu 2 — Động cơ phân tầng an toàn}: Thuật toán suy diễn bảo
+        thủ \code{severerRule} cùng cơ chế phòng vệ kép đã ngăn chặn triệt để
+        nguy cơ hạ cấp an toàn từ AI, đạt tỷ lệ xử trí an toàn lâm sàng \textbf{88,5\%}
+        (đối chứng ở Mục~4.5 cho kết quả y hệt khi tắt hẳn lớp AI).
+  \item \textbf{Mục tiêu 3 — Diễn giải lâm sàng Tool-calling}: Dịch vụ
+        \code{TriageAiBriefing\-Service} sinh nội dung cấu trúc đạt tỷ lệ vượt
+        qua kiểm duyệt an toàn \textbf{100\%} với độ phủ trọn vẹn 5/5 nhóm
+        hướng dẫn chăm sóc trên các ca thực nghiệm.
+  \item \textbf{Mục tiêu 4 — Hiện thực hóa hệ thống}: Ứng dụng web Laravel vận
+        hành trơn tru, bộ kiểm thử tự động gồm \textbf{298 ca kiểm thử} (965 phép
+        khẳng định) đều vượt qua \en{(100\% PASS)}, kiến trúc \code{AiJob} phân
+        tách triệt để thời gian chờ của người dùng.
+\end{itemize}
+
+\section{Đánh giá định lượng động cơ phân tầng nguy cơ}
+
+Để đánh giá chính xác năng lực phân tầng của hệ thống, nhóm nghiên cứu đã xây
+dựng một bộ dữ liệu kiểm thử lâm sàng gồm \textbf{26 ca bệnh mẫu điển hình}
+bao phủ đầy đủ các bệnh cảnh y tế ban đầu:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item 6 ca cấp cứu khẩn cấp \en{(Emergency)}: Đau ngực dữ dội, nghi ngờ đột
+        quỵ, co giật sốt cao, xuất huyết tiêu hoá, sốc phản vệ, rối loạn ý thức.
+  \item 5 ca cần khám bác sĩ \en{(Refer Doctor)}: Sốt cao kéo dài trên 4 ngày,
+        viêm đường hô hấp ở trẻ 8 tháng, tiêu chảy mất nước, đau đầu kéo dài,
+        rong kinh xuất huyết.
+  \item 5 ca cần dược sĩ thẩm định \en{(Pharmacist Review)}: Bệnh nhân đã uống
+        thuốc không đỡ, phụ nữ mang thai, mẹ cho con bú, người bệnh mạn tính
+        đang dùng nhiều thuốc, triệu chứng không đặc hiệu.
+  \item 10 ca tự chăm sóc tại nhà \en{(Self-care)}: Đau đầu căng thẳng, viêm họng
+        nhẹ, cảm lạnh thông thường, khó tiêu, đau mỏi cơ sau tập luyện, ợ chua
+        nhẹ, khó ngủ, đau răng cơ học, ngứa da tiếp xúc, mỏi khớp nhẹ.
+\end{itemize}
+
+\subsection{Tiêu chuẩn đánh giá trong an toàn y tế}
+
+Trong phân tầng y tế, sai số phân loại được chia thành hai bản chất đối lập:
+\begin{enumerate}[leftmargin=1.6em, itemsep=2pt]
+  \item \term{Phân tầng bảo thủ (Over-triage)}: Hệ thống xếp ca bệnh vào mức độ
+        nghiêm trọng \emph{cao hơn} thực tế (ví dụ: ca tự chăm sóc được chuyển
+        lên dược sĩ hoặc bác sĩ). Sai số này được y khoa chấp nhận vì \textbf{bảo
+        vệ tính mạng người bệnh}.
+  \item \term{Phân tầng thiếu hụt (Under-triage)}: Hệ thống xếp ca bệnh vào mức
+        độ \emph{thấp hơn} thực tế (ví dụ: ca cấp cứu bị xếp vào tự chăm sóc).
+        Đây là \textbf{sai số nguy hiểm nghiêm trọng} bị nghiêm cấm trong thiết kế y khoa.
+\end{enumerate}
+
+\subsection{Kết quả thực nghiệm trên 26 ca bệnh}
+
+Kết quả chạy thực tế trên toàn bộ 26 ca bệnh được tổng hợp tại Bảng~\ref{tab:bench_triage}.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả phân tầng nguy cơ lâm sàng trên tập 26 ca kiểm thử}
+\label{tab:bench_triage}
+\small
+\begin{tabular}{|p{6.0cm}|r|r|p{4.8cm}|}
+\toprule
+\textbf{Chỉ số đánh giá} & \textbf{Số lượng} & \textbf{Tỷ lệ} & \textbf{Ý nghĩa lâm sàng} \\
+\midrule
+Khớp nhãn chính xác tuyệt đối \en{(Exact)} & 18 / 26 & \textbf{69,2\%} & Kết luận chuẩn xác theo khuyến nghị. \\
+Phân tầng bảo thủ an toàn \en{(Over-triage)} & 5 / 26 & \textbf{19,2\%} & Nâng mức cảnh báo để bảo đảm an toàn. \\
+Phân tầng thiếu hụt \en{(Under-triage)} & 3 / 26 & \textbf{11,5\%} & Bỏ sót cờ đỏ do rào cản từ khoá. \\
+\midrule
+\textbf{Tổng tỷ lệ xử trí an toàn lâm sàng} & \textbf{23 / 26} & \textbf{88,5\%} & Không gây nguy hiểm tính mạng. \\
+\textbf{Độ nhạy phát hiện cấp cứu (Recall)} & \textbf{5 / 6} & \textbf{83,3\%} & Bắt cờ đỏ 115 lập tức. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Ma trận nhầm lẫn \en{(Confusion Matrix)} phân định rõ xu hướng phân loại của hệ
+thống trên từng nhóm:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{10 ca tự chăm sóc}: 8 ca xác nhận \code{self\_care}; 1 ca đau cơ
+        được nâng lên \code{pharmacist\_review} và 1 ca đau răng được chuyển
+        sang \code{refer\_doctor} do luật cơ sở tri thức quy định triệu chứng nha
+        khoa cần can thiệp nha sĩ. Cả hai đều là sai số bảo thủ, không nguy hiểm.
+  \item \textbf{6 ca cấp cứu}: 5 ca bắt đúng \code{emergency}; 1 ca đột quỵ
+        (EM\_02) rơi xuống \code{pharmacist\_review} vì từ điển cờ đỏ còn thiếu
+        các từ khoá thang điểm FAST.
+  \item \textbf{5 ca cần đi khám}: 3 ca đúng; 1 ca (RD\_04, đau đầu kèm mờ mắt)
+        được đẩy lên \code{emergency} — bảo thủ, an toàn; 1 ca (RD\_03, tiêu chảy
+        mất nước) rơi xuống \code{self\_care} do thiếu từ khoá mất nước.
+  \item \textbf{5 ca cần dược sĩ thẩm định}: 2 ca đúng; 2 ca (thai kỳ, cho con
+        bú) được đẩy lên \code{refer\_doctor} — bảo thủ, an toàn; 1 ca (PR\_04,
+        đau dạ dày ở người đang dùng thuốc huyết áp) rơi xuống \code{self\_care}
+        vì bộ luật chưa có nhánh cho tình trạng bệnh nền đa thuốc.
+\end{itemize}
+
+\section{Đánh giá chất lượng diễn giải lâm sàng (AI Briefing)}
+
+Thực nghiệm gọi trực tiếp dịch vụ \code{TriageAiBriefingService} qua cổng API mô
+hình ngôn ngữ lớn trên 6 phiên sàng lọc thực tế, ghi nhận các chỉ số tại
+Bảng~\ref{tab:bench_briefing}.
+
+\begin{table}[H]
+\centering
+\caption{Đo lường chất lượng và độ phủ nội dung của mô-đun AI Briefing}
+\label{tab:bench_briefing}
+\small
+\setlength{\tabcolsep}{3.6pt}
+\begin{tabular}{|c|l|c|r|r|c|c|}
+\toprule
+\textbf{Mã ca} & \textbf{Nhóm xử trí} & \textbf{Trạng thái} & \textbf{Độ dài lý do} & \textbf{Số mục} & \textbf{Độ phủ} & \textbf{Thời gian} \\
+\midrule
+B\_01 & Tự chăm sóc & \code{ok} & 514 ký tự & 28 mục & 5 / 5 & 8,0 s \\
+B\_02 & Tự chăm sóc & \code{ok} & 534 ký tự & 27 mục & 5 / 5 & 9,8 s \\
+B\_03 & Tự chăm sóc & \code{ok} & 388 ký tự & 16 mục & 5 / 5 & 13,9 s \\
+B\_04 & Tự chăm sóc & \code{ok} & 374 ký tự & 18 mục & 5 / 5 & 13,7 s \\
+B\_05 & Đi khám & \code{ok} & 641 ký tự & 29 mục & 5 / 5 & 10,4 s \\
+B\_06 & Đi khám & \code{ok} & 538 ký tự & 27 mục & 5 / 5 & 8,4 s \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{Trung bình}} & \textbf{100\% ok} & \textbf{498 ký tự} & \textbf{24,2 mục} & \textbf{5,0 / 5} & \textbf{10,7 s} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Nhận xét kết quả}:
+\begin{enumerate}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Độ phủ thông tin hoàn hảo}: Toàn bộ 6/6 ca đều đạt mức tối đa
+        5/5 danh mục lâm sàng, cung cấp trung bình hơn 24 lời khuyên thực tiễn
+        cho người bệnh.
+  \item \textbf{Lý do phân tầng thuyết phục}: Đoạn văn \emph{«Vì sao em kết luận
+        như vậy»} đạt độ dài trung bình gần 500 ký tự (khoảng 4--5 câu), bám sát đúng
+        triệu chứng người dùng kể mà không tự ý suy diễn bệnh danh.
+  \item \textbf{Hiệu quả của bộ kiểm duyệt \code{sanitize()}}: Sau khi tinh chỉnh
+        điều kiện kiểm duyệt tại tầng ứng dụng (yêu cầu bắt buộc có lý do và tối
+        thiểu 2 danh mục), 100\% kết quả lưu trữ đều đầy đủ và mạch lạc, xóa bỏ
+        hoàn toàn hiện tượng giao diện hiển thị tiêu đề mồ côi rỗng nội dung.
+\end{enumerate}
+
+\section{Đo lường thời gian đáp ứng và hiệu năng hệ thống}
+
+Hình~\ref{fig:latency} trực quan hoá độ trễ của ba thành phần theo thang logarit
+(vì chênh lệch giữa động cơ luật và lớp AI lên tới nhiều bậc độ lớn, thang tuyến
+tính sẽ làm biến mất cột đầu tiên). Số liệu chi tiết từ cùng một lượt chạy
+26 ca và 6 ca diễn giải:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Động cơ luật tất định}: Trên 10 ca không cần gọi AI, thời gian
+        thực thi dao động từ \textbf{1,5~ms đến 27,0~ms} (trung bình 4,2~ms).
+        Tốc độ cực nhanh cho phép trả về quyết định phân tầng cho người dùng gần
+        như tức thì.
+  \item \textbf{Mô-đun trích xuất sự kiện LLM (Chặng 1)}: Trên 16 ca còn lại,
+        dao động từ \textbf{1,7~s đến 9,5~s} (trung vị 4,2~s).
+  \item \textbf{Mô-đun diễn giải AI Briefing (Chặng 3)}: Dao động từ
+        \textbf{8,0~s đến 13,9~s} (trung bình 10,7~s) do phải sinh nhiều trường
+        văn bản chi tiết trong một lần gọi công cụ.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{semilogyaxis}[
+  width=0.86\textwidth, height=6.2cm,
+  ybar, bar width=26pt,
+  symbolic x coords={Động cơ luật, LLM trích xuất, AI Briefing},
+  xtick=data, ymin=0.001, ymax=200,
+  ylabel={Thời gian xử lý (giây)},
+  nodes near coords={},
+  enlarge x limits=0.28,
+  every axis plot/.append style={fill=lightnavy, draw=daunavy},
+]
+\addplot coordinates {(Động cơ luật, 0.0042) (LLM trích xuất, 4.2) (AI Briefing, 10.7)};
+\end{semilogyaxis}
+\end{tikzpicture}
+\caption{Độ trễ trung bình của ba thành phần (thang logarit): động cơ luật
+4,2~ms; LLM trích xuất 4,2~s; AI Briefing 10,7~s}
+\label{fig:latency}
+\end{figure}
+
+\section{Thí nghiệm đối chứng: vai trò của lớp AI trong kết quả phân tầng}
+
+Để trả lời câu hỏi \emph{«lớp AI đóng góp gì ngoài tốc độ?»}, chúng tôi chạy lại
+đúng 26 ca trên hai cấu hình: (1) \textbf{chỉ động cơ luật} — tắt trích xuất AI
+qua công tắc môi trường \code{AI\_TRIAGE\_FACTS=false}; (2) \textbf{kiến trúc lai
+đầy đủ}. Kết quả ở Bảng~\ref{tab:ablation}.
+
+\begin{table}[H]
+\centering
+\caption{Đối chứng hai cấu hình phân tầng trên cùng 26 ca}
+\label{tab:ablation}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{|l|r|r|r|r|r|}
+\toprule
+\textbf{Cấu hình} & \textbf{Exact} & \textbf{Over} & \textbf{Under} & \textbf{Recall} & \textbf{Độ trễ TB} \\
+\midrule
+Chỉ động cơ luật & 18 / 26 & 5 & 3 & 83,3\% & 0,2~s \\
+Kiến trúc lai (luật + AI) & 18 / 26 & 5 & 3 & 83,3\% & 3,1~s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Hai cấu hình cho \textbf{kết quả phân tầng đồng nhất tuyệt đối trên cả 26 ca} —
+không một ca nào đổi nhóm khi bật hay tắt AI. Đây chính bằng chứng thực nghiệm
+cho nguyên tắc thiết kế đã nêu ở Chương~\ref{ch:thietke}: \textbf{AI không bao
+giờ được phép thay đổi kết luận an toàn}, hàm \code{severerRule} (Giải
+thuật~\ref{alg:severer}) đảm bảo đầu ra AI chỉ có thể nâng mức nghiêm trọng,
+mà trên bộ ca này mọi sự kiện AI trích xuất được đều đã nằm trong luật khớp
+từ biểu thức chính quy. Chi phí duy nhất của lớp AI là thời gian (3,1~s so với
+0,2~s) — và đó là lý do kiến trúc tách lớp AI ra khỏi đường phản hồi đồng bộ.
+Đóng góp thực sự của LLM nằm ở chỗ khác: hiểu lời kể tiếng Việt tự nhiên mà
+biểu thức chính quy bỏ sót (từ đồng nghĩa, cách nói dân gian), và sinh lời diễn
+giải lâm sàng — hai năng lực được đo ở Mục~4.3.
+
+Kết quả đo đạc này chứng minh về mặt khoa học rằng việc tách kiến trúc thành hai
+tầng xử lý: \textbf{đồng bộ cho quyết định an toàn} và \textbf{bất đồng bộ cho
+diễn giải AI} là quyết định thiết kế tối ưu và hoàn toàn chính xác.
+
+\section{Bàn luận và phân tích các trường hợp biên}
+
+Phân tích sâu ba trường hợp phân tầng thiếu hụt \en{(Under-triage)} trong thực nghiệm:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Ca EM\_02 (Đột quỵ)}: Người dùng mô tả \emph{«méo miệng, yếu liệt
+        nửa người và nói khó»}. Hệ thống xếp vào \code{pharmacist\_review} vì bộ
+        từ điển cờ đỏ \code{medical\_red\_flags} hiện tại chưa nạp các từ khóa
+        dấu hiệu FAST kinh điển của đột quỵ (chỉ mới có ngất, co giật, nôn ra
+        máu). Dù không bị xếp vào tự chăm sóc, việc không kích hoạt ngay cấp cứu
+        115 là một bài học đắt giá về việc mở rộng tập từ khóa cờ đỏ.
+  \item \textbf{Ca RD\_03 (Tiêu chảy mất nước)}: Người dùng mô tả \emph{«tiêu chảy
+        8 lần, kiệt sức, mắt trũng, khát nước»}. Hệ thống khớp triệu chứng tiêu
+        chảy và đưa về luật tự chăm sóc vì các từ khóa cờ đỏ mất nước hiện tại
+        yêu cầu cụm từ tường minh \emph{«mất nước»} hoặc \emph{«tiểu ít»}.
+  \item \textbf{Ca PR\_04 (Bệnh nền đa thuốc)}: Người dùng mô tả \emph{«đau dạ dày
+        mà đang phải uống thuốc huyết áp hàng ngày»}. Hệ thống khớp luật tự chăm
+        sóc của triệu chứng đau dạ dày, vì bộ luật hiện chỉ nâng mức theo tuổi,
+        thời gian kéo dài, thai kỳ và việc đã dùng thuốc không đỡ — chưa có nhánh
+        nào xét \textbf{tình trạng bệnh nền đa thuốc} của hồ sơ sức khỏe. Đây là
+        lỗ hổng thuộc cơ sở tri thức, không phải thuật toán.
+\end{itemize}
+
+\section{Hạn chế của hệ thống}
+
+\begin{enumerate}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Độ phủ của từ điển từ khóa cờ đỏ}: Vẫn còn phụ thuộc vào các cụm
+        từ biểu thức chính quy tĩnh, dễ bỏ sót cách hành văn địa phương hoặc lối
+        nói ẩn dụ dân gian về bệnh tật.
+  \item \textbf{Độ trễ của dịch vụ AI bên thứ ba}: Thời gian sinh lời diễn giải
+        phụ thuộc vào hạ tầng mạng Internet và độ ổn định của nhà cung cấp mô
+        hình ngôn ngữ lớn bên ngoài.
+  \item \textbf{Phạm vi dữ liệu dược lâm sàng}: Hệ thống hiện mới tập trung vào
+        nhóm thuốc không kê đơn OTC thông dụng, chưa tích hợp tương tác thuốc
+        chuyên sâu giữa thuốc tân dược và bệnh học đa mạn tính phức tạp.
+  \item \textbf{Khả năng khái quát}: Kết quả 26 ca là thực nghiệm nội bộ, không
+        thay thế kiểm định đa trung tâm; các nghiên cứu thực địa cũng đối chiếu
+        symptom checker với nhân viên y tế và chỉ số an toàn \cite{Liu2024}.
+\end{enumerate}

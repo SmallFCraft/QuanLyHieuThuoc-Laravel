@@ -1,0 +1,32 @@
+% ---------------------------------------------------------------------
+%  TÓM TẮT
+% ---------------------------------------------------------------------
+\begin{abstract}
+
+Khi người dùng mô tả triệu chứng sức khỏe bằng ngôn ngữ tự nhiên, việc phân
+tầng mức độ nguy cơ đúng đắn và kịp thời quyết định chất lượng chăm sóc ban
+đầu; nếu dựa thuần vào trí tuệ nhân tạo tạo sinh, kết luận có thể thiếu nhất
+quán tại các ngưỡng an toàn tính mạng. Đồ án xây dựng \textbf{hệ thống trợ
+lý sàng lọc sức khỏe và phân tầng nguy cơ y tế} theo kiến trúc \textbf{Hybrid
+AI}: một động cơ phân loại tất định dựa trên bộ tri thức luật y khoa đóng vai
+trò quyết định, còn mô hình ngôn ngữ lớn đảm nhận trích xuất sự kiện triệu
+chứng từ câu nói tự nhiên và sinh lời diễn giải lâm sàng. Bộ tri thức gồm
+31 triệu chứng, 22 dấu hiệu cờ đỏ theo quy ước phân loại khẩn cấp Manchester
+và 44 luật quyết định, ánh xạ ra bốn mức: cấp cứu, đi khám, tư vấn dược sĩ
+và tự chăm sóc. Bắt cờ đỏ cấp cứu luôn ưu tiên tuyệt đối trong suốt quá
+trình ghi nhận câu trả lời; kết quả thực nghiệm trên 26 ca bệnh mẫu cho thấy
+không ca cấp cứu nào bị xếp xuống nhóm tự chăm sóc, tỷ lệ xử trí an toàn lâm
+sàng đạt 88,5\% và chưa từng hạ thấp mức phân loại khi dữ liệu trích xuất do
+AI sinh ra nhiễu. Lớp diễn giải sử dụng cơ chế gọi
+công cụ (tool-calling) để sinh năm loại nội dung chăm sóc, theo dõi và đề
+xuất sử dụng thuốc không kê đơn, được kiểm duyệt chặt về số lượng mục và
+ràng buộc ngưỡng an toàn trước khi hiển thị. Hệ thống được triển khai trên
+nền tảng web Laravel với công cụ quản trị tương tác dược sĩ, đảm bảo mọi
+luồng an toàn lâm sàng đều có cơ chế tự động và nhân viên chịu trách nhiệm
+rõ ràng.
+
+\vspace{0.8em}
+\noindent\textbf{Từ khoá:} trí tuệ nhân tạo lai, phân tầng nguy cơ y tế,
+hệ chuyên gia dựa trên luật, mô hình ngôn ngữ lớn, gọi công cụ, sàng lọc triệu
+chứng, an toàn lâm sàng.
+\end{abstract}

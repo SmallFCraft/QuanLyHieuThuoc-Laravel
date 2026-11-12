@@ -1,4 +1,4 @@
-# Browser checks
+# Kiểm tra trình duyệt (browser checks)
 
 Chạy tay, không nằm trong CI. Repo không có JS test runner và không thêm
 dependency nào cho việc này — cùng lối với `tests/load/voice-normalize.k6.js`.
@@ -9,28 +9,38 @@ dependency nào cho việc này — cùng lối với `tests/load/voice-normaliz
 php artisan serve --port=8123
 ```
 
-MySQL phải chạy (Laragon). Nếu 3306 chết, storefront trả 500 ở bảng `sessions`
-và mọi check dưới đây đỏ vì lý do sai.
+Database phải chạy đúng cấu hình trong `.env` — nếu DB chết, storefront trả 500
+ở bảng `sessions` và mọi check dưới đây đỏ vì lý do sai.
 
 ## Chạy
 
 ```bash
-NODE_PATH="E:/Apps/npm-global/node_modules" node tests/browser/voice-search.cjs
+node tests/browser/voice-search.cjs
 ```
+
+Script tự dò `chromium_headless_shell-*` mới nhất trong `PLAYWRIGHT_BROWSERS_PATH`
+(hoặc thư mục mặc định `%LOCALAPPDATA%\ms-playwright`). Máy nào đã cài Playwright
+chuẩn thì không cần cấu hình gì thêm.
 
 ## Biến môi trường
 
 | Biến | Mặc định | Dùng khi |
 |---|---|---|
 | `BASE_URL` | `http://localhost:8123` | dev server nằm ở cổng khác |
-| `PW_CHROMIUM` | `E:/Apps/Browsers/Playwright/chromium_headless_shell-1237/chrome-headless-shell-win64/chrome-headless-shell.exe` | browser binary nằm chỗ khác |
+| `PW_CHROMIUM` | tự dò trong `PLAYWRIGHT_BROWSERS_PATH` | browser binary cài thủ công ở chỗ khác |
 
-`NODE_PATH` là bắt buộc trên máy này vì repo không có `node_modules` cục bộ và
-`playwright` không resolve được từ đâu cả, chỉ `playwright-core` ở global root
-(`E:\Apps\npm-global\node_modules`) mới resolve — đo 2026-09-02. Repo nào có
-`playwright` cài cục bộ thì bỏ `NODE_PATH` đi, harness tự fallback sang nó.
-`executablePath` cũng phải chỉ tường minh: `PLAYWRIGHT_BROWSERS_PATH` đang giữ
-`chromium-1237` còn `playwright-core` 1.60.0 đi tìm `-1223`.
+## Khi `playwright` không resolve được
+
+Một số máy không có `playwright` nào resolve được (không có `node_modules` cục
+bộ). Script thử lần lượt: `playwright-core` cục bộ → `playwright` cục bộ →
+`playwright-core` trong npm global root (`npm root -g`). Cả ba đều lỗi thì cài
+vào repo:
+
+```bash
+npm install --no-save playwright-core
+```
+
+`--no-save` để không đổi `package.json` — đây chỉ là harness chạy tay, không vào CI.
 
 ## Vì sao mock SpeechRecognition
 
@@ -40,6 +50,5 @@ tất định. Mock biến mỗi nhánh thành một lời gọi hàm.
 
 ## Trạng thái hiện tại
 
-Tám check (F1, F2, F4, F5, F6, F7, F10, F14) đang ĐỎ có ý: chúng tái hiện 8 trong
-15 lỗi máy trạng thái phía client. Dòng `process.exit` cuối file bị đảo ngược nên
-exit code là 0 khi có check đỏ — Task 3 lật lại sau khi các fix vào.
+Cả 30 check đang XANH (chạy tay xác nhận 2026-11-12, các fix thuộc commit
+`aaa2dc3` đã vào). Exit code: `0` khi toàn pass, `1` khi có check đỏ.
