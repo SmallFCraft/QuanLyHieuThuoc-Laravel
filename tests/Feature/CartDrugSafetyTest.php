@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\AuditLog;
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\User;
-use App\Models\UserHealthProfile;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use App\Models\NhatKyKiemToan;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\NguoiDung;
+use App\Models\HoSoSucKhoe;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,22 +15,22 @@ class CartDrugSafetyTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected Category $category;
-    protected User $user;
+    protected DanhMuc $danhMuc;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // MedicalKnowledgeSeeder resolves categories by name, so it must exist first.
-        $this->category = Category::create([
+        // TriThucYTeSeeder resolves categories by name, so it must exist first.
+        $this->danhMuc = DanhMuc::create([
             'name' => 'Thuốc giảm đau - Hạ sốt',
             'description' => 'Giảm đau, hạ sốt',
         ]);
 
-        $this->seed(MedicalKnowledgeSeeder::class);
+        $this->seed(TriThucYTeSeeder::class);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(34)->toDateString(),
@@ -42,12 +42,12 @@ class CartDrugSafetyTest extends TestCase
         $aspirin = $this->product('Aspirin', 'Acid acetylsalicylic 100mg');
         $ibuprofen = $this->product('Ibuprofen', 'Ibuprofen 400mg');
 
-        $this->actingAs($this->user)->post(route('cart.add'), [
+        $this->actingAs($this->nguoiDung)->post(route('cart.add'), [
             'MaSP' => $aspirin->MaSP,
             'quantity' => 1,
         ])->assertSessionHas('success');
 
-        $response = $this->actingAs($this->user)->post(route('cart.add'), [
+        $response = $this->actingAs($this->nguoiDung)->post(route('cart.add'), [
             'MaSP' => $ibuprofen->MaSP,
             'quantity' => 1,
         ]);
@@ -60,7 +60,7 @@ class CartDrugSafetyTest extends TestCase
         $this->assertArrayNotHasKey($ibuprofen->MaSP, $cart);
 
         // The cart page must render the acknowledgement form that replays the request.
-        $this->actingAs($this->user)->get(route('cart.index'))
+        $this->actingAs($this->nguoiDung)->get(route('cart.index'))
             ->assertOk()
             ->assertSee('name="confirm_warning"', false)
             ->assertSee('bi-exclamation-octagon-fill', false);
@@ -73,7 +73,7 @@ class CartDrugSafetyTest extends TestCase
 
         session(['cart' => [$aspirin->MaSP => 1]]);
 
-        $response = $this->actingAs($this->user)->post(route('cart.add'), [
+        $response = $this->actingAs($this->nguoiDung)->post(route('cart.add'), [
             'MaSP' => $ibuprofen->MaSP,
             'quantity' => 1,
             'confirm_warning' => 1,
@@ -86,7 +86,7 @@ class CartDrugSafetyTest extends TestCase
         $this->assertCount(2, $cart);
         $this->assertArrayHasKey($ibuprofen->MaSP, $cart);
 
-        $log = AuditLog::where('action', 'drug_warning_overridden')->first();
+        $log = NhatKyKiemToan::where('action', 'drug_warning_overridden')->first();
         $this->assertNotNull($log);
         $this->assertSame($ibuprofen->MaSP, $log->MaDoiTuong);
     }
@@ -96,7 +96,7 @@ class CartDrugSafetyTest extends TestCase
         $this->healthProfile(['allergies' => ['Paracetamol'], 'consented_at' => now()]);
         $panadol = $this->product('Panadol', 'Paracetamol 500mg');
 
-        $response = $this->actingAs($this->user)->post(route('cart.add'), [
+        $response = $this->actingAs($this->nguoiDung)->post(route('cart.add'), [
             'MaSP' => $panadol->MaSP,
             'quantity' => 1,
         ]);
@@ -110,7 +110,7 @@ class CartDrugSafetyTest extends TestCase
         $this->healthProfile(['allergies' => ['Paracetamol'], 'consented_at' => null]);
         $panadol = $this->product('Panadol', 'Paracetamol 500mg');
 
-        $response = $this->actingAs($this->user)->post(route('cart.add'), [
+        $response = $this->actingAs($this->nguoiDung)->post(route('cart.add'), [
             'MaSP' => $panadol->MaSP,
             'quantity' => 1,
         ]);
@@ -124,7 +124,7 @@ class CartDrugSafetyTest extends TestCase
     {
         $vitamin = $this->product('Vitamin E', 'Vitamin E 400IU');
 
-        $response = $this->actingAs($this->user)->post(route('cart.add'), [
+        $response = $this->actingAs($this->nguoiDung)->post(route('cart.add'), [
             'MaSP' => $vitamin->MaSP,
             'quantity' => 2,
         ]);
@@ -141,7 +141,7 @@ class CartDrugSafetyTest extends TestCase
 
         session(['cart' => [$aspirin->MaSP => 1]]);
 
-        $response = $this->actingAs($this->user)->postJson(route('cart.add'), [
+        $response = $this->actingAs($this->nguoiDung)->postJson(route('cart.add'), [
             'MaSP' => $ibuprofen->MaSP,
             'quantity' => 1,
         ]);
@@ -162,7 +162,7 @@ class CartDrugSafetyTest extends TestCase
 
         session(['cart' => [$aspirin->MaSP => 1]]);
 
-        $response = $this->actingAs($this->user)->postJson(route('cart.add'), [
+        $response = $this->actingAs($this->nguoiDung)->postJson(route('cart.add'), [
             'MaSP' => $ibuprofen->MaSP,
             'quantity' => 1,
             'confirm_warning' => 1,
@@ -183,7 +183,7 @@ class CartDrugSafetyTest extends TestCase
 
         session(['cart' => [$panadol->MaSP => 1]]);
 
-        $response = $this->actingAs($this->user)->postJson(route('cart.add'), [
+        $response = $this->actingAs($this->nguoiDung)->postJson(route('cart.add'), [
             'MaSP' => $ibuprofen->MaSP,
             'quantity' => 1,
         ]);
@@ -201,7 +201,7 @@ class CartDrugSafetyTest extends TestCase
 
         session(['cart' => [$aspirin->MaSP => 1, $ibuprofen->MaSP => 1]]);
 
-        $response = $this->actingAs($this->user)->get(route('checkout.index'));
+        $response = $this->actingAs($this->nguoiDung)->get(route('checkout.index'));
 
         $response->assertOk();
         $response->assertViewIs('checkout.index');
@@ -213,24 +213,24 @@ class CartDrugSafetyTest extends TestCase
 
     public function test_empty_cart_checkout_does_not_error(): void
     {
-        $response = $this->actingAs($this->user)->get(route('checkout.index'));
+        $response = $this->actingAs($this->nguoiDung)->get(route('checkout.index'));
 
         $response->assertRedirect(route('cart.index'));
         $response->assertSessionHas('error');
     }
 
-    protected function healthProfile(array $attributes = []): UserHealthProfile
+    protected function healthProfile(array $attributes = []): HoSoSucKhoe
     {
-        return UserHealthProfile::updateOrCreate(
-            ['MaKH' => $this->user->MaKH],
+        return HoSoSucKhoe::updateOrCreate(
+            ['MaKH' => $this->nguoiDung->MaKH],
             array_merge(['consented_at' => now()], $attributes)
         );
     }
 
-    protected function product(string $name, string $ingredients): Product
+    protected function product(string $name, string $ingredients): SanPham
     {
-        return Product::create([
-            'MaDM' => $this->category->MaDM,
+        return SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => $name,
             'ingredients' => $ingredients,
             'usage' => 'Theo hướng dẫn',

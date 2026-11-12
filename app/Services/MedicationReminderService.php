@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Mail\MedicationReminderMail;
-use App\Models\MedicationReminder;
-use App\Models\Order;
+use App\Models\NhacUongThuoc;
+use App\Models\DonHang;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Mail;
  */
 class MedicationReminderService
 {
-    /** Reminders only fire between these hours, matching MedicationReminder::advanceSchedule(). */
+    /** Reminders only fire between these hours, matching NhacUongThuoc::advanceSchedule(). */
     private const DAY_START_HOUR = 8;
     private const DAY_END_HOUR = 20;
 
@@ -40,35 +40,35 @@ class MedicationReminderService
      * Idempotent: keyed on MaDH + MaSP so replaying a status change cannot
      * duplicate a schedule.
      */
-    public function createFromOrder(Order $order): int
+    public function createFromOrder(DonHang $donHang): int
     {
-        $order->loadMissing('items.product');
+        $donHang->loadMissing('chiTietDonHangs.sanPham');
 
         $quantities = [];
-        $products = [];
+        $sanPhams = [];
 
-        foreach ($order->items as $item) {
-            if (!$item->product) {
+        foreach ($donHang->chiTietDonHangs as $item) {
+            if (!$item->sanPham) {
                 continue;
             }
 
             $productId = (int) $item->MaSP;
             $quantities[$productId] = ($quantities[$productId] ?? 0) + (int) $item->quantity;
-            $products[$productId] = $item->product;
+            $sanPhams[$productId] = $item->sanPham;
         }
 
         foreach ($quantities as $productId => $quantity) {
-            $product = $products[$productId];
-            $timesPerDay = $this->parseTimesPerDay($product->usage);
+            $sanPham = $sanPhams[$productId];
+            $timesPerDay = $this->parseTimesPerDay($sanPham->usage);
 
-            MedicationReminder::updateOrCreate(
+            NhacUongThuoc::updateOrCreate(
                 [
-                    'MaDH' => $order->MaDH,
+                    'MaDH' => $donHang->MaDH,
                     'MaSP' => $productId,
                 ],
                 [
-                    'MaKH' => $order->MaKH,
-                    'dosage_text' => $this->dosageText($product),
+                    'MaKH' => $donHang->MaKH,
+                    'dosage_text' => $this->dosageText($sanPham),
                     'times_per_day' => $timesPerDay,
                     'duration_days' => $this->durationDays($quantity, $timesPerDay),
                     'start_date' => now()->toDateString(),
@@ -86,10 +86,10 @@ class MedicationReminderService
      * longer than the column and can carry markup. Truncate rather than let a
      * strict-mode insert abort the order transaction.
      */
-    private function dosageText(\App\Models\Product $product): string
+    private function dosageText(\App\Models\SanPham $sanPham): string
     {
-        $raw = trim(strip_tags((string) ($product->usage ?? '')));
-        $text = $raw !== '' ? $raw : (string) $product->name;
+        $raw = trim(strip_tags((string) ($sanPham->usage ?? '')));
+        $text = $raw !== '' ? $raw : (string) $sanPham->name;
 
         return mb_substr($text, 0, self::MAX_DOSAGE_TEXT);
     }
@@ -140,29 +140,29 @@ class MedicationReminderService
     {
         $sent = 0;
 
-        MedicationReminder::due()
+        NhacUongThuoc::due()
             // withTrashed on the product: a soft-deleted (discontinued) product is
             // still a course the patient must finish, so it must not cancel the schedule.
-            ->with(['user', 'product' => fn ($query) => $query->withTrashed()])
-            ->chunkById(100, function ($reminders) use (&$sent) {
-                foreach ($reminders as $reminder) {
-                    if (!$reminder->user || !$reminder->product) {
-                        $reminder->update(['status' => 'cancelled', 'next_remind_at' => null]);
+            ->with(['nguoiDung', 'sanPham' => fn ($query) => $query->withTrashed()])
+            ->chunkById(100, function ($cacNhacUong) use (&$sent) {
+                foreach ($cacNhacUong as $nhacUong) {
+                    if (!$nhacUong->nguoiDung || !$nhacUong->sanPham) {
+                        $nhacUong->update(['status' => 'cancelled', 'next_remind_at' => null]);
                         continue;
                     }
 
                     try {
-                        Mail::to($reminder->user->email)->send(new MedicationReminderMail($reminder));
+                        Mail::to($nhacUong->nguoiDung->email)->send(new MedicationReminderMail($nhacUong));
                         $sent++;
                     } catch (\Throwable $e) {
                         // A broken mailbox must not stall the rest of the batch.
                         Log::warning('Medication reminder mail failed', [
-                            'MaNN' => $reminder->MaNN,
+                            'MaNN' => $nhacUong->MaNN,
                             'error' => $e->getMessage(),
                         ]);
                     }
 
-                    $reminder->advanceSchedule();
+                    $nhacUong->advanceSchedule();
                 }
             }, 'MaNN');
 
@@ -174,13 +174,13 @@ class MedicationReminderService
      * medicine can be on two courses from two orders, and cancelling one must not
      * silently stop the other.
      */
-    public function cancelSchedule(MedicationReminder $reminder): void
+    public function cancelSchedule(NhacUongThuoc $nhacUong): void
     {
-        if ($reminder->status !== 'active') {
+        if ($nhacUong->status !== 'active') {
             return;
         }
 
-        $reminder->update([
+        $nhacUong->update([
             'status' => 'cancelled',
             'next_remind_at' => null,
         ]);
@@ -191,7 +191,7 @@ class MedicationReminderService
      */
     public function cancelForUser(int $userId, int $MaSP): void
     {
-        MedicationReminder::where('MaKH', $userId)
+        NhacUongThuoc::where('MaKH', $userId)
             ->where('MaSP', $MaSP)
             ->where('status', 'active')
             ->update([

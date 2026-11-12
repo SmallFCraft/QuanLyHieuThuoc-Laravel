@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\TriageSession;
-use App\Models\User;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -37,7 +37,7 @@ class TriageAffirmedClarifyTest extends TestCase
     /** The real round-1 question from session 55. */
     protected const MULTI_SIGN_QUESTION = 'Anh/chị có sốt, khó thở hoặc đau ngực không?';
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
@@ -45,20 +45,20 @@ class TriageAffirmedClarifyTest extends TestCase
 
         Http::preventStrayRequests();
 
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.fact_extraction', true);
         config()->set('chatbot.ai.triage.clarify_round', true);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(20)->toDateString(),
         ]);
 
-        Product::create([
-            'MaDM' => Category::first()->MaDM,
+        SanPham::create([
+            'MaDM' => DanhMuc::first()->MaDM,
             'name' => 'Paracetamol 500mg',
             'ingredients' => 'Paracetamol 500mg',
             'usage' => 'Giảm đau, hạ sốt. Uống 1-2 viên mỗi 4-6 giờ',
@@ -117,7 +117,7 @@ class TriageAffirmedClarifyTest extends TestCase
     /**
      * @param array<int, string> $wizardAnswers
      */
-    protected function runWizard(array $wizardAnswers = []): TriageSession
+    protected function runWizard(array $wizardAnswers = []): PhienSangLoc
     {
         $answers = $wizardAnswers !== [] ? $wizardAnswers : [
             1 => 'dính covid , và ho rất nhiều',
@@ -127,58 +127,58 @@ class TriageAffirmedClarifyTest extends TestCase
             5 => 'không có thêm',
         ];
 
-        $this->actingAs($this->user)->get(route('health.check'));
-        $session = TriageSession::where('MaKH', $this->user->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        $this->actingAs($this->nguoiDung)->get(route('health.check'));
+        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
 
         foreach ($answers as $step => $answer) {
-            $current = TriageSession::find($session->MaSL);
+            $current = PhienSangLoc::find($phien->MaSL);
 
             if ($current === null || $current->status !== 'in_progress') {
                 break;
             }
 
-            $this->actingAs($this->user)->post(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+            $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+                'triage_session_id' => $phien->MaSL,
                 'step' => $step,
                 'answer' => $answer,
             ]);
         }
 
-        return $session->fresh();
+        return $phien->fresh();
     }
 
     /**
      * @param array<int, string> $answers
      */
-    protected function answerClarify(TriageSession $session, array $answers): TriageSession
+    protected function answerClarify(PhienSangLoc $phien, array $answers): PhienSangLoc
     {
-        $this->actingAs($this->user)->post(route('health.clarify'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.clarify'), [
+            'triage_session_id' => $phien->MaSL,
             'clarify' => $answers,
         ]);
 
-        return $session->fresh();
+        return $phien->fresh();
     }
 
     /**
      * @return array<int, string>
      */
-    protected function flagCodes(TriageSession $session): array
+    protected function flagCodes(PhienSangLoc $phien): array
     {
-        return collect($session->triggered_red_flags)->pluck('code')->all();
+        return collect($phien->triggered_red_flags)->pluck('code')->all();
     }
 
     public function test_affirming_a_multi_sign_question_escalates_to_emergency(): void
     {
         $this->fakeOneRound([self::MULTI_SIGN_QUESTION]);
 
-        $session = $this->answerClarify($this->runWizard(), ['Có']);
+        $phien = $this->answerClarify($this->runWizard(), ['Có']);
 
-        $this->assertSame('emergency', $session->outcome);
-        $this->assertContains('chest_pain_severe', $this->flagCodes($session));
-        $this->assertContains('breathing_difficulty', $this->flagCodes($session));
-        $this->assertSame([], $session->suggested_products);
-        $this->assertStringContainsString('115', (string) $session->advice_given);
+        $this->assertSame('emergency', $phien->outcome);
+        $this->assertContains('chest_pain_severe', $this->flagCodes($phien));
+        $this->assertContains('breathing_difficulty', $this->flagCodes($phien));
+        $this->assertSame([], $phien->suggested_products);
+        $this->assertStringContainsString('115', (string) $phien->advice_given);
     }
 
     public function test_denying_the_same_multi_sign_question_stays_self_care(): void
@@ -189,12 +189,12 @@ class TriageAffirmedClarifyTest extends TestCase
         foreach (['không', 'Không có', 'không sốt, không nôn, không cứng cổ', 'Chưa đo'] as $denial) {
             $this->fakeOneRound([self::MULTI_SIGN_QUESTION]);
 
-            $session = $this->answerClarify($this->runWizard(), [$denial]);
+            $phien = $this->answerClarify($this->runWizard(), [$denial]);
 
-            $this->assertNotSame('emergency', $session->outcome, $denial);
-            $this->assertSame([], $this->flagCodes($session), $denial);
+            $this->assertNotSame('emergency', $phien->outcome, $denial);
+            $this->assertSame([], $this->flagCodes($phien), $denial);
 
-            TriageSession::where('MaKH', $this->user->MaKH)->delete();
+            PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->delete();
         }
     }
 
@@ -205,10 +205,10 @@ class TriageAffirmedClarifyTest extends TestCase
         // The contrast marker keeps the yes alive; the patient's own words then veto the
         // one sign they named. Escalating on the rest is the point — "nhưng không khó thở"
         // says nothing about the chest pain.
-        $session = $this->answerClarify($this->runWizard(), ['Có, nhưng không khó thở']);
+        $phien = $this->answerClarify($this->runWizard(), ['Có, nhưng không khó thở']);
 
-        $this->assertContains('chest_pain_severe', $this->flagCodes($session));
-        $this->assertNotContains('breathing_difficulty', $this->flagCodes($session));
+        $this->assertContains('chest_pain_severe', $this->flagCodes($phien));
+        $this->assertNotContains('breathing_difficulty', $this->flagCodes($phien));
     }
 
     /**
@@ -241,11 +241,11 @@ class TriageAffirmedClarifyTest extends TestCase
     {
         $this->fakeOneRound([self::MULTI_SIGN_QUESTION]);
 
-        $session = $this->answerClarify($this->runWizard(), [$answer]);
+        $phien = $this->answerClarify($this->runWizard(), [$answer]);
 
-        $this->assertNotSame('emergency', $session->outcome, $answer);
-        $this->assertNotContains('chest_pain_severe', $this->flagCodes($session), $answer);
-        $this->assertNotContains('breathing_difficulty', $this->flagCodes($session), $answer);
+        $this->assertNotSame('emergency', $phien->outcome, $answer);
+        $this->assertNotContains('chest_pain_severe', $this->flagCodes($phien), $answer);
+        $this->assertNotContains('breathing_difficulty', $this->flagCodes($phien), $answer);
     }
 
     /**
@@ -285,11 +285,11 @@ class TriageAffirmedClarifyTest extends TestCase
         config()->set('chatbot.ai.triage.fact_extraction', false);
         config()->set('chatbot.ai.triage.clarify_round', false);
 
-        $session = $this->runWizard($answers);
+        $phien = $this->runWizard($answers);
 
         Http::assertNothingSent();
-        $this->assertSame('emergency', $session->outcome);
-        $this->assertContains($expectedFlag, $this->flagCodes($session));
+        $this->assertSame('emergency', $phien->outcome);
+        $this->assertContains($expectedFlag, $this->flagCodes($phien));
     }
 
     public function test_a_restrictive_answer_does_not_project(): void
@@ -297,10 +297,10 @@ class TriageAffirmedClarifyTest extends TestCase
         $this->fakeOneRound([self::MULTI_SIGN_QUESTION]);
 
         // "có ho thôi" is a yes about the cough, not about the three danger signs.
-        $session = $this->answerClarify($this->runWizard(), ['có ho thôi']);
+        $phien = $this->answerClarify($this->runWizard(), ['có ho thôi']);
 
-        $this->assertNotSame('emergency', $session->outcome);
-        $this->assertSame([], $this->flagCodes($session));
+        $this->assertNotSame('emergency', $phien->outcome);
+        $this->assertSame([], $this->flagCodes($phien));
     }
 
     public function test_a_degree_qualified_flag_does_not_fire_from_an_affirmation(): void
@@ -310,10 +310,10 @@ class TriageAffirmedClarifyTest extends TestCase
         // confirmed "có sốt" cannot reach it.
         $this->fakeOneRound(['Anh/chị có sốt không?']);
 
-        $session = $this->answerClarify($this->runWizard(), ['Có']);
+        $phien = $this->answerClarify($this->runWizard(), ['Có']);
 
-        $this->assertNotContains('high_fever_persistent', $this->flagCodes($session));
-        $this->assertNotSame('emergency', $session->outcome);
+        $this->assertNotContains('high_fever_persistent', $this->flagCodes($phien));
+        $this->assertNotSame('emergency', $phien->outcome);
     }
 
     public function test_the_projection_is_order_independent(): void
@@ -324,10 +324,10 @@ class TriageAffirmedClarifyTest extends TestCase
         // first projected term. The projection is matched as its own haystack instead.
         $this->fakeOneRound([self::MULTI_SIGN_QUESTION, 'Anh/chị có bệnh nền không?']);
 
-        $session = $this->answerClarify($this->runWizard(), ['Có', 'không']);
+        $phien = $this->answerClarify($this->runWizard(), ['Có', 'không']);
 
-        $this->assertContains('chest_pain_severe', $this->flagCodes($session));
-        $this->assertContains('breathing_difficulty', $this->flagCodes($session));
+        $this->assertContains('chest_pain_severe', $this->flagCodes($phien));
+        $this->assertContains('breathing_difficulty', $this->flagCodes($phien));
     }
 
     public function test_the_projection_does_not_invent_matched_symptoms(): void
@@ -336,21 +336,21 @@ class TriageAffirmedClarifyTest extends TestCase
         // not symptom codes. The extractor was faked to return only `cough`.
         $this->fakeOneRound([self::MULTI_SIGN_QUESTION]);
 
-        $session = $this->answerClarify($this->runWizard(), ['Có']);
+        $phien = $this->answerClarify($this->runWizard(), ['Có']);
 
-        $this->assertNotContains('chest_pain', (array) $session->matched_symptoms);
-        $this->assertNotContains('shortness_breath', (array) $session->matched_symptoms);
+        $this->assertNotContains('chest_pain', (array) $phien->matched_symptoms);
+        $this->assertNotContains('shortness_breath', (array) $phien->matched_symptoms);
     }
 
     public function test_an_escalated_session_is_asked_no_further_round(): void
     {
         $this->fakeOneRound([self::MULTI_SIGN_QUESTION]);
 
-        $session = $this->answerClarify($this->runWizard(), ['Có']);
+        $phien = $this->answerClarify($this->runWizard(), ['Có']);
 
-        $this->assertSame('emergency', $session->outcome);
-        $this->assertSame('completed', $session->status);
-        $this->assertSame([], $session->pendingClarifyQuestions());
+        $this->assertSame('emergency', $phien->outcome);
+        $this->assertSame('completed', $phien->status);
+        $this->assertSame([], $phien->pendingClarifyQuestions());
     }
 
     public function test_the_text_tier_still_works_with_the_ai_disabled(): void
@@ -361,7 +361,7 @@ class TriageAffirmedClarifyTest extends TestCase
         config()->set('chatbot.ai.triage.fact_extraction', false);
         config()->set('chatbot.ai.triage.clarify_round', false);
 
-        $session = $this->runWizard([
+        $phien = $this->runWizard([
             1 => 'tôi bị đau ngực dữ dội và khó thở',
             2 => 'hôm nay',
             3 => 'chưa dùng gì',
@@ -370,6 +370,6 @@ class TriageAffirmedClarifyTest extends TestCase
         ]);
 
         Http::assertNothingSent();
-        $this->assertSame('emergency', $session->outcome);
+        $this->assertSame('emergency', $phien->outcome);
     }
 }

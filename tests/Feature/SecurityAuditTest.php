@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\AuditLog;
-use App\Models\User;
-use App\Models\Product;
-use App\Models\Category;
+use App\Models\NhatKyKiemToan;
+use App\Models\NguoiDung;
+use App\Models\SanPham;
+use App\Models\DanhMuc;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,24 +14,24 @@ class SecurityAuditTest extends TestCase
     use RefreshDatabase;
 
     protected $admin;
-    protected $user;
-    protected $category;
+    protected $nguoiDung;
+    protected $danhMuc;
 
     protected function setUp(): void
     {
         parent::setUp();
         
-        $this->admin = User::factory()->create([
+        $this->admin = NguoiDung::factory()->create([
             'role' => 'Administrator',
             'status' => 'active'
         ]);
         
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active'
         ]);
         
-        $this->category = Category::create([
+        $this->danhMuc = DanhMuc::create([
             'name' => 'Test Category',
             'description' => 'Test Description'
         ]);
@@ -39,8 +39,8 @@ class SecurityAuditTest extends TestCase
 
     public function test_sql_injection_prevention_in_product_search(): void
     {
-        Product::create([
-            'MaDM' => $this->category->MaDM,
+        SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear(),
@@ -73,8 +73,8 @@ class SecurityAuditTest extends TestCase
     {
         $xssPayload = '<script>alert("XSS")</script>';
         
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => $xssPayload,
             'price' => 10000,
             'expiration_date' => now()->addYear(),
@@ -83,7 +83,7 @@ class SecurityAuditTest extends TestCase
             'batch_number' => 'BATCH-002'
         ]);
 
-        $response = $this->get(route('products.show', $product->MaSP));
+        $response = $this->get(route('products.show', $sanPham->MaSP));
 
         $response->assertStatus(200);
         
@@ -101,8 +101,8 @@ class SecurityAuditTest extends TestCase
 
     public function test_csrf_protection_on_state_changing_requests(): void
     {
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear(),
@@ -115,7 +115,7 @@ class SecurityAuditTest extends TestCase
         $response = $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class)
             ->actingAs($this->admin)
             ->post(route('admin.products.store'), [
-                'MaDM' => $this->category->MaDM,
+                'MaDM' => $this->danhMuc->MaDM,
                 'name' => 'New Product',
                 'price' => 20000,
                 'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -132,7 +132,7 @@ class SecurityAuditTest extends TestCase
     public function test_session_security_with_http_only_cookies(): void
     {
         $response = $this->post(route('login'), [
-            'email' => $this->user->email,
+            'email' => $this->nguoiDung->email,
             'password' => 'password'
         ]);
 
@@ -154,7 +154,7 @@ class SecurityAuditTest extends TestCase
         $fakeImage = \Illuminate\Http\UploadedFile::fake()->create('malicious.php', 100);
 
         $response = $this->post(route('admin.products.store'), [
-            'MaDM' => $this->category->MaDM,
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -175,7 +175,7 @@ class SecurityAuditTest extends TestCase
         $largeFile = \Illuminate\Http\UploadedFile::fake()->create('large.jpg', 6000);
 
         $response = $this->post(route('admin.products.store'), [
-            'MaDM' => $this->category->MaDM,
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -195,14 +195,14 @@ class SecurityAuditTest extends TestCase
         $response->assertRedirect(route('login'));
 
         // Attempt to access admin routes as regular user
-        $response = $this->actingAs($this->user)->get(route('admin.dashboard'));
+        $response = $this->actingAs($this->nguoiDung)->get(route('admin.dashboard'));
         $response->assertStatus(403);
     }
 
     public function test_authorization_bypass_prevention(): void
     {
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear(),
@@ -212,14 +212,14 @@ class SecurityAuditTest extends TestCase
         ]);
 
         // Regular user should not be able to delete products
-        $response = $this->actingAs($this->user)
-            ->delete(route('admin.products.destroy', $product->MaSP));
+        $response = $this->actingAs($this->nguoiDung)
+            ->delete(route('admin.products.destroy', $sanPham->MaSP));
 
         $response->assertStatus(403);
 
         // Verify product was not deleted
         $this->assertDatabaseHas('products', [
-            'MaSP' => $product->MaSP
+            'MaSP' => $sanPham->MaSP
         ]);
     }
 
@@ -241,7 +241,7 @@ class SecurityAuditTest extends TestCase
 
         // Attempt to set role through mass assignment
         $response = $this->post(route('admin.products.store'), [
-            'MaDM' => $this->category->MaDM,
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -252,18 +252,18 @@ class SecurityAuditTest extends TestCase
         ]);
 
         // Product should be created but created_by should not be set to 999
-        $product = Product::where('batch_number', 'BATCH-008')->first();
+        $sanPham = SanPham::where('batch_number', 'BATCH-008')->first();
         
-        if ($product) {
-            $this->assertNotEquals(999, $product->created_by ?? null);
+        if ($sanPham) {
+            $this->assertNotEquals(999, $sanPham->created_by ?? null);
         }
     }
 
     public function test_parameterized_queries_prevent_sql_injection(): void
     {
         // Create test product
-        Product::create([
-            'MaDM' => $this->category->MaDM,
+        SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear(),
@@ -276,10 +276,10 @@ class SecurityAuditTest extends TestCase
         $maliciousId = "1 OR 1=1";
 
         try {
-            $products = Product::where('MaSP', $maliciousId)->get();
+            $sanPhams = SanPham::where('MaSP', $maliciousId)->get();
 
             // Should return empty or single result, not all products
-            $this->assertLessThanOrEqual(1, $products->count());
+            $this->assertLessThanOrEqual(1, $sanPhams->count());
         } catch (\Exception $e) {
             // Exception is acceptable - means injection was prevented
             $this->assertTrue(true);
@@ -294,7 +294,7 @@ class SecurityAuditTest extends TestCase
      */
     public function test_admin_mutations_are_recorded_in_the_audit_log(): void
     {
-        AuditLog::query()->delete();
+        NhatKyKiemToan::query()->delete();
 
         $this->actingAs($this->admin)
             ->post(route('admin.categories.store'), [
@@ -303,7 +303,7 @@ class SecurityAuditTest extends TestCase
             ])
             ->assertRedirect();
 
-        $logged = AuditLog::where('action', 'POST admin/categories')->first();
+        $logged = NhatKyKiemToan::where('action', 'POST admin/categories')->first();
 
         $this->assertNotNull($logged, 'No HTTP audit row was written for an admin POST.');
         $this->assertSame('HTTP:admin.categories.store', $logged->model_type);
@@ -312,12 +312,12 @@ class SecurityAuditTest extends TestCase
 
     public function test_admin_reads_are_not_audit_logged(): void
     {
-        AuditLog::query()->delete();
+        NhatKyKiemToan::query()->delete();
 
         $this->actingAs($this->admin)
             ->get(route('admin.categories.index'))
             ->assertOk();
 
-        $this->assertSame(0, AuditLog::where('action', 'like', 'GET %')->count());
+        $this->assertSame(0, NhatKyKiemToan::where('action', 'like', 'GET %')->count());
     }
 }

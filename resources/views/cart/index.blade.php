@@ -96,15 +96,15 @@
                             @foreach($cartItems as $item)
                                 <div class="cart-item d-flex align-items-center gap-3 p-4 border-bottom flex-wrap position-relative" 
                                      style="border-color: rgba(0,0,0,0.04) !important;" 
-                                     data-product-id="{{ $item['product']->MaSP }}"
-                                     data-price="{{ $item['product']->price_vnd }}"
-                                     data-max-stock="{{ $item['product']->stock_quantity }}">
+                                     data-product-id="{{ $item["sanPham"]->MaSP }}"
+                                     data-price="{{ $item["sanPham"]->price_vnd }}"
+                                     data-max-stock="{{ $item["sanPham"]->stock_quantity }}">
                                     
                                     <!-- Image -->
                                     <div class="bg-gray-50 rounded-3 overflow-hidden flex-shrink-0 position-relative" style="width: 90px; height: 90px;" data-product-image-container>
                                         <x-product-image
-                                            :src="$item['product']->image_url"
-                                            :alt="$item['product']->name"
+                                            :src="$item["sanPham"]->image_url"
+                                            :alt="$item["sanPham"]->name"
                                             class="w-100 h-100 object-fit-contain p-1"
                                             icon-size="2.5rem"
                                         />
@@ -113,12 +113,12 @@
                                     <!-- Info -->
                                     <div class="flex-grow-1 min-w-0">
                                         <h6 class="fw-bold text-gray-800 mb-1 text-truncate">
-                                            <a href="{{ route('products.show', $item['product']->MaSP) }}" class="cart-product-link">
-                                                {{ $item['product']->name }}
+                                            <a href="{{ route('products.show', $item["sanPham"]->MaSP) }}" class="cart-product-link">
+                                                {{ $item["sanPham"]->name }}
                                             </a>
                                         </h6>
-                                        <p class="text-emerald-600 small mb-1 fw-medium">{{ $item['product']->category->name }}</p>
-                                        <p class="text-gray-500 small mb-0">{{ $item['product']->formatted_price }} / {{ __('messages.cart.per_item') }}</p>
+                                        <p class="text-emerald-600 small mb-1 fw-medium">{{ $item["sanPham"]->danhMuc->name }}</p>
+                                        <p class="text-gray-500 small mb-0">{{ $item["sanPham"]->formatted_price }} / {{ __('messages.cart.per_item') }}</p>
                                     </div>
                                     
                                     <!-- Quantity Controls -->
@@ -131,7 +131,7 @@
                                                    class="form-control form-control-sm text-center quantity-input shadow-none border-gray-200" 
                                                    value="{{ $item['quantity'] }}" 
                                                    min="1" 
-                                                   max="{{ $item['product']->stock_quantity }}"
+                                                   max="{{ $item["sanPham"]->stock_quantity }}"
                                                    style="font-size: 0.9rem;">
                                             <button class="btn btn-outline-secondary btn-sm quantity-increase" type="button">
                                                 <i class="bi bi-plus"></i>

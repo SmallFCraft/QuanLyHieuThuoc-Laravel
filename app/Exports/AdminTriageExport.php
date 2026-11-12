@@ -2,8 +2,8 @@
 
 namespace App\Exports;
 
-use App\Models\MedicalSymptom;
-use App\Models\TriageSession;
+use App\Models\PhienSangLoc;
+use App\Models\TrieuChungYTe;
 use App\Services\Triage\TriageReportService;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -28,18 +28,18 @@ class AdminTriageExport implements FromCollection, WithHeadings, WithMapping, Sh
     public function collection(): Collection
     {
         $sessions = $this->reportService->filterSessions($this->filters)
-            ->with(['user:MaKH,name,email', 'pharmacist:MaKH,name'])
+            ->with(['nguoiDung:MaKH,name,email', 'pharmacist:MaKH,name'])
             ->orderByDesc('created_at')
             ->get();
 
         $codes = $sessions
-            ->flatMap(fn (TriageSession $session) => (array) ($session->matched_symptoms ?? []))
+            ->flatMap(fn (PhienSangLoc $phien) => (array) ($phien->matched_symptoms ?? []))
             ->filter(fn ($code) => is_string($code) && $code !== '')
             ->unique();
 
         $this->symptomNames = $codes->isEmpty()
             ? []
-            : MedicalSymptom::whereIn('code', $codes->all())->pluck('name_vi', 'code')->toArray();
+            : TrieuChungYTe::whereIn('code', $codes->all())->pluck('name_vi', 'code')->toArray();
 
         return $sessions;
     }
@@ -60,33 +60,33 @@ class AdminTriageExport implements FromCollection, WithHeadings, WithMapping, Sh
         ];
     }
 
-    public function map($session): array
+    public function map($phien): array
     {
         return [
-            'SL-' . $session->MaSL,
-            optional($session->created_at)->format('d/m/Y H:i'),
-            $session->user->name ?? 'Không rõ',
-            $this->symptomList($session),
-            $this->outcomeLabel($session->outcome),
-            $this->redFlagList($session),
-            $this->statusLabel($session->status),
-            $session->pharmacist->name ?? '—',
-            $this->entryPointLabel($session->entry_point),
+            'SL-' . $phien->MaSL,
+            optional($phien->created_at)->format('d/m/Y H:i'),
+            $phien->nguoiDung->name ?? 'Không rõ',
+            $this->symptomList($phien),
+            $this->outcomeLabel($phien->outcome),
+            $this->redFlagList($phien),
+            $this->statusLabel($phien->status),
+            $phien->pharmacist->name ?? '—',
+            $this->entryPointLabel($phien->entry_point),
         ];
     }
 
-    private function symptomList(TriageSession $session): string
+    private function symptomList(PhienSangLoc $phien): string
     {
-        $names = collect((array) ($session->matched_symptoms ?? []))
+        $names = collect((array) ($phien->matched_symptoms ?? []))
             ->filter(fn ($code) => is_string($code) && $code !== '')
             ->map(fn (string $code) => $this->symptomNames[$code] ?? $code);
 
         return $names->isEmpty() ? '—' : $names->implode(', ');
     }
 
-    private function redFlagList(TriageSession $session): string
+    private function redFlagList(PhienSangLoc $phien): string
     {
-        $names = collect((array) ($session->triggered_red_flags ?? []))
+        $names = collect((array) ($phien->triggered_red_flags ?? []))
             ->map(fn ($flag) => is_array($flag) ? ($flag['name_vi'] ?? $flag['code'] ?? null) : $flag)
             ->filter(fn ($name) => is_string($name) && $name !== '');
 

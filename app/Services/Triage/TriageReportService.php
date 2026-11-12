@@ -2,9 +2,9 @@
 
 namespace App\Services\Triage;
 
-use App\Models\MedicalRedFlag;
-use App\Models\MedicalSymptom;
-use App\Models\TriageSession;
+use App\Models\CoDoYTe;
+use App\Models\TrieuChungYTe;
+use App\Models\PhienSangLoc;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +27,7 @@ class TriageReportService
     public function getSummary(array $filters = []): array
     {
         $outcomes = $this->outcomeCounts($filters);
-        $total = array_sum($outcomes) + $this->applyFilters(TriageSession::query(), $filters)
+        $total = array_sum($outcomes) + $this->applyFilters(PhienSangLoc::query(), $filters)
             ->whereNull('outcome')
             ->count();
 
@@ -35,7 +35,7 @@ class TriageReportService
 
         // Aggregate in SQL: loading every reviewed row to average two timestamps in
         // PHP grows unbounded with the table.
-        $wait = $this->applyFilters(TriageSession::query(), $filters)
+        $wait = $this->applyFilters(PhienSangLoc::query(), $filters)
             ->where('status', 'reviewed')
             ->whereNotNull('reviewed_at')
             ->selectRaw('COUNT(*) as reviewed_count, AVG('.$this->waitMinutesExpression().') as average_wait')
@@ -47,7 +47,7 @@ class TriageReportService
             'total' => $total,
             'outcomes' => $outcomes,
             'referral_rate' => $total > 0 ? round($referred / $total * 100, 1) : 0.0,
-            'pending_pharmacist' => $this->applyFilters(TriageSession::query(), $filters)
+            'pending_pharmacist' => $this->applyFilters(PhienSangLoc::query(), $filters)
                 ->where('status', 'pending_pharmacist')
                 ->count(),
             'average_wait_minutes' => $reviewedCount > 0 ? round((float) $wait->average_wait, 1) : null,
@@ -71,7 +71,7 @@ class TriageReportService
      */
     protected function outcomeCounts(array $filters = []): array
     {
-        $byOutcome = $this->applyFilters(TriageSession::query(), $filters)
+        $byOutcome = $this->applyFilters(PhienSangLoc::query(), $filters)
             ->select('outcome', DB::raw('COUNT(*) as aggregate'))
             ->groupBy('outcome')
             ->pluck('aggregate', 'outcome')
@@ -122,7 +122,7 @@ class TriageReportService
         $startDate = Carbon::today()->subDays($days - 1)->startOfDay();
         $endDate = Carbon::today()->endOfDay();
 
-        $counts = $this->applyFilters(TriageSession::query(), $filters)
+        $counts = $this->applyFilters(PhienSangLoc::query(), $filters)
             ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as aggregate'))
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('date')
@@ -148,7 +148,7 @@ class TriageReportService
 
     public function getTopSymptoms(int $limit = 10, array $filters = []): array
     {
-        $lists = $this->applyFilters(TriageSession::query(), $filters)
+        $lists = $this->applyFilters(PhienSangLoc::query(), $filters)
             ->whereNotNull('matched_symptoms')
             ->pluck('matched_symptoms');
 
@@ -169,7 +169,7 @@ class TriageReportService
         arsort($tally);
         $tally = array_slice($tally, 0, $limit, true);
 
-        $names = MedicalSymptom::whereIn('code', array_keys($tally))
+        $names = TrieuChungYTe::whereIn('code', array_keys($tally))
             ->pluck('name_vi', 'code')
             ->toArray();
 
@@ -187,7 +187,7 @@ class TriageReportService
 
     public function getTopRedFlags(int $limit = 10, array $filters = []): array
     {
-        $lists = $this->applyFilters(TriageSession::query(), $filters)
+        $lists = $this->applyFilters(PhienSangLoc::query(), $filters)
             ->whereNotNull('triggered_red_flags')
             ->pluck('triggered_red_flags');
 
@@ -216,7 +216,7 @@ class TriageReportService
         arsort($tally);
         $tally = array_slice($tally, 0, $limit, true);
 
-        $known = MedicalRedFlag::whereIn('code', array_keys($tally))
+        $known = CoDoYTe::whereIn('code', array_keys($tally))
             ->get(['code', 'name_vi', 'severity'])
             ->keyBy('code');
 
@@ -235,7 +235,7 @@ class TriageReportService
 
     public function getEntryPointSplit(array $filters = []): array
     {
-        $counts = $this->applyFilters(TriageSession::query(), $filters)
+        $counts = $this->applyFilters(PhienSangLoc::query(), $filters)
             ->select('entry_point', DB::raw('COUNT(*) as aggregate'))
             ->groupBy('entry_point')
             ->pluck('aggregate', 'entry_point')
@@ -298,6 +298,6 @@ class TriageReportService
 
     public function filterSessions(array $filters): Builder
     {
-        return $this->applyFilters(TriageSession::query(), $filters);
+        return $this->applyFilters(PhienSangLoc::query(), $filters);
     }
 }

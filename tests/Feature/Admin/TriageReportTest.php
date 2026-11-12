@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\Admin;
 
-use App\Models\Category;
-use App\Models\TriageSession;
-use App\Models\User;
-use App\Models\UserHealthProfile;
+use App\Models\DanhMuc;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use App\Models\HoSoSucKhoe;
 use App\Services\Triage\TriageReportService;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,29 +15,29 @@ class TriageReportTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $admin;
-    protected User $customer;
-    protected User $pharmacist;
+    protected NguoiDung $admin;
+    protected NguoiDung $customer;
+    protected NguoiDung $pharmacist;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         // The knowledge seeder resolves catalog categories by name, so it must exist first.
-        Category::create([
+        DanhMuc::create([
             'name' => 'Thuốc giảm đau - Hạ sốt',
             'description' => 'Giảm đau, hạ sốt',
         ]);
 
-        $this->seed(MedicalKnowledgeSeeder::class);
+        $this->seed(TriThucYTeSeeder::class);
 
-        $this->admin = User::factory()->create(['role' => 'Administrator', 'status' => 'active']);
-        $this->customer = User::factory()->create(['role' => 'User', 'status' => 'active']);
-        $this->pharmacist = User::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
+        $this->admin = NguoiDung::factory()->create(['role' => 'Administrator', 'status' => 'active']);
+        $this->customer = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->pharmacist = NguoiDung::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
     }
 
-    private function makeSession(array $attributes = []): TriageSession    {
-        return TriageSession::create(array_merge([
+    private function makeSession(array $attributes = []): PhienSangLoc    {
+        return PhienSangLoc::create(array_merge([
             'MaKH' => $this->customer->MaKH,
             'collected_data' => [
                 'raw_symptom_text' => 'đau đầu hai ngày',
@@ -249,31 +249,31 @@ class TriageReportTest extends TestCase
 
     public function test_detail_page_never_exposes_the_health_profile(): void
     {
-        UserHealthProfile::create([
+        HoSoSucKhoe::create([
             'MaKH' => $this->customer->MaKH,
             'allergies' => ['Paracetamol'],
             'consented_at' => now(),
         ]);
 
-        $session = $this->makeSession();
+        $phien = $this->makeSession();
 
         $this->actingAs($this->admin)
-            ->get(route('admin.triageReports.show', $session->MaSL))
+            ->get(route('admin.triageReports.show', $phien->MaSL))
             ->assertOk()
-            ->assertSee('SL-' . $session->MaSL)
+            ->assertSee('SL-' . $phien->MaSL)
             ->assertDontSee('Paracetamol');
     }
 
     public function test_detail_page_shows_matched_symptoms_and_pharmacist_note(): void
     {
-        $session = $this->makeSession([
+        $phien = $this->makeSession([
             'status' => 'reviewed',
             'pharmacist_id' => $this->pharmacist->MaKH,
             'pharmacist_note' => 'Đã tư vấn qua điện thoại.',
         ]);
 
         $this->actingAs($this->admin)
-            ->get(route('admin.triageReports.show', $session->MaSL))
+            ->get(route('admin.triageReports.show', $phien->MaSL))
             ->assertOk()
             ->assertSee('đau đầu')
             ->assertSee('Đã tư vấn qua điện thoại.');

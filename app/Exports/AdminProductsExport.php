@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\Product;
+use App\Models\SanPham;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -19,8 +19,8 @@ class AdminProductsExport implements FromCollection, WithHeadings, WithMapping, 
 
     public function collection(): Collection
     {
-        return Product::query()
-            ->with('category')
+        return SanPham::query()
+            ->with('danhMuc')
             ->when($this->categoryId, fn ($query) => $query->where('MaDM', $this->categoryId))
             ->search($this->search)
             ->orderByDesc('MaSP')
@@ -45,7 +45,7 @@ class AdminProductsExport implements FromCollection, WithHeadings, WithMapping, 
         return [
             $product->display_code,
             $product->name,
-            $product->category->name ?? 'Chưa phân loại',
+            $product->danhMuc->name ?? 'Chưa phân loại',
             $product->price_vnd,
             $product->stock_quantity,
             optional($product->expiration_date)->format('d/m/Y'),

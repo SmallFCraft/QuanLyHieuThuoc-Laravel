@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\MedicationReminder;
-use App\Models\TriageSession;
+use App\Models\NhacUongThuoc;
+use App\Models\PhienSangLoc;
 use App\Services\MedicationReminderService;
 use App\Services\Triage\TriageFollowUpService;
 use Illuminate\Http\RedirectResponse;
@@ -26,31 +26,31 @@ class ReminderController extends Controller
 
     public function index(): View
     {
-        $reminders = MedicationReminder::with('product')
+        $cacNhacUong = NhacUongThuoc::with('sanPham')
             ->where('MaKH', (int) auth()->id())
             ->active()
             ->orderBy('next_remind_at')
             ->get();
 
         return view('reminders.index', [
-            'reminders' => $reminders,
+            'reminders' => $cacNhacUong,
         ]);
     }
 
     public function cancel(Request $request, int $MaNN): RedirectResponse
     {
-        $reminder = MedicationReminder::where('MaKH', (int) auth()->id())
+        $nhacUong = NhacUongThuoc::where('MaKH', (int) auth()->id())
             ->where('MaNN', $MaNN)
             ->first();
 
-        if (!$reminder) {
+        if (!$nhacUong) {
             return redirect()->route('reminders.index')
                 ->with('error', __('messages.reminder.not_found'));
         }
 
         // Cancel this schedule only. The same product can be on two courses from two
         // orders (an original and a refill), and cancelling one must not stop the other.
-        $this->reminderService->cancelSchedule($reminder);
+        $this->reminderService->cancelSchedule($nhacUong);
 
         return redirect()->route('reminders.index')
             ->with('success', __('messages.reminder.cancelled'));
@@ -66,22 +66,22 @@ class ReminderController extends Controller
     {
         $improved = $request->boolean('improved');
 
-        $session = TriageSession::where('MaKH', (int) auth()->id())
+        $phien = PhienSangLoc::where('MaKH', (int) auth()->id())
             ->where('MaSL', $MaSL)
             ->first();
 
-        if (!$session) {
+        if (!$phien) {
             return redirect()->route('health.history')
                 ->with('error', __('messages.reminder.response_forbidden'));
         }
 
-        if ($session->follow_up_responded_at !== null) {
-            return redirect()->route('health.result', $session->MaSL)
+        if ($phien->follow_up_responded_at !== null) {
+            return redirect()->route('health.result', $phien->MaSL)
                 ->with('success', __('messages.reminder.response_already_answered'));
         }
 
         return view('reminders.follow-up-confirm', [
-            'session' => $session,
+            'session' => $phien,
             'improved' => $improved,
         ]);
     }
@@ -95,25 +95,25 @@ class ReminderController extends Controller
             'improved' => ['required', 'boolean'],
         ]);
 
-        $session = TriageSession::where('MaKH', (int) auth()->id())
+        $phien = PhienSangLoc::where('MaKH', (int) auth()->id())
             ->where('MaSL', $MaSL)
             ->first();
 
-        if (!$session) {
+        if (!$phien) {
             return redirect()->route('health.history')
                 ->with('error', __('messages.reminder.response_forbidden'));
         }
 
-        $result = $this->followUpService->recordResponse($session, (bool) $validated['improved']);
+        $result = $this->followUpService->recordResponse($phien, (bool) $validated['improved']);
 
         if ($result['already_answered']) {
-            return redirect()->route('health.result', $session->MaSL)
+            return redirect()->route('health.result', $phien->MaSL)
                 ->with('success', __('messages.reminder.response_already_answered'));
         }
 
         // The layout only renders `success` and `error`; the referral advice must
         // be visible, so it uses the `error` channel rather than a silent key.
-        return redirect()->route('health.result', $session->MaSL)
+        return redirect()->route('health.result', $phien->MaSL)
             ->with($result['improved'] ? 'success' : 'error', $result['message']);
     }
 }

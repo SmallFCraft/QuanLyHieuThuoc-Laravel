@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Product;
-use App\Models\Category;
-use App\Models\Order;
-use App\Models\OrderItem;
+use App\Models\NguoiDung;
+use App\Models\SanPham;
+use App\Models\DanhMuc;
+use App\Models\DonHang;
+use App\Models\ChiTietDonHang;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -17,24 +17,24 @@ class PerformanceOptimizationTest extends TestCase
     use RefreshDatabase;
 
     protected $admin;
-    protected $user;
-    protected $category;
+    protected $nguoiDung;
+    protected $danhMuc;
 
     protected function setUp(): void
     {
         parent::setUp();
         
-        $this->admin = User::factory()->create([
+        $this->admin = NguoiDung::factory()->create([
             'role' => 'Administrator',
             'status' => 'active'
         ]);
         
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active'
         ]);
         
-        $this->category = Category::create([
+        $this->danhMuc = DanhMuc::create([
             'name' => 'Test Category',
             'description' => 'Test Description'
         ]);
@@ -44,8 +44,8 @@ class PerformanceOptimizationTest extends TestCase
     {
         // Create multiple products with categories
         for ($i = 1; $i <= 10; $i++) {
-            Product::create([
-                'MaDM' => $this->category->MaDM,
+            SanPham::create([
+                'MaDM' => $this->danhMuc->MaDM,
                 'name' => "Product {$i}",
                 'price' => 10000 * $i,
                 'expiration_date' => now()->addYear(),
@@ -59,7 +59,7 @@ class PerformanceOptimizationTest extends TestCase
         DB::enableQueryLog();
 
         // Load products with eager loading
-        $products = Product::with('category')->get();
+        $sanPhams = SanPham::with('danhMuc')->get();
 
         $queries = DB::getQueryLog();
         $queryCount = count($queries);
@@ -76,8 +76,8 @@ class PerformanceOptimizationTest extends TestCase
     {
         // Create orders with items
         for ($i = 1; $i <= 5; $i++) {
-            $product = Product::create([
-                'MaDM' => $this->category->MaDM,
+            $sanPham = SanPham::create([
+                'MaDM' => $this->danhMuc->MaDM,
                 'name' => "Product {$i}",
                 'price' => 10000,
                 'expiration_date' => now()->addYear(),
@@ -86,17 +86,17 @@ class PerformanceOptimizationTest extends TestCase
                 'batch_number' => "BATCH-ORDER-{$i}"
             ]);
 
-            $order = Order::create([
-                'MaKH' => $this->user->MaKH,
+            $donHang = DonHang::create([
+                'MaKH' => $this->nguoiDung->MaKH,
                 'total_amount' => 20000,
                 'status' => 'Pending',
                 'shipping_address' => '123 Test Street',
                 'shipping_phone' => '0901234567'
             ]);
 
-            OrderItem::create([
-                'MaDH' => $order->MaDH,
-                'MaSP' => $product->MaSP,
+            ChiTietDonHang::create([
+                'MaDH' => $donHang->MaDH,
+                'MaSP' => $sanPham->MaSP,
                 'quantity' => 2,
                 'unit_price' => 10000,
                 'batch_number' => "BATCH-ORDER-{$i}"
@@ -106,7 +106,7 @@ class PerformanceOptimizationTest extends TestCase
         DB::enableQueryLog();
 
         // Load orders with eager loading
-        $orders = Order::with(['user', 'items.product'])->get();
+        $donHangs = DonHang::with(['nguoiDung', 'chiTietDonHangs.sanPham'])->get();
 
         $queries = DB::getQueryLog();
         $queryCount = count($queries);
@@ -123,8 +123,8 @@ class PerformanceOptimizationTest extends TestCase
     {
         // Create many products
         for ($i = 1; $i <= 100; $i++) {
-            Product::create([
-                'MaDM' => $this->category->MaDM,
+            SanPham::create([
+                'MaDM' => $this->danhMuc->MaDM,
                 'name' => "Product {$i}",
                 'price' => 10000,
                 'expiration_date' => now()->addDays($i),
@@ -137,7 +137,7 @@ class PerformanceOptimizationTest extends TestCase
         // Query using indexed column (expiration_date)
         $startTime = microtime(true);
         
-        $expiringProducts = Product::where('expiration_date', '<=', now()->addDays(30))
+        $expiringProducts = SanPham::where('expiration_date', '<=', now()->addDays(30))
             ->get();
         
         $endTime = microtime(true);
@@ -157,7 +157,7 @@ class PerformanceOptimizationTest extends TestCase
         DB::enableQueryLog();
         
         $categories1 = Cache::remember('categories_all', 3600, function () {
-            return Category::all();
+            return DanhMuc::all();
         });
         
         $queries1 = count(DB::getQueryLog());
@@ -168,7 +168,7 @@ class PerformanceOptimizationTest extends TestCase
         DB::enableQueryLog();
         
         $categories2 = Cache::remember('categories_all', 3600, function () {
-            return Category::all();
+            return DanhMuc::all();
         });
         
         $queries2 = count(DB::getQueryLog());
@@ -187,8 +187,8 @@ class PerformanceOptimizationTest extends TestCase
     public function test_dashboard_metrics_caching(): void
     {
         // Create test data
-        Order::create([
-            'MaKH' => $this->user->MaKH,
+        DonHang::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'total_amount' => 100000,
             'status' => 'Completed',
             'shipping_address' => '123 Test Street',
@@ -203,8 +203,8 @@ class PerformanceOptimizationTest extends TestCase
         
         $metrics1 = Cache::remember('dashboard_metrics', 300, function () {
             return [
-                'total_orders' => Order::count(),
-                'total_revenue' => Order::where('status', 'Completed')->sum('total_amount')
+                'total_orders' => DonHang::count(),
+                'total_revenue' => DonHang::where('status', 'Completed')->sum('total_amount')
             ];
         });
         
@@ -217,8 +217,8 @@ class PerformanceOptimizationTest extends TestCase
         
         $metrics2 = Cache::remember('dashboard_metrics', 300, function () {
             return [
-                'total_orders' => Order::count(),
-                'total_revenue' => Order::where('status', 'Completed')->sum('total_amount')
+                'total_orders' => DonHang::count(),
+                'total_revenue' => DonHang::where('status', 'Completed')->sum('total_amount')
             ];
         });
         
@@ -239,8 +239,8 @@ class PerformanceOptimizationTest extends TestCase
     {
         // Create many products
         for ($i = 1; $i <= 50; $i++) {
-            Product::create([
-                'MaDM' => $this->category->MaDM,
+            SanPham::create([
+                'MaDM' => $this->danhMuc->MaDM,
                 'name' => "Product {$i}",
                 'price' => 10000,
                 'expiration_date' => now()->addYear(),
@@ -251,18 +251,18 @@ class PerformanceOptimizationTest extends TestCase
         }
 
         // Get paginated results
-        $products = Product::paginate(12);
+        $sanPhams = SanPham::paginate(12);
 
         // Should only return 12 items per page
-        $this->assertEquals(12, $products->count());
-        $this->assertEquals(50, $products->total());
+        $this->assertEquals(12, $sanPhams->count());
+        $this->assertEquals(50, $sanPhams->total());
     }
 
     public function test_select_specific_columns_reduces_data_transfer(): void
     {
         // Create product with all fields
-        Product::create([
-            'MaDM' => $this->category->MaDM,
+        SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Product',
             'ingredients' => str_repeat('Long ingredient list ', 100),
             'usage' => str_repeat('Long usage instructions ', 100),
@@ -273,10 +273,10 @@ class PerformanceOptimizationTest extends TestCase
             'batch_number' => 'BATCH-SELECT'
         ]);
 
-        $products = Product::select('MaSP', 'name', 'price')->get();
-        $allProducts = Product::all();
+        $sanPhams = SanPham::select('MaSP', 'name', 'price')->get();
+        $allProducts = SanPham::all();
 
-        $selectedAttributes = $products->first()->getAttributes();
+        $selectedAttributes = $sanPhams->first()->getAttributes();
         $allAttributes = $allProducts->first()->getAttributes();
 
         $this->assertArrayHasKey('MaSP', $selectedAttributes);
@@ -295,8 +295,8 @@ class PerformanceOptimizationTest extends TestCase
     {
         // Create many products
         for ($i = 1; $i <= 100; $i++) {
-            Product::create([
-                'MaDM' => $this->category->MaDM,
+            SanPham::create([
+                'MaDM' => $this->danhMuc->MaDM,
                 'name' => "Product {$i}",
                 'price' => 10000,
                 'expiration_date' => now()->addYear(),
@@ -309,8 +309,8 @@ class PerformanceOptimizationTest extends TestCase
         $processedCount = 0;
 
         // Process in chunks
-        Product::chunk(20, function ($products) use (&$processedCount) {
-            $processedCount += $products->count();
+        SanPham::chunk(20, function ($sanPhams) use (&$processedCount) {
+            $processedCount += $sanPhams->count();
         });
 
         // Should process all products

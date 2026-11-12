@@ -59,7 +59,7 @@
                         @endphp
                         <tr>
                             <td><span class="fw-semibold">#{{ $order->MaDH }}</span></td>
-                            <td>{{ $order->user->name }}</td>
+                            <td>{{ $order->nguoiDung->name }}</td>
                             <td class="fw-bold">{{ $order->formatted_total }}</td>
                             <td><span class="badge {{ $statusClass }}">{{ $statuses[$order->status]['label'] ?? $order->status }}</span></td>
                             <td>{{ $order->formatted_created_at }}</td>
@@ -87,7 +87,7 @@
                 <article class="admin-mobile-item">
                     <div class="d-flex justify-content-between gap-3">
                         <div>
-                            <strong>#{{ $order->MaDH }} · {{ $order->user->name }}</strong>
+                            <strong>#{{ $order->MaDH }} · {{ $order->nguoiDung->name }}</strong>
                             <div class="small text-secondary">{{ $order->formatted_created_at }}</div>
                             <div class="fw-bold mt-1">{{ $order->formatted_total }}</div>
                         </div>

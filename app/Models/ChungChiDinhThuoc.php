@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DrugContraindication extends Model
+class ChungChiDinhThuoc extends Model
 {
+    protected $table = 'drug_contraindications';
+
     protected $primaryKey = 'MaCCD';
 
     protected $fillable = [

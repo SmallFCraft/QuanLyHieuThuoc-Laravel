@@ -9,17 +9,17 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Carbon\Carbon;
 
-class OrderSeeder extends Seeder
+class DonHangSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        $users = User::where('role', 'User')->get();
-        $products = Product::all();
+        $nguoiDungs = NguoiDung::where('role', 'User')->get();
+        $sanPhams = SanPham::all();
         
-        if ($users->isEmpty() || $products->isEmpty()) {
+        if ($nguoiDungs->isEmpty() || $sanPhams->isEmpty()) {
             $this->command->warn('Chưa có user hoặc sản phẩm. Chạy UserSeeder và `php artisan crawl:longchau` trước!');
             return;
         }
@@ -43,12 +43,12 @@ class OrderSeeder extends Seeder
 
         // Create 20 orders with various statuses
         for ($i = 0; $i < 20; $i++) {
-            $user = $users->random();
+            $nguoiDung = $nguoiDungs->random();
             $status = $statuses[array_rand($statuses)];
             
             // Create order
-            $order = Order::create([
-                'MaKH' => $user->MaKH,
+            $donHang = DonHang::create([
+                'MaKH' => $nguoiDung->MaKH,
                 'total_amount' => 0, // Will be calculated after adding items
                 'status' => $status,
                 'shipping_address' => $addresses[array_rand($addresses)],
@@ -61,27 +61,27 @@ class OrderSeeder extends Seeder
             $totalAmount = 0;
             
             for ($j = 0; $j < $itemCount; $j++) {
-                $product = $products->random();
+                $sanPham = $sanPhams->random();
                 $quantity = rand(1, 3);
-                $unitPrice = $product->price_vnd;
+                $unitPrice = $sanPham->price_vnd;
                 
                 // Get the first available batch for this product
-                $batch = $product->batches()->first();
+                $lo = $sanPham->cacLo()->first();
                 
-                OrderItem::create([
-                    'MaDH' => $order->MaDH,
-                    'MaSP' => $product->MaSP,
-                    'MaLo' => $batch ? $batch->MaLo : null,
+                ChiTietDonHang::create([
+                    'MaDH' => $donHang->MaDH,
+                    'MaSP' => $sanPham->MaSP,
+                    'MaLo' => $lo ? $lo->MaLo : null,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
-                    'batch_number' => $product->batch_number,
+                    'batch_number' => $sanPham->batch_number,
                 ]);
                 
                 $totalAmount += $quantity * $unitPrice;
             }
             
             // Update order total amount
-            $order->update(['total_amount' => $totalAmount]);
+            $donHang->update(['total_amount' => $totalAmount]);
         }
         
         $this->command->info('Created 20 orders with various statuses');

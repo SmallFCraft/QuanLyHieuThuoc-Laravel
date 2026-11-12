@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\TriageSession;
-use App\Models\User;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -24,7 +24,7 @@ class TriageAiClarifyTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
@@ -32,24 +32,24 @@ class TriageAiClarifyTest extends TestCase
 
         Http::preventStrayRequests();
 
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.fact_extraction', true);
         config()->set('chatbot.ai.triage.clarify_round', true);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(34)->toDateString(),
         ]);
 
-        Product::factory()->create([
+        SanPham::factory()->create([
             'name' => 'Paracetamol 500mg',
             'ingredients' => 'Paracetamol 500mg',
             'usage' => 'Giảm đau đầu, hạ sốt',
             'stock_quantity' => 50,
-            'MaDM' => Category::first()->MaDM,
+            'MaDM' => DanhMuc::first()->MaDM,
         ]);
     }
 
@@ -101,39 +101,39 @@ class TriageAiClarifyTest extends TestCase
     /**
      * @param array<int, string> $answers step => answer
      */
-    protected function runWizard(array $answers): TriageSession
+    protected function runWizard(array $answers): PhienSangLoc
     {
-        $this->actingAs($this->user)->get(route('health.check'));
-        $session = TriageSession::where('MaKH', $this->user->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        $this->actingAs($this->nguoiDung)->get(route('health.check'));
+        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
 
         foreach ($answers as $step => $answer) {
-            $current = TriageSession::find($session->MaSL);
+            $current = PhienSangLoc::find($phien->MaSL);
 
             if ($current === null || $current->status !== 'in_progress') {
                 break;
             }
 
-            $this->actingAs($this->user)->post(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+            $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+                'triage_session_id' => $phien->MaSL,
                 'step' => $step,
                 'answer' => $answer,
             ]);
         }
 
-        return $session->fresh();
+        return $phien->fresh();
     }
 
     /**
      * @param array<int, string> $answers
      */
-    protected function answerClarify(TriageSession $session, array $answers): TriageSession
+    protected function answerClarify(PhienSangLoc $phien, array $answers): PhienSangLoc
     {
-        $this->actingAs($this->user)->post(route('health.clarify'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.clarify'), [
+            'triage_session_id' => $phien->MaSL,
             'clarify' => $answers,
         ]);
 
-        return $session->fresh();
+        return $phien->fresh();
     }
 
     protected function mildAdultAnswers(): array
@@ -155,14 +155,14 @@ class TriageAiClarifyTest extends TestCase
             'missing_questions' => ['Anh/chị đau ở vùng nào của đầu?', 'Cơn đau có kèm buồn nôn không?'],
         ]);
 
-        $session = $this->runWizard($this->mildAdultAnswers());
+        $phien = $this->runWizard($this->mildAdultAnswers());
 
         // Still in progress: the round is not a step, so nothing is finalised yet.
-        $this->assertSame('in_progress', $session->status);
-        $this->assertNull($session->outcome);
-        $this->assertSame(1, $session->ai_clarify_rounds);
+        $this->assertSame('in_progress', $phien->status);
+        $this->assertNull($phien->outcome);
+        $this->assertSame(1, $phien->ai_clarify_rounds);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             ->assertSee(__('messages.health.clarify_title'))
@@ -181,21 +181,21 @@ class TriageAiClarifyTest extends TestCase
             ['symptom_codes' => ['headache'], 'needs_more_info' => false, 'missing_questions' => []],
         ]);
 
-        $session = $this->answerClarify(
+        $phien = $this->answerClarify(
             $this->runWizard($this->mildAdultAnswers()),
             ['đã uống thuốc mà không đỡ']
         );
 
-        $this->assertNotSame('in_progress', $session->status);
+        $this->assertNotSame('in_progress', $phien->status);
         // The answer text reached collectedText(), so the caution red flag fired and
         // downgraded self_care. The queue is opt-in, so the session is still completed.
-        $this->assertSame('pharmacist_review', $session->outcome);
-        $this->assertSame('completed', $session->status);
+        $this->assertSame('pharmacist_review', $phien->outcome);
+        $this->assertSame('completed', $phien->status);
         $this->assertSame(
             'đã uống thuốc mà không đỡ',
-            $session->collected_data['ai_clarify_answers'][0]['answer']
+            $phien->collected_data['ai_clarify_answers'][0]['answer']
         );
-        $this->assertSame(1, $session->ai_clarify_rounds);
+        $this->assertSame(1, $phien->ai_clarify_rounds);
     }
 
     public function test_the_model_may_ask_a_second_round_after_reading_the_first_answer(): void
@@ -206,26 +206,26 @@ class TriageAiClarifyTest extends TestCase
             ['symptom_codes' => ['headache'], 'needs_more_info' => false, 'missing_questions' => []],
         ]);
 
-        $session = $this->answerClarify($this->runWizard($this->mildAdultAnswers()), ['đau nửa đầu bên phải']);
+        $phien = $this->answerClarify($this->runWizard($this->mildAdultAnswers()), ['đau nửa đầu bên phải']);
 
         // Round 2 is open, not finalised.
-        $this->assertSame('in_progress', $session->status);
-        $this->assertSame(2, $session->ai_clarify_rounds);
+        $this->assertSame('in_progress', $phien->status);
+        $this->assertSame(2, $phien->ai_clarify_rounds);
         $this->assertSame(
             ['Cơn đau có kèm buồn nôn hay sợ ánh sáng không?'],
-            $session->pendingClarifyQuestions()
+            $phien->pendingClarifyQuestions()
         );
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             ->assertSee(__('messages.health.clarify_round', ['round' => 2, 'total' => 3]))
             ->assertSee('Cơn đau có kèm buồn nôn hay sợ ánh sáng không?', false);
 
-        $session = $this->answerClarify($session, ['không buồn nôn']);
+        $phien = $this->answerClarify($phien, ['không buồn nôn']);
 
-        $this->assertSame('completed', $session->status);
-        $this->assertCount(2, $session->collected_data['ai_clarify_answers']);
+        $this->assertSame('completed', $phien->status);
+        $this->assertCount(2, $phien->collected_data['ai_clarify_answers']);
     }
 
     /**
@@ -259,7 +259,7 @@ class TriageAiClarifyTest extends TestCase
             ['symptom_codes' => ['cough'], 'needs_more_info' => false, 'missing_questions' => []],
         ]);
 
-        $session = $this->runWizard([
+        $phien = $this->runWizard([
             1 => 'ho',
             2 => 'hôm nay',
             3 => 'chưa uống gì',
@@ -269,10 +269,10 @@ class TriageAiClarifyTest extends TestCase
 
         $this->assertSame(
             ['Anh/chị có sốt hoặc khó thở không ạ?', 'Cơn ho đã mấy ngày rồi ạ?'],
-            $session->pendingClarifyQuestions()
+            $phien->pendingClarifyQuestions()
         );
 
-        $session = $this->answerClarify($session, ['không', 'mấy hôm nay rồi']);
+        $phien = $this->answerClarify($phien, ['không', 'mấy hôm nay rồi']);
 
         // "sốt" was denied outright. "đau ngực" was never asked, so that half of the
         // compound question is new information and must survive.
@@ -281,7 +281,7 @@ class TriageAiClarifyTest extends TestCase
                 'Anh/chị có thấy khó thở hoặc đau ngực không ạ?',
                 'Anh/chị đã uống thuốc gì cho cơn ho chưa ạ?',
             ],
-            $session->pendingClarifyQuestions()
+            $phien->pendingClarifyQuestions()
         );
     }
 
@@ -303,7 +303,7 @@ class TriageAiClarifyTest extends TestCase
             ['symptom_codes' => ['fever'], 'needs_more_info' => false, 'missing_questions' => []],
         ]);
 
-        $session = $this->runWizard([
+        $phien = $this->runWizard([
             1 => 'tiêu chảy',
             2 => 'hôm nay',
             3 => 'chưa uống gì',
@@ -311,13 +311,13 @@ class TriageAiClarifyTest extends TestCase
             5 => 'không có thêm',
         ]);
 
-        $this->assertSame(['Hiện tại anh/chị còn sốt không ạ?'], $session->pendingClarifyQuestions());
+        $this->assertSame(['Hiện tại anh/chị còn sốt không ạ?'], $phien->pendingClarifyQuestions());
 
-        $session = $this->answerClarify($session, ['còn sốt.']);
+        $phien = $this->answerClarify($phien, ['còn sốt.']);
 
         // The age question is already answered by the profile; the fever follow-up
         // is not.
-        $this->assertSame(['Cơn tiêu chảy đã mấy ngày rồi ạ?'], $session->pendingClarifyQuestions());
+        $this->assertSame(['Cơn tiêu chảy đã mấy ngày rồi ạ?'], $phien->pendingClarifyQuestions());
     }
 
     /**
@@ -340,7 +340,7 @@ class TriageAiClarifyTest extends TestCase
             ['symptom_codes' => ['headache'], 'needs_more_info' => false, 'missing_questions' => []],
         ]);
 
-        $session = $this->runWizard([
+        $phien = $this->runWizard([
             1 => 'đau đầu',
             2 => 'hôm nay',
             3 => 'Đã dùng và có đỡ',
@@ -348,12 +348,12 @@ class TriageAiClarifyTest extends TestCase
             5 => 'không có thêm',
         ]);
 
-        $this->assertSame(['Anh/chị đã uống thuốc gì cho chứng này chưa ạ?'], $session->pendingClarifyQuestions());
+        $this->assertSame(['Anh/chị đã uống thuốc gì cho chứng này chưa ạ?'], $phien->pendingClarifyQuestions());
 
-        $session = $this->answerClarify($session, ['chưa uống ạ.']);
+        $phien = $this->answerClarify($phien, ['chưa uống ạ.']);
 
         // Only the location question survives: the medication one was answered.
-        $this->assertSame(['Cơn đau đầu ở vị trí nào ạ?'], $session->pendingClarifyQuestions());
+        $this->assertSame(['Cơn đau đầu ở vị trí nào ạ?'], $phien->pendingClarifyQuestions());
     }
 
     /**
@@ -379,7 +379,7 @@ class TriageAiClarifyTest extends TestCase
             ['symptom_codes' => ['diarrhea'], 'needs_more_info' => false, 'missing_questions' => []],
         ]);
 
-        $session = $this->runWizard([
+        $phien = $this->runWizard([
             1 => 'tiêu chảy',
             2 => 'hôm nay',
             3 => 'chưa uống gì',
@@ -387,11 +387,11 @@ class TriageAiClarifyTest extends TestCase
             5 => 'không có thêm',
         ]);
 
-        $this->assertSame(['Có kèm nôn không ạ?'], $session->pendingClarifyQuestions());
+        $this->assertSame(['Có kèm nôn không ạ?'], $phien->pendingClarifyQuestions());
 
-        $session = $this->answerClarify($session, ['không']);
+        $phien = $this->answerClarify($phien, ['không']);
 
-        $this->assertSame(['Anh/chị đi ngoài mấy lần một ngày ạ?'], $session->pendingClarifyQuestions());
+        $this->assertSame(['Anh/chị đi ngoài mấy lần một ngày ạ?'], $phien->pendingClarifyQuestions());
     }
 
     public function test_the_second_round_prompt_carries_the_first_answer(): void
@@ -428,24 +428,24 @@ class TriageAiClarifyTest extends TestCase
             'missing_questions' => ['Còn dấu hiệu nào khác không ạ?'],
         ]);
 
-        $session = $this->runWizard($this->mildAdultAnswers());
-        $this->assertSame(1, $session->ai_clarify_rounds);
+        $phien = $this->runWizard($this->mildAdultAnswers());
+        $this->assertSame(1, $phien->ai_clarify_rounds);
 
-        $session = $this->answerClarify($session, ['không có gì thêm']);
-        $this->assertSame(2, $session->ai_clarify_rounds);
-        $this->assertSame('in_progress', $session->status);
+        $phien = $this->answerClarify($phien, ['không có gì thêm']);
+        $this->assertSame(2, $phien->ai_clarify_rounds);
+        $this->assertSame('in_progress', $phien->status);
 
-        $session = $this->answerClarify($session, ['vẫn không có']);
-        $this->assertSame(3, $session->ai_clarify_rounds);
-        $this->assertSame('in_progress', $session->status);
+        $phien = $this->answerClarify($phien, ['vẫn không có']);
+        $this->assertSame(3, $phien->ai_clarify_rounds);
+        $this->assertSame('in_progress', $phien->status);
 
-        $session = $this->answerClarify($session, ['thật sự không có']);
+        $phien = $this->answerClarify($phien, ['thật sự không có']);
 
-        // No fourth round: TriageSession::MAX_CLARIFY_ROUNDS is a hard stop.
-        $this->assertSame('completed', $session->status);
-        $this->assertSame(TriageSession::MAX_CLARIFY_ROUNDS, $session->ai_clarify_rounds);
-        $this->assertCount(3, $session->collected_data['ai_clarify_answers']);
-        $this->assertSame([], $session->pendingClarifyQuestions());
+        // No fourth round: PhienSangLoc::MAX_CLARIFY_ROUNDS is a hard stop.
+        $this->assertSame('completed', $phien->status);
+        $this->assertSame(PhienSangLoc::MAX_CLARIFY_ROUNDS, $phien->ai_clarify_rounds);
+        $this->assertCount(3, $phien->collected_data['ai_clarify_answers']);
+        $this->assertSame([], $phien->pendingClarifyQuestions());
     }
 
     public function test_skipping_ends_the_conversation_for_good(): void
@@ -456,19 +456,19 @@ class TriageAiClarifyTest extends TestCase
             'missing_questions' => ['Anh/chị đau ở vùng nào?'],
         ]);
 
-        $session = $this->runWizard($this->mildAdultAnswers());
+        $phien = $this->runWizard($this->mildAdultAnswers());
 
-        $this->actingAs($this->user)->post(route('health.clarify'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.clarify'), [
+            'triage_session_id' => $phien->MaSL,
             'skipped' => 1,
         ]);
 
-        $session = $session->fresh();
+        $phien = $phien->fresh();
 
-        $this->assertSame('self_care', $session->outcome);
-        $this->assertArrayNotHasKey('ai_clarify_answers', $session->collected_data);
+        $this->assertSame('self_care', $phien->outcome);
+        $this->assertArrayNotHasKey('ai_clarify_answers', $phien->collected_data);
         // Declining once means no more rounds, even though the model kept asking.
-        $this->assertSame([], $session->pendingClarifyQuestions());
+        $this->assertSame([], $phien->pendingClarifyQuestions());
     }
 
     public function test_a_finished_session_cannot_be_reopened_by_a_replayed_clarify_post(): void
@@ -478,18 +478,18 @@ class TriageAiClarifyTest extends TestCase
             ['symptom_codes' => ['headache'], 'needs_more_info' => false, 'missing_questions' => []],
         ]);
 
-        $session = $this->answerClarify($this->runWizard($this->mildAdultAnswers()), ['đau nửa đầu']);
+        $phien = $this->answerClarify($this->runWizard($this->mildAdultAnswers()), ['đau nửa đầu']);
 
-        $this->assertNotSame('in_progress', $session->status);
+        $this->assertNotSame('in_progress', $phien->status);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->post(route('health.clarify'), [
-                'triage_session_id' => $session->MaSL,
+                'triage_session_id' => $phien->MaSL,
                 'clarify' => ['thêm nữa'],
             ])
             ->assertRedirect(route('health.check'));
 
-        $this->assertCount(1, $session->fresh()->collected_data['ai_clarify_answers']);
+        $this->assertCount(1, $phien->fresh()->collected_data['ai_clarify_answers']);
     }
 
     public function test_an_emergency_is_never_asked_for_more_detail(): void
@@ -500,10 +500,10 @@ class TriageAiClarifyTest extends TestCase
             'missing_questions' => ['Cơn đau kéo dài bao lâu?'],
         ]);
 
-        $session = $this->runWizard([1 => 'tôi bị đau ngực dữ dội']);
+        $phien = $this->runWizard([1 => 'tôi bị đau ngực dữ dội']);
 
-        $this->assertSame('emergency', $session->outcome);
-        $this->assertSame(0, $session->ai_clarify_rounds);
+        $this->assertSame('emergency', $phien->outcome);
+        $this->assertSame(0, $phien->ai_clarify_rounds);
         Http::assertNothingSent();
     }
 
@@ -515,16 +515,16 @@ class TriageAiClarifyTest extends TestCase
             'missing_questions' => ['Anh/chị còn dấu hiệu nào khác không?'],
         ]);
 
-        $session = $this->answerClarify(
+        $phien = $this->answerClarify(
             $this->runWizard($this->mildAdultAnswers()),
             ['tôi bị co giật lúc chiều']
         );
 
         // The red flag in the answer outranks the model's wish to keep asking.
-        $this->assertSame('emergency', $session->outcome);
-        $this->assertSame('completed', $session->status);
-        $this->assertSame(1, $session->ai_clarify_rounds);
-        $this->assertSame([], $session->suggested_products);
+        $this->assertSame('emergency', $phien->outcome);
+        $this->assertSame('completed', $phien->status);
+        $this->assertSame(1, $phien->ai_clarify_rounds);
+        $this->assertSame([], $phien->suggested_products);
     }
 
     public function test_the_flag_off_skips_the_round_entirely(): void
@@ -537,20 +537,20 @@ class TriageAiClarifyTest extends TestCase
             'missing_questions' => ['Anh/chị đau ở vùng nào?'],
         ]);
 
-        $session = $this->runWizard($this->mildAdultAnswers());
+        $phien = $this->runWizard($this->mildAdultAnswers());
 
-        $this->assertSame('self_care', $session->outcome);
-        $this->assertSame(0, $session->ai_clarify_rounds);
+        $this->assertSame('self_care', $phien->outcome);
+        $this->assertSame(0, $phien->ai_clarify_rounds);
     }
 
     public function test_no_questions_means_no_round(): void
     {
         $this->fakeFacts(['symptom_codes' => ['headache'], 'missing_questions' => []]);
 
-        $session = $this->runWizard($this->mildAdultAnswers());
+        $phien = $this->runWizard($this->mildAdultAnswers());
 
-        $this->assertSame('self_care', $session->outcome);
-        $this->assertSame(0, $session->ai_clarify_rounds);
+        $this->assertSame('self_care', $phien->outcome);
+        $this->assertSame(0, $phien->ai_clarify_rounds);
     }
 
     public function test_needs_more_info_false_stops_the_round_even_with_questions_listed(): void
@@ -561,11 +561,11 @@ class TriageAiClarifyTest extends TestCase
             'missing_questions' => ['Anh/chị đau ở vùng nào?'],
         ]);
 
-        $session = $this->runWizard($this->mildAdultAnswers());
+        $phien = $this->runWizard($this->mildAdultAnswers());
 
         // The model's own stop signal wins: no round is offered.
-        $this->assertSame('self_care', $session->outcome);
-        $this->assertSame(0, $session->ai_clarify_rounds);
+        $this->assertSame('self_care', $phien->outcome);
+        $this->assertSame(0, $phien->ai_clarify_rounds);
     }
 
     public function test_a_question_carrying_a_link_is_discarded(): void
@@ -576,9 +576,9 @@ class TriageAiClarifyTest extends TestCase
             'missing_questions' => ['Bấm vào https://evil.test để xác nhận', 'Anh/chị đau ở vùng nào?'],
         ]);
 
-        $session = $this->runWizard($this->mildAdultAnswers());
+        $phien = $this->runWizard($this->mildAdultAnswers());
 
-        $this->assertSame(['Anh/chị đau ở vùng nào?'], $session->pendingClarifyQuestions());
+        $this->assertSame(['Anh/chị đau ở vùng nào?'], $phien->pendingClarifyQuestions());
     }
 
     public function test_at_most_three_questions_survive_per_round(): void
@@ -589,11 +589,11 @@ class TriageAiClarifyTest extends TestCase
             'missing_questions' => ['Câu một?', 'Câu hai?', 'Câu ba?', 'Câu bốn?'],
         ]);
 
-        $session = $this->runWizard($this->mildAdultAnswers());
+        $phien = $this->runWizard($this->mildAdultAnswers());
 
         $this->assertCount(
-            TriageSession::MAX_CLARIFY_QUESTIONS_PER_ROUND,
-            $session->pendingClarifyQuestions()
+            PhienSangLoc::MAX_CLARIFY_QUESTIONS_PER_ROUND,
+            $phien->pendingClarifyQuestions()
         );
     }
 
@@ -605,34 +605,34 @@ class TriageAiClarifyTest extends TestCase
             'missing_questions' => ['Câu một?', 'Câu hai?', 'Câu ba?'],
         ]);
 
-        $session = $this->runWizard($this->mildAdultAnswers());
+        $phien = $this->runWizard($this->mildAdultAnswers());
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->post(route('health.clarify'), [
-                'triage_session_id' => $session->MaSL,
+                'triage_session_id' => $phien->MaSL,
                 'clarify' => ['một', 'hai', 'ba', 'bốn'],
             ])
             ->assertSessionHasErrors('clarify');
 
-        $this->assertSame('in_progress', $session->fresh()->status);
+        $this->assertSame('in_progress', $phien->fresh()->status);
     }
 
     public function test_clarify_is_unreachable_when_no_round_is_open(): void
     {
         $this->fakeFacts(['symptom_codes' => ['headache'], 'missing_questions' => []]);
 
-        $this->actingAs($this->user)->get(route('health.check'));
-        $session = TriageSession::where('MaKH', $this->user->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        $this->actingAs($this->nguoiDung)->get(route('health.check'));
+        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->post(route('health.clarify'), [
-                'triage_session_id' => $session->MaSL,
+                'triage_session_id' => $phien->MaSL,
                 'clarify' => ['gì đó'],
             ])
             ->assertRedirect(route('health.check'))
             ->assertSessionHas('error');
 
-        $this->assertSame('in_progress', $session->fresh()->status);
+        $this->assertSame('in_progress', $phien->fresh()->status);
     }
 
     public function test_another_user_cannot_answer_someone_elses_round(): void
@@ -643,17 +643,17 @@ class TriageAiClarifyTest extends TestCase
             'missing_questions' => ['Anh/chị đau ở vùng nào?'],
         ]);
 
-        $session = $this->runWizard($this->mildAdultAnswers());
-        $other = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $phien = $this->runWizard($this->mildAdultAnswers());
+        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
 
         $this->actingAs($other)->post(route('health.clarify'), [
-            'triage_session_id' => $session->MaSL,
+            'triage_session_id' => $phien->MaSL,
             'clarify' => ['tôi chen ngang'],
         ]);
 
-        $session = $session->fresh();
-        $this->assertSame('in_progress', $session->status);
-        $this->assertArrayNotHasKey('ai_clarify_answers', $session->collected_data);
+        $phien = $phien->fresh();
+        $this->assertSame('in_progress', $phien->status);
+        $this->assertArrayNotHasKey('ai_clarify_answers', $phien->collected_data);
     }
 
     public function test_a_guest_cannot_reach_the_clarify_route(): void

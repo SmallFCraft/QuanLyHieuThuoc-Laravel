@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Admin;
 
-use App\Models\Category;
-use App\Models\User;
+use App\Models\DanhMuc;
+use App\Models\NguoiDung;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,30 +17,30 @@ class CategoryDuplicateNameTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $admin;
+    protected NguoiDung $admin;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create(['role' => 'Administrator', 'status' => 'active']);
+        $this->admin = NguoiDung::factory()->create(['role' => 'Administrator', 'status' => 'active']);
     }
 
     public function test_a_name_differing_only_by_punctuation_is_rejected(): void
     {
-        Category::create(['name' => 'Cơ - xương - khớp']);
+        DanhMuc::create(['name' => 'Cơ - xương - khớp']);
 
         $this->actingAs($this->admin)
             ->postJson(route('admin.categories.store'), ['name' => 'Cơ xương khớp'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('name');
 
-        $this->assertSame(1, Category::count());
+        $this->assertSame(1, DanhMuc::count());
     }
 
     public function test_a_name_differing_only_by_accents_is_rejected(): void
     {
-        Category::create(['name' => 'Thuốc dị ứng']);
+        DanhMuc::create(['name' => 'Thuốc dị ứng']);
 
         $this->actingAs($this->admin)
             ->postJson(route('admin.categories.store'), ['name' => 'thuoc di ung'])
@@ -50,25 +50,25 @@ class CategoryDuplicateNameTest extends TestCase
 
     public function test_a_genuinely_new_name_is_accepted(): void
     {
-        Category::create(['name' => 'Cơ - xương - khớp']);
+        DanhMuc::create(['name' => 'Cơ - xương - khớp']);
 
         $this->actingAs($this->admin)
             ->postJson(route('admin.categories.store'), ['name' => 'Thuốc hô hấp'])
             ->assertStatus(201);
 
-        $this->assertSame(2, Category::count());
-        $this->assertSame('thuoc ho hap', Category::firstWhere('name', 'Thuốc hô hấp')->name_folded);
+        $this->assertSame(2, DanhMuc::count());
+        $this->assertSame('thuoc ho hap', DanhMuc::firstWhere('name', 'Thuốc hô hấp')->name_folded);
     }
 
     /** Renaming must not trip over the row being renamed. */
     public function test_a_category_can_be_saved_under_its_own_folded_name(): void
     {
-        $category = Category::create(['name' => 'Cơ - xương - khớp']);
+        $danhMuc = DanhMuc::create(['name' => 'Cơ - xương - khớp']);
 
         $this->actingAs($this->admin)
-            ->putJson(route('admin.categories.update', $category), ['name' => 'Cơ xương khớp'])
+            ->putJson(route('admin.categories.update', $danhMuc), ['name' => 'Cơ xương khớp'])
             ->assertOk();
 
-        $this->assertSame('Cơ xương khớp', $category->fresh()->name);
+        $this->assertSame('Cơ xương khớp', $danhMuc->fresh()->name);
     }
 }

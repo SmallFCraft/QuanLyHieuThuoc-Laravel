@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\User;
+use App\Models\NguoiDung;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -17,7 +17,7 @@ class AdminUsersExport implements FromCollection, WithHeadings, WithMapping, Sho
 
     public function collection(): Collection
     {
-        return User::query()
+        return NguoiDung::query()
             ->when($this->search, function ($query) {
                 $search = $this->search;
 
@@ -45,15 +45,15 @@ class AdminUsersExport implements FromCollection, WithHeadings, WithMapping, Sho
         ];
     }
 
-    public function map($user): array
+    public function map($nguoiDung): array
     {
         return [
-            '#' . $user->MaKH,
-            $user->name,
-            $user->email,
-            $user->role,
-            $user->status === 'active' ? 'Hoạt động' : 'Vô hiệu hóa',
-            optional($user->created_at)->format('d/m/Y H:i'),
+            '#' . $nguoiDung->MaKH,
+            $nguoiDung->name,
+            $nguoiDung->email,
+            $nguoiDung->role,
+            $nguoiDung->status === 'active' ? 'Hoạt động' : 'Vô hiệu hóa',
+            optional($nguoiDung->created_at)->format('d/m/Y H:i'),
         ];
     }
 }

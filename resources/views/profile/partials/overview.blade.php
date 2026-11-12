@@ -14,7 +14,7 @@
     $profilePercent = (int) round($filledCount / max(1, count($profileFields)) * 100);
     $missingFields = array_keys(array_filter($profileFields, fn ($ok) => ! $ok));
 
-    $healthProfile = $user->healthProfile;
+    $healthProfile = $user->hoSoSucKhoe;
     $healthFields = [
         filled($healthProfile?->allergies),
         filled($healthProfile?->chronic_conditions),
@@ -124,7 +124,7 @@
                     <li class="profile-overview-item">
                         <span class="profile-overview-item__icon"><i class="bi bi-capsule"></i></span>
                         <span class="profile-overview-item__body">
-                            <span class="profile-overview-item__title">{{ $reminder->product?->name ?? __('messages.profile.product_not_exist') }}</span>
+                            <span class="profile-overview-item__title">{{ $reminder->sanPham?->name ?? __('messages.profile.product_not_exist') }}</span>
                             <span class="profile-overview-item__meta">
                                 {{ __('messages.profile.overview_reminder_next') }}:
                                 {{ $reminder->next_remind_at?->format('d/m/Y H:i') ?? '—' }}
@@ -186,7 +186,7 @@
             // Chỉ 3 dòng: thẻ này nằm cạnh "đơn hàng gần đây" trong lưới 2 cột, dài
             // hơn thì hai thẻ lệch chiều cao. Danh sách đầy đủ ở tab Yêu thích.
             $previewFavorites = $favoriteItems->getCollection()
-                ->map(fn ($favorite) => $favorite->product)
+                ->map(fn ($favorite) => $favorite->sanPham)
                 ->filter()
                 ->take(3);
         @endphp
@@ -208,7 +208,7 @@
                             <span class="profile-overview-item__body">
                                 <span class="profile-overview-item__title">{{ $product->name }}</span>
                                 <span class="profile-overview-item__meta">
-                                    {{ $product->category?->name ?? __('messages.product_category') }}
+                                    {{ $product->danhMuc?->name ?? __('messages.product_category') }}
                                     @if($product->stock_quantity < 1)
                                         · <span class="text-danger">{{ __('messages.out_of_stock') }}</span>
                                     @endif

@@ -19,7 +19,7 @@
     $detailUrl = route('products.show', $product->MaSP);
     $detailText = $detailLabel ?? __('messages.view_details');
     $fitClass = $imageFit === 'contain' ? 'object-fit-contain p-2' : 'object-fit-cover';
-    $categoryName = $product->category?->name ?? __('messages.product_category');
+    $categoryName = $product->danhMuc?->name ?? __('messages.product_category');
     $price = $product->formatted_price ?? format_currency_vi($product->price_vnd);
     $canShowFavorite = $showFavorite && auth()->check();
 @endphp

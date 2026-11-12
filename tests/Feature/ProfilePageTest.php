@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Favorite;
-use App\Models\MedicationReminder;
-use App\Models\Order;
-use App\Models\Product;
-use App\Models\User;
-use App\Models\UserHealthProfile;
+use App\Models\DanhMuc;
+use App\Models\YeuThich;
+use App\Models\NhacUongThuoc;
+use App\Models\DonHang;
+use App\Models\SanPham;
+use App\Models\NguoiDung;
+use App\Models\HoSoSucKhoe;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -22,18 +22,18 @@ class ProfilePageTest extends TestCase
 {
     use RefreshDatabase;
 
-    private User $user;
+    private NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user = User::factory()->create(['name' => 'Nguyễn Văn An']);
+        $this->nguoiDung = NguoiDung::factory()->create(['name' => 'Nguyễn Văn An']);
     }
 
     public function test_the_page_opens_on_the_overview_tab(): void
     {
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('profile.edit'))
             ->assertOk()
             ->assertSee('id="overview"', false)
@@ -43,7 +43,7 @@ class ProfilePageTest extends TestCase
 
     public function test_every_tab_is_rendered(): void
     {
-        $response = $this->actingAs($this->user)->get(route('profile.edit'))->assertOk();
+        $response = $this->actingAs($this->nguoiDung)->get(route('profile.edit'))->assertOk();
 
         foreach (['overview', 'profile-info', 'orders', 'favorites', 'security', 'health-profile', 'settings'] as $tab) {
             $response->assertSee('id="' . $tab . '"', false);
@@ -54,7 +54,7 @@ class ProfilePageTest extends TestCase
     {
         // Bootstrap Tab tìm container qua closest('.nav, .list-group, [role="tablist"]')
         // và im lặng không làm gì nếu không thấy — tab sẽ không đổi được.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('profile.edit'))
             ->assertOk()
             ->assertSee('class="profile-nav" role="tablist"', false)
@@ -64,15 +64,15 @@ class ProfilePageTest extends TestCase
     public function test_the_overview_counts_orders_by_status(): void
     {
         foreach (['Pending', 'Pending', 'Delivering', 'Completed'] as $status) {
-            Order::create([
-                'MaKH' => $this->user->MaKH,
+            DonHang::create([
+                'MaKH' => $this->nguoiDung->MaKH,
                 'total_amount' => 120000,
                 'status' => $status,
                 'shipping_address' => '1 Lê Văn Hiến, Đà Nẵng',
             ]);
         }
 
-        $counts = $this->actingAs($this->user)
+        $counts = $this->actingAs($this->nguoiDung)
             ->get(route('profile.edit'))
             ->assertOk()
             ->viewData('orderCounts');
@@ -86,19 +86,19 @@ class ProfilePageTest extends TestCase
     public function test_the_overview_lists_the_three_most_recent_orders(): void
     {
         foreach (range(1, 5) as $i) {
-            $order = Order::create([
-                'MaKH' => $this->user->MaKH,
+            $donHang = DonHang::create([
+                'MaKH' => $this->nguoiDung->MaKH,
                 'total_amount' => 10000 * $i,
                 'status' => 'Completed',
                 'shipping_address' => "{$i} Lê Văn Hiến, Đà Nẵng",
             ]);
 
-            // created_at không nằm trong $fillable nên Order::create() bỏ qua nó và
+            // created_at không nằm trong $fillable nên DonHang::create() bỏ qua nó và
             // cả 5 đơn dùng cùng một mốc thời gian.
-            $order->forceFill(['created_at' => now()->subDays(10 - $i)])->save();
+            $donHang->forceFill(['created_at' => now()->subDays(10 - $i)])->save();
         }
 
-        $recent = $this->actingAs($this->user)
+        $recent = $this->actingAs($this->nguoiDung)
             ->get(route('profile.edit'))
             ->assertOk()
             ->viewData('recentOrders');
@@ -110,9 +110,9 @@ class ProfilePageTest extends TestCase
 
     public function test_the_overview_lists_only_this_users_active_reminders(): void
     {
-        $category = Category::create(['name' => 'Thuốc hô hấp']);
-        $product = Product::create([
-            'MaDM' => $category->MaDM,
+        $danhMuc = DanhMuc::create(['name' => 'Thuốc hô hấp']);
+        $sanPham = SanPham::create([
+            'MaDM' => $danhMuc->MaDM,
             'name' => 'Thuốc ho Prospan',
             'price' => 85000,
             'expiration_date' => now()->addYears(2),
@@ -120,11 +120,11 @@ class ProfilePageTest extends TestCase
             'reorder_point' => 4,
             'batch_number' => 'LC-prospan',
         ]);
-        $other = User::factory()->create();
+        $other = NguoiDung::factory()->create();
 
-        MedicationReminder::create([
-            'MaKH' => $this->user->MaKH,
-            'MaSP' => $product->MaSP,
+        NhacUongThuoc::create([
+            'MaKH' => $this->nguoiDung->MaKH,
+            'MaSP' => $sanPham->MaSP,
             'dosage_text' => '1 viên sau ăn',
             'times_per_day' => 2,
             'duration_days' => 5,
@@ -132,9 +132,9 @@ class ProfilePageTest extends TestCase
             'next_remind_at' => now()->addHours(3),
             'status' => 'active',
         ]);
-        MedicationReminder::create([
+        NhacUongThuoc::create([
             'MaKH' => $other->MaKH,
-            'MaSP' => $product->MaSP,
+            'MaSP' => $sanPham->MaSP,
             'dosage_text' => '2 viên sau ăn',
             'times_per_day' => 2,
             'duration_days' => 5,
@@ -143,20 +143,20 @@ class ProfilePageTest extends TestCase
             'status' => 'active',
         ]);
 
-        $reminders = $this->actingAs($this->user)
+        $reminders = $this->actingAs($this->nguoiDung)
             ->get(route('profile.edit'))
             ->assertOk()
             ->viewData('upcomingReminders');
 
         // Lịch nhắc của người khác không được lọt vào: MaKH đi trong URL email.
         $this->assertCount(1, $reminders);
-        $this->assertSame((int) $this->user->MaKH, (int) $reminders->first()->MaKH);
+        $this->assertSame((int) $this->nguoiDung->MaKH, (int) $reminders->first()->MaKH);
     }
 
     public function test_the_health_progress_is_hidden_without_consent(): void
     {
-        UserHealthProfile::create([
-            'MaKH' => $this->user->MaKH,
+        HoSoSucKhoe::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'allergies' => ['penicillin'],
             'chronic_conditions' => ['tăng huyết áp'],
             'weight_kg' => 62,
@@ -165,7 +165,7 @@ class ProfilePageTest extends TestCase
 
         // Không đồng ý thì hồ sơ không được dùng cho bất kỳ mục đích nào, kể cả
         // hiển thị mức hoàn thiện — chỉ thấy lời mời khai báo.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('profile.edit'))
             ->assertOk()
             ->assertSee(__('messages.profile.overview_health_empty'))
@@ -174,8 +174,8 @@ class ProfilePageTest extends TestCase
 
     public function test_the_health_progress_shows_once_consent_is_given(): void
     {
-        UserHealthProfile::create([
-            'MaKH' => $this->user->MaKH,
+        HoSoSucKhoe::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'allergies' => ['penicillin'],
             'chronic_conditions' => ['tăng huyết áp'],
             'current_medications' => ['amlodipin'],
@@ -183,7 +183,7 @@ class ProfilePageTest extends TestCase
             'consented_at' => now(),
         ]);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('profile.edit'))
             ->assertOk()
             ->assertSee(__('messages.profile.overview_health_complete', ['percent' => 100]))
@@ -196,7 +196,7 @@ class ProfilePageTest extends TestCase
         //
         // `disabled` phải nằm trong đúng thẻ input: chatbot widget cũng có chuỗi đó chục
         // lần, nên assertSee('disabled') trần vẫn xanh sau khi bỏ hẳn nó khỏi switch.
-        $html = $this->actingAs($this->user)
+        $html = $this->actingAs($this->nguoiDung)
             ->get(route('profile.edit'))
             ->assertOk()
             ->assertSee(__('messages.profile.notifications_soon'))
@@ -211,11 +211,11 @@ class ProfilePageTest extends TestCase
 
     public function test_the_overview_previews_three_favourite_products(): void
     {
-        $category = Category::create(['name' => 'Thuốc tiêu hoá & gan mật']);
+        $danhMuc = DanhMuc::create(['name' => 'Thuốc tiêu hoá & gan mật']);
 
         foreach (range(1, 5) as $i) {
-            $product = Product::create([
-                'MaDM' => $category->MaDM,
+            $sanPham = SanPham::create([
+                'MaDM' => $danhMuc->MaDM,
                 'name' => "Thuốc số {$i} điều trị viêm gan do virus, xơ gan",
                 'price' => 100000 + $i,
                 'expiration_date' => now()->addYears(2),
@@ -224,10 +224,10 @@ class ProfilePageTest extends TestCase
                 'batch_number' => "LC-fav-{$i}",
             ]);
 
-            Favorite::create(['MaKH' => $this->user->MaKH, 'MaSP' => $product->MaSP]);
+            YeuThich::create(['MaKH' => $this->nguoiDung->MaKH, 'MaSP' => $sanPham->MaSP]);
         }
 
-        $response = $this->actingAs($this->user)->get(route('profile.edit'))->assertOk();
+        $response = $this->actingAs($this->nguoiDung)->get(route('profile.edit'))->assertOk();
 
         // Ba dòng, kèm tên + danh mục + giá — không còn là một thẻ trống với một nút.
         $this->assertSame(
@@ -243,7 +243,7 @@ class ProfilePageTest extends TestCase
 
     public function test_the_overview_favourites_fall_back_to_a_call_to_action(): void
     {
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('profile.edit'))
             ->assertOk()
             ->assertSee(__('messages.profile.favorites_empty_desc'))

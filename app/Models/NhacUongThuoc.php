@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class MedicationReminder extends Model
+class NhacUongThuoc extends Model
 {
+    protected $table = 'medication_reminders';
+
     protected $primaryKey = 'MaNN';
 
     protected $fillable = [
@@ -29,19 +31,19 @@ class MedicationReminder extends Model
         'follow_up_at' => 'datetime',
     ];
 
-    public function user()
+    public function nguoiDung()
     {
-        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
     }
 
-    public function order()
+    public function donHang()
     {
-        return $this->belongsTo(Order::class, 'MaDH', 'MaDH');
+        return $this->belongsTo(DonHang::class, 'MaDH', 'MaDH');
     }
 
-    public function product()
+    public function sanPham()
     {
-        return $this->belongsTo(Product::class, 'MaSP', 'MaSP');
+        return $this->belongsTo(SanPham::class, 'MaSP', 'MaSP');
     }
 
     public function scopeActive($query)
@@ -66,23 +68,23 @@ class MedicationReminder extends Model
      */
     public function advanceSchedule(): void
     {
-        $intervalHours = max(1, (int) floor(12 / max(1, $this->times_per_day)));
-        $from = max($this->next_remind_at ?? now(), now());
-        $next = $from->copy()->addHours($intervalHours);
+        $soGioMoiLan = max(1, (int) floor(12 / max(1, $this->times_per_day)));
+        $tuThoiDiem = max($this->next_remind_at ?? now(), now());
+        $thoiDiemNhacTiep = $tuThoiDiem->copy()->addHours($soGioMoiLan);
 
-        if ($next->hour >= 20) {
-            $next = $next->copy()->addDay()->setTime(8, 0);
-        } elseif ($next->hour < 8) {
-            $next = $next->copy()->setTime(8, 0);
+        if ($thoiDiemNhacTiep->hour >= 20) {
+            $thoiDiemNhacTiep = $thoiDiemNhacTiep->copy()->addDay()->setTime(8, 0);
+        } elseif ($thoiDiemNhacTiep->hour < 8) {
+            $thoiDiemNhacTiep = $thoiDiemNhacTiep->copy()->setTime(8, 0);
         }
 
-        $endsAt = $this->start_date->copy()->addDays($this->duration_days);
+        $thoiDiemKetThuc = $this->start_date->copy()->addDays($this->duration_days);
 
-        if ($next->greaterThan($endsAt)) {
+        if ($thoiDiemNhacTiep->greaterThan($thoiDiemKetThuc)) {
             $this->status = 'completed';
             $this->next_remind_at = null;
         } else {
-            $this->next_remind_at = $next;
+            $this->next_remind_at = $thoiDiemNhacTiep;
         }
 
         $this->save();

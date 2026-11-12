@@ -385,8 +385,8 @@
                                 <td class="fw-semibold">SL-{{ $session->MaSL }}</td>
                                 <td><time datetime="{{ $session->created_at->toIso8601String() }}">{{ $session->created_at->format('d/m/Y H:i') }}</time></td>
                                 <td>
-                                    <div class="fw-semibold">{{ $session->user->name ?? __('triage_report.table.unknown') }}</div>
-                                    <div class="small text-secondary">{{ $session->user->email ?? '#' . $session->MaKH }}</div>
+                                    <div class="fw-semibold">{{ $session->nguoiDung->name ?? __('triage_report.table.unknown') }}</div>
+                                    <div class="small text-secondary">{{ $session->nguoiDung->email ?? '#' . $session->MaKH }}</div>
                                 </td>
                                 <td>{{ $symptomList->isEmpty() ? '—' : $symptomList->implode(', ') }}</td>
                                 <td>

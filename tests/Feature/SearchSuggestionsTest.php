@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -19,18 +19,18 @@ class SearchSuggestionsTest extends TestCase
     {
         parent::setUp();
 
-        $painRelief = Category::create(['name' => 'Thuốc giảm đau, hạ sốt']);
-        $skincare = Category::create(['name' => 'Chăm sóc da mặt']);
+        $painRelief = DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt']);
+        $skincare = DanhMuc::create(['name' => 'Chăm sóc da mặt']);
 
         $this->make($painRelief, 'Viên nén Paracetamol Stada 500mg', 'Paracetamol 500mg');
         $this->make($painRelief, 'Viên nén Panadol Extra đỏ GSK', 'Caffeine 65mg, Paracetamol 500mg');
         $this->make($skincare, 'Kem dưỡng ẩm Ceradan', 'Ceramide');
     }
 
-    private function make(Category $category, string $name, string $ingredients): Product
+    private function make(DanhMuc $danhMuc, string $name, string $ingredients): SanPham
     {
-        return Product::create([
-            'MaDM' => $category->MaDM,
+        return SanPham::create([
+            'MaDM' => $danhMuc->MaDM,
             'name' => $name,
             'ingredients' => $ingredients,
             'price' => 50000,
@@ -104,7 +104,7 @@ class SearchSuggestionsTest extends TestCase
 
     public function test_a_category_without_stock_is_not_suggested(): void
     {
-        Category::create(['name' => 'Danh mục rỗng']);
+        DanhMuc::create(['name' => 'Danh mục rỗng']);
 
         $data = $this->suggest('danh muc rong');
 
@@ -113,7 +113,7 @@ class SearchSuggestionsTest extends TestCase
 
     public function test_out_of_stock_products_are_not_suggested(): void
     {
-        Product::where('name', 'like', 'Viên nén Panadol%')->update(['stock_quantity' => 0]);
+        SanPham::where('name', 'like', 'Viên nén Panadol%')->update(['stock_quantity' => 0]);
 
         $this->assertSame([], $this->suggest('panadol')['products']);
     }

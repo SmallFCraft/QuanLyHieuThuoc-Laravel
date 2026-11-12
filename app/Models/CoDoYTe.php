@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class MedicalRedFlag extends Model
+class CoDoYTe extends Model
 {
+    protected $table = 'medical_red_flags';
+
     protected $primaryKey = 'MaCB';
 
     protected $fillable = [
@@ -27,7 +29,7 @@ class MedicalRedFlag extends Model
 
     public function symptom()
     {
-        return $this->belongsTo(MedicalSymptom::class, 'applies_to_symptom', 'MaTC');
+        return $this->belongsTo(TrieuChungYTe::class, 'applies_to_symptom', 'MaTC');
     }
 
     public function scopeActive($query)

@@ -3,7 +3,7 @@
 namespace App\Exports;
 
 use App\Helpers\VietnameseHelper;
-use App\Models\Order;
+use App\Models\DonHang;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -20,8 +20,8 @@ class AdminOrdersExport implements FromCollection, WithHeadings, WithMapping, Sh
 
     public function collection(): Collection
     {
-        return Order::query()
-            ->with('user')
+        return DonHang::query()
+            ->with('nguoiDung')
             ->when($this->status, fn ($query) => $query->where('status', $this->status))
             ->when($this->search, function ($query) {
                 $search = $this->search;
@@ -29,7 +29,7 @@ class AdminOrdersExport implements FromCollection, WithHeadings, WithMapping, Sh
                 $query->where(function ($inner) use ($search) {
                     $inner->where('MaDH', 'like', "%{$search}%")
                         ->orWhere('status', 'like', "%{$search}%")
-                        ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', "%{$search}%"));
+                        ->orWhereHas('nguoiDung', fn ($nguoiDungQuery) => $nguoiDungQuery->where('name', 'like', "%{$search}%"));
                 });
             })
             ->orderByDesc('created_at')
@@ -47,14 +47,14 @@ class AdminOrdersExport implements FromCollection, WithHeadings, WithMapping, Sh
         ];
     }
 
-    public function map($order): array
+    public function map($donHang): array
     {
         return [
-            '#' . $order->MaDH,
-            $order->user->name ?? 'Khách hàng không tồn tại',
-            (int) round((float) $order->total_amount),
-            VietnameseHelper::getOrderStatusText($order->status),
-            optional($order->created_at)->format('d/m/Y H:i'),
+            '#' . $donHang->MaDH,
+            $donHang->nguoiDung->name ?? 'Khách hàng không tồn tại',
+            (int) round((float) $donHang->total_amount),
+            VietnameseHelper::getOrderStatusText($donHang->status),
+            optional($donHang->created_at)->format('d/m/Y H:i'),
         ];
     }
 }

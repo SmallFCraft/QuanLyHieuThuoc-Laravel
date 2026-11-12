@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ContactInquiry;
+use App\Models\YeuCauLienHe;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -42,7 +42,7 @@ class ContactController extends Controller
             'message.max' => 'Tin nhắn không được quá 1000 ký tự',
         ]);
 
-        ContactInquiry::create([
+        YeuCauLienHe::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],

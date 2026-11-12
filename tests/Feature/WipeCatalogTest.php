@@ -2,18 +2,18 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\ChatMessage;
-use App\Models\DrugInteraction;
-use App\Models\MedicalRedFlag;
-use App\Models\MedicalSymptom;
-use App\Models\MedicalTriageRule;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Product;
-use App\Models\ProductBatch;
-use App\Models\SearchQuery;
-use App\Models\User;
+use App\Models\DanhMuc;
+use App\Models\TinNhanChat;
+use App\Models\TuongTacThuoc;
+use App\Models\CoDoYTe;
+use App\Models\TrieuChungYTe;
+use App\Models\QuyTacPhanTangYTe;
+use App\Models\DonHang;
+use App\Models\ChiTietDonHang;
+use App\Models\SanPham;
+use App\Models\LoSanPham;
+use App\Models\TruyVanTimKiem;
+use App\Models\NguoiDung;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -39,34 +39,34 @@ class WipeCatalogTest extends TestCase
      * A catalog with an order against it — the case where a plain delete on
      * products fails, because order_items.MaSP restricts.
      */
-    private function seedCatalogWithAnOrder(): Product
+    private function seedCatalogWithAnOrder(): SanPham
     {
-        $product = Product::factory()->create(['MaDM' => Category::factory()]);
-        ProductBatch::create([
-            'MaSP' => $product->MaSP,
+        $sanPham = SanPham::factory()->create(['MaDM' => DanhMuc::factory()]);
+        LoSanPham::create([
+            'MaSP' => $sanPham->MaSP,
             'batch_number' => 'B-1',
             'expiration_date' => now()->addYear(),
             'stock_quantity' => 10,
             'reorder_point' => 5,
         ]);
 
-        $order = Order::create([
-            'MaKH' => User::factory()->create()->MaKH,
+        $donHang = DonHang::create([
+            'MaKH' => NguoiDung::factory()->create()->MaKH,
             'total_amount' => 1000,
             'status' => 'Pending',
             'shipping_address' => '1 Test',
             'shipping_phone' => '0901234567',
         ]);
 
-        OrderItem::create([
-            'MaDH' => $order->MaDH,
-            'MaSP' => $product->MaSP,
+        ChiTietDonHang::create([
+            'MaDH' => $donHang->MaDH,
+            'MaSP' => $sanPham->MaSP,
             'quantity' => 1,
             'unit_price' => 1000,
             'batch_number' => 'B-1',
         ]);
 
-        return $product;
+        return $sanPham;
     }
 
     public function test_it_clears_the_catalog_and_the_orders_that_reference_it(): void
@@ -75,23 +75,23 @@ class WipeCatalogTest extends TestCase
 
         $this->artisan('db:wipe-catalog --force')->assertSuccessful();
 
-        $this->assertSame(0, Product::withTrashed()->count());
-        $this->assertSame(0, ProductBatch::count());
-        $this->assertSame(0, Category::count());
-        $this->assertSame(0, Order::count());
-        $this->assertSame(0, OrderItem::count());
+        $this->assertSame(0, SanPham::withTrashed()->count());
+        $this->assertSame(0, LoSanPham::count());
+        $this->assertSame(0, DanhMuc::count());
+        $this->assertSame(0, DonHang::count());
+        $this->assertSame(0, ChiTietDonHang::count());
     }
 
     public function test_it_keeps_users_and_medical_knowledge(): void
     {
         $this->seedCatalogWithAnOrder();
-        $userCount = User::count();
+        $userCount = NguoiDung::count();
 
         // Nội dung y khoa do người soạn tay, không crawl lại được. Nó không nằm trong
-        // TABLES, nhưng chỉ assert User::count() thì thêm một bảng y khoa vào danh sách
+        // TABLES, nhưng chỉ assert NguoiDung::count() thì thêm một bảng y khoa vào danh sách
         // đó — điều rất dễ xảy ra khi một bảng có thêm khoá ngoại tới products — vẫn
         // xanh trong khi dữ liệu mất vĩnh viễn.
-        $symptom = MedicalSymptom::create([
+        $trieuChung = TrieuChungYTe::create([
             'code' => 'sot',
             'name_vi' => 'Sốt',
             'aliases' => ['sot cao'],
@@ -99,7 +99,7 @@ class WipeCatalogTest extends TestCase
             'body_system' => 'general',
         ]);
 
-        MedicalRedFlag::create([
+        CoDoYTe::create([
             'code' => 'cung-co',
             'name_vi' => 'Cứng cổ',
             'keywords' => ['cung co'],
@@ -107,14 +107,14 @@ class WipeCatalogTest extends TestCase
             'guidance_vi' => 'Gọi 115.',
         ]);
 
-        MedicalTriageRule::create([
-            'MaTC' => $symptom->MaTC,
+        QuyTacPhanTangYTe::create([
+            'MaTC' => $trieuChung->MaTC,
             'conditions' => [],
             'outcome' => 'self_care',
             'advice_vi' => 'Nghỉ ngơi, uống nhiều nước.',
         ]);
 
-        DrugInteraction::create([
+        TuongTacThuoc::create([
             'ingredient_a' => 'paracetamol',
             'ingredient_b' => 'warfarin',
             'severity' => 'moderate',
@@ -124,28 +124,28 @@ class WipeCatalogTest extends TestCase
 
         $this->artisan('db:wipe-catalog --force')->assertSuccessful();
 
-        $this->assertSame($userCount, User::count());
-        $this->assertSame(1, MedicalSymptom::count());
-        $this->assertSame(1, MedicalRedFlag::count());
-        $this->assertSame(1, MedicalTriageRule::count());
-        $this->assertSame(1, DrugInteraction::count());
+        $this->assertSame($userCount, NguoiDung::count());
+        $this->assertSame(1, TrieuChungYTe::count());
+        $this->assertSame(1, CoDoYTe::count());
+        $this->assertSame(1, QuyTacPhanTangYTe::count());
+        $this->assertSame(1, TuongTacThuoc::count());
     }
 
     public function test_it_clears_the_search_log_so_trending_stops_naming_dead_products(): void
     {
-        SearchQuery::create([
+        TruyVanTimKiem::create([
             'term_folded' => 'paracetamol',
             'term' => 'paracetamol',
             'hits' => 9,
             'last_searched_at' => now(),
         ]);
-        SearchQuery::trending();
+        TruyVanTimKiem::trending();
 
         $this->artisan('db:wipe-catalog --force')->assertSuccessful();
 
-        $this->assertSame(0, SearchQuery::count());
+        $this->assertSame(0, TruyVanTimKiem::count());
         // Cache cũng phải rơi: pill vẫn hiện 10 phút nữa dù bảng đã trống.
-        $this->assertFalse(Cache::has(SearchQuery::CACHE_KEY));
+        $this->assertFalse(Cache::has(TruyVanTimKiem::CACHE_KEY));
     }
 
     public function test_declining_the_prompt_changes_nothing(): void
@@ -156,8 +156,8 @@ class WipeCatalogTest extends TestCase
             ->expectsConfirmation('Tiếp tục?', 'no')
             ->assertSuccessful();
 
-        $this->assertSame(1, Product::count());
-        $this->assertSame(1, Order::count());
+        $this->assertSame(1, SanPham::count());
+        $this->assertSame(1, DonHang::count());
     }
 
     public function test_it_deletes_uploaded_product_images(): void
@@ -182,21 +182,21 @@ class WipeCatalogTest extends TestCase
 
     public function test_product_snapshots_on_surviving_records_are_emptied(): void
     {
-        $product = $this->seedCatalogWithAnOrder();
+        $sanPham = $this->seedCatalogWithAnOrder();
 
-        $message = ChatMessage::create([
-            'MaKH' => User::factory()->create()->MaKH,
+        $tinNhan = TinNhanChat::create([
+            'MaKH' => NguoiDung::factory()->create()->MaKH,
             'session_id' => (string) \Illuminate\Support\Str::uuid(),
             'role' => 'assistant',
             'content' => 'Sản phẩm gợi ý',
-            'products' => [['id' => $product->MaSP, 'name' => $product->name]],
+            'products' => [['id' => $sanPham->MaSP, 'name' => $sanPham->name]],
         ]);
 
         $this->artisan('db:wipe-catalog --force')->assertSuccessful();
 
         // The message outlives the catalog, so its stored product block has to stop
         // linking to ids that no longer exist.
-        $this->assertSame([], $message->fresh()->products);
+        $this->assertSame([], $tinNhan->fresh()->products);
     }
 
     public function test_ids_restart_so_the_new_catalog_is_numbered_from_one(): void
@@ -205,7 +205,7 @@ class WipeCatalogTest extends TestCase
 
         $this->artisan('db:wipe-catalog --force')->assertSuccessful();
 
-        $fresh = Product::factory()->create(['MaDM' => Category::factory()]);
+        $fresh = SanPham::factory()->create(['MaDM' => DanhMuc::factory()]);
 
         $this->assertSame(1, $fresh->MaSP);
     }
@@ -214,6 +214,6 @@ class WipeCatalogTest extends TestCase
     {
         $this->artisan('db:wipe-catalog --force')->assertSuccessful();
 
-        $this->assertSame(0, Product::count());
+        $this->assertSame(0, SanPham::count());
     }
 }

@@ -2,21 +2,21 @@
 
 namespace Database\Factories;
 
-use App\Models\Category;
-use App\Models\Product;
+use App\Models\SanPham;
+use App\Models\DanhMuc;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Product>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\SanPham>
  */
-class ProductFactory extends Factory
+class SanPhamFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
      * @var string
      */
-    protected $model = Product::class;
+    protected $model = SanPham::class;
 
     /**
      * Define the model's default state.
@@ -26,7 +26,7 @@ class ProductFactory extends Factory
     public function definition(): array
     {
         return [
-            'MaDM' => Category::factory(),
+            'MaDM' => DanhMuc::factory(),
             'name' => $this->faker->words(3, true),
             'ingredients' => $this->faker->sentence(),
             'usage' => $this->faker->sentence(),

@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use App\Traits\Auditable;
 use Carbon\Carbon;
 
-class ProductBatch extends Model
+class LoSanPham extends Model
 {
     use HasFactory, Auditable;
+
+    protected $table = 'product_batches';
 
     protected $primaryKey = 'MaLo';
 
@@ -40,17 +42,17 @@ class ProductBatch extends Model
     /**
      * Get the product that owns the batch.
      */
-    public function product()
+    public function sanPham()
     {
-        return $this->belongsTo(Product::class, 'MaSP', 'MaSP');
+        return $this->belongsTo(SanPham::class, 'MaSP', 'MaSP');
     }
 
     /**
      * Get the order items for this batch.
      */
-    public function orderItems()
+    public function chiTietDonHangs()
     {
-        return $this->hasMany(OrderItem::class, 'MaLo', 'MaLo');
+        return $this->hasMany(ChiTietDonHang::class, 'MaLo', 'MaLo');
     }
 
     /**

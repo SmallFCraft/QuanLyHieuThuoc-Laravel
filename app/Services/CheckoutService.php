@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Product;
-use App\Models\ProductBatch;
+use App\Models\DonHang;
+use App\Models\ChiTietDonHang;
+use App\Models\SanPham;
+use App\Models\LoSanPham;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -17,14 +17,14 @@ class CheckoutService
      * @param array $cartItems
      * @param int $userId
      * @param array $shippingInfo
-     * @return Order
+     * @return DonHang
      * @throws \Exception
      */
-    public function processCheckout(array $cartItems, int $userId, array $shippingInfo): Order
+    public function processCheckout(array $cartItems, int $userId, array $shippingInfo): DonHang
     {
         // OPTIMIZED: Load all products in 1 query instead of N+1
         $productIds = array_column($cartItems, 'MaSP');
-        $products = Product::whereIn('MaSP', $productIds)
+        $sanPhams = SanPham::whereIn('MaSP', $productIds)
             ->get()
             ->keyBy('MaSP');
         
@@ -33,24 +33,24 @@ class CheckoutService
         $totalAmount = 0;
         
         foreach ($cartItems as $item) {
-            $product = $products[$item['MaSP']] ?? null;
+            $sanPham = $sanPhams[$item['MaSP']] ?? null;
             
-            if (!$product) {
+            if (!$sanPham) {
                 $errors[] = "Sản phẩm không tồn tại.";
                 continue;
             }
             
             // Check total stock across all batches
-            $totalStock = ProductBatch::where('MaSP', $product->MaSP)
+            $totalStock = LoSanPham::where('MaSP', $sanPham->MaSP)
                 ->inStock()
                 ->notExpired()
                 ->sum('stock_quantity');
             
             if ($totalStock < $item['quantity']) {
-                $errors[] = "Sản phẩm {$product->name} không đủ số lượng. Còn lại: {$totalStock}.";
+                $errors[] = "Sản phẩm {$sanPham->name} không đủ số lượng. Còn lại: {$totalStock}.";
             }
             
-            $totalAmount += $product->price_vnd * $item['quantity'];
+            $totalAmount += $sanPham->price_vnd * $item['quantity'];
         }
         
         if (!empty($errors)) {
@@ -61,7 +61,7 @@ class CheckoutService
         
         try {
             // Create order
-            $order = Order::create([
+            $donHang = DonHang::create([
                 'MaKH' => $userId,
                 'total_amount' => $totalAmount,
                 'status' => 'Pending',
@@ -77,37 +77,37 @@ class CheckoutService
                 $productId = $item['MaSP'];
                 
                 // Get batches using FEFO (First Expired, First Out)
-                $batches = ProductBatch::where('MaSP', $productId)
+                $cacLo = LoSanPham::where('MaSP', $productId)
                     ->inStock()
                     ->notExpired()
                     ->FEFO()
                     ->lockForUpdate()
                     ->get();
                 
-                if ($batches->sum('stock_quantity') < $remainingQty) {
-                    $product = Product::find($productId);
-                    throw new \Exception("Sản phẩm {$product->name} không đủ số lượng trong kho.");
+                if ($cacLo->sum('stock_quantity') < $remainingQty) {
+                    $sanPham = SanPham::find($productId);
+                    throw new \Exception("Sản phẩm {$sanPham->name} không đủ số lượng trong kho.");
                 }
                 
                 // Deduct from batches following FEFO
-                foreach ($batches as $batch) {
+                foreach ($cacLo as $lo) {
                     if ($remainingQty <= 0) break;
                     
-                    $deductQty = min($remainingQty, $batch->stock_quantity);
+                    $deductQty = min($remainingQty, $lo->stock_quantity);
                     
                     // Create order item for this batch
-                    OrderItem::create([
-                        'MaDH' => $order->MaDH,
+                    ChiTietDonHang::create([
+                        'MaDH' => $donHang->MaDH,
                         'MaSP' => $productId,
-                        'MaLo' => $batch->MaLo,
+                        'MaLo' => $lo->MaLo,
                         'quantity' => $deductQty,
-                        'unit_price' => $products[$productId]->price_vnd,
-                        'batch_number' => $batch->batch_number,
+                        'unit_price' => $sanPhams[$productId]->price_vnd,
+                        'batch_number' => $lo->batch_number,
                     ]);
                     
                     // Deduct stock from batch
-                    $batch->stock_quantity -= $deductQty;
-                    $batch->save();
+                    $lo->stock_quantity -= $deductQty;
+                    $lo->save();
                     
                     $remainingQty -= $deductQty;
                 }
@@ -116,7 +116,7 @@ class CheckoutService
                     throw new \Exception("Không thể phân bổ đủ hàng cho sản phẩm.");
                 }
 
-                $updatedStock = (int) $batches->sum('stock_quantity');
+                $updatedStock = (int) $cacLo->sum('stock_quantity');
                 DB::table('products')
                     ->where('MaSP', $productId)
                     ->update([
@@ -124,14 +124,14 @@ class CheckoutService
                         'updated_at' => now(),
                     ]);
 
-                if (isset($products[$productId])) {
-                    $products[$productId]->setAttribute('stock_quantity', $updatedStock);
+                if (isset($sanPhams[$productId])) {
+                    $sanPhams[$productId]->setAttribute('stock_quantity', $updatedStock);
                 }
             }
 
             DB::commit();
 
-            return $order;
+            return $donHang;
             
         } catch (\Exception $e) {
             DB::rollBack();

@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class ChatMessage extends Model
+class TinNhanChat extends Model
 {
+    protected $table = 'chat_messages';
+
     protected $primaryKey = 'MaTN';
 
     /**
@@ -22,7 +24,7 @@ class ChatMessage extends Model
         'metadata',
         'show_disclaimer'
     ];
-    
+
     /**
      * Get the attributes that should be cast.
      *
@@ -36,14 +38,14 @@ class ChatMessage extends Model
             'show_disclaimer' => 'boolean'
         ];
     }
-    
+
     /**
      * Get the user that owns the message.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function user()
+    public function nguoiDung()
     {
-        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
     }
 }

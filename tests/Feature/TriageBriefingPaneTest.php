@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\TriageSession;
-use App\Models\User;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,22 +14,22 @@ class TriageBriefingPaneTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
-        $this->user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
     }
 
-    protected function completedSession(array $attributes = []): TriageSession
+    protected function completedSession(array $attributes = []): PhienSangLoc
     {
-        return TriageSession::create(array_merge([
-            'MaKH' => $this->user->MaKH,
+        return PhienSangLoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -41,46 +41,46 @@ class TriageBriefingPaneTest extends TestCase
 
     public function test_a_guest_is_redirected_to_login(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $this->get(route('health.result.briefing-pane', $session->MaSL))
+        $this->get(route('health.result.briefing-pane', $phien->MaSL))
             ->assertRedirect('/login');
     }
 
     public function test_another_customers_session_is_not_found(): void
     {
-        $other = User::factory()->create(['role' => 'User', 'status' => 'active']);
-        $session = $this->completedSession(['MaKH' => $other->MaKH]);
+        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $phien = $this->completedSession(['MaKH' => $other->MaKH]);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result.briefing-pane', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result.briefing-pane', $phien->MaSL))
             ->assertNotFound();
     }
 
     public function test_an_emergency_session_has_no_briefing_pane(): void
     {
-        $session = $this->completedSession(['outcome' => 'emergency', 'advice_given' => null]);
+        $phien = $this->completedSession(['outcome' => 'emergency', 'advice_given' => null]);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result.briefing-pane', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result.briefing-pane', $phien->MaSL))
             ->assertNotFound();
     }
 
     public function test_an_in_progress_session_has_no_briefing_pane(): void
     {
-        $session = $this->completedSession(['status' => 'in_progress', 'advice_given' => null]);
+        $phien = $this->completedSession(['status' => 'in_progress', 'advice_given' => null]);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result.briefing-pane', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result.briefing-pane', $phien->MaSL))
             ->assertNotFound();
     }
 
     public function test_a_pending_briefing_returns_202_with_the_skeleton(): void
     {
-        $session = $this->completedSession(['ai_briefing' => null, 'ai_briefing_status' => null]);
+        $phien = $this->completedSession(['ai_briefing' => null, 'ai_briefing_status' => null]);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result.briefing-pane', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result.briefing-pane', $phien->MaSL))
             ->assertStatus(202)
             ->assertSee('health-skeleton', false);
     }
@@ -91,24 +91,24 @@ class TriageBriefingPaneTest extends TestCase
         // to write columns) leaves status null while the job itself is done. The poller
         // sees `done` and hits the pane; if the pane returned 202 it would loop until
         // the 90-attempt cap. It must treat a finished job as definitively done.
-        $session = $this->completedSession(['ai_briefing' => null, 'ai_briefing_status' => null]);
+        $phien = $this->completedSession(['ai_briefing' => null, 'ai_briefing_status' => null]);
         \App\Models\AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'kind' => \App\Models\AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'done',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result.briefing-pane', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result.briefing-pane', $phien->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.briefing_unavailable'), false);
     }
 
     public function test_a_finished_briefing_returns_200_with_its_sections(): void
     {
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'ai_briefing' => [
                 'why' => 'Đau đầu nhẹ thường gặp khi thiếu ngủ.',
                 'self_care' => ['Nghỉ ngơi trong phòng yên tĩnh.'],
@@ -117,8 +117,8 @@ class TriageBriefingPaneTest extends TestCase
             'ai_briefing_status' => 'ok',
         ]);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result.briefing-pane', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result.briefing-pane', $phien->MaSL))
             ->assertOk()
             ->assertSee('Đau đầu nhẹ thường gặp khi thiếu ngủ.', false)
             ->assertSee('briefing-self-care', false)
@@ -127,19 +127,19 @@ class TriageBriefingPaneTest extends TestCase
 
     public function test_a_failed_briefing_returns_200_with_the_unavailable_notice(): void
     {
-        $session = $this->completedSession(['ai_briefing' => null, 'ai_briefing_status' => 'failed']);
+        $phien = $this->completedSession(['ai_briefing' => null, 'ai_briefing_status' => 'failed']);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result.briefing-pane', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result.briefing-pane', $phien->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.briefing_unavailable'), false);
     }
 
     public function test_a_finished_briefing_embeds_ai_selected_products_in_the_care_template(): void
     {
-        $category = Category::first();
-        $product = Product::create([
-            'MaDM' => $category->MaDM,
+        $danhMuc = DanhMuc::first();
+        $sanPham = SanPham::create([
+            'MaDM' => $danhMuc->MaDM,
             'name' => 'Thuốc ho Prospan 100ml',
             'ingredients' => 'Cao lá thường xuân',
             'usage' => 'Uống 5ml mỗi ngày 3 lần',
@@ -150,13 +150,13 @@ class TriageBriefingPaneTest extends TestCase
             'batch_number' => 'B-PROSPAN',
         ]);
 
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'suggested_products' => [],
             'ai_briefing' => [
                 'why' => 'Ho có đờm cần thuốc long đờm thảo dược.',
                 'self_care' => ['Uống nhiều nước ấm.'],
                 'products' => [[
-                    'id' => $product->MaSP,
+                    'id' => $sanPham->MaSP,
                     'name' => 'Thuốc ho Prospan 100ml',
                     'price' => 120000,
                     'stock_quantity' => 15,
@@ -166,8 +166,8 @@ class TriageBriefingPaneTest extends TestCase
             'ai_briefing_status' => 'ok',
         ]);
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result.briefing-pane', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result.briefing-pane', $phien->MaSL))
             ->assertOk()
             ->getContent();
 

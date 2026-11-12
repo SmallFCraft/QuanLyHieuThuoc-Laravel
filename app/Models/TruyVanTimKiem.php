@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\SanPham;
 use App\Support\VietnameseText;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -13,12 +14,14 @@ use Illuminate\Support\Facades\Cache;
  * Nguồn cho khối "Xu hướng tìm kiếm". Cố ý không lưu gì gắn với một người: bảng
  * chỉ đếm từ khoá, nên không có gì để lộ nếu bị đọc.
  */
-class SearchQuery extends Model
+class TruyVanTimKiem extends Model
 {
     public const CACHE_KEY = 'search.trending';
 
     /** Bảng chỉ có last_searched_at; created_at/updated_at không nói thêm điều gì. */
     public $timestamps = false;
+
+    protected $table = 'search_queries';
 
     protected $fillable = ['term_folded', 'term', 'hits', 'last_searched_at'];
 
@@ -41,7 +44,7 @@ class SearchQuery extends Model
 
         // 60 ký tự: từ khoá thật dài nhất trong catalog là tên thuốc đầy đủ (~45).
         // Dài hơn thì đó là đoạn văn dán vào, hoặc payload — không phải xu hướng.
-        if ($folded === '' || mb_strlen($term) > 60 || Product::searchWords($term) === []) {
+        if ($folded === '' || mb_strlen($term) > 60 || SanPham::searchWords($term) === []) {
             return false;
         }
 
@@ -53,13 +56,13 @@ class SearchQuery extends Model
         // mới đều thấy bảng trống rồi cùng insert, và bên thua ăn lỗi unique term_folded
         // — thành 500 trên trang kết quả đã render xong. Bên trong nó là createOrFirst,
         // có bắt UniqueConstraintViolationException và đọc lại dòng bên kia vừa ghi.
-        $row = self::firstOrCreate(
+        $dong = self::firstOrCreate(
             ['term_folded' => $folded],
             ['term' => $term, 'hits' => 1, 'last_searched_at' => now()],
         );
 
-        if (! $row->wasRecentlyCreated) {
-            $row->increment('hits', 1, ['last_searched_at' => now()]);
+        if (! $dong->wasRecentlyCreated) {
+            $dong->increment('hits', 1, ['last_searched_at' => now()]);
         }
 
         Cache::forget(self::CACHE_KEY);

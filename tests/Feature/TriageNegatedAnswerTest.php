@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\TriageSession;
-use App\Models\User;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -26,7 +26,7 @@ class TriageNegatedAnswerTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
@@ -34,20 +34,20 @@ class TriageNegatedAnswerTest extends TestCase
 
         Http::preventStrayRequests();
 
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.fact_extraction', true);
         config()->set('chatbot.ai.triage.clarify_round', true);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(34)->toDateString(),
         ]);
 
-        Product::create([
-            'MaDM' => Category::first()->MaDM,
+        SanPham::create([
+            'MaDM' => DanhMuc::first()->MaDM,
             'name' => 'Paracetamol 500mg',
             'ingredients' => 'Paracetamol 500mg',
             'usage' => 'Giảm đau, hạ sốt. Uống 1-2 viên mỗi 4-6 giờ',
@@ -106,39 +106,39 @@ class TriageNegatedAnswerTest extends TestCase
         ]);
     }
 
-    protected function runWizard(): TriageSession
+    protected function runWizard(): PhienSangLoc
     {
-        $this->actingAs($this->user)->get(route('health.check'));
-        $session = TriageSession::where('MaKH', $this->user->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        $this->actingAs($this->nguoiDung)->get(route('health.check'));
+        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
 
         foreach ([1 => 'tôi bị đau đầu', 2 => 'hôm nay', 3 => 'chưa dùng gì', 4 => 'không có', 5 => 'không có thêm'] as $step => $answer) {
-            $current = TriageSession::find($session->MaSL);
+            $current = PhienSangLoc::find($phien->MaSL);
 
             if ($current === null || $current->status !== 'in_progress') {
                 break;
             }
 
-            $this->actingAs($this->user)->post(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+            $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+                'triage_session_id' => $phien->MaSL,
                 'step' => $step,
                 'answer' => $answer,
             ]);
         }
 
-        return $session->fresh();
+        return $phien->fresh();
     }
 
     /**
      * @param array<int, string> $answers
      */
-    protected function answerClarify(TriageSession $session, array $answers): TriageSession
+    protected function answerClarify(PhienSangLoc $phien, array $answers): PhienSangLoc
     {
-        $this->actingAs($this->user)->post(route('health.clarify'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.clarify'), [
+            'triage_session_id' => $phien->MaSL,
             'clarify' => $answers,
         ]);
 
-        return $session->fresh();
+        return $phien->fresh();
     }
 
     public function test_denying_every_danger_sign_does_not_trigger_an_emergency(): void
@@ -147,78 +147,78 @@ class TriageNegatedAnswerTest extends TestCase
         // gives. Every red-flag keyword is present, all negated.
         $this->fakeOneRound('Anh/chị có kèm sốt, nôn hay cứng cổ không ạ?');
 
-        $session = $this->runWizard();
-        $session = $this->answerClarify($session, ['không sốt, không nôn, không cứng cổ']);
+        $phien = $this->runWizard();
+        $phien = $this->answerClarify($phien, ['không sốt, không nôn, không cứng cổ']);
 
-        $this->assertSame('self_care', $session->outcome);
-        $this->assertSame([], $session->triggered_red_flags);
-        $this->assertNotEmpty($session->suggested_products);
+        $this->assertSame('self_care', $phien->outcome);
+        $this->assertSame([], $phien->triggered_red_flags);
+        $this->assertNotEmpty($phien->suggested_products);
     }
 
     public function test_denying_neurological_signs_does_not_trigger_a_referral(): void
     {
         $this->fakeOneRound('Anh/chị có mờ mắt, yếu tay chân hay nói khó không ạ?');
 
-        $session = $this->runWizard();
-        $session = $this->answerClarify($session, ['không, mắt bình thường, tay chân bình thường']);
+        $phien = $this->runWizard();
+        $phien = $this->answerClarify($phien, ['không, mắt bình thường, tay chân bình thường']);
 
-        $this->assertSame('self_care', $session->outcome);
+        $this->assertSame('self_care', $phien->outcome);
     }
 
     public function test_a_real_danger_sign_in_a_follow_up_answer_still_escalates(): void
     {
         $this->fakeOneRound('Anh/chị có kèm dấu hiệu nào khác không ạ?');
 
-        $session = $this->runWizard();
-        $session = $this->answerClarify($session, ['tôi bị co giật lúc chiều']);
+        $phien = $this->runWizard();
+        $phien = $this->answerClarify($phien, ['tôi bị co giật lúc chiều']);
 
-        $this->assertSame('emergency', $session->outcome);
-        $this->assertSame([], $session->suggested_products);
+        $this->assertSame('emergency', $phien->outcome);
+        $this->assertSame([], $phien->suggested_products);
     }
 
     public function test_a_mixed_answer_keeps_the_affirmed_sign(): void
     {
         $this->fakeOneRound('Anh/chị có kèm sốt, nôn hay cứng cổ không ạ?');
 
-        $session = $this->runWizard();
+        $phien = $this->runWizard();
         // Denies two, reports one. The reported one must win: a negation only reaches
         // the phrase directly after it, never the rest of the sentence.
-        $session = $this->answerClarify($session, ['không sốt, không nôn, nhưng bị cứng cổ']);
+        $phien = $this->answerClarify($phien, ['không sốt, không nôn, nhưng bị cứng cổ']);
 
-        $this->assertNotSame('self_care', $session->outcome);
+        $this->assertNotSame('self_care', $phien->outcome);
     }
 
     public function test_a_negation_far_from_the_symptom_is_not_treated_as_a_denial(): void
     {
         $this->fakeOneRound('Cơn đau thế nào ạ?');
 
-        $session = $this->runWizard();
+        $phien = $this->runWizard();
         // "không" belongs to "không chịu được", not to the chest pain.
-        $session = $this->answerClarify($session, ['tôi không chịu được, còn bị đau ngực dữ dội nữa']);
+        $phien = $this->answerClarify($phien, ['tôi không chịu được, còn bị đau ngực dữ dội nữa']);
 
-        $this->assertSame('emergency', $session->outcome);
+        $this->assertSame('emergency', $phien->outcome);
     }
 
     public function test_saying_no_medication_was_tried_is_not_a_caution_flag(): void
     {
         $this->fakeOneRound('Anh/chị đã dùng thuốc gì chưa ạ?');
 
-        $session = $this->runWizard();
-        $session = $this->answerClarify($session, ['chưa uống thuốc gì cả']);
+        $phien = $this->runWizard();
+        $phien = $this->answerClarify($phien, ['chưa uống thuốc gì cả']);
 
         // "đã dùng thuốc mà không đỡ" is a caution flag; "chưa dùng" is not.
-        $this->assertSame('self_care', $session->outcome);
+        $this->assertSame('self_care', $phien->outcome);
     }
 
     public function test_medication_that_did_not_help_is_still_a_caution_flag(): void
     {
         $this->fakeOneRound('Anh/chị đã dùng thuốc gì chưa ạ?');
 
-        $session = $this->runWizard();
-        $session = $this->answerClarify($session, ['uống paracetamol mà không đỡ']);
+        $phien = $this->runWizard();
+        $phien = $this->answerClarify($phien, ['uống paracetamol mà không đỡ']);
 
         // The keyword is itself built around "không", so the negation check must not
         // cancel it.
-        $this->assertSame('pharmacist_review', $session->outcome);
+        $this->assertSame('pharmacist_review', $phien->outcome);
     }
 }

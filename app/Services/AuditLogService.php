@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\AuditLog;
+use App\Models\NhatKyKiemToan;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -18,7 +18,7 @@ class AuditLogService
      */
     public function logAuthAttempt(string $email, bool $success, ?string $reason = null)
     {
-        AuditLog::create([
+        NhatKyKiemToan::create([
             'MaKH' => $success ? Auth::id() : null,
             'action' => $success ? 'login_success' : 'login_failed',
             'model_type' => 'Auth',
@@ -39,7 +39,7 @@ class AuditLogService
      */
     public function logLogout()
     {
-        AuditLog::create([
+        NhatKyKiemToan::create([
             'MaKH' => Auth::id(),
             'action' => 'logout',
             'model_type' => 'Auth',
@@ -67,7 +67,7 @@ class AuditLogService
         ?array $newValues = null,
         ?int $userId = null
     ) {
-        AuditLog::create([
+        NhatKyKiemToan::create([
             'MaKH' => $userId ?? Auth::id(),
             'action' => $action,
             'model_type' => $modelType ?? 'System',

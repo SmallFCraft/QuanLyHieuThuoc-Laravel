@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Category;
-use App\Models\Product;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
 use App\Support\LongChauProduct;
 use App\Support\VietnameseText;
 use Illuminate\Support\Facades\DB;
@@ -35,19 +35,19 @@ class ProductImportService
      * Create or refresh one product. Safe to call repeatedly for the same source
      * record: it resolves to the same row.
      */
-    public function import(LongChauProduct $source): Product
+    public function import(LongChauProduct $source): SanPham
     {
         return DB::transaction(function () use ($source) {
             $categoryId = $this->resolveCategoryId($source->categoryName);
             $batchNumber = $source->batchNumber();
 
-            $product = Product::withTrashed()->firstWhere('batch_number', $batchNumber);
+            $sanPham = SanPham::withTrashed()->firstWhere('batch_number', $batchNumber);
 
-            if ($product === null) {
+            if ($sanPham === null) {
                 return $this->create($source, $categoryId, $batchNumber);
             }
 
-            return $this->refresh($product, $source, $categoryId);
+            return $this->refresh($sanPham, $source, $categoryId);
         });
     }
 
@@ -73,11 +73,11 @@ class ProductImportService
         return array_values($this->newCategories);
     }
 
-    private function create(LongChauProduct $source, int $categoryId, string $batchNumber): Product
+    private function create(LongChauProduct $source, int $categoryId, string $batchNumber): SanPham
     {
         // ProductObserver::created() reads batch_number and expiration_date to build
         // the matching product_batches row, so both must be set on insert.
-        return Product::create([
+        return SanPham::create([
             'MaDM' => $categoryId,
             'name' => $source->name,
             'ingredients' => $source->ingredients,
@@ -97,13 +97,13 @@ class ProductImportService
      * left untouched because a pharmacist may have corrected them since the last
      * crawl, and overwriting real stock with a random figure would corrupt FEFO.
      */
-    private function refresh(Product $product, LongChauProduct $source, int $categoryId): Product
+    private function refresh(SanPham $sanPham, LongChauProduct $source, int $categoryId): SanPham
     {
-        if ($product->trashed()) {
-            $product->restore();
+        if ($sanPham->trashed()) {
+            $sanPham->restore();
         }
 
-        $product->fill([
+        $sanPham->fill([
             'MaDM' => $categoryId,
             'name' => $source->name,
             'ingredients' => $source->ingredients,
@@ -113,7 +113,7 @@ class ProductImportService
             'image' => $source->imageUrl,
         ])->save();
 
-        return $product;
+        return $sanPham;
     }
 
     /**
@@ -123,7 +123,7 @@ class ProductImportService
      * năng), and matching raw made the crawl create a category per spelling, which
      * split 114 products across two storefront entries a customer reads as one.
      *
-     * The first spelling seen keeps the display name; Category::booted() fills in the
+     * The first spelling seen keeps the display name; DanhMuc::booted() fills in the
      * code and the folded column.
      */
     private function resolveCategoryId(string $name): int
@@ -134,12 +134,12 @@ class ProductImportService
             return $this->categoryIds[$folded];
         }
 
-        $category = Category::firstOrCreate(['name_folded' => $folded], ['name' => $name]);
+        $danhMuc = DanhMuc::firstOrCreate(['name_folded' => $folded], ['name' => $name]);
 
-        if ($category->wasRecentlyCreated) {
-            $this->newCategories[$folded] = $category->name;
+        if ($danhMuc->wasRecentlyCreated) {
+            $this->newCategories[$folded] = $danhMuc->name;
         }
 
-        return $this->categoryIds[$folded] = (int) $category->MaDM;
+        return $this->categoryIds[$folded] = (int) $danhMuc->MaDM;
     }
 }

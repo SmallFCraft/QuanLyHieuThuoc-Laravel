@@ -49,11 +49,11 @@
                 <table class="table table-borderless mb-0">
                     <tr>
                         <td class="text-gray-500 ps-0" style="width: 140px;">Khách hàng</td>
-                        <td class="fw-medium">{{ $order->user->name }}</td>
+                        <td class="fw-medium">{{ $order->nguoiDung->name }}</td>
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">Email</td>
-                        <td class="fw-medium">{{ $order->user->email }}</td>
+                        <td class="fw-medium">{{ $order->nguoiDung->email }}</td>
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">Điện thoại</td>
@@ -117,9 +117,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($order->items as $item)
+                    @foreach($order->chiTietDonHangs as $item)
                         <tr>
-                            <td class="fw-medium">{{ $item->product->name }}</td>
+                            <td class="fw-medium">{{ $item->sanPham->name }}</td>
                             <td class="text-gray-500 small">{{ $item->batch_number }}</td>
                             <td>{{ number_format($item->unit_price, 0, ',', '.') }} ₫</td>
                             <td>{{ $item->quantity }}</td>

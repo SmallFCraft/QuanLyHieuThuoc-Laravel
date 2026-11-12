@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Services;
 
-use App\Models\User;
+use App\Models\NguoiDung;
 use App\Services\Triage\Ai\TriageAiContextService;
 use App\Services\AuditLogService;
 use Tests\TestCase;

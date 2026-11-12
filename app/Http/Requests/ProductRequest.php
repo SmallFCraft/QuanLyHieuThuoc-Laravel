@@ -25,7 +25,7 @@ class ProductRequest extends FormRequest
         $product = $this->route('product');
         $productId = $product ? $product->MaSP : null;
         $batchId = $product
-            ? $product->batches()->orderBy('expiration_date')->orderBy('MaLo')->value('MaLo')
+            ? $product->cacLo()->orderBy('expiration_date')->orderBy('MaLo')->value('MaLo')
             : null;
         
         return [

@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\ChatbotImage;
+use App\Models\AnhChatbot;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -41,7 +41,7 @@ class CleanupChatbotImages extends Command
         
         $this->info("Cleaning up chatbot images older than {$hours} hours...");
 
-        if (! ChatbotImage::where('created_at', '<', $cutoffTime)->exists()) {
+        if (! AnhChatbot::where('created_at', '<', $cutoffTime)->exists()) {
             $this->info('No images to clean up.');
             return Command::SUCCESS;
         }
@@ -49,7 +49,7 @@ class CleanupChatbotImages extends Command
         $deletedCount = 0;
         $errorCount = 0;
         
-        ChatbotImage::where('created_at', '<', $cutoffTime)
+        AnhChatbot::where('created_at', '<', $cutoffTime)
             ->chunkById(100, function ($oldImages) use ($disk, &$deletedCount, &$errorCount) {
                 foreach ($oldImages as $image) {
                     try {

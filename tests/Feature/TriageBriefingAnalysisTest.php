@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\TriageSession;
-use App\Models\User;
+use App\Models\DanhMuc;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
 use App\Services\Triage\Ai\TriageAiBriefingService;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -23,7 +23,7 @@ class TriageBriefingAnalysisTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
@@ -31,12 +31,12 @@ class TriageBriefingAnalysisTest extends TestCase
 
         Http::preventStrayRequests();
 
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.briefing', true);
 
-        $this->user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
     }
 
     protected function fakeToolCall(array $arguments): void
@@ -59,10 +59,10 @@ class TriageBriefingAnalysisTest extends TestCase
         ])]);
     }
 
-    protected function triageSession(array $attributes = []): TriageSession
+    protected function triageSession(array $attributes = []): PhienSangLoc
     {
-        return TriageSession::create(array_merge([
-            'MaKH' => $this->user->MaKH,
+        return PhienSangLoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -89,10 +89,10 @@ class TriageBriefingAnalysisTest extends TestCase
 
     public function test_the_metrics_block_renders_without_any_ai_briefing(): void
     {
-        $session = $this->triageSession();
+        $phien = $this->triageSession();
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -119,7 +119,7 @@ class TriageBriefingAnalysisTest extends TestCase
             'collected_data' => ['raw_symptom_text' => 'sot', 'duration_days' => 7],
         ]);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.result', $flagged->MaSL))
             ->assertOk();
 
@@ -141,7 +141,7 @@ class TriageBriefingAnalysisTest extends TestCase
             ],
         ]);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.result', $emergency->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.analysis_score_level', ['level' => __('messages.health.outcome_emergency')]), false);
@@ -156,15 +156,15 @@ class TriageBriefingAnalysisTest extends TestCase
             ],
         ]));
 
-        $session = $this->triageSession();
-        app(TriageAiBriefingService::class)->generate($session);
-        $session = $session->refresh();
+        $phien = $this->triageSession();
+        app(TriageAiBriefingService::class)->generate($phien);
+        $phien = $phien->refresh();
 
-        $this->assertSame('ok', $session->ai_briefing_status);
-        $this->assertCount(2, $session->ai_briefing['data_analysis']);
+        $this->assertSame('ok', $phien->ai_briefing_status);
+        $this->assertCount(2, $phien->ai_briefing['data_analysis']);
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -182,38 +182,38 @@ class TriageBriefingAnalysisTest extends TestCase
             ],
         ]));
 
-        $session = $this->triageSession();
-        app(TriageAiBriefingService::class)->generate($session);
-        $session = $session->refresh();
+        $phien = $this->triageSession();
+        app(TriageAiBriefingService::class)->generate($phien);
+        $phien = $phien->refresh();
 
         // 82 never appears in the metric table, so that line cannot be trusted and is
         // dropped; the metric-backed line survives.
-        $this->assertCount(1, $session->ai_briefing['data_analysis']);
-        $this->assertStringContainsString('1 triệu chứng', $session->ai_briefing['data_analysis'][0]);
+        $this->assertCount(1, $phien->ai_briefing['data_analysis']);
+        $this->assertStringContainsString('1 triệu chứng', $phien->ai_briefing['data_analysis'][0]);
     }
 
     public function test_a_briefing_without_data_analysis_is_still_accepted(): void
     {
         $this->fakeToolCall($this->fullBriefing());
 
-        $session = $this->triageSession();
-        app(TriageAiBriefingService::class)->generate($session);
-        $session = $session->refresh();
+        $phien = $this->triageSession();
+        app(TriageAiBriefingService::class)->generate($phien);
+        $phien = $phien->refresh();
 
-        $this->assertSame('ok', $session->ai_briefing_status);
-        $this->assertArrayNotHasKey('data_analysis', $session->ai_briefing);
+        $this->assertSame('ok', $phien->ai_briefing_status);
+        $this->assertArrayNotHasKey('data_analysis', $phien->ai_briefing);
     }
 
     public function test_the_briefing_pane_carries_the_same_metrics_block(): void
     {
         $this->fakeToolCall($this->fullBriefing());
 
-        $session = $this->triageSession();
-        app(TriageAiBriefingService::class)->generate($session);
-        $session = $session->refresh();
+        $phien = $this->triageSession();
+        app(TriageAiBriefingService::class)->generate($phien);
+        $phien = $phien->refresh();
 
-        $this->actingAs($this->user)
-            ->get(route('health.result.briefing-pane', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result.briefing-pane', $phien->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.analysis_title'), false);
     }

@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Favorite;
-use App\Models\Product;
-use App\Models\User;
+use App\Models\YeuThich;
+use App\Models\SanPham;
+use App\Models\NguoiDung;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,88 +14,88 @@ class FavoriteTest extends TestCase
 
     public function test_guest_cannot_use_favorite_api(): void
     {
-        $product = Product::factory()->create();
+        $sanPham = SanPham::factory()->create();
 
-        $response = $this->postJson(route('favorites.toggle', $product));
+        $response = $this->postJson(route('favorites.toggle', $sanPham));
 
         $response->assertUnauthorized();
     }
 
     public function test_user_can_toggle_favorite_product(): void
     {
-        $user = User::factory()->create();
-        $product = Product::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
+        $sanPham = SanPham::factory()->create();
 
         $saveResponse = $this
-            ->actingAs($user)
-            ->postJson(route('favorites.toggle', $product));
+            ->actingAs($nguoiDung)
+            ->postJson(route('favorites.toggle', $sanPham));
 
         $saveResponse
             ->assertOk()
             ->assertJson([
-                'product_id' => (string) $product->MaSP,
+                'product_id' => (string) $sanPham->MaSP,
                 'saved' => true,
-                'favorites' => [(string) $product->MaSP],
+                'favorites' => [(string) $sanPham->MaSP],
             ]);
 
         $this->assertDatabaseHas('favorites', [
-            'MaKH' => $user->MaKH,
-            'MaSP' => $product->MaSP,
+            'MaKH' => $nguoiDung->MaKH,
+            'MaSP' => $sanPham->MaSP,
         ]);
 
         $removeResponse = $this
-            ->actingAs($user)
-            ->postJson(route('favorites.toggle', $product));
+            ->actingAs($nguoiDung)
+            ->postJson(route('favorites.toggle', $sanPham));
 
         $removeResponse
             ->assertOk()
             ->assertJson([
-                'product_id' => (string) $product->MaSP,
+                'product_id' => (string) $sanPham->MaSP,
                 'saved' => false,
                 'favorites' => [],
             ]);
 
         $this->assertDatabaseMissing('favorites', [
-            'MaKH' => $user->MaKH,
-            'MaSP' => $product->MaSP,
+            'MaKH' => $nguoiDung->MaKH,
+            'MaSP' => $sanPham->MaSP,
         ]);
     }
 
     public function test_user_can_sync_local_favorites_to_database(): void
     {
-        $user = User::factory()->create();
-        $products = Product::factory()->count(2)->create();
+        $nguoiDung = NguoiDung::factory()->create();
+        $sanPhams = SanPham::factory()->count(2)->create();
 
         $response = $this
-            ->actingAs($user)
+            ->actingAs($nguoiDung)
             ->postJson(route('favorites.sync'), [
-                'product_ids' => $products->pluck('MaSP')->all(),
+                'product_ids' => $sanPhams->pluck('MaSP')->all(),
             ]);
 
         $response
             ->assertOk()
             ->assertJson([
                 'synced_count' => 2,
-                'favorites' => $products->pluck('MaSP')->map(fn ($id) => (string) $id)->values()->all(),
+                'favorites' => $sanPhams->pluck('MaSP')->map(fn ($id) => (string) $id)->values()->all(),
             ]);
 
-        $this->assertSame(2, Favorite::where('MaKH', $user->MaKH)->count());
+        $this->assertSame(2, YeuThich::where('MaKH', $nguoiDung->MaKH)->count());
     }
 
     public function test_profile_shows_favorite_products(): void
     {
-        $user = User::factory()->create();
-        $product = Product::factory()->create([
+        $nguoiDung = NguoiDung::factory()->create();
+        $sanPham = SanPham::factory()->create([
             'name' => 'Vitamin Sync 500mg',
         ]);
 
-        Favorite::create([
-            'MaKH' => $user->MaKH,
-            'MaSP' => $product->MaSP,
+        YeuThich::create([
+            'MaKH' => $nguoiDung->MaKH,
+            'MaSP' => $sanPham->MaSP,
         ]);
 
         $response = $this
-            ->actingAs($user)
+            ->actingAs($nguoiDung)
             ->get(route('profile.edit') . '#favorites');
 
         $response
@@ -106,24 +106,24 @@ class FavoriteTest extends TestCase
 
     public function test_user_can_refresh_favorite_section_without_full_page_reload(): void
     {
-        $user = User::factory()->create();
-        $product = Product::factory()->create([
+        $nguoiDung = NguoiDung::factory()->create();
+        $sanPham = SanPham::factory()->create([
             'name' => 'Ajax Favorite 250mg',
         ]);
 
-        Favorite::create([
-            'MaKH' => $user->MaKH,
-            'MaSP' => $product->MaSP,
+        YeuThich::create([
+            'MaKH' => $nguoiDung->MaKH,
+            'MaSP' => $sanPham->MaSP,
         ]);
 
         $response = $this
-            ->actingAs($user)
+            ->actingAs($nguoiDung)
             ->getJson(route('favorites.section'));
 
         $response
             ->assertOk()
             ->assertJson([
-                'favorites' => [(string) $product->MaSP],
+                'favorites' => [(string) $sanPham->MaSP],
             ]);
 
         $this->assertStringContainsString('data-profile-favorites', $response->json('html'));

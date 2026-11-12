@@ -3,9 +3,9 @@
 namespace Tests\Feature\Admin;
 
 use App\Exports\AdminInventoryExport;
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\User;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\NguoiDung;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -19,18 +19,18 @@ class InventorySearchExportParityTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $admin;
+    protected NguoiDung $admin;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create(['role' => 'Administrator', 'status' => 'active']);
+        $this->admin = NguoiDung::factory()->create(['role' => 'Administrator', 'status' => 'active']);
 
-        $paracetamol = Category::create(['name' => 'Thuốc giảm đau', 'description' => 'Giảm đau']);
-        $vitamin = Category::create(['name' => 'Vitamin', 'description' => 'Bổ sung']);
+        $paracetamol = DanhMuc::create(['name' => 'Thuốc giảm đau', 'description' => 'Giảm đau']);
+        $vitamin = DanhMuc::create(['name' => 'Vitamin', 'description' => 'Bổ sung']);
 
-        Product::create([
+        SanPham::create([
             'MaDM' => $paracetamol->MaDM,
             'name' => 'Paracetamol 500mg',
             'price' => 20000,
@@ -40,7 +40,7 @@ class InventorySearchExportParityTest extends TestCase
             'batch_number' => 'LOT-AAA',
         ]);
 
-        Product::create([
+        SanPham::create([
             'MaDM' => $vitamin->MaDM,
             'name' => 'Vitamin C 1000mg',
             'price' => 50000,

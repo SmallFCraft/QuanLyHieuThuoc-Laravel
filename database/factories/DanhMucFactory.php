@@ -2,20 +2,20 @@
 
 namespace Database\Factories;
 
-use App\Models\Category;
+use App\Models\DanhMuc;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Category>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\DanhMuc>
  */
-class CategoryFactory extends Factory
+class DanhMucFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
      * @var string
      */
-    protected $model = Category::class;
+    protected $model = DanhMuc::class;
 
     /**
      * Define the model's default state.

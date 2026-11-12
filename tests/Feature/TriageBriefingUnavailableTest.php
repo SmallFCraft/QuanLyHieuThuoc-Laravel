@@ -3,10 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\AiJob;
-use App\Models\Category;
-use App\Models\TriageSession;
-use App\Models\User;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use App\Models\DanhMuc;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -24,27 +24,27 @@ class TriageBriefingUnavailableTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.briefing', true);
 
-        $this->user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
     }
 
     public function test_a_pending_briefing_ships_the_unavailable_notice_hidden(): void
     {
-        $session = $this->completedSession();
-        $this->queuedBriefing($session);
+        $phien = $this->completedSession();
+        $this->queuedBriefing($phien);
 
-        $html = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $html = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee('triage-briefing-pending', false)
             ->assertSee('triage-briefing-unavailable', false)
@@ -61,18 +61,18 @@ class TriageBriefingUnavailableTest extends TestCase
     /** The poller needs the id to unhide, and only for the briefing. */
     public function test_only_the_briefing_poll_job_carries_a_fallback_target(): void
     {
-        $session = $this->completedSession();
-        $this->queuedBriefing($session);
+        $phien = $this->completedSession();
+        $this->queuedBriefing($phien);
         AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'MaKH' => $phien->MaKH,
             'kind' => AiJob::KIND_TRIAGE_ADVICE,
             'status' => 'queued',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
 
-        $html = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $html = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -84,10 +84,10 @@ class TriageBriefingUnavailableTest extends TestCase
     /** A briefing already attempted and abandoned shows the notice outright. */
     public function test_a_finished_attempt_without_a_briefing_shows_the_notice_visible(): void
     {
-        $session = $this->completedSession(['ai_briefing_status' => 'failed']);
+        $phien = $this->completedSession(['ai_briefing_status' => 'failed']);
 
-        $html = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $html = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.briefing_unavailable'), false)
             ->getContent();
@@ -103,13 +103,13 @@ class TriageBriefingUnavailableTest extends TestCase
     /** An emergency page was never due one, so it must not apologise for the absence. */
     public function test_an_emergency_page_shows_no_briefing_notice_at_all(): void
     {
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'outcome' => 'emergency',
             'advice_given' => 'Anh/chị hãy gọi ngay 115.',
         ]);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertDontSee(__('messages.health.briefing_unavailable'), false)
             ->assertDontSee('triage-briefing-pending', false);
@@ -118,10 +118,10 @@ class TriageBriefingUnavailableTest extends TestCase
     /**
      * @param array<string, mixed> $attributes
      */
-    protected function completedSession(array $attributes = []): TriageSession
+    protected function completedSession(array $attributes = []): PhienSangLoc
     {
-        return TriageSession::create(array_merge([
-            'MaKH' => $this->user->MaKH,
+        return PhienSangLoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -136,14 +136,14 @@ class TriageBriefingUnavailableTest extends TestCase
      * A briefing job the page will poll. `ai_briefing_status` stays null so
      * ensureBriefingJob() finds this row instead of queueing a second one.
      */
-    protected function queuedBriefing(TriageSession $session): AiJob
+    protected function queuedBriefing(PhienSangLoc $phien): AiJob
     {
         return AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'MaKH' => $phien->MaKH,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'queued',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
     }
 }

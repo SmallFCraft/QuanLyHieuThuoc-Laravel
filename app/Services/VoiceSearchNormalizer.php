@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Product;
-use App\Models\VoicePhonetic;
+use App\Models\SanPham;
+use App\Models\PhienAmGiongNoi;
 use App\Support\VietnameseText;
 use App\Support\VoicePhonetics;
 use Illuminate\Support\Collection;
@@ -107,10 +107,10 @@ class VoiceSearchNormalizer
             }
         }
 
-        $phonetic = $this->matchPhonetically($alternatives);
+        $phienAm = $this->matchPhonetically($alternatives);
 
-        if ($phonetic !== null) {
-            return $this->result($phonetic, $heard, self::SOURCE_PHONETIC, $this->wordsCoOccur($phonetic));
+        if ($phienAm !== null) {
+            return $this->result($phienAm, $heard, self::SOURCE_PHONETIC, $this->wordsCoOccur($phienAm));
         }
 
         $ai = $this->askAi($alternatives);
@@ -209,7 +209,7 @@ class VoiceSearchNormalizer
      * có liên quan catalog không". Hai câu hỏi khác nhau, và trả lời sai câu thứ nhất
      * bằng câu thứ hai là lỗi gốc của cả tầng.
      *
-     * KHÔNG dùng Product::storefrontSearch() làm cổng, dù nó là hàm tìm kiếm thật của
+     * KHÔNG dùng SanPham::storefrontSearch() làm cổng, dù nó là hàm tìm kiếm thật của
      * shop. Đo 2026-09-02 trên catalog 3.146 sản phẩm: nó khớp CHUỖI CON (`la` nằm
      * trong "Salonpas", "Calcium") và chỉ cần từng từ khớp đâu đó, kể cả trong
      * `ingredients_folded`. Nên "ê a ê a" khớp 3.146 sản phẩm (cả catalog), "lá la la
@@ -239,7 +239,7 @@ class VoiceSearchNormalizer
      */
     private function isRealQuery(string $term): bool
     {
-        $all = array_unique(Product::searchWords($term));
+        $all = array_unique(SanPham::searchWords($term));
 
         // Cổng số lượng TRƯỚC mọi truy vấn: T1 có max_windows chặn, T0 thì không có gì.
         // nameHasWord() là một truy vấn cho mỗi TỪ PHÂN BIỆT, hai trong bốn nhánh LIKE
@@ -314,7 +314,7 @@ class VoiceSearchNormalizer
             return $this->wordInName[$word];
         }
 
-        $query = Product::notExpired();
+        $query = SanPham::notExpired();
         $this->whereNameHasWord($query, $word);
 
         return $this->wordInName[$word] = $query->exists();
@@ -387,7 +387,7 @@ class VoiceSearchNormalizer
     {
         $hits = 0;
 
-        foreach (array_unique(Product::searchWords($term)) as $word) {
+        foreach (array_unique(SanPham::searchWords($term)) as $word) {
             if (strlen($word) < self::MEANINGFUL_WORD_LENGTH) {
                 continue;
             }
@@ -418,7 +418,7 @@ class VoiceSearchNormalizer
     private function wordsCoOccur(string $term): bool
     {
         $words = array_unique(array_filter(
-            Product::searchWords($term),
+            SanPham::searchWords($term),
             fn (string $word) => strlen($word) >= self::MEANINGFUL_WORD_LENGTH
         ));
 
@@ -426,7 +426,7 @@ class VoiceSearchNormalizer
             return false;
         }
 
-        $query = Product::notExpired();
+        $query = SanPham::notExpired();
 
         foreach ($words as $word) {
             $this->whereNameHasWord($query, $word);
@@ -493,7 +493,7 @@ class VoiceSearchNormalizer
             fn (?string $block) => $block !== null && $block !== ''
         )));
 
-        return VoicePhonetic::query()
+        return PhienAmGiongNoi::query()
             ->select('phonetic_key', 'term', 'kind', 'weight')
             ->where(function ($query) use ($keys, $blocks): void {
                 $query->whereIn('phonetic_key', $keys);
@@ -509,7 +509,7 @@ class VoiceSearchNormalizer
      * Điểm chỉ xếp thứ tự giữa các ứng viên within() ĐÃ nhận — không quyết định
      * nhận hay loại. Trộn hai việc đó lại là cách "vitamin C" thành "vitamin D".
      */
-    private function score(array $window, VoicePhonetic $candidate): int
+    private function score(array $window, PhienAmGiongNoi $candidate): int
     {
         $key = (string) $candidate->phonetic_key;
         $exact = $key === $window['key'];
@@ -654,7 +654,7 @@ class VoiceSearchNormalizer
         $candidates ??= $this->lookup($windows);
 
         return $candidates
-            ->sortByDesc(fn (VoicePhonetic $row) => (self::KIND_BONUS[$row->kind] ?? 0) + min((int) $row->weight, 20))
+            ->sortByDesc(fn (PhienAmGiongNoi $row) => (self::KIND_BONUS[$row->kind] ?? 0) + min((int) $row->weight, 20))
             ->pluck('term')
             ->unique()
             ->take(self::AI_CANDIDATES)
@@ -685,7 +685,7 @@ class VoiceSearchNormalizer
 
         $key = VoicePhonetics::key($answer);
 
-        return $key !== '' && VoicePhonetic::where('phonetic_key', $key)->exists() ? $answer : null;
+        return $key !== '' && PhienAmGiongNoi::where('phonetic_key', $key)->exists() ? $answer : null;
     }
 
     private function breakerIsOpen(): bool

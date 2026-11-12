@@ -2,13 +2,13 @@
 
 namespace Tests\Unit\Services;
 
-use App\Models\Category;
-use App\Models\DrugContraindication;
-use App\Models\Product;
-use App\Models\User;
-use App\Models\UserHealthProfile;
+use App\Models\DanhMuc;
+use App\Models\ChungChiDinhThuoc;
+use App\Models\SanPham;
+use App\Models\NguoiDung;
+use App\Models\HoSoSucKhoe;
 use App\Services\DrugSafetyService;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,23 +17,23 @@ class DrugSafetyServiceTest extends TestCase
     use RefreshDatabase;
 
     protected DrugSafetyService $service;
-    protected Category $category;
-    protected User $user;
+    protected DanhMuc $danhMuc;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->category = Category::create([
+        $this->danhMuc = DanhMuc::create([
             'name' => 'Thuốc giảm đau - Hạ sốt',
             'description' => 'Giảm đau, hạ sốt',
         ]);
 
-        $this->seed(MedicalKnowledgeSeeder::class);
+        $this->seed(TriThucYTeSeeder::class);
 
         $this->service = app(DrugSafetyService::class);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(34)->toDateString(),
@@ -108,9 +108,9 @@ class DrugSafetyServiceTest extends TestCase
     public function test_declared_allergy_blocks_the_matching_product(): void
     {
         $this->profile(['allergies' => ['Paracetamol']]);
-        $product = $this->product('Panadol', 'Paracetamol 500mg');
+        $sanPham = $this->product('Panadol', 'Paracetamol 500mg');
 
-        $result = $this->service->checkProduct($product, $this->consentedProfile(), $this->user);
+        $result = $this->service->checkProduct($sanPham, $this->consentedProfile(), $this->nguoiDung);
 
         $this->assertTrue($result['blocking']);
         $this->assertSame('allergy', $result['warnings'][0]['type']);
@@ -119,9 +119,9 @@ class DrugSafetyServiceTest extends TestCase
     public function test_pregnancy_blocks_nsaids(): void
     {
         $this->profile(['is_pregnant' => true]);
-        $product = $this->product('Ibuprofen', 'Ibuprofen 400mg');
+        $sanPham = $this->product('Ibuprofen', 'Ibuprofen 400mg');
 
-        $result = $this->service->checkProduct($product, $this->consentedProfile(), $this->user);
+        $result = $this->service->checkProduct($sanPham, $this->consentedProfile(), $this->nguoiDung);
 
         $this->assertTrue($result['blocking']);
         $this->assertTrue(
@@ -132,9 +132,9 @@ class DrugSafetyServiceTest extends TestCase
     public function test_chronic_condition_blocks_the_contraindicated_drug(): void
     {
         $this->profile(['chronic_conditions' => ['loét dạ dày']]);
-        $product = $this->product('Ibuprofen', 'Ibuprofen 400mg');
+        $sanPham = $this->product('Ibuprofen', 'Ibuprofen 400mg');
 
-        $result = $this->service->checkProduct($product, $this->consentedProfile(), $this->user);
+        $result = $this->service->checkProduct($sanPham, $this->consentedProfile(), $this->nguoiDung);
 
         $this->assertTrue(
             collect($result['warnings'])->contains(fn ($w) => str_contains($w['title'], 'loét dạ dày'))
@@ -144,9 +144,9 @@ class DrugSafetyServiceTest extends TestCase
     public function test_current_medication_interaction_is_reported(): void
     {
         $this->profile(['current_medications' => ['Clopidogrel 75mg']]);
-        $product = $this->product('Ibuprofen', 'Ibuprofen 400mg');
+        $sanPham = $this->product('Ibuprofen', 'Ibuprofen 400mg');
 
-        $result = $this->service->checkProduct($product, $this->consentedProfile(), $this->user);
+        $result = $this->service->checkProduct($sanPham, $this->consentedProfile(), $this->nguoiDung);
 
         $this->assertTrue(
             collect($result['warnings'])->contains(fn ($w) => $w['type'] === 'current_medication')
@@ -156,10 +156,10 @@ class DrugSafetyServiceTest extends TestCase
     public function test_profile_without_consent_produces_no_personalised_warning(): void
     {
         $this->profile(['allergies' => ['Paracetamol'], 'consented_at' => null]);
-        $product = $this->product('Panadol', 'Paracetamol 500mg');
+        $sanPham = $this->product('Panadol', 'Paracetamol 500mg');
 
         // consentedProfile() returns null, mirroring what the controllers pass in.
-        $result = $this->service->checkProduct($product, $this->consentedProfile(), $this->user);
+        $result = $this->service->checkProduct($sanPham, $this->consentedProfile(), $this->nguoiDung);
 
         $this->assertFalse($result['blocking']);
         $this->assertSame([], $result['warnings']);
@@ -167,14 +167,14 @@ class DrugSafetyServiceTest extends TestCase
 
     public function test_age_guard_fires_for_a_child(): void
     {
-        $child = User::factory()->create([
+        $child = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(10)->toDateString(),
         ]);
-        $product = $this->product('Aspirin', 'Acid acetylsalicylic 100mg');
+        $sanPham = $this->product('Aspirin', 'Acid acetylsalicylic 100mg');
 
-        $result = $this->service->checkProduct($product, null, $child);
+        $result = $this->service->checkProduct($sanPham, null, $child);
 
         $this->assertTrue($result['blocking']);
         $this->assertTrue(
@@ -184,9 +184,9 @@ class DrugSafetyServiceTest extends TestCase
 
     public function test_age_guard_does_not_fire_for_an_adult(): void
     {
-        $product = $this->product('Aspirin', 'Acid acetylsalicylic 100mg');
+        $sanPham = $this->product('Aspirin', 'Acid acetylsalicylic 100mg');
 
-        $result = $this->service->checkProduct($product, null, $this->user);
+        $result = $this->service->checkProduct($sanPham, null, $this->nguoiDung);
 
         $this->assertFalse(
             collect($result['warnings'])->contains(fn ($w) => str_contains($w['title'], 'dưới 16 tuổi'))
@@ -195,14 +195,14 @@ class DrugSafetyServiceTest extends TestCase
 
     public function test_unknown_age_does_not_silently_pass_an_age_guard(): void
     {
-        $noBirthDate = User::factory()->create([
+        $noBirthDate = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => null,
         ]);
-        $product = $this->product('Aspirin', 'Acid acetylsalicylic 100mg');
+        $sanPham = $this->product('Aspirin', 'Acid acetylsalicylic 100mg');
 
-        $result = $this->service->checkProduct($product, null, $noBirthDate);
+        $result = $this->service->checkProduct($sanPham, null, $noBirthDate);
 
         // No age known means the age rule cannot be evaluated, so it must not claim a match.
         $this->assertFalse(
@@ -212,11 +212,11 @@ class DrugSafetyServiceTest extends TestCase
 
     public function test_inactive_contraindications_are_ignored(): void
     {
-        DrugContraindication::query()->update(['is_active' => false]);
+        ChungChiDinhThuoc::query()->update(['is_active' => false]);
         $this->profile(['is_pregnant' => true]);
-        $product = $this->product('Ibuprofen', 'Ibuprofen 400mg');
+        $sanPham = $this->product('Ibuprofen', 'Ibuprofen 400mg');
 
-        $result = $this->service->checkProduct($product, $this->consentedProfile(), $this->user);
+        $result = $this->service->checkProduct($sanPham, $this->consentedProfile(), $this->nguoiDung);
 
         $this->assertFalse(
             collect($result['warnings'])->contains(fn ($w) => $w['type'] === 'contraindication')
@@ -233,7 +233,7 @@ class DrugSafetyServiceTest extends TestCase
         $result = $this->service->checkCart([
             ['MaSP' => $aspirin->MaSP, 'quantity' => 1],
             ['MaSP' => $ibuprofen->MaSP, 'quantity' => 1],
-        ], $this->user->MaKH);
+        ], $this->nguoiDung->MaKH);
 
         $this->assertTrue($result['blocking']);
         $this->assertTrue(collect($result['warnings'])->contains(fn ($w) => $w['type'] === 'interaction'));
@@ -249,14 +249,14 @@ class DrugSafetyServiceTest extends TestCase
             ['MaSP' => $aspirin->MaSP, 'quantity' => 1],
             ['MaSP' => $vitamin->MaSP, 'quantity' => 1],
             ['MaSP' => $ibuprofen->MaSP, 'quantity' => 1],
-        ], $this->user->MaKH);
+        ], $this->nguoiDung->MaKH);
 
         $this->assertTrue(collect($result['warnings'])->contains(fn ($w) => $w['type'] === 'interaction'));
     }
 
     public function test_empty_cart_produces_no_warnings(): void
     {
-        $result = $this->service->checkCart([], $this->user->MaKH);
+        $result = $this->service->checkCart([], $this->nguoiDung->MaKH);
 
         $this->assertFalse($result['blocking']);
         $this->assertSame([], $result['warnings']);
@@ -268,7 +268,7 @@ class DrugSafetyServiceTest extends TestCase
 
         $result = $this->service->checkCart(
             [['MaSP' => $vitamin->MaSP, 'quantity' => 1]],
-            $this->user->MaKH
+            $this->nguoiDung->MaKH
         );
 
         $this->assertFalse($result['blocking']);
@@ -283,7 +283,7 @@ class DrugSafetyServiceTest extends TestCase
         $result = $this->service->checkAddition(
             $ibuprofen,
             [['MaSP' => $aspirin->MaSP, 'quantity' => 1]],
-            $this->user->MaKH
+            $this->nguoiDung->MaKH
         );
 
         $this->assertTrue($result['blocking']);
@@ -296,7 +296,7 @@ class DrugSafetyServiceTest extends TestCase
         $result = $this->service->checkAddition(
             $aspirin,
             [['MaSP' => $aspirin->MaSP, 'quantity' => 1]],
-            $this->user->MaKH
+            $this->nguoiDung->MaKH
         );
 
         $this->assertFalse($result['blocking']);
@@ -312,7 +312,7 @@ class DrugSafetyServiceTest extends TestCase
 
         $result = $this->service->checkCart(
             [['MaSP' => $paracetamol->MaSP, 'quantity' => 1]],
-            $this->user->MaKH
+            $this->nguoiDung->MaKH
         );
 
         $this->assertSame('major', $result['warnings'][0]['severity']);
@@ -320,37 +320,37 @@ class DrugSafetyServiceTest extends TestCase
 
     public function test_override_is_written_to_the_audit_trail(): void
     {
-        $product = $this->product('Ibuprofen', 'Ibuprofen 400mg');
+        $sanPham = $this->product('Ibuprofen', 'Ibuprofen 400mg');
 
-        $this->service->logOverride($this->user->MaKH, $product, [
+        $this->service->logOverride($this->nguoiDung->MaKH, $sanPham, [
             ['type' => 'interaction', 'severity' => 'major'],
         ]);
 
-        $log = \App\Models\AuditLog::where('action', 'drug_warning_overridden')->latest('MaNK')->first();
+        $log = \App\Models\NhatKyKiemToan::where('action', 'drug_warning_overridden')->latest('MaNK')->first();
 
         $this->assertNotNull($log);
-        $this->assertSame($product->MaSP, $log->MaDoiTuong);
+        $this->assertSame($sanPham->MaSP, $log->MaDoiTuong);
     }
 
     // --- Helpers ---
 
-    protected function profile(array $attributes = []): UserHealthProfile
+    protected function profile(array $attributes = []): HoSoSucKhoe
     {
-        return UserHealthProfile::updateOrCreate(
-            ['MaKH' => $this->user->MaKH],
+        return HoSoSucKhoe::updateOrCreate(
+            ['MaKH' => $this->nguoiDung->MaKH],
             array_merge(['consented_at' => now()], $attributes)
         );
     }
 
-    protected function consentedProfile(): ?UserHealthProfile
+    protected function consentedProfile(): ?HoSoSucKhoe
     {
-        return UserHealthProfile::where('MaKH', $this->user->MaKH)->consented()->first();
+        return HoSoSucKhoe::where('MaKH', $this->nguoiDung->MaKH)->consented()->first();
     }
 
-    protected function product(string $name, string $ingredients): Product
+    protected function product(string $name, string $ingredients): SanPham
     {
-        return Product::create([
-            'MaDM' => $this->category->MaDM,
+        return SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => $name,
             'ingredients' => $ingredients,
             'usage' => 'Theo hướng dẫn',

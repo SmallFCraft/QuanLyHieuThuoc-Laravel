@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\TriageSession;
-use App\Models\User;
-use App\Models\UserHealthProfile;
+use App\Models\DanhMuc;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use App\Models\HoSoSucKhoe;
 use App\Services\Triage\Ai\TriageAiBriefingService;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -24,7 +24,7 @@ class TriageAiBriefingContextTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $customer;
+    protected NguoiDung $customer;
 
     protected function setUp(): void
     {
@@ -34,10 +34,10 @@ class TriageAiBriefingContextTest extends TestCase
 
         config()->set('chatbot.ai.triage.briefing', true);
 
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
-        $this->customer = User::factory()->create([
+        $this->customer = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(41)->toDateString(),
@@ -76,9 +76,9 @@ class TriageAiBriefingContextTest extends TestCase
         ];
     }
 
-    protected function priorSession(string $symptom): TriageSession
+    protected function priorSession(string $symptom): PhienSangLoc
     {
-        return TriageSession::create([
+        return PhienSangLoc::create([
             'MaKH' => $this->customer->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
@@ -89,9 +89,9 @@ class TriageAiBriefingContextTest extends TestCase
         ]);
     }
 
-    protected function triageSession(array $attributes = []): TriageSession
+    protected function triageSession(array $attributes = []): PhienSangLoc
     {
-        return TriageSession::create(array_merge([
+        return PhienSangLoc::create(array_merge([
             'MaKH' => $this->customer->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
@@ -104,11 +104,11 @@ class TriageAiBriefingContextTest extends TestCase
         ], $attributes));
     }
 
-    protected function generate(TriageSession $session): TriageSession
+    protected function generate(PhienSangLoc $phien): PhienSangLoc
     {
-        app(TriageAiBriefingService::class)->generate($session);
+        app(TriageAiBriefingService::class)->generate($phien);
 
-        return $session->refresh();
+        return $phien->refresh();
     }
 
     protected function userMessage(): string
@@ -127,7 +127,7 @@ class TriageAiBriefingContextTest extends TestCase
 
     public function test_prompt_carries_age_and_prior_symptom_when_ai_consent_granted(): void
     {
-        UserHealthProfile::create([
+        HoSoSucKhoe::create([
             'MaKH' => $this->customer->MaKH,
             'allergies' => ['aspirin'],
             'consented_at' => now(),
@@ -155,7 +155,7 @@ class TriageAiBriefingContextTest extends TestCase
      */
     public function test_prompt_excludes_profile_when_ai_consent_not_granted(): void
     {
-        UserHealthProfile::create([
+        HoSoSucKhoe::create([
             'MaKH' => $this->customer->MaKH,
             'allergies' => ['amoxicillin'],
             'chronic_conditions' => ['tiểu đường'],
@@ -194,7 +194,7 @@ class TriageAiBriefingContextTest extends TestCase
 
         $withoutConsent = $this->userMessage();
 
-        UserHealthProfile::create([
+        HoSoSucKhoe::create([
             'MaKH' => $this->customer->MaKH,
             'allergies' => ['aspirin'],
             'consented_at' => now(),

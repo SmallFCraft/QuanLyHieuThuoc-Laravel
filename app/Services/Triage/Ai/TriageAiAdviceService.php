@@ -2,7 +2,7 @@
 
 namespace App\Services\Triage\Ai;
 
-use App\Models\TriageSession;
+use App\Models\PhienSangLoc;
 use App\Services\AiProviderService;
 use Illuminate\Support\Facades\Log;
 
@@ -51,11 +51,11 @@ class TriageAiAdviceService extends TriageAiService
      * Public so the result page can tell "the rewrite is still coming" from "there
      * will never be one", instead of re-deriving the rule from the outcome enum.
      */
-    public function isEligible(TriageSession $session): bool
+    public function isEligible(PhienSangLoc $phien): bool
     {
         return $this->isEnabled()
-            && ! in_array($session->outcome, self::VERBATIM_OUTCOMES, true)
-            && trim((string) $session->advice_given) !== '';
+            && ! in_array($phien->outcome, self::VERBATIM_OUTCOMES, true)
+            && trim((string) $phien->advice_given) !== '';
     }
 
     /**
@@ -64,13 +64,13 @@ class TriageAiAdviceService extends TriageAiService
      * Never throws: a failure leaves the columns null and the result page renders
      * exactly as it does with the feature off.
      */
-    public function rewrite(TriageSession $session): void
+    public function rewrite(PhienSangLoc $phien): void
     {
-        if (! $this->isEligible($session)) {
+        if (! $this->isEligible($phien)) {
             return;
         }
 
-        $source = trim((string) $session->advice_given);
+        $source = trim((string) $phien->advice_given);
 
         $startedAt = microtime(true);
 
@@ -78,37 +78,37 @@ class TriageAiAdviceService extends TriageAiService
             $provider = $this->provider();
 
             $response = $this->callProvider($provider, [
-                ['role' => 'system', 'content' => $this->systemPrompt(TriageAiContextService::honorificFor($session->user?->gender))],
-                ['role' => 'user', 'content' => $this->buildPrompt($session)],
+                ['role' => 'system', 'content' => $this->systemPrompt(TriageAiContextService::honorificFor($phien->nguoiDung?->gender))],
+                ['role' => 'user', 'content' => $this->buildPrompt($phien)],
             ]);
 
             $rewrite = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
             $sections = $this->splitSections($rewrite);
 
-            $expected = array_filter([$source, trim((string) $session->safety_net)]);
+            $expected = array_filter([$source, trim((string) $phien->safety_net)]);
             $produced = array_filter([$sections['advice'], $sections['safety_net']]);
 
             if (! $this->passesSafetyChecks($rewrite, $expected, $produced)) {
-                $this->record($session, 'rejected', null, null, $provider, $startedAt);
+                $this->record($phien, 'rejected', null, null, $provider, $startedAt);
 
                 return;
             }
 
             $this->record(
-                $session,
+                $phien,
                 'ok',
                 $sections['advice'],
-                $session->safety_net ? ($sections['safety_net'] ?: null) : null,
+                $phien->safety_net ? ($sections['safety_net'] ?: null) : null,
                 $provider,
                 $startedAt
             );
         } catch (\Throwable $exception) {
             Log::warning('Triage AI advice rewrite failed', [
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'error' => $exception->getMessage(),
             ]);
 
-            $session->forceFill(['ai_status' => 'failed'])->save();
+            $phien->forceFill(['ai_status' => 'failed'])->save();
         }
     }
 
@@ -130,19 +130,19 @@ class TriageAiAdviceService extends TriageAiService
     /**
      * Only rule-derived strings plus the outcome enum. No free text, no profile.
      */
-    protected function buildPrompt(TriageSession $session): string
+    protected function buildPrompt(PhienSangLoc $phien): string
     {
         $lines = [
-            'Kết luận hệ thống: '.$this->outcomeLabel($session->outcome),
+            'Kết luận hệ thống: '.$this->outcomeLabel($phien->outcome),
             '',
             'LỜI KHUYÊN:',
-            (string) $session->advice_given,
+            (string) $phien->advice_given,
         ];
 
-        if (trim((string) $session->safety_net) !== '') {
+        if (trim((string) $phien->safety_net) !== '') {
             $lines[] = '';
             $lines[] = 'NGƯỠNG CẦN ĐI KHÁM:';
-            $lines[] = (string) $session->safety_net;
+            $lines[] = (string) $phien->safety_net;
         }
 
         $lines[] = '';
@@ -237,7 +237,7 @@ class TriageAiAdviceService extends TriageAiService
     }
 
     protected function record(
-        TriageSession $session,
+        PhienSangLoc $phien,
         string $status,
         ?string $advice,
         ?string $safetyNet,
@@ -248,7 +248,7 @@ class TriageAiAdviceService extends TriageAiService
         $durationMs = round((microtime(true) - $startedAt) * 1000, 1);
 
         $this->persistWithProvenance(
-            $session,
+            $phien,
             [
                 'ai_advice' => $advice,
                 'ai_safety_net' => $safetyNet,
@@ -262,7 +262,7 @@ class TriageAiAdviceService extends TriageAiService
 
         // Status and provenance only: never the prompt, never either version of the
         // advice text.
-        $this->auditProvenance($session, 'triage_ai_advice', $described, $durationMs, [
+        $this->auditProvenance($phien, 'triage_ai_advice', $described, $durationMs, [
             'ai_status' => $status,
         ]);
     }

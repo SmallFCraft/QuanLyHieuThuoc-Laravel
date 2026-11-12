@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Category;
+use App\Models\DanhMuc;
 use App\Support\ProductCodeGenerator;
 use App\Support\VietnameseText;
 use Illuminate\Http\Request;
@@ -17,7 +17,7 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        $categories = Category::withCount('products')->orderBy('name')->get();
+        $categories = DanhMuc::withCount('sanPhams')->orderBy('name')->get();
         
         return view('admin.categories.index', compact('categories'));
     }
@@ -49,19 +49,19 @@ class CategoryController extends Controller
             ], 422);
         }
 
-        $category = Category::create($this->categoryPayload($request));
+        $danhMuc = DanhMuc::create($this->categoryPayload($request));
 
         return response()->json([
             'success' => true,
             'message' => 'Tạo danh mục thành công',
-            'data' => $category
+            'data' => $danhMuc
         ], 201);
     }
 
     /**
      * Update the specified category in storage.
      */
-    public function update(Request $request, Category $category)
+    public function update(Request $request, DanhMuc $category)
     {
         $validator = Validator::make($request->all(), [
             'name' => [
@@ -101,7 +101,7 @@ class CategoryController extends Controller
     /**
      * Remove the specified category from storage.
      */
-    public function destroy(Category $category)
+    public function destroy(DanhMuc $category)
     {
         // Prevent deletion if category has products
         if ($category->hasProducts()) {
@@ -119,7 +119,7 @@ class CategoryController extends Controller
         ]);
     }
 
-    private function categoryPayload(Request $request, ?Category $category = null): array
+    private function categoryPayload(Request $request, ?DanhMuc $category = null): array
     {
         $code = ProductCodeGenerator::normalizeCategoryCode($request->input('code'));
 
@@ -140,10 +140,10 @@ class CategoryController extends Controller
      * the folded column. Enforced here as well as by the unique index so the admin
      * gets a field error instead of a 500 from the driver.
      */
-    private function uniqueFoldedName(?Category $category = null): callable
+    private function uniqueFoldedName(?DanhMuc $category = null): callable
     {
         return function (string $attribute, mixed $value, callable $fail) use ($category): void {
-            $exists = Category::query()
+            $exists = DanhMuc::query()
                 ->where('name_folded', VietnameseText::fold((string) $value))
                 ->when($category, fn ($query) => $query->whereKeyNot($category->MaDM))
                 ->exists();

@@ -5,8 +5,11 @@ namespace App\Models;
 use App\Services\Triage\TriageReportService;
 use Illuminate\Database\Eloquent\Model;
 
-class TriageSession extends Model
-{    protected $primaryKey = 'MaSL';
+class PhienSangLoc extends Model
+{
+    protected $table = 'triage_sessions';
+
+    protected $primaryKey = 'MaSL';
 
     protected $fillable = [
         'MaKH',
@@ -64,14 +67,14 @@ class TriageSession extends Model
     public const MAX_CLARIFY_ROUNDS = 3;
     public const MAX_CLARIFY_QUESTIONS_PER_ROUND = 3;
 
-    public function user()
+    public function nguoiDung()
     {
-        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
     }
 
     public function pharmacist()
     {
-        return $this->belongsTo(User::class, 'pharmacist_id', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'pharmacist_id', 'MaKH');
     }
 
     public function scopeInProgress($query)
@@ -115,7 +118,7 @@ class TriageSession extends Model
 
         $redFlags = collect($this->triggered_red_flags ?? []);
         $bySeverity = fn (string $severity) => $redFlags
-            ->filter(fn ($flag) => is_array($flag) && ($flag['severity'] ?? '') === $severity)
+            ->filter(fn ($co) => is_array($co) && ($co['severity'] ?? '') === $severity)
             ->count();
 
         $duration = (int) ($this->answerFor('duration_days') ?? 0);
@@ -159,7 +162,7 @@ class TriageSession extends Model
     {
         return array_values(array_filter(
             (array) data_get($this->ai_meta, 'clarify_questions', []),
-            fn ($question): bool => is_string($question) && trim($question) !== ''
+            fn ($cauHoi): bool => is_string($cauHoi) && trim($cauHoi) !== ''
         ));
     }
 
@@ -178,7 +181,7 @@ class TriageSession extends Model
     {
         return array_values(array_filter(
             (array) ($this->collected_data['ai_clarify_answers'] ?? []),
-            fn ($pair): bool => is_array($pair) && ($pair['answer'] ?? '') !== ''
+            fn ($cap): bool => is_array($cap) && ($cap['answer'] ?? '') !== ''
         ));
     }
 }

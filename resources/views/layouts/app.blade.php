@@ -146,7 +146,7 @@
                     // product_code, not batch_number: the batch is an internal
                     // inventory record and search engines index this markup.
                     'sku' => $product->product_code ?: (string) $product->MaSP,
-                    'category' => $product->category->name ?? null,
+                    'category' => $product->danhMuc->name ?? null,
                     'brand' => [
                         '@type' => 'Brand',
                         'name' => $appName,

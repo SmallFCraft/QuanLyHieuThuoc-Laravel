@@ -3,14 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\AiJob;
-use App\Models\AuditLog;
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\TriageSession;
-use App\Models\User;
-use App\Models\UserHealthProfile;
+use App\Models\NhatKyKiemToan;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use App\Models\HoSoSucKhoe;
 use App\Services\Triage\Ai\TriageAiBriefingService;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -32,7 +32,7 @@ class TriageAiBriefingTest extends TestCase
     protected const SOURCE_ADVICE = 'Anh/chị nghỉ ngơi, uống nhiều nước, mặc thoáng.';
     protected const SOURCE_SAFETY = 'Đi khám ngay nếu sốt trên 39 độ không hạ hoặc sốt quá 3 ngày.';
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
@@ -43,12 +43,12 @@ class TriageAiBriefingTest extends TestCase
         // The candidate list is derived from `medical_triage_rules.suggest_categories`,
         // so the real seed is what makes this test exercise the real allow-list.
         // Category first: the seeder maps rule categories by name.
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.briefing', true);
 
-        $this->user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
     }
 
     /**
@@ -56,10 +56,10 @@ class TriageAiBriefingTest extends TestCase
      * The service reads that list rather than a config, so a category no rule points
      * at is never a candidate.
      */
-    protected function stockedProduct(string $name = 'Paracetamol 500mg', string $ingredients = 'Paracetamol 500mg'): Product
+    protected function stockedProduct(string $name = 'Paracetamol 500mg', string $ingredients = 'Paracetamol 500mg'): SanPham
     {
-        return Product::create([
-            'MaDM' => Category::first()->MaDM,
+        return SanPham::create([
+            'MaDM' => DanhMuc::first()->MaDM,
             'name' => $name,
             'ingredients' => $ingredients,
             'usage' => 'Giảm đau, hạ sốt. Uống 1-2 viên mỗi 4-6 giờ',
@@ -94,10 +94,10 @@ class TriageAiBriefingTest extends TestCase
         ])]);
     }
 
-    protected function triageSession(array $attributes = []): TriageSession
+    protected function triageSession(array $attributes = []): PhienSangLoc
     {
-        return TriageSession::create(array_merge([
-            'MaKH' => $this->user->MaKH,
+        return PhienSangLoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -109,11 +109,11 @@ class TriageAiBriefingTest extends TestCase
         ], $attributes));
     }
 
-    protected function generate(TriageSession $session): TriageSession
+    protected function generate(PhienSangLoc $phien): PhienSangLoc
     {
-        app(TriageAiBriefingService::class)->generate($session);
+        app(TriageAiBriefingService::class)->generate($phien);
 
-        return $session->refresh();
+        return $phien->refresh();
     }
 
     /**
@@ -135,23 +135,23 @@ class TriageAiBriefingTest extends TestCase
     {
         config()->set('chatbot.ai.triage.briefing', false);
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
         Http::assertNothingSent();
-        $this->assertNull($session->ai_briefing);
-        $this->assertNull($session->ai_briefing_status);
+        $this->assertNull($phien->ai_briefing);
+        $this->assertNull($phien->ai_briefing_status);
     }
 
     public function test_an_emergency_outcome_never_gets_a_briefing(): void
     {
-        $session = $this->generate($this->triageSession([
+        $phien = $this->generate($this->triageSession([
             'outcome' => 'emergency',
             'advice_given' => 'Anh/chị gọi ngay 115.',
             'safety_net' => null,
         ]));
 
         Http::assertNothingSent();
-        $this->assertNull($session->ai_briefing);
+        $this->assertNull($phien->ai_briefing);
     }
 
     /**
@@ -163,30 +163,30 @@ class TriageAiBriefingTest extends TestCase
     {
         $this->fakeToolCall($this->fullBriefing());
 
-        $session = $this->generate($this->triageSession([
+        $phien = $this->generate($this->triageSession([
             'outcome' => 'refer_doctor',
             'advice_given' => 'Anh/chị nên đi khám trong hôm nay.',
         ]));
 
         Http::assertSentCount(1);
-        $this->assertNotNull($session->ai_briefing);
-        $this->assertSame('ok', $session->ai_briefing_status);
+        $this->assertNotNull($phien->ai_briefing);
+        $this->assertSame('ok', $phien->ai_briefing_status);
     }
 
     public function test_a_full_briefing_is_stored_without_touching_the_conclusion(): void
     {
         $this->fakeToolCall($this->fullBriefing());
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
-        $this->assertSame('ok', $session->ai_briefing_status);
-        $this->assertStringContainsString('không có dấu hiệu nguy hiểm', $session->ai_briefing['why']);
-        $this->assertCount(1, $session->ai_briefing['watch_for']);
+        $this->assertSame('ok', $phien->ai_briefing_status);
+        $this->assertStringContainsString('không có dấu hiệu nguy hiểm', $phien->ai_briefing['why']);
+        $this->assertCount(1, $phien->ai_briefing['watch_for']);
 
         // The deterministic record is untouched.
-        $this->assertSame('self_care', $session->outcome);
-        $this->assertSame(self::SOURCE_ADVICE, $session->advice_given);
-        $this->assertSame(self::SOURCE_SAFETY, $session->safety_net);
+        $this->assertSame('self_care', $phien->outcome);
+        $this->assertSame(self::SOURCE_ADVICE, $phien->advice_given);
+        $this->assertSame(self::SOURCE_SAFETY, $phien->safety_net);
     }
 
     public function test_markdown_is_stripped_rather_than_rejecting_the_whole_briefing(): void
@@ -198,12 +198,12 @@ class TriageAiBriefingTest extends TestCase
             'self_care' => ['- Uống đủ nước và nghỉ ngơi.'],
         ]));
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
-        $this->assertSame('ok', $session->ai_briefing_status);
-        $this->assertStringNotContainsString('**', $session->ai_briefing['why']);
-        $this->assertStringNotContainsString('##', $session->ai_briefing['why']);
-        $this->assertSame('Uống đủ nước và nghỉ ngơi.', $session->ai_briefing['self_care'][0]);
+        $this->assertSame('ok', $phien->ai_briefing_status);
+        $this->assertStringNotContainsString('**', $phien->ai_briefing['why']);
+        $this->assertStringNotContainsString('##', $phien->ai_briefing['why']);
+        $this->assertSame('Uống đủ nước và nghỉ ngơi.', $phien->ai_briefing['self_care'][0]);
     }
 
     public function test_tool_call_markup_leaked_into_a_field_is_stripped(): void
@@ -212,25 +212,25 @@ class TriageAiBriefingTest extends TestCase
         // argument tag (`<parameter>why>...`) instead of emitting clean prose.
         // Transport noise from the provider, not content — it must not reach
         // the customer's screen. Closing tags ride the same wire.
-        $product = $this->stockedProduct('Paracetamol 500mg', 'Paracetamol 500mg');
+        $sanPham = $this->stockedProduct('Paracetamol 500mg', 'Paracetamol 500mg');
 
         $this->fakeToolCall($this->fullBriefing([
             'why' => '<parameter>why>Em ghi lại triệu chứng: đau đầu ngày thứ nhất, mức độ bình thường.',
             'watch_for' => ['<parameter name="watch_for">Sốt cao hoặc nôn nhiều.'],
             'products' => [
-                ['id' => $product->MaSP, 'reason' => '<parameter name="reason">Hạ sốt tại nhà, an toàn cho ca này.</parameter>'],
+                ['id' => $sanPham->MaSP, 'reason' => '<parameter name="reason">Hạ sốt tại nhà, an toàn cho ca này.</parameter>'],
             ],
         ]));
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
-        $this->assertSame('ok', $session->ai_briefing_status);
-        $this->assertStringNotContainsString('<parameter', $session->ai_briefing['why']);
-        $this->assertStringNotContainsString('why>', $session->ai_briefing['why']);
-        $this->assertStringContainsString('đau đầu ngày thứ nhất', $session->ai_briefing['why']);
-        $this->assertStringNotContainsString('<parameter', $session->ai_briefing['watch_for'][0]);
+        $this->assertSame('ok', $phien->ai_briefing_status);
+        $this->assertStringNotContainsString('<parameter', $phien->ai_briefing['why']);
+        $this->assertStringNotContainsString('why>', $phien->ai_briefing['why']);
+        $this->assertStringContainsString('đau đầu ngày thứ nhất', $phien->ai_briefing['why']);
+        $this->assertStringNotContainsString('<parameter', $phien->ai_briefing['watch_for'][0]);
 
-        $reason = (string) ($session->ai_briefing['products'][0]['reason'] ?? '');
+        $reason = (string) ($phien->ai_briefing['products'][0]['reason'] ?? '');
         $this->assertStringContainsString('Hạ sốt tại nhà', $reason);
         $this->assertStringNotContainsString('<parameter', $reason);
         $this->assertStringNotContainsString('</parameter>', $reason);
@@ -242,12 +242,12 @@ class TriageAiBriefingTest extends TestCase
             'why' => "Đoạn một bình thường.\n<parameter>why>Đoạn hai cần lưu ý.",
         ]));
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
-        $this->assertSame('ok', $session->ai_briefing_status);
-        $this->assertStringNotContainsString('why>', $session->ai_briefing['why']);
-        $this->assertStringNotContainsString('<parameter', $session->ai_briefing['why']);
-        $this->assertStringContainsString('Đoạn hai cần lưu ý.', $session->ai_briefing['why']);
+        $this->assertSame('ok', $phien->ai_briefing_status);
+        $this->assertStringNotContainsString('why>', $phien->ai_briefing['why']);
+        $this->assertStringNotContainsString('<parameter', $phien->ai_briefing['why']);
+        $this->assertStringContainsString('Đoạn hai cần lưu ý.', $phien->ai_briefing['why']);
     }
 
     public function test_legitimate_prose_starting_with_a_word_and_greater_than_survives(): void
@@ -259,11 +259,11 @@ class TriageAiBriefingTest extends TestCase
             'why' => "pH>7 là ngưỡng kiềm.\ndose>2 viên mỗi ngày là quá liều.",
         ]));
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
-        $this->assertSame('ok', $session->ai_briefing_status);
-        $this->assertStringContainsString('pH>7 là ngưỡng kiềm.', $session->ai_briefing['why']);
-        $this->assertStringContainsString('dose>2 viên mỗi ngày', $session->ai_briefing['why']);
+        $this->assertSame('ok', $phien->ai_briefing_status);
+        $this->assertStringContainsString('pH>7 là ngưỡng kiềm.', $phien->ai_briefing['why']);
+        $this->assertStringContainsString('dose>2 viên mỗi ngày', $phien->ai_briefing['why']);
     }
 
     public function test_why_returned_as_array_or_json_array_is_flattened_into_readable_prose(): void
@@ -304,39 +304,39 @@ class TriageAiBriefingTest extends TestCase
 
     public function test_a_product_id_outside_the_catalogue_is_dropped(): void
     {
-        $product = $this->stockedProduct();
+        $sanPham = $this->stockedProduct();
 
         // 999999 does not exist; the real id does. Only the real one may survive,
         // which is what stops the model naming a medicine the pharmacy has not got.
         $this->fakeToolCall($this->fullBriefing([
             'products' => [
                 ['id' => 999999, 'reason' => 'Thuốc này không tồn tại trong kho.'],
-                ['id' => $product->MaSP, 'reason' => 'Hạ sốt, giảm đau, phù hợp với sốt nhẹ.'],
+                ['id' => $sanPham->MaSP, 'reason' => 'Hạ sốt, giảm đau, phù hợp với sốt nhẹ.'],
             ],
         ]));
 
-        $session = $this->generate($this->triageSession());
-        $ids = collect($session->ai_briefing['products'])->pluck('id');
+        $phien = $this->generate($this->triageSession());
+        $ids = collect($phien->ai_briefing['products'])->pluck('id');
 
-        $this->assertTrue($ids->contains($product->MaSP));
+        $this->assertTrue($ids->contains($sanPham->MaSP));
         $this->assertFalse($ids->contains(999999));
     }
 
     public function test_the_name_and_price_shown_come_from_the_catalogue_not_the_model(): void
     {
-        $product = $this->stockedProduct();
+        $sanPham = $this->stockedProduct();
 
         $this->fakeToolCall($this->fullBriefing([
             'products' => [[
-                'id' => $product->MaSP,
+                'id' => $sanPham->MaSP,
                 'name' => 'Thuốc bịa 999mg',
                 'price' => 1,
                 'reason' => 'Hạ sốt, giảm đau.',
             ]],
         ]));
 
-        $session = $this->generate($this->triageSession());
-        $stored = $session->ai_briefing['products'][0];
+        $phien = $this->generate($this->triageSession());
+        $stored = $phien->ai_briefing['products'][0];
 
         $this->assertSame('Paracetamol 500mg', $stored['name']);
         $this->assertSame(2000, (int) $stored['price']);
@@ -344,62 +344,62 @@ class TriageAiBriefingTest extends TestCase
 
     public function test_an_out_of_stock_product_is_never_a_candidate(): void
     {
-        $product = $this->stockedProduct();
-        $product->forceFill(['stock_quantity' => 0])->save();
+        $sanPham = $this->stockedProduct();
+        $sanPham->forceFill(['stock_quantity' => 0])->save();
 
         $this->fakeToolCall($this->fullBriefing([
-            'products' => [['id' => $product->MaSP, 'reason' => 'Hạ sốt.']],
+            'products' => [['id' => $sanPham->MaSP, 'reason' => 'Hạ sốt.']],
         ]));
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
-        $this->assertSame([], $session->ai_briefing['products']);
+        $this->assertSame([], $phien->ai_briefing['products']);
     }
 
     public function test_a_referral_outcome_gets_prose_but_no_medicine(): void
     {
         // The page exists to send somebody to a doctor; offering something to take
         // first works against it.
-        $product = $this->stockedProduct();
+        $sanPham = $this->stockedProduct();
 
         $this->fakeToolCall($this->fullBriefing([
-            'products' => [['id' => $product->MaSP, 'reason' => 'Hạ sốt.']],
+            'products' => [['id' => $sanPham->MaSP, 'reason' => 'Hạ sốt.']],
         ]));
 
-        $session = $this->generate($this->triageSession([
+        $phien = $this->generate($this->triageSession([
             'outcome' => 'refer_doctor',
             'safety_net' => null,
         ]));
 
-        $this->assertSame('ok', $session->ai_briefing_status);
-        $this->assertNotSame('', $session->ai_briefing['why']);
-        $this->assertSame([], $session->ai_briefing['products']);
+        $this->assertSame('ok', $phien->ai_briefing_status);
+        $this->assertNotSame('', $phien->ai_briefing['why']);
+        $this->assertSame([], $phien->ai_briefing['products']);
     }
 
     public function test_a_product_already_suggested_by_the_rules_is_not_repeated(): void
     {
-        $product = $this->stockedProduct();
+        $sanPham = $this->stockedProduct();
 
         $this->fakeToolCall($this->fullBriefing([
-            'products' => [['id' => $product->MaSP, 'reason' => 'Hạ sốt.']],
+            'products' => [['id' => $sanPham->MaSP, 'reason' => 'Hạ sốt.']],
         ]));
 
-        $session = $this->generate($this->triageSession([
-            'suggested_products' => [['id' => $product->MaSP, 'name' => $product->name]],
+        $phien = $this->generate($this->triageSession([
+            'suggested_products' => [['id' => $sanPham->MaSP, 'name' => $sanPham->name]],
         ]));
 
-        $this->assertSame([], $session->ai_briefing['products']);
+        $this->assertSame([], $phien->ai_briefing['products']);
     }
 
     public function test_an_empty_tool_call_is_recorded_as_rejected(): void
     {
         $this->fakeToolCall(['why' => '', 'possible_causes' => [], 'self_care' => []]);
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
-        $this->assertSame('rejected', $session->ai_briefing_status);
-        $this->assertNull($session->ai_briefing);
-        $this->assertSame(self::SOURCE_ADVICE, $session->advice_given);
+        $this->assertSame('rejected', $phien->ai_briefing_status);
+        $this->assertNull($phien->ai_briefing);
+        $this->assertSame(self::SOURCE_ADVICE, $phien->advice_given);
     }
 
     public function test_a_why_only_briefing_with_all_sections_empty_is_rejected(): void
@@ -416,10 +416,10 @@ class TriageAiBriefingTest extends TestCase
             'products' => [],
         ]);
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
-        $this->assertSame('rejected', $session->ai_briefing_status);
-        $this->assertNull($session->ai_briefing);
+        $this->assertSame('rejected', $phien->ai_briefing_status);
+        $this->assertNull($phien->ai_briefing);
     }
 
     public function test_a_briefing_with_why_and_at_least_two_sections_is_accepted(): void
@@ -433,22 +433,22 @@ class TriageAiBriefingTest extends TestCase
             'ask_pharmacist' => [],
         ]);
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
-        $this->assertSame('ok', $session->ai_briefing_status);
-        $this->assertNotNull($session->ai_briefing);
-        $this->assertSame('Em kết luận tự chăm sóc vì triệu chứng nhẹ.', $session->ai_briefing['why']);
+        $this->assertSame('ok', $phien->ai_briefing_status);
+        $this->assertNotNull($phien->ai_briefing);
+        $this->assertSame('Em kết luận tự chăm sóc vì triệu chứng nhẹ.', $phien->ai_briefing['why']);
     }
 
     public function test_a_provider_failure_leaves_the_page_unchanged(): void
     {
         Http::fake(['*' => Http::response('gateway down', 502)]);
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
-        $this->assertSame('failed', $session->ai_briefing_status);
-        $this->assertNull($session->ai_briefing);
-        $this->assertSame('self_care', $session->outcome);
+        $this->assertSame('failed', $phien->ai_briefing_status);
+        $this->assertNull($phien->ai_briefing);
+        $this->assertSame('self_care', $phien->outcome);
     }
 
     /**
@@ -465,8 +465,8 @@ class TriageAiBriefingTest extends TestCase
     {
         // A usage line far longer than any real one, in the shape the catalogue
         // stores: instructions and warnings run together in one column.
-        $product = $this->stockedProduct('Paracetamol 500mg', 'Paracetamol 500mg');
-        $product->forceFill(['usage' => str_repeat('Uống 1-2 viên mỗi 4-6 giờ. ', 400)])->save();
+        $sanPham = $this->stockedProduct('Paracetamol 500mg', 'Paracetamol 500mg');
+        $sanPham->forceFill(['usage' => str_repeat('Uống 1-2 viên mỗi 4-6 giờ. ', 400)])->save();
 
         $this->fakeToolCall($this->fullBriefing());
 
@@ -496,15 +496,15 @@ class TriageAiBriefingTest extends TestCase
      */
     public function test_the_stored_briefing_keeps_the_full_usage_text(): void
     {
-        $product = $this->stockedProduct('Paracetamol 500mg', 'Paracetamol 500mg');
-        $product->forceFill(['usage' => str_repeat('Uống 1-2 viên mỗi 4-6 giờ. ', 40)])->save();
+        $sanPham = $this->stockedProduct('Paracetamol 500mg', 'Paracetamol 500mg');
+        $sanPham->forceFill(['usage' => str_repeat('Uống 1-2 viên mỗi 4-6 giờ. ', 40)])->save();
 
         $this->fakeToolCall($this->fullBriefing(['products' => [
-            ['id' => $product->MaSP, 'reason' => 'Phù hợp với triệu chứng.'],
+            ['id' => $sanPham->MaSP, 'reason' => 'Phù hợp với triệu chứng.'],
         ]]));
 
-        $session = $this->generate($this->triageSession());
-        $stored = $session->ai_briefing['products'][0] ?? null;
+        $phien = $this->generate($this->triageSession());
+        $stored = $phien->ai_briefing['products'][0] ?? null;
 
         $this->assertNotNull($stored);
         $this->assertGreaterThan(
@@ -516,8 +516,8 @@ class TriageAiBriefingTest extends TestCase
 
     public function test_the_prompt_carries_the_customers_words_but_never_the_profile(): void
     {
-        UserHealthProfile::create([
-            'MaKH' => $this->user->MaKH,
+        HoSoSucKhoe::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'allergies' => ['penicillin'],
             'consented_at' => now(),
         ]);
@@ -542,10 +542,10 @@ class TriageAiBriefingTest extends TestCase
     {
         $this->fakeToolCall($this->fullBriefing());
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.briefing_title'))
             ->assertSee(__('messages.health.ai_badge'))
@@ -559,7 +559,7 @@ class TriageAiBriefingTest extends TestCase
         // its suggestions need the cart's drug-safety check as much as the rules' do.
         $ibuprofen = $this->stockedProduct('Ibuprofen 400mg', 'Ibuprofen 400mg');
 
-        \App\Models\DrugContraindication::create([
+        \App\Models\ChungChiDinhThuoc::create([
             'ingredient' => 'ibuprofen',
             'condition_type' => 'pregnancy',
             'severity' => 'absolute',
@@ -567,8 +567,8 @@ class TriageAiBriefingTest extends TestCase
             'is_active' => true,
         ]);
 
-        UserHealthProfile::create([
-            'MaKH' => $this->user->MaKH,
+        HoSoSucKhoe::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'is_pregnant' => true,
             'consented_at' => now(),
         ]);
@@ -577,10 +577,10 @@ class TriageAiBriefingTest extends TestCase
             'products' => [['id' => $ibuprofen->MaSP, 'reason' => 'Giảm đau, kháng viêm.']],
         ]));
 
-        $session = $this->generate($this->triageSession());
+        $phien = $this->generate($this->triageSession());
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.product_has_warning'));
     }
@@ -592,14 +592,14 @@ class TriageAiBriefingTest extends TestCase
         // rather than leaving the page permanently thin.
         $this->fakeToolCall($this->fullBriefing());
 
-        $session = $this->triageSession();
+        $phien = $this->triageSession();
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.briefing_title'));
 
-        $this->assertSame('ok', $session->refresh()->ai_briefing_status);
+        $this->assertSame('ok', $phien->refresh()->ai_briefing_status);
         $this->assertSame(1, AiJob::where('kind', AiJob::KIND_TRIAGE_BRIEFING)->count());
     }
 
@@ -610,30 +610,30 @@ class TriageAiBriefingTest extends TestCase
         // the budget is two attempts and no more.
         Http::fake(['*' => Http::response('gateway down', 502)]);
 
-        $session = $this->triageSession();
+        $phien = $this->triageSession();
 
         for ($i = 0; $i < 4; $i++) {
-            $this->actingAs($this->user)->get(route('health.result', $session->MaSL))->assertOk();
+            $this->actingAs($this->nguoiDung)->get(route('health.result', $phien->MaSL))->assertOk();
         }
 
-        $this->assertSame('failed', $session->refresh()->ai_briefing_status);
+        $this->assertSame('failed', $phien->refresh()->ai_briefing_status);
         $this->assertSame(2, AiJob::where('kind', AiJob::KIND_TRIAGE_BRIEFING)->count());
     }
 
     public function test_the_page_shows_the_waiting_state_while_a_worker_is_writing(): void
     {
-        $session = $this->triageSession();
+        $phien = $this->triageSession();
 
         AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'running',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.briefing_pending'));
 
@@ -647,7 +647,7 @@ class TriageAiBriefingTest extends TestCase
 
         $this->generate($this->triageSession());
 
-        $log = AuditLog::where('action', 'triage_ai_briefing')->firstOrFail();
+        $log = NhatKyKiemToan::where('action', 'triage_ai_briefing')->firstOrFail();
         $encoded = json_encode($log->new_values, JSON_UNESCAPED_UNICODE);
 
         $this->assertSame('ok', $log->new_values['ai_briefing_status']);

@@ -10,8 +10,10 @@ use Illuminate\Database\Eloquent\Model;
  * Không quan hệ nào: đường nóng chỉ đọc `term` để trả về khách. Không timestamps:
  * mỗi lần dựng là truncate + insert lại, nên created_at không nói lên điều gì.
  */
-class VoicePhonetic extends Model
+class PhienAmGiongNoi extends Model
 {
+    protected $table = 'voice_phonetics';
+
     public $timestamps = false;
 
     protected $fillable = [

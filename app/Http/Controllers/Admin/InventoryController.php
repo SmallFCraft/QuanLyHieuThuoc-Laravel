@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Exports\AdminInventoryExport;
 use App\Http\Controllers\Controller;
-use App\Models\Product;
+use App\Models\SanPham;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -31,7 +31,7 @@ class InventoryController extends Controller
         // Searching and filtering both run in SQL over the whole table, so the export
         // (which does the same) returns exactly the rows the screen shows. A
         // client-side DataTables search would only ever see the current page.
-        $products = Product::with('category')
+        $products = SanPham::with('danhMuc')
             ->inventoryStatus($status, $days)
             ->search($search)
             ->FEFO()

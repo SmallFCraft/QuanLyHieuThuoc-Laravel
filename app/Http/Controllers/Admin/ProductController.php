@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Exports\AdminProductsExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductRequest;
-use App\Models\Product;
-use App\Models\Category;
-use App\Models\ProductBatch;
+use App\Models\SanPham;
+use App\Models\DanhMuc;
+use App\Models\LoSanPham;
 use App\Support\ProductCodeGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +22,7 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $categories = Category::orderBy('name')->get();
+        $categories = DanhMuc::orderBy('name')->get();
         return view('admin.products.index', compact('categories'));
     }
 
@@ -31,7 +31,7 @@ class ProductController extends Controller
      */
     public function create()
     {
-        $categories = Category::orderBy('name')->get();
+        $categories = DanhMuc::orderBy('name')->get();
         
         return view('admin.products.create', compact('categories'));
     }
@@ -42,8 +42,8 @@ class ProductController extends Controller
     public function store(ProductRequest $request)
     {
         $data = $request->validated();
-        $category = Category::findOrFail($data['MaDM']);
-        $data['product_code'] = ProductCodeGenerator::productCodeForCategory($category);
+        $danhMuc = DanhMuc::findOrFail($data['MaDM']);
+        $data['product_code'] = ProductCodeGenerator::productCodeForCategory($danhMuc);
         $uploadedImage = null;
         
         // Handle image upload
@@ -53,7 +53,7 @@ class ProductController extends Controller
         }
 
         try {
-            DB::transaction(fn () => Product::create($data));
+            DB::transaction(fn () => SanPham::create($data));
         } catch (\Throwable $e) {
             if ($uploadedImage) {
                 Storage::disk('public')->delete($uploadedImage);
@@ -74,9 +74,9 @@ class ProductController extends Controller
     /**
      * Display the specified product.
      */
-    public function show(Product $product)
+    public function show(SanPham $product)
     {
-        $product->load('category');
+        $product->load('danhMuc');
         
         return view('admin.products.show', compact('product'));
     }
@@ -84,9 +84,9 @@ class ProductController extends Controller
     /**
      * Show the form for editing the specified product.
      */
-    public function edit(Product $product)
+    public function edit(SanPham $product)
     {
-        $categories = Category::orderBy('name')->get();
+        $categories = DanhMuc::orderBy('name')->get();
         
         return view('admin.products.edit', compact('product', 'categories'));
     }
@@ -94,7 +94,7 @@ class ProductController extends Controller
     /**
      * Update the specified product in storage.
      */
-    public function update(ProductRequest $request, Product $product)
+    public function update(ProductRequest $request, SanPham $product)
     {
         $data = $request->validated();
         $oldImage = $product->image;
@@ -135,7 +135,7 @@ class ProductController extends Controller
     /**
      * Remove the specified product from storage (soft delete).
      */
-    public function destroy(Product $product)
+    public function destroy(SanPham $product)
     {
         $product->delete();
         
@@ -151,11 +151,11 @@ class ProductController extends Controller
     public function data(Request $request)
     {
         // Total records - count BEFORE building query
-        $totalRecords = Product::count();
+        $totalRecords = SanPham::count();
         
-        $query = Product::query();
+        $query = SanPham::query();
         
-        // Filter by Category
+        // Filter by DanhMuc
         if ($request->has('MaDM') && $request->MaDM != '') {
             $query->where('MaDM', $request->MaDM);
         }
@@ -200,16 +200,16 @@ class ProductController extends Controller
         // Pagination - ONLY load records needed for current page
         $start = max(0, $request->integer('start', 0));
         $length = min(max($request->integer('length', 10), 1), 100);
-        $products = $query->with('category')->skip($start)->take($length)->get();
+        $sanPhams = $query->with('danhMuc')->skip($start)->take($length)->get();
         
         // Format data - return raw data instead of HTML
-        $data = $products->map(function($product) {
+        $data = $sanPhams->map(function($product) {
             return [
                 'MaSP' => $product->MaSP,
                 'product_code' => $product->product_code,
                 'display_code' => $product->display_code,
                 'name' => $product->name,
-                'category' => $product->category->name,
+                'category' => $product->danhMuc->name,
                 'price' => $product->price_vnd,
                 'formatted_price' => $product->formatted_price,
                 'stock_quantity' => $product->stock_quantity,
@@ -263,26 +263,26 @@ class ProductController extends Controller
     /**
      * Keep the editable primary product batch aligned with product fields.
      */
-    private function syncPrimaryBatch(Product $product, array $data): void
+    private function syncPrimaryBatch(SanPham $product, array $data): void
     {
-        $batchPayload = [
+        $payloadLo = [
             'batch_number' => $data['batch_number'],
             'expiration_date' => $data['expiration_date'],
             'stock_quantity' => (int) $data['stock_quantity'],
             'reorder_point' => (int) $data['reorder_point'],
         ];
 
-        $batch = $product->batches()
+        $lo = $product->cacLo()
             ->lockForUpdate()
             ->orderBy('expiration_date')
             ->orderBy('MaLo')
             ->first();
 
-        if ($batch instanceof ProductBatch) {
-            $batch->update($batchPayload);
+        if ($lo instanceof LoSanPham) {
+            $lo->update($payloadLo);
             return;
         }
 
-        $product->batches()->create($batchPayload);
+        $product->cacLo()->create($payloadLo);
     }
 }

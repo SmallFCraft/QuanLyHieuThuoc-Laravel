@@ -4,12 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class AuditLog extends Model
+class NhatKyKiemToan extends Model
 {
     const UPDATED_AT = null; // Audit logs are immutable, no updated_at
 
+    protected $table = 'audit_logs';
+
     protected $primaryKey = 'MaNK';
-    
+
     /**
      * The attributes that are mass assignable.
      *
@@ -25,7 +27,7 @@ class AuditLog extends Model
         'ip_address',
         'user_agent',
     ];
-    
+
     /**
      * The attributes that should be cast.
      *
@@ -36,15 +38,15 @@ class AuditLog extends Model
         'new_values' => 'array',
         'created_at' => 'datetime',
     ];
-    
+
     /**
      * Get the user that performed the action
      */
-    public function user()
+    public function nguoiDung()
     {
-        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
     }
-    
+
     /**
      * Get the auditable model
      */

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Product;
-use App\Models\Category;
+use App\Models\SanPham;
+use App\Models\DanhMuc;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,7 +16,7 @@ class ShoppingCartTest extends TestCase
         parent::setUp();
         
         // Create a category
-        $this->category = Category::create([
+        $this->danhMuc = DanhMuc::create([
             'name' => 'Test Category',
             'description' => 'Test Description'
         ]);
@@ -24,8 +24,8 @@ class ShoppingCartTest extends TestCase
 
     public function test_can_add_product_to_cart(): void
     {
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -35,7 +35,7 @@ class ShoppingCartTest extends TestCase
         ]);
 
         $response = $this->post(route('cart.add'), [
-            'MaSP' => $product->MaSP,
+            'MaSP' => $sanPham->MaSP,
             'quantity' => 2
         ]);
 
@@ -43,14 +43,14 @@ class ShoppingCartTest extends TestCase
         $response->assertSessionHas('success');
 
         $cart = session('cart');
-        $this->assertArrayHasKey($product->MaSP, $cart);
-        $this->assertEquals(2, $cart[$product->MaSP]);
+        $this->assertArrayHasKey($sanPham->MaSP, $cart);
+        $this->assertEquals(2, $cart[$sanPham->MaSP]);
     }
 
     public function test_can_add_product_to_cart_via_json(): void
     {
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Ajax Product',
             'price' => 15000,
             'expiration_date' => now()->addMonths(6),
@@ -60,7 +60,7 @@ class ShoppingCartTest extends TestCase
         ]);
 
         $response = $this->postJson(route('cart.add'), [
-            'MaSP' => $product->MaSP,
+            'MaSP' => $sanPham->MaSP,
             'quantity' => 3,
         ]);
 
@@ -71,13 +71,13 @@ class ShoppingCartTest extends TestCase
         ]);
 
         $cart = session('cart');
-        $this->assertEquals(3, $cart[$product->MaSP]);
+        $this->assertEquals(3, $cart[$sanPham->MaSP]);
     }
 
     public function test_json_add_rejects_expired_product(): void
     {
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Expired Ajax Product',
             'price' => 10000,
             'expiration_date' => now()->subDays(1),
@@ -87,7 +87,7 @@ class ShoppingCartTest extends TestCase
         ]);
 
         $response = $this->postJson(route('cart.add'), [
-            'MaSP' => $product->MaSP,
+            'MaSP' => $sanPham->MaSP,
             'quantity' => 1,
         ]);
 
@@ -99,8 +99,8 @@ class ShoppingCartTest extends TestCase
 
     public function test_cannot_add_expired_product_to_cart(): void
     {
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Expired Product',
             'price' => 10000,
             'expiration_date' => now()->subDays(1),
@@ -110,7 +110,7 @@ class ShoppingCartTest extends TestCase
         ]);
 
         $response = $this->post(route('cart.add'), [
-            'MaSP' => $product->MaSP,
+            'MaSP' => $sanPham->MaSP,
             'quantity' => 1
         ]);
 
@@ -120,8 +120,8 @@ class ShoppingCartTest extends TestCase
 
     public function test_cannot_add_more_than_stock_quantity(): void
     {
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Limited Stock Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -131,7 +131,7 @@ class ShoppingCartTest extends TestCase
         ]);
 
         $response = $this->post(route('cart.add'), [
-            'MaSP' => $product->MaSP,
+            'MaSP' => $sanPham->MaSP,
             'quantity' => 10
         ]);
 
@@ -141,8 +141,8 @@ class ShoppingCartTest extends TestCase
 
     public function test_can_update_cart_quantity(): void
     {
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -152,9 +152,9 @@ class ShoppingCartTest extends TestCase
         ]);
 
         // Add to cart first
-        session(['cart' => [$product->MaSP => 2]]);
+        session(['cart' => [$sanPham->MaSP => 2]]);
 
-        $response = $this->put(route('cart.update', $product->MaSP), [
+        $response = $this->put(route('cart.update', $sanPham->MaSP), [
             'quantity' => 5
         ]);
 
@@ -162,13 +162,13 @@ class ShoppingCartTest extends TestCase
         $response->assertSessionHas('success');
         
         $cart = session('cart');
-        $this->assertEquals(5, $cart[$product->MaSP]);
+        $this->assertEquals(5, $cart[$sanPham->MaSP]);
     }
 
     public function test_cart_uses_whole_vnd_price_when_rendering_totals(): void
     {
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Decimal Price Product',
             'price' => 343487.26,
             'expiration_date' => now()->addMonths(6),
@@ -177,7 +177,7 @@ class ShoppingCartTest extends TestCase
             'batch_number' => 'BATCH-DECIMAL-001'
         ]);
 
-        session(['cart' => [$product->MaSP => 1]]);
+        session(['cart' => [$sanPham->MaSP => 1]]);
 
         $response = $this->get(route('cart.index'));
 
@@ -189,8 +189,8 @@ class ShoppingCartTest extends TestCase
 
     public function test_can_remove_product_from_cart(): void
     {
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addMonths(6),
@@ -200,14 +200,14 @@ class ShoppingCartTest extends TestCase
         ]);
 
         // Add to cart first
-        session(['cart' => [$product->MaSP => 2]]);
+        session(['cart' => [$sanPham->MaSP => 2]]);
 
-        $response = $this->delete(route('cart.remove', $product->MaSP));
+        $response = $this->delete(route('cart.remove', $sanPham->MaSP));
 
         $response->assertRedirect();
         $response->assertSessionHas('success');
         
         $cart = session('cart');
-        $this->assertArrayNotHasKey($product->MaSP, $cart);
+        $this->assertArrayNotHasKey($sanPham->MaSP, $cart);
     }
 }

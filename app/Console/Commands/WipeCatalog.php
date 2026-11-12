@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Category;
-use App\Models\SearchQuery;
+use App\Models\DanhMuc;
+use App\Models\TruyVanTimKiem;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -88,8 +88,8 @@ class WipeCatalog extends Command
             $this->line("Đã xoá {$imageCount} ảnh sản phẩm.");
         }
 
-        Category::flushCategoryCaches();
-        Cache::forget(SearchQuery::CACHE_KEY);
+        DanhMuc::flushCategoryCaches();
+        Cache::forget(TruyVanTimKiem::CACHE_KEY);
 
         $this->newLine();
         $this->info('Đã dọn xong. Chạy `php artisan crawl:longchau` để nạp danh mục mới.');

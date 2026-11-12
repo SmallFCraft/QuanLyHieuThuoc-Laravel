@@ -7,7 +7,7 @@ use App\Jobs\ProcessTriageAdviceRewrite;
 use App\Jobs\ProcessTriageBriefing;
 use App\Jobs\ProcessTriageEvaluation;
 use App\Models\AiJob;
-use App\Models\TriageSession;
+use App\Models\PhienSangLoc;
 use App\Services\Triage\Ai\TriageAiAdviceService;
 use App\Services\Triage\Ai\TriageAiBriefingService;
 use Illuminate\Support\Facades\DB;
@@ -42,7 +42,7 @@ class AiJobService
      */
     public function dispatchChat(
         int $userId,
-        string $message,
+        string $tinNhan,
         array $context,
         string $sessionId,
         bool $sync = false
@@ -53,7 +53,7 @@ class AiJobService
             'kind' => AiJob::KIND_CHAT,
             'status' => 'queued',
             'payload' => [
-                'message' => $message,
+                'message' => $tinNhan,
                 'context' => $context,
                 'session_id' => $sessionId,
             ],
@@ -77,14 +77,14 @@ class AiJobService
      * The patient waits on this job, so the conclusion is never revised after they
      * have read it — see ProcessTriageEvaluation.
      */
-    public function dispatchEvaluation(TriageSession $session): AiJob
+    public function dispatchEvaluation(PhienSangLoc $phien): AiJob
     {
         $job = AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'MaKH' => $phien->MaKH,
             'kind' => AiJob::KIND_TRIAGE_EVALUATION,
             'status' => 'queued',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
 
         // Queued, not run inline: the caller falls back to deciding in-request when
@@ -100,14 +100,14 @@ class AiJobService
      * The payload is only the session id: no customer free text, no profile field.
      * TriageAiAdviceService reads what it needs from the row itself.
      */
-    public function dispatchAdviceRewrite(TriageSession $session): AiJob
+    public function dispatchAdviceRewrite(PhienSangLoc $phien): AiJob
     {
         $job = AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'MaKH' => $phien->MaKH,
             'kind' => AiJob::KIND_TRIAGE_ADVICE,
             'status' => 'queued',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
 
         ProcessTriageAdviceRewrite::dispatch($job->uuid);
@@ -119,17 +119,17 @@ class AiJobService
      * Queue the rewrite only when this session is actually eligible for one, and
      * never let a queue failure cost the patient their result.
      */
-    public function dispatchAdviceRewriteIfEligible(TriageSession $session): ?AiJob
+    public function dispatchAdviceRewriteIfEligible(PhienSangLoc $phien): ?AiJob
     {
-        if (! app(TriageAiAdviceService::class)->isEligible($session)) {
+        if (! app(TriageAiAdviceService::class)->isEligible($phien)) {
             return null;
         }
 
         try {
-            return $this->dispatchAdviceRewrite($session);
+            return $this->dispatchAdviceRewrite($phien);
         } catch (\Throwable $exception) {
             Log::warning('Triage advice rewrite skipped', [
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -144,14 +144,14 @@ class AiJobService
      * sections and a product pick, so it is much slower, and the two must not share
      * a failure. The payload is only the session id.
      */
-    public function dispatchBriefing(TriageSession $session): AiJob
+    public function dispatchBriefing(PhienSangLoc $phien): AiJob
     {
         $job = AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'MaKH' => $phien->MaKH,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'queued',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
 
         ProcessTriageBriefing::dispatch($job->uuid);
@@ -163,17 +163,17 @@ class AiJobService
      * Queue the briefing only when the session is eligible, and never let a queue
      * failure cost the patient their result.
      */
-    public function dispatchBriefingIfEligible(TriageSession $session): ?AiJob
+    public function dispatchBriefingIfEligible(PhienSangLoc $phien): ?AiJob
     {
-        if (! app(TriageAiBriefingService::class)->isEligible($session)) {
+        if (! app(TriageAiBriefingService::class)->isEligible($phien)) {
             return null;
         }
 
         try {
-            return $this->dispatchBriefing($session);
+            return $this->dispatchBriefing($phien);
         } catch (\Throwable $exception) {
             Log::warning('Triage briefing skipped', [
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'error' => $exception->getMessage(),
             ]);
 

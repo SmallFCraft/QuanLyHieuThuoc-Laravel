@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\AiJob;
-use App\Models\TriageSession;
+use App\Models\PhienSangLoc;
 use App\Services\AiJobService;
 use App\Services\Triage\Ai\TriageAiBriefingService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -42,9 +42,9 @@ class ProcessTriageBriefing implements ShouldQueue
 
         $jobs->markRunning($job);
 
-        $session = TriageSession::find($job->payload['MaSL'] ?? null);
+        $phien = PhienSangLoc::find($job->payload['MaSL'] ?? null);
 
-        if ($session === null) {
+        if ($phien === null) {
             $jobs->markFailed($job, 'triage session no longer exists');
 
             return;
@@ -53,12 +53,12 @@ class ProcessTriageBriefing implements ShouldQueue
         try {
             // generate() never throws and records its own status, so this reports
             // whether the seam ran, not whether the model was any good.
-            $briefing->generate($session);
+            $briefing->generate($phien);
 
-            $jobs->markDone($job, ['ai_briefing_status' => $session->refresh()->ai_briefing_status]);
+            $jobs->markDone($job, ['ai_briefing_status' => $phien->refresh()->ai_briefing_status]);
         } catch (\Throwable $exception) {
             Log::warning('Triage briefing job failed', [
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'error' => $exception->getMessage(),
             ]);
 

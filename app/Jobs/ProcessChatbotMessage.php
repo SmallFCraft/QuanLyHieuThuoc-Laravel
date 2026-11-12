@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\AiJob;
-use App\Models\ChatMessage;
+use App\Models\TinNhanChat;
 use App\Services\AiJobService;
 use App\Services\ChatbotService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -97,7 +97,7 @@ class ProcessChatbotMessage implements ShouldQueue
      */
     protected function storeTurn(int $userId, string $sessionId, string $message, array $response): void
     {
-        ChatMessage::create([
+        TinNhanChat::create([
             'MaKH' => $userId,
             'session_id' => $sessionId,
             'role' => 'user',
@@ -111,7 +111,7 @@ class ProcessChatbotMessage implements ShouldQueue
             return;
         }
 
-        ChatMessage::create([
+        TinNhanChat::create([
             'MaKH' => $userId,
             'session_id' => $sessionId,
             'role' => 'assistant',
@@ -132,7 +132,7 @@ class ProcessChatbotMessage implements ShouldQueue
     protected function storeFailure(int $userId, string $sessionId, string $message): void
     {
         try {
-            ChatMessage::create([
+            TinNhanChat::create([
                 'MaKH' => $userId,
                 'session_id' => $sessionId,
                 'role' => 'user',
@@ -142,7 +142,7 @@ class ProcessChatbotMessage implements ShouldQueue
                 'show_disclaimer' => false,
             ]);
 
-            ChatMessage::create([
+            TinNhanChat::create([
                 'MaKH' => $userId,
                 'session_id' => $sessionId,
                 'role' => 'system',

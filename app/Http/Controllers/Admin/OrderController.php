@@ -4,18 +4,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\Exports\AdminOrdersExport;
 use App\Http\Controllers\Controller;
-use App\Models\Order;
+use App\Models\DonHang;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 
 class OrderController extends Controller
 {
-    protected $orderService;
+    protected $donHangService;
 
-    public function __construct(OrderService $orderService)
+    public function __construct(OrderService $donHangService)
     {
-        $this->orderService = $orderService;
+        $this->donHangService = $donHangService;
     }
 
     /**
@@ -23,7 +23,7 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::with(['user', 'items']);
+        $query = DonHang::with(['nguoiDung', 'chiTietDonHangs']);
 
         // Filter by status if provided
         if ($request->has('status') && $request->status) {
@@ -40,7 +40,7 @@ class OrderController extends Controller
      */
     public function show($MaDH)
     {
-        $order = Order::with(['user', 'items.product'])->findOrFail($MaDH);
+        $order = DonHang::with(['nguoiDung', 'chiTietDonHangs.sanPham'])->findOrFail($MaDH);
 
         return view('admin.orders.show', compact('order'));
     }
@@ -66,7 +66,7 @@ class OrderController extends Controller
         ]);
 
         try {
-            $order = $this->orderService->updateStatus(
+            $result = $this->donHangService->updateStatus(
                 $MaDH,
                 $request->status,
                 auth()->id()
@@ -85,7 +85,7 @@ class OrderController extends Controller
     public function cancel($MaDH)
     {
         try {
-            $this->orderService->cancelOrder($MaDH, auth()->id());
+            $this->donHangService->cancelOrder($MaDH, auth()->id());
 
             return back()->with('success', 'Đã hủy đơn hàng và hoàn trả tồn kho.');
             

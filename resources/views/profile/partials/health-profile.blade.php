@@ -1,5 +1,5 @@
 @php
-    $healthProfile = $user->healthProfile;
+    $healthProfile = $user->hoSoSucKhoe;
     $tagValue = fn (string $field) => old($field, $healthProfile?->{$field} ?? []);
     $hasConsent = (bool) $healthProfile?->hasConsented();
 

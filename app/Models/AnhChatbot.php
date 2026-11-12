@@ -6,12 +6,14 @@ use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class ChatbotImage extends Model
+class AnhChatbot extends Model
 {
     use Auditable, SoftDeletes;
 
+    protected $table = 'chatbot_images';
+
     protected $primaryKey = 'MaAnh';
-    
+
     /**
      * The attributes that are mass assignable.
      *
@@ -32,7 +34,7 @@ class ChatbotImage extends Model
         'recognized_products',
         'processed_at'
     ];
-    
+
     /**
      * Get the attributes that should be cast.
      *
@@ -46,14 +48,14 @@ class ChatbotImage extends Model
             'file_size' => 'integer'
         ];
     }
-    
+
     /**
      * Get the user that owns the chatbot image.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function user()
+    public function nguoiDung()
     {
-        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
     }
 }

@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\HealthProfileController;
-use App\Models\AuditLog;
-use App\Models\User;
-use App\Models\UserHealthProfile;
+use App\Models\NhatKyKiemToan;
+use App\Models\NguoiDung;
+use App\Models\HoSoSucKhoe;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -28,49 +28,49 @@ class HealthProfileAiConsentTest extends TestCase
 
     public function test_ai_consent_checkbox_grants_ai_consent(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $this->actingAs($user)
+        $this->actingAs($nguoiDung)
             ->put(route('profile.health.update'), $this->payload(['ai_consent' => '1']))
             ->assertSessionHasNoErrors();
 
-        $profile = UserHealthProfile::where('MaKH', $user->MaKH)->firstOrFail();
+        $hoSo = HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail();
 
-        $this->assertNotNull($profile->ai_consent_at);
-        $this->assertTrue($profile->hasAiConsent());
+        $this->assertNotNull($hoSo->ai_consent_at);
+        $this->assertTrue($hoSo->hasAiConsent());
     }
 
     public function test_ai_consent_is_granted_without_safety_consent(): void
     {
         // The two consents are independent: declining pharmacist warnings must not
         // silently decline - or grant - the AI one.
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
         $payload = $this->payload(['ai_consent' => '1']);
         unset($payload['consent']);
 
-        $this->actingAs($user)->put(route('profile.health.update'), $payload);
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $payload);
 
-        $profile = UserHealthProfile::where('MaKH', $user->MaKH)->firstOrFail();
+        $hoSo = HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail();
 
-        $this->assertFalse($profile->hasConsented());
-        $this->assertTrue($profile->hasAiConsent());
+        $this->assertFalse($hoSo->hasConsented());
+        $this->assertTrue($hoSo->hasAiConsent());
     }
 
     public function test_unticking_ai_consent_revokes_it_and_audits_the_transition(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload(['ai_consent' => '1']));
-        $this->assertTrue(UserHealthProfile::where('MaKH', $user->MaKH)->firstOrFail()->hasAiConsent());
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload(['ai_consent' => '1']));
+        $this->assertTrue(HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail()->hasAiConsent());
 
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload());
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload());
 
-        $profile = UserHealthProfile::where('MaKH', $user->MaKH)->firstOrFail();
-        $log = AuditLog::where('action', 'health_profile_updated')->latest('MaNK')->firstOrFail();
+        $hoSo = HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail();
+        $log = NhatKyKiemToan::where('action', 'health_profile_updated')->latest('MaNK')->firstOrFail();
         $serialized = json_encode($log->getAttributes(), JSON_UNESCAPED_UNICODE);
 
-        $this->assertNull($profile->ai_consent_at);
-        $this->assertFalse($profile->hasAiConsent());
+        $this->assertNull($hoSo->ai_consent_at);
+        $this->assertFalse($hoSo->hasAiConsent());
         // Only the consent transition changed, and it is named by field, not by value.
         $this->assertSame(['ai_consent_at'], $log->new_values['changed_fields']);
         $this->assertStringNotContainsString('Penicillin', $serialized);
@@ -84,8 +84,8 @@ class HealthProfileAiConsentTest extends TestCase
         $controller = new HealthProfileController();
         $changedFields = new \ReflectionMethod($controller, 'changedFields');
 
-        $granted = (new UserHealthProfile())->forceFill(['ai_consent_at' => now()->subDay()]);
-        $revoked = new UserHealthProfile();
+        $granted = (new HoSoSucKhoe())->forceFill(['ai_consent_at' => now()->subDay()]);
+        $revoked = new HoSoSucKhoe();
 
         // Two distinct, non-null timestamps: same state, so nothing changed.
         $this->assertSame([], $changedFields->invoke($controller, $granted, ['ai_consent_at' => now()]));
@@ -101,23 +101,23 @@ class HealthProfileAiConsentTest extends TestCase
         // validation error in any of them flashes _old_input, but only the health form
         // may influence the health checkboxes — otherwise a mistyped phone number
         // silently revokes medical consent on the next save.
-        $user = User::factory()->create();
-        UserHealthProfile::create([
-            'MaKH' => $user->MaKH,
+        $nguoiDung = NguoiDung::factory()->create();
+        HoSoSucKhoe::create([
+            'MaKH' => $nguoiDung->MaKH,
             'consented_at' => now(),
             'ai_consent_at' => now(),
         ]);
 
-        $this->actingAs($user)
+        $this->actingAs($nguoiDung)
             ->from(route('profile.edit'))
             ->patch(route('profile.update'), [
-                'name' => $user->name,
-                'email' => $user->email,
+                'name' => $nguoiDung->name,
+                'email' => $nguoiDung->email,
                 'phone' => 'not-a-phone',
             ])
             ->assertSessionHasErrors('phone');
 
-        $html = $this->actingAs($user)->get(route('profile.edit'))->getContent();
+        $html = $this->actingAs($nguoiDung)->get(route('profile.edit'))->getContent();
 
         $this->assertMatchesRegularExpression('/<input[^>]+id="health_consent"[^>]+checked/', $html);
         $this->assertMatchesRegularExpression('/<input[^>]+id="health_ai_consent"[^>]+checked/', $html);
@@ -125,21 +125,21 @@ class HealthProfileAiConsentTest extends TestCase
 
     public function test_validation_redirect_keeps_both_consent_checkboxes_unticked(): void
     {
-        $user = User::factory()->create();
-        UserHealthProfile::create([
-            'MaKH' => $user->MaKH,
+        $nguoiDung = NguoiDung::factory()->create();
+        HoSoSucKhoe::create([
+            'MaKH' => $nguoiDung->MaKH,
             'consented_at' => now(),
             'ai_consent_at' => now(),
         ]);
 
-        $response = $this->actingAs($user)
+        $response = $this->actingAs($nguoiDung)
             ->from(route('profile.edit'))
             ->put(route('profile.health.update'), ['weight_kg' => '501']);
 
         $response->assertRedirect(route('profile.edit'))
             ->assertSessionHasErrors('weight_kg');
 
-        $html = $this->actingAs($user)->get(route('profile.edit'))->getContent();
+        $html = $this->actingAs($nguoiDung)->get(route('profile.edit'))->getContent();
 
         $this->assertDoesNotMatchRegularExpression('/<input[^>]+id="health_consent"[^>]+checked/', $html);
         $this->assertDoesNotMatchRegularExpression('/<input[^>]+id="health_ai_consent"[^>]+checked/', $html);
@@ -147,25 +147,25 @@ class HealthProfileAiConsentTest extends TestCase
 
     public function test_re_granting_ai_consent_keeps_the_original_timestamp(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload(['ai_consent' => '1']));
-        $grantedAt = UserHealthProfile::where('MaKH', $user->MaKH)->firstOrFail()->ai_consent_at;
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload(['ai_consent' => '1']));
+        $grantedAt = HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail()->ai_consent_at;
 
         $this->travel(5)->minutes();
 
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload(['ai_consent' => '1']));
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload(['ai_consent' => '1']));
 
         $this->assertTrue($grantedAt->equalTo(
-            UserHealthProfile::where('MaKH', $user->MaKH)->firstOrFail()->ai_consent_at
+            HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail()->ai_consent_at
         ));
     }
 
     public function test_ai_consent_checkbox_labels_are_rendered(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $response = $this->actingAs($user)->get(route('profile.edit'));
+        $response = $this->actingAs($nguoiDung)->get(route('profile.edit'));
 
         // Colour alone is not the state indicator, and the label wraps the text so
         // the click target and the accessible name both belong to the input.
@@ -178,19 +178,19 @@ class HealthProfileAiConsentTest extends TestCase
 
     public function test_health_profile_tracks_ai_consent_correctly(): void
     {
-        $user = User::factory()->create();
-        $profile = UserHealthProfile::create([
-            'MaKH' => $user->MaKH,
+        $nguoiDung = NguoiDung::factory()->create();
+        $hoSo = HoSoSucKhoe::create([
+            'MaKH' => $nguoiDung->MaKH,
             'consented_at' => now(),
             'ai_consent_at' => null,
         ]);
 
-        $this->assertFalse($profile->hasAiConsent());
+        $this->assertFalse($hoSo->hasAiConsent());
 
-        $profile->update(['ai_consent_at' => now()]);
-        $profile->refresh();
+        $hoSo->update(['ai_consent_at' => now()]);
+        $hoSo->refresh();
 
-        $this->assertTrue($profile->hasAiConsent());
-        $this->assertNotNull($profile->ai_consent_at);
+        $this->assertTrue($hoSo->hasAiConsent());
+        $this->assertNotNull($hoSo->ai_consent_at);
     }
 }

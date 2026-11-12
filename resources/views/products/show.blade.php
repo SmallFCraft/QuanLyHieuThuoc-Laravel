@@ -82,7 +82,7 @@
                                 <i class="bi bi-patch-check-fill"></i>{{ __('messages.product_detail_badge') }}
                             </span>
                             <a href="{{ route('products.category', $product->MaDM) }}" class="product-status-chip product-status-chip--link">
-                                <i class="bi bi-bookmark"></i>{{ $product->category->name }}
+                                <i class="bi bi-bookmark"></i>{{ $product->danhMuc->name }}
                             </a>
                             @if($inStock)
                                 <span class="product-status-chip product-status-chip--success">
@@ -251,7 +251,7 @@
                                     </div>
                                     <div>
                                         <span>{{ __('messages.product_category') }}</span>
-                                        <strong>{{ $product->category->name }}</strong>
+                                        <strong>{{ $product->danhMuc->name }}</strong>
                                     </div>
                                     <div>
                                         <span>{{ __('messages.stock_status') }}</span>

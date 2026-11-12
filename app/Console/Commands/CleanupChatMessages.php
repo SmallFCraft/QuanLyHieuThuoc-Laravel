@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\ChatMessage;
+use App\Models\TinNhanChat;
 use Illuminate\Console\Command;
 
 class CleanupChatMessages extends Command
@@ -15,7 +15,7 @@ class CleanupChatMessages extends Command
         $days = 30;
         $date = now()->subDays($days);
         
-        $count = ChatMessage::where('created_at', '<', $date)->delete();
+        $count = TinNhanChat::where('created_at', '<', $date)->delete();
         
         $this->info("Đã xóa {$count} tin nhắn chat cũ hơn {$days} ngày.");
         

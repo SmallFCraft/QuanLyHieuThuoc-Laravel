@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\AuditLog;
+use App\Models\NhatKyKiemToan;
 use Illuminate\Console\Command;
 use Carbon\Carbon;
 
@@ -33,12 +33,12 @@ class CleanupAuditLogs extends Command
         $this->info("Cleaning up audit logs older than {$retentionDays} days (before {$cutoffDate->toDateString()})...");
         
         // Delete old audit logs
-        $deleted = AuditLog::where('created_at', '<', $cutoffDate)->delete();
-        
+        $deleted = NhatKyKiemToan::where('created_at', '<', $cutoffDate)->delete();
+
         $this->info("Successfully deleted {$deleted} audit log records.");
-        
+
         // Show current stats
-        $remaining = AuditLog::count();
+        $remaining = NhatKyKiemToan::count();
         $this->info("Remaining audit logs: {$remaining}");
         
         return 0;

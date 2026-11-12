@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Exceptions\CrawlerSourceChangedException;
-use App\Models\Category;
+use App\Models\DanhMuc;
 use App\Services\LongChauCrawlerService;
 use App\Services\ProductImportService;
 use App\Support\LongChauProduct;
@@ -107,7 +107,7 @@ class CrawlLongChau extends Command
         }
 
         if (! $dryRun && $written > 0) {
-            Category::flushCategoryCaches();
+            DanhMuc::flushCategoryCaches();
         }
 
         $this->table(

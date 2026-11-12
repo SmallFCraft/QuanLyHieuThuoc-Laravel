@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\SearchQuery;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\TruyVanTimKiem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -24,11 +24,11 @@ class SearchPanelTest extends TestCase
 
         Cache::flush();
 
-        $category = Category::create(['name' => 'Thuốc giảm đau, hạ sốt']);
+        $danhMuc = DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt']);
 
         foreach (range(1, 3) as $i) {
-            Product::create([
-                'MaDM' => $category->MaDM,
+            SanPham::create([
+                'MaDM' => $danhMuc->MaDM,
                 'name' => "Viên nén Paracetamol số {$i}",
                 'price' => 50000 * $i,
                 'expiration_date' => now()->addYears(2),
@@ -53,11 +53,11 @@ class SearchPanelTest extends TestCase
 
     public function test_the_panel_carries_trending_terms_top_categories_and_popular_products(): void
     {
-        SearchQuery::updateOrCreate(
+        TruyVanTimKiem::updateOrCreate(
             ['term_folded' => 'thuoc ho tre em'],
             ['term' => 'thuốc ho trẻ em', 'hits' => 12, 'last_searched_at' => now()],
         );
-        Cache::forget(SearchQuery::CACHE_KEY);
+        Cache::forget(TruyVanTimKiem::CACHE_KEY);
 
         $response = $this->get(route('home'))->assertOk();
 
@@ -87,8 +87,8 @@ class SearchPanelTest extends TestCase
     public function test_the_panel_shows_at_most_three_popular_products(): void
     {
         foreach (range(4, 8) as $i) {
-            Product::create([
-                'MaDM' => Category::sole()->MaDM,
+            SanPham::create([
+                'MaDM' => DanhMuc::sole()->MaDM,
                 'name' => "Viên nén Paracetamol số {$i}",
                 'price' => 10000,
                 'expiration_date' => now()->addYears(2),
@@ -111,7 +111,7 @@ class SearchPanelTest extends TestCase
         // thì test chỉ chứng minh query đúng chứ không chứng minh cache hết hạn đúng.
         $this->get(route('home'))->assertOk();
 
-        Product::each(fn (Product $product) => $product->forceFill(['stock_quantity' => 0])->save());
+        SanPham::each(fn (SanPham $sanPham) => $sanPham->forceFill(['stock_quantity' => 0])->save());
 
         $panel = $this->panelMarkup($this->get(route('home'))->assertOk()->getContent());
 
@@ -121,11 +121,11 @@ class SearchPanelTest extends TestCase
 
     public function test_the_trending_pills_are_real_links_so_they_work_without_javascript(): void
     {
-        SearchQuery::updateOrCreate(
+        TruyVanTimKiem::updateOrCreate(
             ['term_folded' => 'collagen'],
             ['term' => 'collagen', 'hits' => 20, 'last_searched_at' => now()],
         );
-        Cache::forget(SearchQuery::CACHE_KEY);
+        Cache::forget(TruyVanTimKiem::CACHE_KEY);
 
         $this->get(route('home'))
             ->assertOk()

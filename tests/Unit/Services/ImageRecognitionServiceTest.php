@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Services;
 
-use App\Models\Category;
-use App\Models\Product;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
 use App\Services\AiProviderService;
 use App\Services\AuditLogService;
 use App\Services\ImageRecognitionService;
@@ -15,7 +15,7 @@ class ImageRecognitionServiceTest extends TestCase
     use RefreshDatabase;
 
     protected ImageRecognitionService $service;
-    protected Category $category;
+    protected DanhMuc $danhMuc;
 
     protected function getEnvironmentSetUp($app)
     {
@@ -36,13 +36,13 @@ class ImageRecognitionServiceTest extends TestCase
             $this->createMock(AiProviderService::class)
         );
 
-        $this->category = Category::factory()->create(['name' => 'Vitamin và khoáng chất']);
+        $this->danhMuc = DanhMuc::factory()->create(['name' => 'Vitamin và khoáng chất']);
     }
 
-    protected function createProduct(string $name, string $ingredients = '', string $usage = ''): Product
+    protected function createProduct(string $name, string $ingredients = '', string $usage = ''): SanPham
     {
-        return Product::factory()->create([
-            'MaDM' => $this->category->MaDM,
+        return SanPham::factory()->create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => $name,
             'ingredients' => $ingredients,
             'usage' => $usage,
@@ -109,7 +109,7 @@ class ImageRecognitionServiceTest extends TestCase
 
     public function test_equivalent_brand_name_still_matches_the_catalog_product(): void
     {
-        $product = $this->createProduct('Vitamin C 1000mg', 'Acid ascorbic 1000mg', 'Bổ sung vitamin C, tăng sức đề kháng');
+        $sanPham = $this->createProduct('Vitamin C 1000mg', 'Acid ascorbic 1000mg', 'Bổ sung vitamin C, tăng sức đề kháng');
         $this->createProduct('Zinc 50mg', 'Zinc sulfate 50mg', 'Bổ sung kẽm');
 
         $matched = $this->service->matchProducts([[
@@ -120,12 +120,12 @@ class ImageRecognitionServiceTest extends TestCase
         ]]);
 
         $this->assertTrue($matched[0]['matched']);
-        $this->assertSame($product->MaSP, $matched[0]['product']['id']);
+        $this->assertSame($sanPham->MaSP, $matched[0]['product']['id']);
     }
 
     public function test_exact_product_name_is_matched(): void
     {
-        $product = $this->createProduct('Zinc 50mg', 'Zinc sulfate 50mg', 'Bổ sung kẽm');
+        $sanPham = $this->createProduct('Zinc 50mg', 'Zinc sulfate 50mg', 'Bổ sung kẽm');
 
         $matched = $this->service->matchProducts([[
             'name' => 'Zinc 50mg',
@@ -134,13 +134,13 @@ class ImageRecognitionServiceTest extends TestCase
         ]]);
 
         $this->assertTrue($matched[0]['matched']);
-        $this->assertSame($product->MaSP, $matched[0]['product']['id']);
+        $this->assertSame($sanPham->MaSP, $matched[0]['product']['id']);
         $this->assertGreaterThanOrEqual(0.9, $matched[0]['confidence']);
     }
 
     public function test_accent_free_parsed_name_matches_accented_catalog_name(): void
     {
-        $product = $this->createProduct('Nước muối sinh lý 0.9%', 'Natri clorid 0.9%', 'Rửa mũi, vệ sinh mắt');
+        $sanPham = $this->createProduct('Nước muối sinh lý 0.9%', 'Natri clorid 0.9%', 'Rửa mũi, vệ sinh mắt');
 
         $matched = $this->service->matchProducts([[
             'name' => 'Nuoc muoi sinh ly',
@@ -148,7 +148,7 @@ class ImageRecognitionServiceTest extends TestCase
         ]]);
 
         $this->assertTrue($matched[0]['matched']);
-        $this->assertSame($product->MaSP, $matched[0]['product']['id']);
+        $this->assertSame($sanPham->MaSP, $matched[0]['product']['id']);
     }
 
     public function test_dosage_decides_between_two_strengths_of_the_same_medicine(): void
@@ -168,15 +168,15 @@ class ImageRecognitionServiceTest extends TestCase
 
     public function test_same_product_in_two_batches_is_not_treated_as_ambiguous(): void
     {
-        $earliest = Product::factory()->create([
-            'MaDM' => $this->category->MaDM,
+        $earliest = SanPham::factory()->create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Vitamin C 1000mg',
             'ingredients' => 'Acid ascorbic 1000mg',
             'stock_quantity' => 10,
             'expiration_date' => now()->addMonths(3),
         ]);
-        Product::factory()->create([
-            'MaDM' => $this->category->MaDM,
+        SanPham::factory()->create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Vitamin C 1000mg',
             'ingredients' => 'Acid ascorbic 1000mg',
             'stock_quantity' => 40,

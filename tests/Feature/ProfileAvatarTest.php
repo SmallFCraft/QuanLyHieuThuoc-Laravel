@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
+use App\Models\NguoiDung;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +18,7 @@ class ProfileAvatarTest extends TestCase
 {
     use RefreshDatabase;
 
-    private User $user;
+    private NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
@@ -26,37 +26,37 @@ class ProfileAvatarTest extends TestCase
 
         Storage::fake('public');
 
-        $this->user = User::factory()->create(['name' => 'Nguyễn Văn An']);
+        $this->nguoiDung = NguoiDung::factory()->create(['name' => 'Nguyễn Văn An']);
     }
 
     public function test_a_user_can_upload_an_avatar(): void
     {
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->post(route('profile.avatar.update'), [
                 'avatar' => UploadedFile::fake()->image('me.jpg', 1200, 1200),
             ])
             ->assertRedirect(route('profile.edit'))
             ->assertSessionHas('status', 'avatar-updated');
 
-        $this->user->refresh();
+        $this->nguoiDung->refresh();
 
-        $this->assertNotNull($this->user->avatar);
-        Storage::disk('public')->assertExists($this->user->avatar);
+        $this->assertNotNull($this->nguoiDung->avatar);
+        Storage::disk('public')->assertExists($this->nguoiDung->avatar);
 
         // Chuẩn hoá về JPEG dù người dùng gửi PNG: đường dẫn luôn kết thúc bằng .jpg.
-        $this->assertStringEndsWith('.jpg', $this->user->avatar);
-        $this->assertStringStartsWith('avatars/', $this->user->avatar);
+        $this->assertStringEndsWith('.jpg', $this->nguoiDung->avatar);
+        $this->assertStringStartsWith('avatars/', $this->nguoiDung->avatar);
     }
 
     public function test_the_stored_avatar_is_scaled_down(): void
     {
-        $this->actingAs($this->user)->post(route('profile.avatar.update'), [
+        $this->actingAs($this->nguoiDung)->post(route('profile.avatar.update'), [
             'avatar' => UploadedFile::fake()->image('huge.jpg', 3000, 2000),
         ])->assertRedirect();
 
-        $this->user->refresh();
+        $this->nguoiDung->refresh();
 
-        $bytes = Storage::disk('public')->get($this->user->avatar);
+        $bytes = Storage::disk('public')->get($this->nguoiDung->avatar);
         [$width, $height] = getimagesizefromstring($bytes);
 
         $max = (int) config('uploads.avatars.max_dimension');
@@ -69,46 +69,46 @@ class ProfileAvatarTest extends TestCase
 
     public function test_uploading_again_deletes_the_previous_file(): void
     {
-        $this->actingAs($this->user)->post(route('profile.avatar.update'), [
+        $this->actingAs($this->nguoiDung)->post(route('profile.avatar.update'), [
             'avatar' => UploadedFile::fake()->image('first.jpg'),
         ]);
 
-        $this->user->refresh();
-        $first = $this->user->avatar;
+        $this->nguoiDung->refresh();
+        $first = $this->nguoiDung->avatar;
 
-        $this->actingAs($this->user)->post(route('profile.avatar.update'), [
+        $this->actingAs($this->nguoiDung)->post(route('profile.avatar.update'), [
             'avatar' => UploadedFile::fake()->image('second.jpg'),
         ]);
 
-        $this->user->refresh();
+        $this->nguoiDung->refresh();
 
-        $this->assertNotSame($first, $this->user->avatar);
+        $this->assertNotSame($first, $this->nguoiDung->avatar);
         Storage::disk('public')->assertMissing($first);
-        Storage::disk('public')->assertExists($this->user->avatar);
+        Storage::disk('public')->assertExists($this->nguoiDung->avatar);
     }
 
     public function test_an_oversized_image_is_rejected(): void
     {
         $maxKb = (int) config('uploads.images.max_size');
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->post(route('profile.avatar.update'), [
                 'avatar' => UploadedFile::fake()->image('big.jpg')->size($maxKb + 64),
             ])
             ->assertSessionHasErrors('avatar');
 
-        $this->assertNull($this->user->fresh()->avatar);
+        $this->assertNull($this->nguoiDung->fresh()->avatar);
     }
 
     public function test_a_non_image_file_is_rejected(): void
     {
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->post(route('profile.avatar.update'), [
                 'avatar' => UploadedFile::fake()->create('prescription.pdf', 40, 'application/pdf'),
             ])
             ->assertSessionHasErrors('avatar');
 
-        $this->assertNull($this->user->fresh()->avatar);
+        $this->assertNull($this->nguoiDung->fresh()->avatar);
     }
 
     public function test_the_chatbot_and_the_avatar_share_one_size_limit(): void
@@ -122,20 +122,20 @@ class ProfileAvatarTest extends TestCase
 
     public function test_a_user_can_remove_their_avatar(): void
     {
-        $this->actingAs($this->user)->post(route('profile.avatar.update'), [
+        $this->actingAs($this->nguoiDung)->post(route('profile.avatar.update'), [
             'avatar' => UploadedFile::fake()->image('me.jpg'),
         ]);
 
-        $this->user->refresh();
-        $path = $this->user->avatar;
+        $this->nguoiDung->refresh();
+        $path = $this->nguoiDung->avatar;
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->delete(route('profile.avatar.destroy'))
             ->assertRedirect(route('profile.edit'))
             ->assertSessionHas('status', 'avatar-removed');
 
         Storage::disk('public')->assertMissing($path);
-        $this->assertNull($this->user->fresh()->avatar);
+        $this->assertNull($this->nguoiDung->fresh()->avatar);
     }
 
     public function test_a_guest_cannot_touch_avatars(): void
@@ -149,7 +149,7 @@ class ProfileAvatarTest extends TestCase
 
     public function test_the_page_falls_back_to_the_name_initial(): void
     {
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('profile.edit'))
             ->assertOk()
             ->assertSee('profile-avatar--initial', false)
@@ -159,11 +159,11 @@ class ProfileAvatarTest extends TestCase
     public function test_a_missing_file_falls_back_instead_of_a_broken_image(): void
     {
         // Bản ghi còn trỏ tới ảnh đã bị xoá khỏi disk: một <img> hỏng xấu hơn chữ cái đầu.
-        $this->user->update(['avatar' => 'avatars/deleted.jpg']);
+        $this->nguoiDung->update(['avatar' => 'avatars/deleted.jpg']);
 
-        $this->assertNull($this->user->fresh()->avatarUrl());
+        $this->assertNull($this->nguoiDung->fresh()->avatarUrl());
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('profile.edit'))
             ->assertOk()
             ->assertSee('profile-avatar--initial', false);
@@ -171,11 +171,11 @@ class ProfileAvatarTest extends TestCase
 
     public function test_the_header_serves_the_avatar_from_this_app(): void
     {
-        $this->actingAs($this->user)->post(route('profile.avatar.update'), [
+        $this->actingAs($this->nguoiDung)->post(route('profile.avatar.update'), [
             'avatar' => UploadedFile::fake()->image('me.jpg'),
         ]);
 
-        $this->actingAs($this->user->fresh())
+        $this->actingAs($this->nguoiDung->fresh())
             ->get('/')
             ->assertOk()
             ->assertDontSee('ui-avatars.com')

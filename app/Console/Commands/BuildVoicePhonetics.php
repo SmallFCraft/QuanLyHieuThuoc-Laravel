@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\VoicePhonetic;
+use App\Models\DanhMuc;
+use App\Models\PhienAmGiongNoi;
+use App\Models\SanPham;
 use App\Support\VietnameseText;
 use App\Support\VoicePhonetics;
 use Illuminate\Console\Command;
@@ -25,7 +25,7 @@ class BuildVoicePhonetics extends Command
 
         [$rows, $tokens] = $this->collectFromProducts();
 
-        foreach (Category::pluck('name') as $name) {
+        foreach (DanhMuc::pluck('name') as $name) {
             $this->addRow($rows, (string) $name, 'category', 1);
         }
 
@@ -44,10 +44,10 @@ class BuildVoicePhonetics extends Command
         // Transaction quanh cả truncate + insert: một lần dựng thất bại giữa đường
         // để lại index rỗng, và index rỗng nghĩa là mọi lượt voice rơi xuống AI.
         DB::transaction(function () use ($rows) {
-            VoicePhonetic::query()->delete();
+            PhienAmGiongNoi::query()->delete();
 
             foreach (array_chunk(array_values($rows), self::INSERT_CHUNK) as $chunk) {
-                VoicePhonetic::insert($chunk);
+                PhienAmGiongNoi::insert($chunk);
             }
         });
 
@@ -65,8 +65,8 @@ class BuildVoicePhonetics extends Command
         $tokens = [];
 
         // cursor(): catalog đã 3.146 dòng và chỉ tăng, nên không nạp hết vào bộ nhớ.
-        Product::select('MaSP', 'name')->cursor()->each(function (Product $product) use (&$rows, &$tokens): void {
-            $name = (string) $product->name;
+        SanPham::select('MaSP', 'name')->cursor()->each(function (SanPham $sanPham) use (&$rows, &$tokens): void {
+            $name = (string) $sanPham->name;
 
             $this->addRow($rows, $name, 'product', 1);
 

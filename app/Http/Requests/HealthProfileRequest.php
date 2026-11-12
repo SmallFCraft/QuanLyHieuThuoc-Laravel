@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\UserHealthProfile;
+use App\Models\HoSoSucKhoe;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -38,7 +38,7 @@ class HealthProfileRequest extends FormRequest
                 ->filter(fn ($item) => is_scalar($item))
                 ->map(fn ($item) => trim((string) $item))
                 ->filter(fn (string $item) => $item !== '')
-                ->reject(fn (string $item) => UserHealthProfile::isNegationTerm($item))
+                ->reject(fn (string $item) => HoSoSucKhoe::isNegationTerm($item))
                 ->unique()
                 ->values()
                 ->all();

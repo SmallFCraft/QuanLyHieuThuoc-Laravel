@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -19,13 +19,13 @@ class StorefrontSearchTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Category $painRelief;
+    private DanhMuc $painRelief;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->painRelief = Category::create(['name' => 'Thuốc giảm đau, hạ sốt']);
+        $this->painRelief = DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt']);
 
         $this->make('Viên nén Paracetamol Stada 500mg', 'Paracetamol 500mg', 'Điều trị các cơn đau đầu, đau lưng.');
         $this->make('Viên nén Panadol Extra đỏ GSK', 'Caffeine 65mg, Paracetamol 500mg', 'Giảm đau đầu, hạ sốt.');
@@ -34,9 +34,9 @@ class StorefrontSearchTest extends TestCase
         $this->make('Kem dưỡng ẩm Ceradan', 'Ceramide', 'Dưỡng ẩm cho da khô.');
     }
 
-    private function make(string $name, string $ingredients, string $usage): Product
+    private function make(string $name, string $ingredients, string $usage): SanPham
     {
-        return Product::create([
+        return SanPham::create([
             'MaDM' => $this->painRelief->MaDM,
             'name' => $name,
             'ingredients' => $ingredients,
@@ -52,7 +52,7 @@ class StorefrontSearchTest extends TestCase
     /** @return array<string> */
     private function names(string $term): array
     {
-        return Product::query()
+        return SanPham::query()
             ->notExpired()
             ->where('stock_quantity', '>', 0)
             ->storefrontSearch($term)
@@ -114,7 +114,7 @@ class StorefrontSearchTest extends TestCase
     {
         // Folding strips punctuation, so "%" cannot reach the LIKE — it splits the
         // query instead. "pa%ol" is therefore the two words "pa" and "ol".
-        $this->assertSame(Product::searchWords('pa%ol'), ['pa', 'ol']);
+        $this->assertSame(SanPham::searchWords('pa%ol'), ['pa', 'ol']);
         $this->assertSame($this->names('pa ol'), $this->names('pa%ol'));
     }
 
@@ -122,8 +122,8 @@ class StorefrontSearchTest extends TestCase
     {
         // The admin scope matches raw, unfolded text, so it is the one that needs
         // the wildcards escaped.
-        $this->assertSame(0, Product::search('Paracetamo%')->count());
-        $this->assertSame(1, Product::search('Paracetamol')->count());
+        $this->assertSame(0, SanPham::search('Paracetamo%')->count());
+        $this->assertSame(1, SanPham::search('Paracetamol')->count());
     }
 
     public function test_a_bare_wildcard_is_treated_as_an_empty_query(): void

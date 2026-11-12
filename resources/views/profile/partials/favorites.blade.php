@@ -14,7 +14,7 @@
     @if($favoriteItems->isNotEmpty())
         <div class="row g-3 g-xl-4">
             @foreach($favoriteItems as $favorite)
-                @php($product = $favorite->product)
+                @php($product = $favorite->sanPham)
                 @continue(!$product)
 
                 <div class="col-md-6 col-xl-4" data-favorite-item data-product-id="{{ $product->MaSP }}">

@@ -114,10 +114,10 @@
                 <i class="bi bi-bag-check text-emerald-600 me-2"></i>{{ __('messages.checkout.order_details') }}
             </h5>
             
-            @foreach($order->items as $item)
+            @foreach($order->chiTietDonHangs as $item)
                 <div class="d-flex justify-content-between align-items-center py-3 border-bottom" style="border-color: rgba(0,0,0,0.06) !important;">
                     <div>
-                        <p class="fw-medium text-gray-800 mb-0">{{ $item->product->name }}</p>
+                        <p class="fw-medium text-gray-800 mb-0">{{ $item->sanPham->name }}</p>
                         <small class="text-gray-400">{{ number_format($item->unit_price, 0, ',', '.') }}₫ × {{ $item->quantity }}</small>
                     </div>
                     <span class="fw-bold text-gray-700">{{ $item->formatted_subtotal }}</span>

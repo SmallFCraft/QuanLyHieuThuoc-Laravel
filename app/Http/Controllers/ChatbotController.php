@@ -8,9 +8,9 @@ use App\Services\DrugSafetyService;
 use App\Services\ImageRecognitionService;
 use App\Services\AuditLogService;
 use App\Models\AiJob;
-use App\Models\ChatbotImage;
-use App\Models\ChatMessage;
-use App\Models\Order;
+use App\Models\AnhChatbot;
+use App\Models\TinNhanChat;
+use App\Models\DonHang;
 use App\Support\CartLine;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
@@ -252,7 +252,7 @@ class ChatbotController extends Controller
     {
         $context = (array) $request->input('context', []);
 
-        $previousMessages = ChatMessage::where('MaKH', $userId)
+        $previousMessages = TinNhanChat::where('MaKH', $userId)
             ->where('session_id', $sessionId)
             ->orderBy('created_at', 'desc')
             ->orderBy('MaTN', 'desc')
@@ -270,7 +270,7 @@ class ChatbotController extends Controller
             })
             ->toArray();
 
-        $nameMemoryMessages = ChatMessage::where('MaKH', $userId)
+        $nameMemoryMessages = TinNhanChat::where('MaKH', $userId)
             ->where('session_id', $sessionId)
             ->where('role', 'user')
             ->orderBy('created_at', 'desc')
@@ -333,12 +333,12 @@ class ChatbotController extends Controller
 
         try {
             $userId = auth()->id();
-            $image = $request->file('image');
+            $anh = $request->file('image');
             $type = $validated['type'] ?? 'prescription';
             $imageMessage = trim((string) ($validated['message'] ?? ''));
             $sessionId = $this->getSessionId();
 
-            $userImageMessage = ChatMessage::create([
+            $userImageMessage = TinNhanChat::create([
                 'MaKH' => $userId,
                 'session_id' => $sessionId,
                 'role' => 'user',
@@ -355,9 +355,9 @@ class ChatbotController extends Controller
             
             // Process image based on type
             if ($type === 'prescription') {
-                $result = $this->imageRecognitionService->processPrescription($image, $userId);
+                $result = $this->imageRecognitionService->processPrescription($anh, $userId);
             } else {
-                $result = $this->imageRecognitionService->processReceipt($image, $userId);
+                $result = $this->imageRecognitionService->processReceipt($anh, $userId);
             }
 
             if (!$result['success']) {
@@ -417,7 +417,7 @@ class ChatbotController extends Controller
                 ? $imageAnswer['response']
                 : $this->buildImageRecognitionMessageContent($recognizedProducts);
 
-            ChatMessage::create([
+            TinNhanChat::create([
                 'MaKH' => $userId,
                 'session_id' => $sessionId,
                 'role' => 'assistant',
@@ -498,7 +498,7 @@ class ChatbotController extends Controller
                 ]);
             }
             
-            $messages = ChatMessage::where('MaKH', $userId)
+            $cacTinNhan = TinNhanChat::where('MaKH', $userId)
                 ->where('session_id', $sessionId)
                 ->latest('created_at')
                 ->limit($limit)
@@ -513,9 +513,9 @@ class ChatbotController extends Controller
                 ->reverse()
                 ->values();
 
-            $imageUrls = $this->resolveHistoryImageUrls($messages, (int) $userId);
+            $imageUrls = $this->resolveHistoryImageUrls($cacTinNhan, (int) $userId);
 
-            $messages = $messages
+            $cacTinNhan = $cacTinNhan
                 ->map(function ($msg) use ($imageUrls) {
                     $imageId = data_get($msg->metadata, 'image_upload.image_id');
                     $imageUrl = $imageId === null ? null : ($imageUrls[(int) $imageId] ?? null);
@@ -539,11 +539,11 @@ class ChatbotController extends Controller
                 })
                 ->toArray();
             
-            $count = count($messages);
+            $count = count($cacTinNhan);
 
             return response()->json([
                 'success' => true,
-                'messages' => $messages,
+                'messages' => $cacTinNhan,
                 'count' => $count,
                 'session_id' => $count > 0 ? $sessionId : null,
             ]);
@@ -566,12 +566,12 @@ class ChatbotController extends Controller
      * MaAnh. One query for the whole page, and only rows that still have their file:
      * retention deletes images after chatbot.images.cleanup_after hours.
      *
-     * @param \Illuminate\Support\Collection<int, ChatMessage> $messages
+     * @param \Illuminate\Support\Collection<int, TinNhanChat> $cacTinNhan
      * @return array<int, string>
      */
-    protected function resolveHistoryImageUrls($messages, int $userId): array
+    protected function resolveHistoryImageUrls($cacTinNhan, int $userId): array
     {
-        $ids = $messages
+        $ids = $cacTinNhan
             ->map(fn ($msg) => data_get($msg->metadata, 'image_upload.image_id'))
             ->filter(fn ($id) => is_numeric($id))
             ->map(fn ($id) => (int) $id)
@@ -582,11 +582,11 @@ class ChatbotController extends Controller
             return [];
         }
 
-        return ChatbotImage::whereIn('MaAnh', $ids)
+        return AnhChatbot::whereIn('MaAnh', $ids)
             ->where('MaKH', $userId)
             ->get(['MaAnh'])
-            ->mapWithKeys(fn (ChatbotImage $image) => [
-                (int) $image->MaAnh => route('chatbot.images.show', ['image' => $image->MaAnh]),
+            ->mapWithKeys(fn (AnhChatbot $anh) => [
+                (int) $anh->MaAnh => route('chatbot.images.show', ['image' => $anh->MaAnh]),
             ])
             ->all();
     }
@@ -598,7 +598,7 @@ class ChatbotController extends Controller
      * sequential MaAnh would otherwise let any signed-in user page through every
      * prescription image on the system.
      */
-    public function image(ChatbotImage $image)
+    public function image(AnhChatbot $image)
     {
         abort_if((int) $image->MaKH !== (int) auth()->id(), 404);
 
@@ -631,21 +631,21 @@ class ChatbotController extends Controller
             $sessionId = session('chat_session_id');
             
             if ($sessionId) {
-                ChatMessage::where('MaKH', $userId)
+                TinNhanChat::where('MaKH', $userId)
                     ->where('session_id', $sessionId)
                     ->delete();
 
-                ChatbotImage::where('MaKH', $userId)
+                AnhChatbot::where('MaKH', $userId)
                     ->where('session_id', $sessionId)
-                    ->chunkById(100, function ($images) {
-                        foreach ($images as $image) {
-                            $path = $image->file_path ?? $image->image_path;
+                    ->chunkById(100, function ($cacAnh) {
+                        foreach ($cacAnh as $anh) {
+                            $path = $anh->file_path ?? $anh->image_path;
 
                             if ($path && Storage::disk('local')->exists($path)) {
                                 Storage::disk('local')->delete($path);
                             }
 
-                            $image->forceDelete();
+                            $anh->forceDelete();
                         }
                     });
             }
@@ -676,7 +676,7 @@ class ChatbotController extends Controller
      * @param Request $request
      * @return JsonResponse
      */
-    public function addToCart(Request $request, DrugSafetyService $drugSafety): JsonResponse
+    public function addToCart(Request $request, DrugSafetyService $anToanThuoc): JsonResponse
     {
         $validated = $request->validate([
             'MaSP' => 'required|integer|exists:products,MaSP',
@@ -690,33 +690,33 @@ class ChatbotController extends Controller
         ]);
 
         try {
-            $product = \App\Models\Product::findOrFail($validated['MaSP']);
+            $sanPham = \App\Models\SanPham::findOrFail($validated['MaSP']);
             $quantity = $validated['quantity'] ?? 1;
 
             // Validate product
-            if ($product->isExpired()) {
+            if ($sanPham->isExpired()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Sản phẩm đã hết hạn.'
                 ], 422);
             }
 
-            if ($product->stock_quantity < $quantity) {
+            if ($sanPham->stock_quantity < $quantity) {
                 return response()->json([
                     'success' => false,
-                    'message' => __('messages.cart.stock_remaining', ['count' => $product->stock_quantity])
+                    'message' => __('messages.cart.stock_remaining', ['count' => $sanPham->stock_quantity])
                 ], 422);
             }
 
             // Add to session cart (same cart used by CartController)
             $cart = session()->get('cart', []);
-            $currentQty = $cart[$product->MaSP] ?? 0;
+            $currentQty = $cart[$sanPham->MaSP] ?? 0;
             $newQty = $currentQty + $quantity;
 
-            if ($newQty > $product->stock_quantity) {
+            if ($newQty > $sanPham->stock_quantity) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Số lượng vượt quá tồn kho. Đã có {$currentQty} trong giỏ, còn lại {$product->stock_quantity}."
+                    'message' => "Số lượng vượt quá tồn kho. Đã có {$currentQty} trong giỏ, còn lại {$sanPham->stock_quantity}."
                 ], 422);
             }
 
@@ -725,7 +725,7 @@ class ChatbotController extends Controller
             // bypassable through the chat widget.
             $userId = (int) auth()->id();
             $confirmed = $request->boolean('confirm_warning');
-            $safety = $drugSafety->checkAddition($product, CartLine::rowsFrom($cart), $userId);
+            $safety = $anToanThuoc->checkAddition($sanPham, CartLine::rowsFrom($cart), $userId);
 
             if ($safety['blocking'] && ! $confirmed) {
                 return response()->json([
@@ -736,11 +736,11 @@ class ChatbotController extends Controller
                 ], 409);
             }
 
-            $cart[$product->MaSP] = $newQty;
+            $cart[$sanPham->MaSP] = $newQty;
             session()->put('cart', $cart);
 
             if ($safety['blocking'] && $confirmed) {
-                $drugSafety->logOverride($userId, $product, $safety['warnings']);
+                $anToanThuoc->logOverride($userId, $sanPham, $safety['warnings']);
             }
 
             // Build cart summary for response
@@ -748,7 +748,7 @@ class ChatbotController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Đã thêm {$quantity} x {$product->name} vào giỏ hàng.",
+                'message' => "Đã thêm {$quantity} x {$sanPham->name} vào giỏ hàng.",
                 'cart' => $cartSummary,
                 'requires_confirmation' => false,
                 'drug_warnings' => $safety['warnings'],
@@ -806,32 +806,32 @@ class ChatbotController extends Controller
         ]);
 
         try {
-            $product = \App\Models\Product::findOrFail($validated['MaSP']);
+            $sanPham = \App\Models\SanPham::findOrFail($validated['MaSP']);
             $quantity = $validated['quantity'];
             
             $cart = session()->get('cart', []);
             
             // Remove if quantity is 0
             if ($quantity === 0) {
-                unset($cart[$product->MaSP]);
+                unset($cart[$sanPham->MaSP]);
                 session()->put('cart', $cart);
                 
                 return response()->json([
                     'success' => true,
-                    'message' => "Đã xóa {$product->name} khỏi giỏ hàng.",
+                    'message' => "Đã xóa {$sanPham->name} khỏi giỏ hàng.",
                     'cart' => $this->getCartSummary()
                 ]);
             }
             
             // Validate stock
-            if ($product->stock_quantity < $quantity) {
+            if ($sanPham->stock_quantity < $quantity) {
                 return response()->json([
                     'success' => false,
-                    'message' => __('messages.cart.stock_remaining', ['count' => $product->stock_quantity])
+                    'message' => __('messages.cart.stock_remaining', ['count' => $sanPham->stock_quantity])
                 ], 422);
             }
             
-            $cart[$product->MaSP] = $quantity;
+            $cart[$sanPham->MaSP] = $quantity;
             session()->put('cart', $cart);
             
             return response()->json([
@@ -892,7 +892,7 @@ class ChatbotController extends Controller
                 $completedOrderId = Cache::get($completedKey);
 
                 if ($completedOrderId) {
-                    $completedOrder = Order::where('MaKH', $userId)->find($completedOrderId);
+                    $completedOrder = DonHang::where('MaKH', $userId)->find($completedOrderId);
 
                     if ($completedOrder) {
                         session()->forget('cart');
@@ -909,7 +909,7 @@ class ChatbotController extends Controller
 
                 // Use existing CheckoutService for transaction-safe order creation
                 $checkoutService = app(\App\Services\CheckoutService::class);
-                $order = $checkoutService->processCheckout(
+                $donHang = $checkoutService->processCheckout(
                     CartLine::rowsFrom($cart),
                     $userId,
                     [
@@ -921,27 +921,27 @@ class ChatbotController extends Controller
                     ]
                 );
 
-                Cache::put($completedKey, $order->MaDH, now()->addMinutes(10));
+                Cache::put($completedKey, $donHang->MaDH, now()->addMinutes(10));
                 session()->forget('cart');
 
                 // Log audit
                 app(AuditLogService::class)->log(
                     action: 'chatbot_order_placed',
-                    modelType: Order::class,
-                    modelId: $order->MaDH,
+                    modelType: DonHang::class,
+                    modelId: $donHang->MaDH,
                     oldValues: null,
                     newValues: [
                         'MaKH' => $userId,
                         'source' => 'chatbot',
-                        'MaDH' => $order->MaDH,
-                        'total_amount' => $order->total_amount
+                        'MaDH' => $donHang->MaDH,
+                        'total_amount' => $donHang->total_amount
                     ]
                 );
 
                 return response()->json([
                     'success' => true,
                     'message' => 'Đặt hàng thành công!',
-                    'order' => $this->formatOrderPayload($order)
+                    'order' => $this->formatOrderPayload($donHang)
                 ]);
             });
 
@@ -976,7 +976,7 @@ class ChatbotController extends Controller
             return ['items' => [], 'total' => 0, 'count' => 0];
         }
 
-        $products = \App\Models\Product::whereIn('MaSP', array_keys($cart))
+        $sanPhams = \App\Models\SanPham::whereIn('MaSP', array_keys($cart))
             ->notExpired()
             ->get()
             ->keyBy('MaSP');
@@ -985,18 +985,18 @@ class ChatbotController extends Controller
         $total = 0;
 
         foreach ($cart as $productId => $quantity) {
-            if (isset($products[$productId])) {
-                $product = $products[$productId];
-                $subtotal = $product->price_vnd * $quantity;
+            if (isset($sanPhams[$productId])) {
+                $sanPham = $sanPhams[$productId];
+                $subtotal = $sanPham->price_vnd * $quantity;
                 $total += $subtotal;
                 $items[] = [
-                    'MaSP' => $product->MaSP,
-                    'name' => $product->name,
-                    'price' => $product->price_vnd,
+                    'MaSP' => $sanPham->MaSP,
+                    'name' => $sanPham->name,
+                    'price' => $sanPham->price_vnd,
                     'quantity' => $quantity,
                     'subtotal' => $subtotal,
-                    'stock_quantity' => $product->stock_quantity,
-                    'image_url' => $product->image_url
+                    'stock_quantity' => $sanPham->stock_quantity,
+                    'image_url' => $sanPham->image_url
                 ];
             }
         }
@@ -1025,13 +1025,13 @@ class ChatbotController extends Controller
         return hash('sha256', json_encode($cart));
     }
 
-    private function formatOrderPayload(Order $order): array
+    private function formatOrderPayload(DonHang $donHang): array
     {
         return [
-            'id' => $order->MaDH,
-            'total_amount' => $order->total_amount,
-            'status' => $order->status,
-            'created_at' => $order->created_at->format('d/m/Y H:i')
+            'id' => $donHang->MaDH,
+            'total_amount' => $donHang->total_amount,
+            'status' => $donHang->status,
+            'created_at' => $donHang->created_at->format('d/m/Y H:i')
         ];
     }
 
@@ -1052,12 +1052,12 @@ class ChatbotController extends Controller
         return $sessionId;
     }
 
-    protected function formatMessageContentForAiContext(ChatMessage $message): string
+    protected function formatMessageContentForAiContext(TinNhanChat $tinNhan): string
     {
-        $content = trim((string) $message->content);
-        $productNames = $this->extractProductNamesFromRecognitionPayload($message->products ?? []);
+        $content = trim((string) $tinNhan->content);
+        $productNames = $this->extractProductNamesFromRecognitionPayload($tinNhan->products ?? []);
 
-        if ($message->role === 'assistant' && !empty($productNames)) {
+        if ($tinNhan->role === 'assistant' && !empty($productNames)) {
             $content .= "\n\nSản phẩm đã nhận dạng từ ảnh: " . implode(', ', $productNames) . '.';
             $content .= "\nNếu người dùng hỏi \"thuốc đó\", \"thuốc này\", \"sản phẩm đó\" hoặc \"sản phẩm này\", hãy hiểu là đang hỏi về các sản phẩm này.";
         }
@@ -1065,24 +1065,24 @@ class ChatbotController extends Controller
         return trim($content);
     }
 
-    protected function extractRecentImageProducts(array $messages): array
+    protected function extractRecentImageProducts(array $cacTinNhan): array
     {
-        for ($index = count($messages) - 1; $index >= 0; $index--) {
-            $message = $messages[$index];
-            if (!is_array($message) || ($message['role'] ?? null) !== 'assistant') {
+        for ($index = count($cacTinNhan) - 1; $index >= 0; $index--) {
+            $tinNhan = $cacTinNhan[$index];
+            if (!is_array($tinNhan) || ($tinNhan['role'] ?? null) !== 'assistant') {
                 continue;
             }
 
             // The recognition wrapper, not the rendered rows: the follow-up path needs
             // parsed_name and the unmatched entries, which flattening drops.
-            $recognition = $message['metadata']['image_recognition'] ?? [];
+            $recognition = $tinNhan['metadata']['image_recognition'] ?? [];
             if (is_array($recognition) && !empty($recognition)) {
                 return $recognition;
             }
 
-            $products = $message['products'] ?? [];
-            if (is_array($products) && !empty($products)) {
-                return $products;
+            $sanPhams = $tinNhan['products'] ?? [];
+            if (is_array($sanPhams) && !empty($sanPhams)) {
+                return $sanPhams;
             }
         }
 
@@ -1098,18 +1098,18 @@ class ChatbotController extends Controller
      * every card read undefined and render "0 đ" with a placeholder icon, so this runs on
      * write AND on read: sessions from before the fix still hold the wrapper.
      *
-     * @param mixed $products
+     * @param mixed $sanPhams
      * @return array<int, array<string, mixed>>
      */
-    protected function normalizeProductsForWidget($products): array
+    protected function normalizeProductsForWidget($sanPhams): array
     {
-        if (!is_array($products)) {
+        if (!is_array($sanPhams)) {
             return [];
         }
 
         $rows = [];
 
-        foreach ($products as $item) {
+        foreach ($sanPhams as $item) {
             if (!is_array($item)) {
                 continue;
             }
@@ -1127,9 +1127,9 @@ class ChatbotController extends Controller
                 continue;
             }
 
-            $product = $item['product'] ?? null;
-            if (is_array($product) && !empty($product)) {
-                $rows[] = $product;
+            $sanPham = $item['product'] ?? null;
+            if (is_array($sanPham) && !empty($sanPham)) {
+                $rows[] = $sanPham;
             }
         }
 
@@ -1159,21 +1159,21 @@ class ChatbotController extends Controller
         return $content;
     }
 
-    protected function extractProductNamesFromRecognitionPayload($products): array
+    protected function extractProductNamesFromRecognitionPayload($sanPhams): array
     {
-        if (!is_array($products)) {
+        if (!is_array($sanPhams)) {
             return [];
         }
 
         $names = [];
-        foreach ($products as $item) {
+        foreach ($sanPhams as $item) {
             if (!is_array($item)) {
                 continue;
             }
 
-            $product = $item['product'] ?? null;
-            $name = is_array($product)
-                ? trim((string) ($product['name'] ?? ''))
+            $sanPham = $item['product'] ?? null;
+            $name = is_array($sanPham)
+                ? trim((string) ($sanPham['name'] ?? ''))
                 : trim((string) ($item['parsed_name'] ?? ''));
 
             if ($name !== '') {

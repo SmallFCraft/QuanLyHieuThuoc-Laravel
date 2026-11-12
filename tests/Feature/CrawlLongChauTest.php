@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\ProductBatch;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\LoSanPham;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -60,14 +60,14 @@ class CrawlLongChauTest extends TestCase
         $this->artisan('crawl:longchau --sitemap=thuoc')
             ->assertSuccessful();
 
-        $product = Product::sole();
+        $sanPham = SanPham::sole();
 
-        $this->assertSame('00005713', str_replace('LC-', '', $product->batch_number));
-        $this->assertSame(252000, $product->price_vnd);
-        $this->assertStringContainsString('Panadol Extra', $product->name);
-        $this->assertSame('Thuốc giảm đau, hạ sốt, kháng viêm', $product->category->name);
-        $this->assertSame(1, ProductBatch::count());
-        $this->assertSame(1, Category::count());
+        $this->assertSame('00005713', str_replace('LC-', '', $sanPham->batch_number));
+        $this->assertSame(252000, $sanPham->price_vnd);
+        $this->assertStringContainsString('Panadol Extra', $sanPham->name);
+        $this->assertSame('Thuốc giảm đau, hạ sốt, kháng viêm', $sanPham->danhMuc->name);
+        $this->assertSame(1, LoSanPham::count());
+        $this->assertSame(1, DanhMuc::count());
     }
 
     public function test_products_without_a_published_price_are_left_out(): void
@@ -76,7 +76,7 @@ class CrawlLongChauTest extends TestCase
 
         $this->artisan('crawl:longchau --sitemap=thuoc')->assertSuccessful();
 
-        $this->assertSame(1, Product::count(), 'The prescription drug has no price to store.');
+        $this->assertSame(1, SanPham::count(), 'The prescription drug has no price to store.');
     }
 
     public function test_a_dead_url_does_not_fail_the_run(): void
@@ -85,7 +85,7 @@ class CrawlLongChauTest extends TestCase
 
         $this->artisan('crawl:longchau --sitemap=thuoc')->assertExitCode(0);
 
-        $this->assertSame(1, Product::count());
+        $this->assertSame(1, SanPham::count());
     }
 
     public function test_running_it_twice_updates_rather_than_duplicates(): void
@@ -95,9 +95,9 @@ class CrawlLongChauTest extends TestCase
         $this->artisan('crawl:longchau --sitemap=thuoc')->assertSuccessful();
         $this->artisan('crawl:longchau --sitemap=thuoc')->assertSuccessful();
 
-        $this->assertSame(1, Product::count());
-        $this->assertSame(1, ProductBatch::count());
-        $this->assertSame(1, Category::count());
+        $this->assertSame(1, SanPham::count());
+        $this->assertSame(1, LoSanPham::count());
+        $this->assertSame(1, DanhMuc::count());
     }
 
     public function test_the_limit_option_caps_the_number_of_pages_fetched(): void
@@ -118,8 +118,8 @@ class CrawlLongChauTest extends TestCase
             ->expectsOutputToContain('không ghi vào cơ sở dữ liệu')
             ->assertSuccessful();
 
-        $this->assertSame(0, Product::count());
-        $this->assertSame(0, Category::count());
+        $this->assertSame(0, SanPham::count());
+        $this->assertSame(0, DanhMuc::count());
     }
 
     public function test_an_unknown_sitemap_key_fails_loudly(): void
@@ -137,7 +137,7 @@ class CrawlLongChauTest extends TestCase
 
         $this->artisan('crawl:longchau --sitemap=thuoc')->assertFailed();
 
-        $this->assertSame(0, Product::count());
+        $this->assertSame(0, SanPham::count());
     }
 
     public function test_a_site_structure_change_aborts_the_run(): void
@@ -156,18 +156,18 @@ class CrawlLongChauTest extends TestCase
 
         $this->artisan('crawl:longchau --sitemap=thuoc')->assertFailed();
 
-        $this->assertSame(0, Product::count());
+        $this->assertSame(0, SanPham::count());
     }
 
     public function test_the_storefront_category_cache_is_refreshed_after_an_import(): void
     {
         $this->fakeCatalog();
 
-        cache()->put(Category::NAV_CACHE_KEY, 'stale', now()->addHour());
+        cache()->put(DanhMuc::NAV_CACHE_KEY, 'stale', now()->addHour());
 
         $this->artisan('crawl:longchau --sitemap=thuoc')->assertSuccessful();
 
-        $this->assertNull(cache()->get(Category::NAV_CACHE_KEY));
+        $this->assertNull(cache()->get(DanhMuc::NAV_CACHE_KEY));
     }
 
     /**
@@ -227,7 +227,7 @@ class CrawlLongChauTest extends TestCase
 
         $this->artisan('crawl:longchau --sitemap=thuoc')->assertSuccessful();
 
-        $this->assertSame(1, Category::count());
-        $this->assertSame('Cơ - xương - khớp', Category::sole()->name);
+        $this->assertSame(1, DanhMuc::count());
+        $this->assertSame('Cơ - xương - khớp', DanhMuc::sole()->name);
     }
 }

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,9 +18,9 @@ class HomeHeroStatsTest extends TestCase
 
     public function test_the_hero_counts_only_what_the_shop_can_actually_sell(): void
     {
-        $painRelief = Category::create(['name' => 'Thuốc giảm đau']);
-        $skincare = Category::create(['name' => 'Chăm sóc da']);
-        $empty = Category::create(['name' => 'Danh mục rỗng']);
+        $painRelief = DanhMuc::create(['name' => 'Thuốc giảm đau']);
+        $skincare = DanhMuc::create(['name' => 'Chăm sóc da']);
+        $empty = DanhMuc::create(['name' => 'Danh mục rỗng']);
 
         $this->product($painRelief, 'Paracetamol Stada 500mg');
         $this->product($painRelief, 'Panadol Extra đỏ GSK');
@@ -39,10 +39,10 @@ class HomeHeroStatsTest extends TestCase
         $this->assertStringNotContainsString('10k+', $html);
     }
 
-    private function product(Category $category, string $name, array $overrides = []): Product
+    private function product(DanhMuc $danhMuc, string $name, array $overrides = []): SanPham
     {
-        return Product::create(array_merge([
-            'MaDM' => $category->MaDM,
+        return SanPham::create(array_merge([
+            'MaDM' => $danhMuc->MaDM,
             'name' => $name,
             'price' => 45000,
             'shelf_life_months' => 36,

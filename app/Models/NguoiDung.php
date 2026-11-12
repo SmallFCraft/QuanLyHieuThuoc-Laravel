@@ -8,9 +8,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
-class User extends Authenticatable
+class NguoiDung extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    protected $table = 'users';
+
+    /** @use HasFactory<\Database\Factories\NguoiDungFactory> */
     use HasFactory, Notifiable;
 
     /**
@@ -61,7 +63,7 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-    
+
     /**
      * Check if user is an administrator
      *
@@ -81,7 +83,7 @@ class User extends Authenticatable
     {
         return $this->role === 'Pharmacist';
     }
-    
+
     /**
      * Check if user account is active
      *
@@ -91,21 +93,21 @@ class User extends Authenticatable
     {
         return $this->status === 'active';
     }
-    
+
     /**
      * Get orders for this user
      */
-    public function orders()
+    public function donHangs()
     {
-        return $this->hasMany(Order::class, 'MaKH', 'MaKH');
+        return $this->hasMany(DonHang::class, 'MaKH', 'MaKH');
     }
-    
+
     /**
      * Get the health profile for this user
      */
-    public function healthProfile()
+    public function hoSoSucKhoe()
     {
-        return $this->hasOne(UserHealthProfile::class, 'MaKH', 'MaKH');
+        return $this->hasOne(HoSoSucKhoe::class, 'MaKH', 'MaKH');
     }
 
     /**

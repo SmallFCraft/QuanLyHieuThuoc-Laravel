@@ -84,7 +84,7 @@
                     <div class="col-md-6">
                         <div class="border rounded p-3 h-100">
                             <div class="text-secondary small">Danh mục</div>
-                            <div class="fw-semibold">{{ $product->category->name ?? 'Chưa phân loại' }}</div>
+                            <div class="fw-semibold">{{ $product->danhMuc->name ?? 'Chưa phân loại' }}</div>
                         </div>
                     </div>
                     <div class="col-md-6">

@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\AiJob;
-use App\Models\TriageSession;
+use App\Models\PhienSangLoc;
 use App\Services\AiJobService;
 use App\Services\Triage\Ai\TriageAiAdviceService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -44,9 +44,9 @@ class ProcessTriageAdviceRewrite implements ShouldQueue
 
         $jobs->markRunning($job);
 
-        $session = TriageSession::find($job->payload['MaSL'] ?? null);
+        $phien = PhienSangLoc::find($job->payload['MaSL'] ?? null);
 
-        if ($session === null) {
+        if ($phien === null) {
             $jobs->markFailed($job, 'triage session no longer exists');
 
             return;
@@ -55,12 +55,12 @@ class ProcessTriageAdviceRewrite implements ShouldQueue
         try {
             // rewrite() never throws and records its own ai_status, so this reports
             // whether the seam ran, not whether the model was any good.
-            $advice->rewrite($session);
+            $advice->rewrite($phien);
 
-            $jobs->markDone($job, ['ai_status' => $session->refresh()->ai_status]);
+            $jobs->markDone($job, ['ai_status' => $phien->refresh()->ai_status]);
         } catch (\Throwable $exception) {
             Log::warning('Triage advice rewrite job failed', [
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'error' => $exception->getMessage(),
             ]);
 

@@ -2,7 +2,7 @@
 
 namespace App\Traits;
 
-use App\Models\AuditLog;
+use App\Models\NhatKyKiemToan;
 use Illuminate\Support\Facades\Auth;
 
 trait Auditable
@@ -63,7 +63,7 @@ trait Auditable
      */
     protected function createAuditLog(string $action, ?array $oldValues, ?array $newValues)
     {
-        AuditLog::create([
+        NhatKyKiemToan::create([
             'MaKH' => Auth::id(),
             'action' => $action,
             'model_type' => get_class($this),

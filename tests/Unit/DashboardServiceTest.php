@@ -2,10 +2,10 @@
 
 namespace Tests\Unit;
 
-use App\Models\Category;
-use App\Models\Order;
-use App\Models\Product;
-use App\Models\User;
+use App\Models\DanhMuc;
+use App\Models\DonHang;
+use App\Models\SanPham;
+use App\Models\NguoiDung;
 use App\Services\DashboardService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,10 +35,10 @@ class DashboardServiceTest extends TestCase
 
     public function test_daily_revenue_chart_includes_orders_created_later_today(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $this->createOrder($user, 'Completed', 125000, '2026-07-06 16:30:00');
-        $this->createOrder($user, 'Cancelled', 999000, '2026-07-06 17:00:00');
+        $this->createOrder($nguoiDung, 'Completed', 125000, '2026-07-06 16:30:00');
+        $this->createOrder($nguoiDung, 'Cancelled', 999000, '2026-07-06 17:00:00');
 
         $chart = $this->dashboardService->getDailyRevenueChart(1);
 
@@ -48,7 +48,7 @@ class DashboardServiceTest extends TestCase
 
     public function test_monthly_revenue_counts_delivering_and_completed_orders_only(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
         foreach ([
             ['Completed', 100000, '2026-07-01 09:00:00'],
@@ -57,7 +57,7 @@ class DashboardServiceTest extends TestCase
             ['Cancelled', 900000, '2026-07-04 09:00:00'],
             ['Completed', 300000, '2026-06-30 09:00:00'],
         ] as [$status, $amount, $createdAt]) {
-            $this->createOrder($user, $status, $amount, $createdAt);
+            $this->createOrder($nguoiDung, $status, $amount, $createdAt);
         }
 
         $this->assertEquals(150000.0, $this->dashboardService->getMonthlyRevenue());
@@ -65,10 +65,10 @@ class DashboardServiceTest extends TestCase
 
     public function test_top_selling_products_excludes_pending_and_cancelled_orders(): void
     {
-        $user = User::factory()->create();
-        $category = Category::create(['name' => 'Dashboard Test']);
-        $product = Product::create([
-            'MaDM' => $category->MaDM,
+        $nguoiDung = NguoiDung::factory()->create();
+        $danhMuc = DanhMuc::create(['name' => 'Dashboard Test']);
+        $sanPham = SanPham::create([
+            'MaDM' => $danhMuc->MaDM,
             'name' => 'Vitamin Dashboard',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -77,13 +77,13 @@ class DashboardServiceTest extends TestCase
             'batch_number' => 'DASHBOARD-001',
         ]);
 
-        $completedOrder = $this->createOrder($user, 'Completed', 200000, '2026-07-06 10:00:00');
-        $pendingOrder = $this->createOrder($user, 'Pending', 5000000, '2026-07-06 10:00:00');
+        $completedOrder = $this->createOrder($nguoiDung, 'Completed', 200000, '2026-07-06 10:00:00');
+        $pendingOrder = $this->createOrder($nguoiDung, 'Pending', 5000000, '2026-07-06 10:00:00');
 
         DB::table('order_items')->insert([
             [
                 'MaDH' => $completedOrder->MaDH,
-                'MaSP' => $product->MaSP,
+                'MaSP' => $sanPham->MaSP,
                 'quantity' => 4,
                 'unit_price' => 50000,
                 'batch_number' => 'DASHBOARD-001',
@@ -92,7 +92,7 @@ class DashboardServiceTest extends TestCase
             ],
             [
                 'MaDH' => $pendingOrder->MaDH,
-                'MaSP' => $product->MaSP,
+                'MaSP' => $sanPham->MaSP,
                 'quantity' => 100,
                 'unit_price' => 50000,
                 'batch_number' => 'DASHBOARD-001',
@@ -107,17 +107,17 @@ class DashboardServiceTest extends TestCase
         $this->assertSame([4], array_map('intval', $chart['data']));
     }
 
-    private function createOrder(User $user, string $status, int $amount, string $createdAt): Order
+    private function createOrder(NguoiDung $nguoiDung, string $status, int $amount, string $createdAt): DonHang
     {
         $timestamp = Carbon::parse($createdAt);
         $id = DB::table('orders')->insertGetId([
-            'MaKH' => $user->MaKH,
+            'MaKH' => $nguoiDung->MaKH,
             'total_amount' => $amount,
             'status' => $status,
             'created_at' => $timestamp,
             'updated_at' => $timestamp,
         ]);
 
-        return Order::findOrFail($id);
+        return DonHang::findOrFail($id);
     }
 }

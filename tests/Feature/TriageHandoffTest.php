@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\ChatMessage;
-use App\Models\Product;
-use App\Models\User;
+use App\Models\DanhMuc;
+use App\Models\TinNhanChat;
+use App\Models\SanPham;
+use App\Models\NguoiDung;
 use App\Services\ChatbotService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -19,14 +19,14 @@ class TriageHandoffTest extends TestCase
     {
         parent::setUp();
 
-        // MedicalKnowledgeSeeder maps contraindications onto existing categories.
-        Category::factory()->create(['name' => 'Thuốc giảm đau - Hạ sốt']);
-        $this->seed(\Database\Seeders\MedicalKnowledgeSeeder::class);
+        // TriThucYTeSeeder maps contraindications onto existing categories.
+        DanhMuc::factory()->create(['name' => 'Thuốc giảm đau - Hạ sốt']);
+        $this->seed(\Database\Seeders\TriThucYTeSeeder::class);
     }
 
-    protected function activeUser(): User
+    protected function activeUser(): NguoiDung
     {
-        return User::factory()->create([
+        return NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
         ]);
@@ -96,8 +96,8 @@ class TriageHandoffTest extends TestCase
 
     public function test_explicit_product_question_falls_through_to_catalog(): void
     {
-        Product::factory()->create([
-            'MaDM' => Category::where('name', 'Thuốc giảm đau - Hạ sốt')->value('MaDM'),
+        SanPham::factory()->create([
+            'MaDM' => DanhMuc::where('name', 'Thuốc giảm đau - Hạ sốt')->value('MaDM'),
             'name' => 'Paracetamol 500mg',
             'ingredients' => 'Paracetamol 500mg',
             'usage' => 'Giảm đau, hạ sốt',
@@ -140,13 +140,13 @@ class TriageHandoffTest extends TestCase
 
     public function test_triage_handoff_is_persisted_in_chat_message_metadata(): void
     {
-        $user = $this->activeUser();
+        $nguoiDung = $this->activeUser();
 
-        $this->actingAs($user)
+        $this->actingAs($nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'tôi bị đau đầu 2 ngày'])
             ->assertOk();
 
-        $assistantMessage = ChatMessage::where('MaKH', $user->MaKH)
+        $assistantMessage = TinNhanChat::where('MaKH', $nguoiDung->MaKH)
             ->where('role', 'assistant')
             ->latest('MaTN')
             ->firstOrFail();
@@ -210,8 +210,8 @@ class TriageHandoffTest extends TestCase
 
     public function test_check_drug_safety_tool_call_checks_a_real_product(): void
     {
-        Product::factory()->create([
-            'MaDM' => Category::where('name', 'Thuốc giảm đau - Hạ sốt')->value('MaDM'),
+        SanPham::factory()->create([
+            'MaDM' => DanhMuc::where('name', 'Thuốc giảm đau - Hạ sốt')->value('MaDM'),
             'name' => 'Paracetamol 500mg',
             'ingredients' => 'Paracetamol 500mg',
             'usage' => 'Giảm đau, hạ sốt',

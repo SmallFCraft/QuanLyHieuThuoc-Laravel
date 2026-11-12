@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\CheckoutService;
 use App\Services\DrugSafetyService;
-use App\Models\Product;
+use App\Models\SanPham;
 use App\Support\CartLine;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
@@ -22,7 +22,7 @@ class CheckoutController extends Controller
     /**
      * Display the checkout page.
      */
-    public function index(DrugSafetyService $drugSafety)
+    public function index(DrugSafetyService $anToanThuoc)
     {
         $cart = session()->get('cart', []);
 
@@ -32,7 +32,7 @@ class CheckoutController extends Controller
 
         // OPTIMIZED: Load all products in 1 query instead of N+1
         $productIds = array_keys($cart);
-        $products = Product::whereIn('MaSP', $productIds)
+        $sanPhams = SanPham::whereIn('MaSP', $productIds)
             ->notExpired()
             ->get()
             ->keyBy('MaSP');
@@ -41,22 +41,22 @@ class CheckoutController extends Controller
         $total = 0;
 
         foreach ($cart as $productId => $quantity) {
-            if (isset($products[$productId])) {
-                $product = $products[$productId];
-                if ($product->stock_quantity >= $quantity) {
+            if (isset($sanPhams[$productId])) {
+                $sanPham = $sanPhams[$productId];
+                if ($sanPham->stock_quantity >= $quantity) {
                     $cartItems[] = [
-                        'product' => $product,
+                        'sanPham' => $sanPham,
                         'quantity' => $quantity,
-                        'subtotal' => $product->price_vnd * $quantity
+                        'subtotal' => $sanPham->price_vnd * $quantity
                     ];
-                    $total += $product->price_vnd * $quantity;
+                    $total += $sanPham->price_vnd * $quantity;
                 }
             }
         }
 
         // Informational only: the customer already confirmed any blocking warning when
         // the item was added, so checkout is never blocked here.
-        $drugWarnings = $drugSafety->checkCart(
+        $drugWarnings = $anToanThuoc->checkCart(
             CartLine::rowsFrom($cart),
             (int) auth()->id()
         )['warnings'];
@@ -107,7 +107,7 @@ class CheckoutController extends Controller
 
                 $cartItems = CartLine::rowsFrom($cart);
 
-                $order = $this->checkoutService->processCheckout(
+                $donHang = $this->checkoutService->processCheckout(
                     $cartItems,
                     $userId,
                     [
@@ -120,10 +120,10 @@ class CheckoutController extends Controller
                     ]
                 );
 
-                Cache::put($completedKey, $order->MaDH, now()->addMinutes(10));
+                Cache::put($completedKey, $donHang->MaDH, now()->addMinutes(10));
                 session()->forget('cart');
 
-                return redirect()->route('checkout.success', $order->MaDH)
+                return redirect()->route('checkout.success', $donHang->MaDH)
                     ->with('success', 'Đặt hàng thành công!');
             });
         } catch (LockTimeoutException) {
@@ -139,7 +139,7 @@ class CheckoutController extends Controller
      */
     public function success($MaDH)
     {
-        $order = auth()->user()->orders()->with('items.product')->findOrFail($MaDH);
+        $order = auth()->user()->donHangs()->with('chiTietDonHangs.sanPham')->findOrFail($MaDH);
         
         return view('checkout.success', compact('order'));
     }

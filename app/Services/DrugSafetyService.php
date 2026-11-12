@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\DrugContraindication;
-use App\Models\DrugInteraction;
-use App\Models\Product;
-use App\Models\User;
-use App\Models\UserHealthProfile;
+use App\Models\ChungChiDinhThuoc;
+use App\Models\TuongTacThuoc;
+use App\Models\SanPham;
+use App\Models\NguoiDung;
+use App\Models\HoSoSucKhoe;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -53,14 +53,14 @@ class DrugSafetyService
     /**
      * Interaction table indexed by ingredient pair, built once per request.
      *
-     * @var array<string, DrugInteraction>|null
+     * @var array<string, TuongTacThuoc>|null
      */
     protected ?array $interactionIndex = null;
 
     /**
      * Contraindication rows indexed by ingredient, built once per request.
      *
-     * @var array<string, array<int, DrugContraindication>>|null
+     * @var array<string, array<int, ChungChiDinhThuoc>>|null
      */
     protected ?array $contraindicationIndex = null;
 
@@ -69,18 +69,18 @@ class DrugSafetyService
      *
      * @return array{warnings: array<int, array>, blocking: bool}
      */
-    public function checkProduct(Product $product, ?UserHealthProfile $profile = null, ?User $user = null): array
+    public function checkProduct(SanPham $sanPham, ?HoSoSucKhoe $hoSo = null, ?NguoiDung $nguoiDung = null): array
     {
-        $ingredients = $this->extractIngredients($product->ingredients ?? '');
+        $ingredients = $this->extractIngredients($sanPham->ingredients ?? '');
 
         if ($ingredients === []) {
             return ['warnings' => [], 'blocking' => false];
         }
 
         $warnings = [
-            ...$this->contraindicationWarnings($ingredients, $profile, $user),
-            ...$this->currentMedicationWarnings($ingredients, $profile, $product),
-            ...$this->allergyWarnings($ingredients, $profile, $product),
+            ...$this->contraindicationWarnings($ingredients, $hoSo, $nguoiDung),
+            ...$this->currentMedicationWarnings($ingredients, $hoSo, $sanPham),
+            ...$this->allergyWarnings($ingredients, $hoSo, $sanPham),
         ];
 
         return [
@@ -109,10 +109,10 @@ class DrugSafetyService
                     continue;
                 }
 
-                $interaction = $this->findInteraction($left, $right);
+                $tuongTac = $this->findInteraction($left, $right);
 
-                if ($interaction) {
-                    $found->push($interaction);
+                if ($tuongTac) {
+                    $found->push($tuongTac);
                 }
             }
         }
@@ -127,7 +127,7 @@ class DrugSafetyService
      * 100-item cart ceiling that was ~10k queries for a single checkout render. The
      * curated interaction table is small enough to index in memory once.
      *
-     * @return array<string, DrugInteraction>
+     * @return array<string, TuongTacThuoc>
      */
     protected function interactionIndex(): array
     {
@@ -137,16 +137,16 @@ class DrugSafetyService
 
         $index = [];
 
-        foreach (DrugInteraction::active()->get() as $interaction) {
+        foreach (TuongTacThuoc::active()->get() as $tuongTac) {
             // Stored once but symmetric, so index both directions.
-            $index[$interaction->ingredient_a . '|' . $interaction->ingredient_b] = $interaction;
-            $index[$interaction->ingredient_b . '|' . $interaction->ingredient_a] = $interaction;
+            $index[$tuongTac->ingredient_a . '|' . $tuongTac->ingredient_b] = $tuongTac;
+            $index[$tuongTac->ingredient_b . '|' . $tuongTac->ingredient_a] = $tuongTac;
         }
 
         return $this->interactionIndex = $index;
     }
 
-    protected function findInteraction(string $a, string $b): ?DrugInteraction
+    protected function findInteraction(string $a, string $b): ?TuongTacThuoc
     {
         return $this->interactionIndex()[$a . '|' . $b] ?? null;
     }
@@ -154,7 +154,7 @@ class DrugSafetyService
     /**
      * Same reason as interactionIndex: one query instead of one per product.
      *
-     * @return array<string, array<int, DrugContraindication>>
+     * @return array<string, array<int, ChungChiDinhThuoc>>
      */
     protected function contraindicationIndex(): array
     {
@@ -164,7 +164,7 @@ class DrugSafetyService
 
         $index = [];
 
-        foreach (DrugContraindication::active()->get() as $row) {
+        foreach (ChungChiDinhThuoc::active()->get() as $row) {
             $index[$row->ingredient][] = $row;
         }
 
@@ -186,24 +186,24 @@ class DrugSafetyService
             return ['warnings' => [], 'blocking' => false];
         }
 
-        $products = Product::whereIn('MaSP', $productIds)->get();
-        $user = User::find($userId);
-        $profile = $this->consentedProfile($userId);
+        $sanPhams = SanPham::whereIn('MaSP', $productIds)->get();
+        $nguoiDung = NguoiDung::find($userId);
+        $hoSo = $this->consentedProfile($userId);
 
         $warnings = [];
 
-        foreach ($products as $product) {
-            $warnings = [...$warnings, ...$this->checkProduct($product, $profile, $user)['warnings']];
+        foreach ($sanPhams as $sanPham) {
+            $warnings = [...$warnings, ...$this->checkProduct($sanPham, $hoSo, $nguoiDung)['warnings']];
         }
 
-        foreach ($this->productPairs($products) as [$left, $right]) {
-            foreach ($this->checkPair($left->ingredients ?? '', $right->ingredients ?? '') as $interaction) {
+        foreach ($this->productPairs($sanPhams) as [$left, $right]) {
+            foreach ($this->checkPair($left->ingredients ?? '', $right->ingredients ?? '') as $tuongTac) {
                 $warnings[] = [
                     'type' => 'interaction',
-                    'severity' => $interaction->severity,
+                    'severity' => $tuongTac->severity,
                     'title' => "{$left->name} + {$right->name}",
-                    'message' => $interaction->description_vi,
-                    'action' => $interaction->recommendation_vi,
+                    'message' => $tuongTac->description_vi,
+                    'action' => $tuongTac->recommendation_vi,
                     'product_ids' => [$left->MaSP, $right->MaSP],
                 ];
             }
@@ -220,27 +220,27 @@ class DrugSafetyService
      *
      * @return array{warnings: array<int, array>, blocking: bool}
      */
-    public function checkAddition(Product $product, array $existingCart, int $userId): array
+    public function checkAddition(SanPham $sanPham, array $existingCart, int $userId): array
     {
-        $user = User::find($userId);
-        $profile = $this->consentedProfile($userId);
+        $nguoiDung = NguoiDung::find($userId);
+        $hoSo = $this->consentedProfile($userId);
 
-        $warnings = $this->checkProduct($product, $profile, $user)['warnings'];
+        $warnings = $this->checkProduct($sanPham, $hoSo, $nguoiDung)['warnings'];
 
         $existingIds = collect($existingCart)->pluck('MaSP')->filter()
-            ->reject(fn ($id) => (int) $id === (int) $product->MaSP)
+            ->reject(fn ($id) => (int) $id === (int) $sanPham->MaSP)
             ->unique();
 
         if ($existingIds->isNotEmpty()) {
-            foreach (Product::whereIn('MaSP', $existingIds)->get() as $existing) {
-                foreach ($this->checkPair($product->ingredients ?? '', $existing->ingredients ?? '') as $interaction) {
+            foreach (SanPham::whereIn('MaSP', $existingIds)->get() as $existing) {
+                foreach ($this->checkPair($sanPham->ingredients ?? '', $existing->ingredients ?? '') as $tuongTac) {
                     $warnings[] = [
                         'type' => 'interaction',
-                        'severity' => $interaction->severity,
-                        'title' => "{$product->name} + {$existing->name}",
-                        'message' => $interaction->description_vi,
-                        'action' => $interaction->recommendation_vi,
-                        'product_ids' => [$product->MaSP, $existing->MaSP],
+                        'severity' => $tuongTac->severity,
+                        'title' => "{$sanPham->name} + {$existing->name}",
+                        'message' => $tuongTac->description_vi,
+                        'action' => $tuongTac->recommendation_vi,
+                        'product_ids' => [$sanPham->MaSP, $existing->MaSP],
                     ];
                 }
             }
@@ -258,17 +258,17 @@ class DrugSafetyService
      * The write is best-effort: the safety decision itself has already been made, so a
      * failing audit row must not turn the acknowledged add-to-cart into a 500.
      */
-    public function logOverride(int $userId, Product $product, array $warnings): void
+    public function logOverride(int $userId, SanPham $sanPham, array $warnings): void
     {
         try {
             $this->auditLogService->log(
                 action: 'drug_warning_overridden',
-                modelType: Product::class,
-                modelId: $product->MaSP,
+                modelType: SanPham::class,
+                modelId: $sanPham->MaSP,
                 oldValues: null,
                 newValues: [
                     'MaKH' => $userId,
-                    'product' => $product->name,
+                    'product' => $sanPham->name,
                     'warning_types' => collect($warnings)->pluck('type')->unique()->values()->all(),
                     'severities' => collect($warnings)->pluck('severity')->unique()->values()->all(),
                 ],
@@ -277,7 +277,7 @@ class DrugSafetyService
         } catch (\Throwable $exception) {
             Log::warning('Drug warning override audit failed', [
                 'MaKH' => $userId,
-                'MaSP' => $product->MaSP,
+                'MaSP' => $sanPham->MaSP,
                 'error' => $exception->getMessage(),
             ]);
         }
@@ -287,9 +287,9 @@ class DrugSafetyService
      * Profile is only readable once the user consented; without consent the checks
      * fall back to product-level rules that need no personal data.
      */
-    protected function consentedProfile(int $userId): ?UserHealthProfile
+    protected function consentedProfile(int $userId): ?HoSoSucKhoe
     {
-        return UserHealthProfile::consentedFor($userId);
+        return HoSoSucKhoe::consentedFor($userId);
     }
 
     /**
@@ -353,24 +353,24 @@ class DrugSafetyService
      *
      * @return array<int, array>
      */
-    protected function contraindicationWarnings(array $ingredients, ?UserHealthProfile $profile, ?User $user): array
+    protected function contraindicationWarnings(array $ingredients, ?HoSoSucKhoe $hoSo, ?NguoiDung $nguoiDung): array
     {
         $rows = collect($ingredients)
             ->flatMap(fn (string $ingredient) => $this->contraindicationIndex()[$ingredient] ?? [])
-            ->unique(fn (DrugContraindication $row) => $row->MaCCD);
+            ->unique(fn (ChungChiDinhThuoc $row) => $row->MaCCD);
 
         if ($rows->isEmpty()) {
             return [];
         }
 
-        $age = $user?->ageInYears();
-        $chronic = $profile?->hasConsented() ? $this->lowercaseList($profile->chronic_conditions) : [];
-        $allergies = $profile?->hasConsented() ? $this->lowercaseList($profile->allergies) : [];
+        $age = $nguoiDung?->ageInYears();
+        $chronic = $hoSo?->hasConsented() ? $this->lowercaseList($hoSo->chronic_conditions) : [];
+        $allergies = $hoSo?->hasConsented() ? $this->lowercaseList($hoSo->allergies) : [];
 
         $warnings = [];
 
         foreach ($rows as $row) {
-            if (!$this->contraindicationApplies($row, $age, $profile, $chronic, $allergies)) {
+            if (!$this->contraindicationApplies($row, $age, $hoSo, $chronic, $allergies)) {
                 continue;
             }
 
@@ -390,9 +390,9 @@ class DrugSafetyService
     }
 
     protected function contraindicationApplies(
-        DrugContraindication $row,
+        ChungChiDinhThuoc $row,
         ?int $age,
-        ?UserHealthProfile $profile,
+        ?HoSoSucKhoe $hoSo,
         array $chronic,
         array $allergies
     ): bool {
@@ -400,15 +400,15 @@ class DrugSafetyService
             // Unknown age must not silently pass an age guard.
             'age_under' => $age !== null && $age < (int) $row->condition_value,
             'age_over' => $age !== null && $age > (int) $row->condition_value,
-            'pregnancy' => (bool) ($profile?->hasConsented() && $profile->is_pregnant),
-            'breastfeeding' => (bool) ($profile?->hasConsented() && $profile->is_breastfeeding),
+            'pregnancy' => (bool) ($hoSo?->hasConsented() && $hoSo->is_pregnant),
+            'breastfeeding' => (bool) ($hoSo?->hasConsented() && $hoSo->is_breastfeeding),
             'chronic_disease' => $this->listMentions($chronic, (string) $row->condition_value),
             'allergy' => $this->listMentions($allergies, (string) $row->condition_value),
             default => false,
         };
     }
 
-    protected function contraindicationTitle(DrugContraindication $row): string
+    protected function contraindicationTitle(ChungChiDinhThuoc $row): string
     {
         return match ($row->condition_type) {
             'age_under' => "Không phù hợp với người dưới {$row->condition_value} tuổi",
@@ -426,33 +426,33 @@ class DrugSafetyService
      *
      * @return array<int, array>
      */
-    protected function currentMedicationWarnings(array $ingredients, ?UserHealthProfile $profile, Product $product): array
+    protected function currentMedicationWarnings(array $ingredients, ?HoSoSucKhoe $hoSo, SanPham $sanPham): array
     {
-        if (!$profile?->hasConsented() || empty($profile->current_medications)) {
+        if (!$hoSo?->hasConsented() || empty($hoSo->current_medications)) {
             return [];
         }
 
         $warnings = [];
 
-        foreach ($profile->current_medications as $medication) {
+        foreach ($hoSo->current_medications as $medication) {
             foreach ($this->extractIngredients((string) $medication) as $existing) {
                 foreach ($ingredients as $incoming) {
                     if ($incoming === $existing) {
                         continue;
                     }
 
-                    $interaction = $this->findInteraction($incoming, $existing);
+                    $tuongTac = $this->findInteraction($incoming, $existing);
 
-                    if (!$interaction) {
+                    if (!$tuongTac) {
                         continue;
                     }
 
                     $warnings[] = [
                         'type' => 'current_medication',
-                        'severity' => $interaction->severity,
-                        'title' => "{$product->name} + thuốc đang dùng ({$medication})",
-                        'message' => $interaction->description_vi,
-                        'action' => $interaction->recommendation_vi,
+                        'severity' => $tuongTac->severity,
+                        'title' => "{$sanPham->name} + thuốc đang dùng ({$medication})",
+                        'message' => $tuongTac->description_vi,
+                        'action' => $tuongTac->recommendation_vi,
                         'ingredient' => $incoming,
                     ];
                 }
@@ -467,18 +467,18 @@ class DrugSafetyService
      *
      * @return array<int, array>
      */
-    protected function allergyWarnings(array $ingredients, ?UserHealthProfile $profile, Product $product): array
+    protected function allergyWarnings(array $ingredients, ?HoSoSucKhoe $hoSo, SanPham $sanPham): array
     {
-        if (!$profile?->hasConsented() || empty($profile->allergies)) {
+        if (!$hoSo?->hasConsented() || empty($hoSo->allergies)) {
             return [];
         }
 
         $warnings = [];
 
-        foreach ($profile->allergies as $allergy) {
+        foreach ($hoSo->allergies as $allergy) {
             $allergyTokens = $this->extractIngredients((string) $allergy);
             $normalizedAllergy = $this->normalizeIngredientText((string) $allergy);
-            $productName = $this->normalizeIngredientText($product->name);
+            $productName = $this->normalizeIngredientText($sanPham->name);
 
             // The name fallback needs the same length floor as isMeaningfulToken:
             // an allergy typed as "C" or "cá" would otherwise substring-match nearly
@@ -496,7 +496,7 @@ class DrugSafetyService
                 'type' => 'allergy',
                 'severity' => 'major',
                 'title' => "Anh/chị đã khai dị ứng với: {$allergy}",
-                'message' => "Sản phẩm {$product->name} có thành phần trùng hoặc liên quan đến chất anh/chị đã khai dị ứng.",
+                'message' => "Sản phẩm {$sanPham->name} có thành phần trùng hoặc liên quan đến chất anh/chị đã khai dị ứng.",
                 'action' => 'Anh/chị không nên dùng thuốc này. Vui lòng hỏi dược sĩ để được đổi sang thuốc khác.',
                 'ingredient' => $allergy,
             ];
@@ -506,11 +506,11 @@ class DrugSafetyService
     }
 
     /**
-     * @return array<int, array{0: Product, 1: Product}>
+     * @return array<int, array{0: SanPham, 1: SanPham}>
      */
-    protected function productPairs(Collection $products): array
+    protected function productPairs(Collection $sanPhams): array
     {
-        $list = $products->values();
+        $list = $sanPhams->values();
         $pairs = [];
 
         for ($i = 0; $i < $list->count(); $i++) {

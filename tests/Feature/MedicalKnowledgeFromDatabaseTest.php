@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\MedicalRedFlag;
-use App\Models\MedicalSymptom;
+use App\Models\DanhMuc;
+use App\Models\CoDoYTe;
+use App\Models\TrieuChungYTe;
 use App\Services\ChatbotService;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -27,12 +27,12 @@ class MedicalKnowledgeFromDatabaseTest extends TestCase
     {
         parent::setUp();
 
-        Category::create([
+        DanhMuc::create([
             'name' => 'Thuốc giảm đau - Hạ sốt',
             'description' => 'Giảm đau, hạ sốt',
         ]);
 
-        $this->seed(MedicalKnowledgeSeeder::class);
+        $this->seed(TriThucYTeSeeder::class);
 
         $this->chatbot = app(ChatbotService::class);
     }
@@ -74,7 +74,7 @@ class MedicalKnowledgeFromDatabaseTest extends TestCase
 
         $this->assertFalse($this->isUrgent($novel));
 
-        MedicalRedFlag::create([
+        CoDoYTe::create([
             'code' => 'brand_new_sign',
             'name_vi' => 'Dấu hiệu mới do dược sĩ thêm',
             'keywords' => ['dau hieu rat kho ta'],
@@ -175,10 +175,10 @@ class MedicalKnowledgeFromDatabaseTest extends TestCase
 
         // The rows still exist and are still readable by the triage wizard.
         $this->assertTrue(
-            MedicalRedFlag::where('code', 'pregnancy_symptom')->where('is_active', true)->exists()
+            CoDoYTe::where('code', 'pregnancy_symptom')->where('is_active', true)->exists()
         );
         $this->assertFalse(
-            (bool) MedicalRedFlag::where('code', 'pregnancy_symptom')->value('chat_short_circuit')
+            (bool) CoDoYTe::where('code', 'pregnancy_symptom')->value('chat_short_circuit')
         );
     }
 
@@ -190,7 +190,7 @@ class MedicalKnowledgeFromDatabaseTest extends TestCase
      */
     public function test_the_pregnancy_flag_names_both_states_it_fires_on(): void
     {
-        $name = (string) MedicalRedFlag::where('code', 'pregnancy_symptom')->value('name_vi');
+        $name = (string) CoDoYTe::where('code', 'pregnancy_symptom')->value('name_vi');
 
         $this->assertStringContainsString('mang thai', $name);
         $this->assertStringContainsString('cho con bú', $name);
@@ -253,7 +253,7 @@ class MedicalKnowledgeFromDatabaseTest extends TestCase
      */
     public function test_a_pharmacist_can_add_a_guard_word_without_a_code_change(): void
     {
-        MedicalSymptom::create([
+        TrieuChungYTe::create([
             'code' => 'probe_symptom',
             'name_vi' => 'cầm máu',
             'catalog_query' => 'cầm máu',
@@ -271,7 +271,7 @@ class MedicalKnowledgeFromDatabaseTest extends TestCase
     {
         $this->assertTrue($this->isUrgent('tôi bị co giật'));
 
-        MedicalRedFlag::where('code', 'seizure')->update(['is_active' => false]);
+        CoDoYTe::where('code', 'seizure')->update(['is_active' => false]);
 
         $this->assertFalse($this->isUrgent('tôi bị co giật'));
     }
@@ -284,7 +284,7 @@ class MedicalKnowledgeFromDatabaseTest extends TestCase
 
     public function test_urgent_detection_survives_an_empty_knowledge_base(): void
     {
-        MedicalRedFlag::query()->delete();
+        CoDoYTe::query()->delete();
 
         // Falls back to the built-in list rather than declaring nothing dangerous.
         $this->assertTrue($this->isUrgent('tôi bị khó thở'));
@@ -309,8 +309,8 @@ class MedicalKnowledgeFromDatabaseTest extends TestCase
 
         $this->assertSame([], $this->symptomQueries($slang));
 
-        $symptom = MedicalSymptom::where('code', 'diarrhea')->firstOrFail();
-        $symptom->update(['aliases' => [...$symptom->aliases, 'xon bung']]);
+        $trieuChung = TrieuChungYTe::where('code', 'diarrhea')->firstOrFail();
+        $trieuChung->update(['aliases' => [...$trieuChung->aliases, 'xon bung']]);
 
         $this->assertContains('tiêu chảy', $this->symptomQueries($slang));
     }
@@ -319,21 +319,21 @@ class MedicalKnowledgeFromDatabaseTest extends TestCase
     {
         $this->assertNotEmpty($this->symptomQueries('tôi bị táo bón'));
 
-        MedicalSymptom::where('code', 'constipation')->update(['is_active' => false]);
+        TrieuChungYTe::where('code', 'constipation')->update(['is_active' => false]);
 
         $this->assertSame([], $this->symptomQueries('tôi bị táo bón'));
     }
 
     public function test_symptom_detection_survives_an_empty_knowledge_base(): void
     {
-        MedicalSymptom::query()->delete();
+        TrieuChungYTe::query()->delete();
 
         $this->assertContains('tiêu chảy', $this->symptomQueries('tôi bị tiêu chảy'));
     }
 
     public function test_catalog_query_wins_over_the_display_name(): void
     {
-        MedicalSymptom::where('code', 'diarrhea')->update(['catalog_query' => 'thuốc cầm tiêu chảy']);
+        TrieuChungYTe::where('code', 'diarrhea')->update(['catalog_query' => 'thuốc cầm tiêu chảy']);
 
         $this->assertContains('thuốc cầm tiêu chảy', $this->symptomQueries('tôi bị tiêu chảy'));
     }

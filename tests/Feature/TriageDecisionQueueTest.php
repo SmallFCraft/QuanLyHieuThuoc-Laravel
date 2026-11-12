@@ -4,11 +4,11 @@ namespace Tests\Feature;
 
 use App\Jobs\ProcessTriageEvaluation;
 use App\Models\AiJob;
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\TriageSession;
-use App\Models\User;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -30,7 +30,7 @@ class TriageDecisionQueueTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
@@ -38,17 +38,17 @@ class TriageDecisionQueueTest extends TestCase
 
         Http::preventStrayRequests();
 
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(34)->toDateString(),
         ]);
 
-        Product::create([
-            'MaDM' => Category::first()->MaDM,
+        SanPham::create([
+            'MaDM' => DanhMuc::first()->MaDM,
             'name' => 'Paracetamol 500mg',
             'ingredients' => 'Paracetamol 500mg',
             'usage' => 'Giảm đau, hạ sốt. Uống 1-2 viên mỗi 4-6 giờ',
@@ -79,11 +79,11 @@ class TriageDecisionQueueTest extends TestCase
         ];
     }
 
-    protected function startSession(): TriageSession
+    protected function startSession(): PhienSangLoc
     {
-        $this->actingAs($this->user)->get(route('health.check'));
+        $this->actingAs($this->nguoiDung)->get(route('health.check'));
 
-        return TriageSession::where('MaKH', $this->user->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        return PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
     }
 
     /**
@@ -91,20 +91,20 @@ class TriageDecisionQueueTest extends TestCase
      *
      * @return \Illuminate\Testing\TestResponse
      */
-    protected function answerAllSteps(TriageSession $session)
+    protected function answerAllSteps(PhienSangLoc $phien)
     {
         $answers = [1 => 'tôi bị đau đầu', 2 => 'hôm nay', 3 => 'chưa dùng gì', 4 => 'không có', 5 => 'không có thêm'];
         $response = null;
 
         foreach ($answers as $step => $answer) {
-            $current = TriageSession::find($session->MaSL);
+            $current = PhienSangLoc::find($phien->MaSL);
 
             if ($current === null || $current->status !== 'in_progress') {
                 break;
             }
 
-            $response = $this->actingAs($this->user)->post(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+            $response = $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+                'triage_session_id' => $phien->MaSL,
                 'step' => $step,
                 'answer' => $answer,
             ]);
@@ -117,8 +117,8 @@ class TriageDecisionQueueTest extends TestCase
     {
         Queue::fake();
 
-        $session = $this->startSession();
-        $this->answerAllSteps($session);
+        $phien = $this->startSession();
+        $this->answerAllSteps($phien);
 
         // The whole point: the 11-30s provider call does not happen in the request.
         Http::assertNothingSent();
@@ -126,22 +126,22 @@ class TriageDecisionQueueTest extends TestCase
 
         $job = AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->firstOrFail();
         $this->assertSame('queued', $job->status);
-        $this->assertSame($session->MaSL, $job->payload['MaSL']);
+        $this->assertSame($phien->MaSL, $job->payload['MaSL']);
 
         // Undecided, not half-decided: no outcome is shown before the job runs.
-        $session->refresh();
-        $this->assertSame('in_progress', $session->status);
-        $this->assertNull($session->outcome);
+        $phien->refresh();
+        $this->assertSame('in_progress', $phien->status);
+        $this->assertNull($phien->outcome);
     }
 
     public function test_the_wizard_shows_a_waiting_state_while_the_worker_decides(): void
     {
         Queue::fake();
 
-        $session = $this->startSession();
-        $this->answerAllSteps($session);
+        $phien = $this->startSession();
+        $this->answerAllSteps($phien);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             ->assertSee(__('messages.health.deciding_title'))
@@ -154,11 +154,11 @@ class TriageDecisionQueueTest extends TestCase
     {
         Queue::fake();
 
-        $session = $this->startSession();
-        $this->answerAllSteps($session);
+        $phien = $this->startSession();
+        $this->answerAllSteps($phien);
 
-        $this->actingAs($this->user)->get(route('health.check'))->assertOk();
-        $this->actingAs($this->user)->get(route('health.check'))->assertOk();
+        $this->actingAs($this->nguoiDung)->get(route('health.check'))->assertOk();
+        $this->actingAs($this->nguoiDung)->get(route('health.check'))->assertOk();
 
         // A second job would mean a second paid provider call for one questionnaire.
         $this->assertSame(1, AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->count());
@@ -174,8 +174,8 @@ class TriageDecisionQueueTest extends TestCase
         ]))]);
         config()->set('chatbot.ai.triage.fact_extraction', true);
 
-        $session = $this->startSession();
-        $this->answerAllSteps($session);
+        $phien = $this->startSession();
+        $this->answerAllSteps($phien);
 
         $job = AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->firstOrFail();
         (new ProcessTriageEvaluation($job->uuid))->handle(
@@ -183,18 +183,18 @@ class TriageDecisionQueueTest extends TestCase
             app(\App\Services\AiJobService::class)
         );
 
-        $session->refresh();
-        $this->assertSame('completed', $session->status);
-        $this->assertSame('self_care', $session->outcome);
+        $phien->refresh();
+        $this->assertSame('completed', $phien->status);
+        $this->assertSame('self_care', $phien->outcome);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->getJson(route('health.decision', $job->uuid))
             ->assertOk()
             ->assertJsonPath('status', 'done')
             ->assertJsonPath('next', 'result')
             // Built by the controller, not the worker: route() inside a job resolves the
             // host from APP_URL, which sent the browser to a 404 on a non-default port.
-            ->assertJsonPath('redirect_url', route('health.result', $session->MaSL));
+            ->assertJsonPath('redirect_url', route('health.result', $phien->MaSL));
 
         $this->assertArrayNotHasKey('result_url', (array) $job->refresh()->result);
     }
@@ -211,8 +211,8 @@ class TriageDecisionQueueTest extends TestCase
             'missing_questions' => ['Anh/chị đau ở vùng nào của đầu?'],
         ]))]);
 
-        $session = $this->startSession();
-        $this->answerAllSteps($session);
+        $phien = $this->startSession();
+        $this->answerAllSteps($phien);
 
         $job = AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->firstOrFail();
         (new ProcessTriageEvaluation($job->uuid))->handle(
@@ -220,19 +220,19 @@ class TriageDecisionQueueTest extends TestCase
             app(\App\Services\AiJobService::class)
         );
 
-        $session->refresh();
+        $phien->refresh();
 
         // Still open, with a round stored — this is the state the timeout used to skip.
-        $this->assertSame('in_progress', $session->status);
-        $this->assertSame(1, $session->ai_clarify_rounds);
-        $this->assertSame(['Anh/chị đau ở vùng nào của đầu?'], $session->pendingClarifyQuestions());
+        $this->assertSame('in_progress', $phien->status);
+        $this->assertSame(1, $phien->ai_clarify_rounds);
+        $this->assertSame(['Anh/chị đau ở vùng nào của đầu?'], $phien->pendingClarifyQuestions());
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->getJson(route('health.decision', $job->uuid))
             ->assertOk()
             ->assertJsonPath('next', 'clarify');
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             ->assertSee(__('messages.health.clarify_round', ['round' => 1, 'total' => 3]))
@@ -245,15 +245,15 @@ class TriageDecisionQueueTest extends TestCase
         config()->set('chatbot.ai.triage.fact_extraction', true);
         config()->set('chatbot.ai.triage.clarify_round', true);
 
-        $session = $this->startSession();
-        $session->forceFill([
+        $phien = $this->startSession();
+        $phien->forceFill([
             'collected_data' => ['raw_symptom_text' => 'đau đầu', 'duration_days' => 1],
             'ai_clarify_rounds' => 1,
             'ai_meta' => ['clarify_questions' => ['Anh/chị đau ở vùng nào của đầu?']],
         ])->save();
 
-        $this->actingAs($this->user)->post(route('health.clarify'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.clarify'), [
+            'triage_session_id' => $phien->MaSL,
             'clarify' => ['đau nửa đầu bên phải'],
         ]);
 
@@ -262,22 +262,22 @@ class TriageDecisionQueueTest extends TestCase
         Http::assertNothingSent();
         Queue::assertPushed(ProcessTriageEvaluation::class, 1);
 
-        $session->refresh();
-        $this->assertSame('in_progress', $session->status);
-        $this->assertSame('đau nửa đầu bên phải', $session->collected_data['ai_clarify_answers'][0]['answer']);
+        $phien->refresh();
+        $this->assertSame('in_progress', $phien->status);
+        $this->assertSame('đau nửa đầu bên phải', $phien->collected_data['ai_clarify_answers'][0]['answer']);
     }
 
     public function test_a_stranded_job_is_retired_so_the_reload_decides_inline(): void
     {
         Queue::fake();
 
-        $session = $this->startSession();
-        $this->answerAllSteps($session);
+        $phien = $this->startSession();
+        $this->answerAllSteps($phien);
 
         $job = AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->firstOrFail();
         $job->forceFill(['created_at' => now()->subSeconds(AiJob::SYNC_FALLBACK_SECONDS + 1)])->save();
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->getJson(route('health.decision', $job->uuid))
             ->assertOk()
             ->assertJsonPath('stranded', true)
@@ -292,8 +292,8 @@ class TriageDecisionQueueTest extends TestCase
     {
         Queue::fake();
 
-        $session = $this->startSession();
-        $this->answerAllSteps($session);
+        $phien = $this->startSession();
+        $this->answerAllSteps($phien);
 
         AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)
             ->firstOrFail()
@@ -301,24 +301,24 @@ class TriageDecisionQueueTest extends TestCase
             ->save();
 
         // With no worker at all, reloading the wizard has to finish the job itself.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
-            ->assertRedirect(route('health.result', $session->MaSL));
+            ->assertRedirect(route('health.result', $phien->MaSL));
 
-        $this->assertSame('completed', $session->fresh()->status);
+        $this->assertSame('completed', $phien->fresh()->status);
     }
 
     public function test_a_failed_job_sends_the_client_back_to_decide_inline(): void
     {
         Queue::fake();
 
-        $session = $this->startSession();
-        $this->answerAllSteps($session);
+        $phien = $this->startSession();
+        $this->answerAllSteps($phien);
 
         $job = AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->firstOrFail();
         $job->forceFill(['status' => 'failed', 'error' => 'worker died'])->save();
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->getJson(route('health.decision', $job->uuid))
             ->assertOk()
             ->assertJsonPath('status', 'failed')
@@ -326,11 +326,11 @@ class TriageDecisionQueueTest extends TestCase
 
         // The reload finishes the questionnaire in-request rather than queueing again:
         // one dead attempt is enough evidence that nothing is consuming the queue.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
-            ->assertRedirect(route('health.result', $session->MaSL));
+            ->assertRedirect(route('health.result', $phien->MaSL));
 
-        $this->assertSame('completed', $session->fresh()->status);
+        $this->assertSame('completed', $phien->fresh()->status);
         $this->assertSame(
             1,
             AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->count(),
@@ -342,11 +342,11 @@ class TriageDecisionQueueTest extends TestCase
     {
         Queue::fake();
 
-        $session = $this->startSession();
-        $this->answerAllSteps($session);
+        $phien = $this->startSession();
+        $this->answerAllSteps($phien);
 
         $job = AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->firstOrFail();
-        $other = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
 
         $this->actingAs($other)
             ->getJson(route('health.decision', $job->uuid))
@@ -362,20 +362,20 @@ class TriageDecisionQueueTest extends TestCase
     {
         Queue::fake();
 
-        $session = $this->startSession();
+        $phien = $this->startSession();
 
-        $this->actingAs($this->user)->post(route('health.answer'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+            'triage_session_id' => $phien->MaSL,
             'step' => 1,
             'answer' => 'đau ngực dữ dội, khó thở',
         ]);
 
-        $session->refresh();
+        $phien->refresh();
 
         // The red flag is detected in plain PHP, so somebody describing chest pain is
         // told to call 115 in the same request — never after a queue hop.
-        $this->assertSame('emergency', $session->outcome);
-        $this->assertSame('completed', $session->status);
+        $this->assertSame('emergency', $phien->outcome);
+        $this->assertSame('completed', $phien->status);
         Queue::assertNotPushed(ProcessTriageEvaluation::class);
     }
 
@@ -383,22 +383,22 @@ class TriageDecisionQueueTest extends TestCase
     {
         // No Queue::fake(): the `sync` driver runs the job during dispatch, which is
         // what a worker-less install does.
-        $session = $this->startSession();
-        $response = $this->answerAllSteps($session);
+        $phien = $this->startSession();
+        $response = $this->answerAllSteps($phien);
 
-        $session->refresh();
+        $phien->refresh();
 
-        $this->assertSame('completed', $session->status);
-        $this->assertSame('self_care', $session->outcome);
-        $response->assertRedirect(route('health.result', $session->MaSL));
+        $this->assertSame('completed', $phien->status);
+        $this->assertSame('self_care', $phien->outcome);
+        $response->assertRedirect(route('health.result', $phien->MaSL));
     }
 
     public function test_the_ajax_answer_returns_the_next_stage_without_a_reload(): void
     {
-        $session = $this->startSession();
+        $phien = $this->startSession();
 
-        $response = $this->actingAs($this->user)->postJson(route('health.answer'), [
-            'triage_session_id' => $session->MaSL,
+        $response = $this->actingAs($this->nguoiDung)->postJson(route('health.answer'), [
+            'triage_session_id' => $phien->MaSL,
             'step' => 1,
             'answer' => 'tôi bị đau đầu',
         ]);
@@ -419,18 +419,18 @@ class TriageDecisionQueueTest extends TestCase
     {
         Queue::fake();
 
-        $session = $this->startSession();
+        $phien = $this->startSession();
 
         foreach ([1 => 'tôi bị đau đầu', 2 => 'hôm nay', 3 => 'chưa dùng gì', 4 => 'không có'] as $step => $answer) {
-            $this->actingAs($this->user)->post(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+            $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+                'triage_session_id' => $phien->MaSL,
                 'step' => $step,
                 'answer' => $answer,
             ]);
         }
 
-        $response = $this->actingAs($this->user)->postJson(route('health.answer'), [
-            'triage_session_id' => $session->MaSL,
+        $response = $this->actingAs($this->nguoiDung)->postJson(route('health.answer'), [
+            'triage_session_id' => $phien->MaSL,
             'step' => 5,
             'answer' => 'không có thêm',
         ]);
@@ -444,11 +444,11 @@ class TriageDecisionQueueTest extends TestCase
 
     public function test_an_ajax_validation_error_carries_the_field(): void
     {
-        $session = $this->startSession();
+        $phien = $this->startSession();
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->postJson(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+                'triage_session_id' => $phien->MaSL,
                 'step' => 1,
                 'answer' => '',
             ])
@@ -458,11 +458,11 @@ class TriageDecisionQueueTest extends TestCase
 
     public function test_an_ajax_stale_step_offers_a_recovery_url(): void
     {
-        $session = $this->startSession();
+        $phien = $this->startSession();
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->postJson(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+                'triage_session_id' => $phien->MaSL,
                 'step' => 4,
                 'answer' => 'gì đó',
             ])

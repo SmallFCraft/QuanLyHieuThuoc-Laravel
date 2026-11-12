@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
+use App\Models\SanPham;
 use App\Services\DrugSafetyService;
 use App\Support\CartLine;
 use Illuminate\Http\Request;
@@ -22,7 +22,7 @@ class CartController extends Controller
         
         // OPTIMIZED: Load all products in 1 query instead of N+1
         $productIds = array_keys($cart);
-        $products = Product::whereIn('MaSP', $productIds)
+        $sanPhams = SanPham::whereIn('MaSP', $productIds)
             ->notExpired()
             ->where('stock_quantity', '>', 0)
             ->get()
@@ -32,14 +32,14 @@ class CartController extends Controller
         $total = 0;
 
         foreach ($cart as $productId => $quantity) {
-            if (isset($products[$productId])) {
-                $product = $products[$productId];
+            if (isset($sanPhams[$productId])) {
+                $sanPham = $sanPhams[$productId];
                 $cartItems[] = [
-                    'product' => $product,
+                    'sanPham' => $sanPham,
                     'quantity' => $quantity,
-                    'subtotal' => $product->price_vnd * $quantity
+                    'subtotal' => $sanPham->price_vnd * $quantity
                 ];
-                $total += $product->price_vnd * $quantity;
+                $total += $sanPham->price_vnd * $quantity;
             }
         }
 
@@ -49,7 +49,7 @@ class CartController extends Controller
     /**
      * Add a product to the cart.
      */
-    public function add(Request $request, DrugSafetyService $drugSafety)
+    public function add(Request $request, DrugSafetyService $anToanThuoc)
     {
         $request->validate([
             'MaSP' => 'required|exists:products,MaSP',
@@ -62,61 +62,61 @@ class CartController extends Controller
 
         // SECURITY: Limit number of unique items in cart
         if (count($cart) >= 100 && ! isset($cart[$request->MaSP])) {
-            $message = 'Giỏ hàng đã đạt giới hạn 100 sản phẩm khác nhau.';
+            $tinNhan = 'Giỏ hàng đã đạt giới hạn 100 sản phẩm khác nhau.';
             if ($wantsJson) {
-                return response()->json(['success' => false, 'message' => $message], 422);
+                return response()->json(['success' => false, 'message' => $tinNhan], 422);
             }
 
-            return back()->with('error', $message);
+            return back()->with('error', $tinNhan);
         }
 
         // SECURITY: Limit total quantity in cart
         $totalQuantity = array_sum($cart);
         if ($totalQuantity + $request->quantity > 1000) {
-            $message = 'Tổng số lượng trong giỏ hàng không được vượt quá 1000.';
+            $tinNhan = 'Tổng số lượng trong giỏ hàng không được vượt quá 1000.';
             if ($wantsJson) {
-                return response()->json(['success' => false, 'message' => $message], 422);
+                return response()->json(['success' => false, 'message' => $tinNhan], 422);
             }
 
-            return back()->with('error', $message);
+            return back()->with('error', $tinNhan);
         }
 
-        $product = Product::findOrFail($request->MaSP);
+        $sanPham = SanPham::findOrFail($request->MaSP);
 
         // Validate product is not expired
-        if ($product->isExpired()) {
-            $message = 'Sản phẩm đã hết hạn. Không thể thêm vào giỏ hàng.';
+        if ($sanPham->isExpired()) {
+            $tinNhan = 'Sản phẩm đã hết hạn. Không thể thêm vào giỏ hàng.';
             if ($wantsJson) {
-                return response()->json(['success' => false, 'message' => $message], 422);
+                return response()->json(['success' => false, 'message' => $tinNhan], 422);
             }
 
-            return back()->with('error', $message);
+            return back()->with('error', $tinNhan);
         }
 
         // Validate stock availability
-        if ($product->stock_quantity < $request->quantity) {
-            $message = __('messages.cart.stock_insufficient');
+        if ($sanPham->stock_quantity < $request->quantity) {
+            $tinNhan = __('messages.cart.stock_insufficient');
             if ($wantsJson) {
-                return response()->json(['success' => false, 'message' => $message], 422);
+                return response()->json(['success' => false, 'message' => $tinNhan], 422);
             }
 
-            return back()->with('error', $message);
+            return back()->with('error', $tinNhan);
         }
 
         // Drug safety runs before the cart is touched: a blocked item must never land
         // in the session, even for one request.
         $userId = (int) auth()->id();
         $confirmed = $request->boolean('confirm_warning');
-        $safety = $drugSafety->checkAddition($product, CartLine::rowsFrom($cart), $userId);
+        $safety = $anToanThuoc->checkAddition($sanPham, CartLine::rowsFrom($cart), $userId);
         $warnings = $safety['warnings'];
 
         if ($safety['blocking'] && ! $confirmed) {
-            $message = __('messages.drug_safety.blocked_message');
+            $tinNhan = __('messages.drug_safety.blocked_message');
 
             if ($wantsJson) {
                 return response()->json([
                     'success' => false,
-                    'message' => $message,
+                    'message' => $tinNhan,
                     'requires_confirmation' => true,
                     'drug_warnings' => $warnings,
                 ], 409);
@@ -125,9 +125,9 @@ class CartController extends Controller
             // Redirect to the cart, not back(): the confirmation block lives there, and a
             // product page cannot render it.
             return redirect()->route('cart.index')
-                ->with('error', $message)
+                ->with('error', $tinNhan)
                 ->with('drug_warnings', $warnings)
-                ->with('drug_warning_product', $product->MaSP)
+                ->with('drug_warning_product', $sanPham->MaSP)
                 ->with('drug_warning_quantity', (int) $request->quantity);
         }
 
@@ -136,13 +136,13 @@ class CartController extends Controller
             $newQuantity = $cart[$request->MaSP] + $request->quantity;
 
             // Check if new quantity exceeds stock
-            if ($newQuantity > $product->stock_quantity) {
-                $message = __('messages.cart.stock_exceeded');
+            if ($newQuantity > $sanPham->stock_quantity) {
+                $tinNhan = __('messages.cart.stock_exceeded');
                 if ($wantsJson) {
-                    return response()->json(['success' => false, 'message' => $message], 422);
+                    return response()->json(['success' => false, 'message' => $tinNhan], 422);
                 }
 
-                return back()->with('error', $message);
+                return back()->with('error', $tinNhan);
             }
 
             $cart[$request->MaSP] = $newQuantity;
@@ -153,7 +153,7 @@ class CartController extends Controller
         session()->put('cart', $cart);
 
         if ($safety['blocking'] && $confirmed) {
-            $drugSafety->logOverride($userId, $product, $warnings);
+            $anToanThuoc->logOverride($userId, $sanPham, $warnings);
         }
 
         $successMessage = 'Đã thêm sản phẩm vào giỏ hàng.';
@@ -186,10 +186,10 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1'
         ]);
 
-        $product = Product::findOrFail($productId);
+        $sanPham = SanPham::findOrFail($productId);
 
         // Validate stock availability
-        if ($product->stock_quantity < $request->quantity) {
+        if ($sanPham->stock_quantity < $request->quantity) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,

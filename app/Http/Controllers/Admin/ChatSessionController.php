@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\ChatbotImage;
-use App\Models\ChatMessage;
+use App\Models\AnhChatbot;
+use App\Models\TinNhanChat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -16,7 +16,7 @@ class ChatSessionController extends Controller
         $search = trim((string) $request->query('q', ''));
         $sessionSearch = preg_replace('/^CHAT-/i', '', $search);
 
-        $sessions = ChatMessage::query()
+        $cacPhien = TinNhanChat::query()
             ->select([
                 'session_id',
                 'MaKH',
@@ -24,13 +24,13 @@ class ChatSessionController extends Controller
                 DB::raw('MIN(created_at) as started_at'),
                 DB::raw('MAX(created_at) as last_message_at'),
             ])
-            ->with('user')
+            ->with('nguoiDung')
             ->when($search !== '', function ($query) use ($search, $sessionSearch) {
                 $query->where(function ($inner) use ($search, $sessionSearch) {
                     $inner->where('session_id', 'like', "%{$search}%")
                         ->orWhere('session_id', 'like', "%{$sessionSearch}%")
-                        ->orWhereHas('user', function ($userQuery) use ($search) {
-                            $userQuery->where('name', 'like', "%{$search}%")
+                        ->orWhereHas('nguoiDung', function ($nguoiDungQuery) use ($search) {
+                            $nguoiDungQuery->where('name', 'like', "%{$search}%")
                                 ->orWhere('email', 'like', "%{$search}%");
                         });
 
@@ -45,14 +45,14 @@ class ChatSessionController extends Controller
             ->get();
 
         $summary = [
-            'total_sessions' => $sessions->count(),
-            'total_messages' => $sessions->sum(fn ($session) => (int) $session->messages_count),
-            'identified_users' => $sessions->pluck('MaKH')->filter()->unique()->count(),
-            'latest_at' => $sessions->first()?->last_message_at,
+            'total_sessions' => $cacPhien->count(),
+            'total_messages' => $cacPhien->sum(fn ($session) => (int) $session->messages_count),
+            'identified_users' => $cacPhien->pluck('MaKH')->filter()->unique()->count(),
+            'latest_at' => $cacPhien->first()?->last_message_at,
         ];
 
         return view('admin.chat-sessions.index', [
-            'sessions' => $sessions,
+            'sessions' => $cacPhien,
             'search' => $search,
             'summary' => $summary,
         ]);
@@ -60,41 +60,41 @@ class ChatSessionController extends Controller
 
     public function show(string $sessionId)
     {
-        $messages = ChatMessage::with('user')
+        $cacTinNhan = TinNhanChat::with('nguoiDung')
             ->where('session_id', $sessionId)
             ->orderBy('created_at')
             ->orderBy('MaTN')
             ->get();
 
-        abort_if($messages->isEmpty(), 404);
+        abort_if($cacTinNhan->isEmpty(), 404);
 
-        $images = ChatbotImage::with('user')
+        $cacAnh = AnhChatbot::with('nguoiDung')
             ->where('session_id', $sessionId)
             ->orderBy('created_at')
             ->get();
 
-        $images->each(function (ChatbotImage $image) use ($sessionId): void {
-            $image->admin_url = route('admin.chatSessions.images.show', [
+        $cacAnh->each(function (AnhChatbot $anh) use ($sessionId): void {
+            $anh->admin_url = route('admin.chatSessions.images.show', [
                 'sessionId' => $sessionId,
-                'image' => $image->MaAnh,
+                'image' => $anh->MaAnh,
             ]);
         });
 
-        $messageImageMap = $this->mapImagesToAssistantMessages($messages, $images);
+        $messageImageMap = $this->mapImagesToAssistantMessages($cacTinNhan, $cacAnh);
 
         return view('admin.chat-sessions.show', [
             'sessionId' => $sessionId,
             'displaySessionId' => $this->displaySessionId($sessionId),
-            'messages' => $messages,
-            'images' => $images,
+            'messages' => $cacTinNhan,
+            'images' => $cacAnh,
             'messageImageMap' => $messageImageMap,
-            'sessionUser' => $messages->first()->user,
-            'startedAt' => $messages->first()->created_at,
-            'lastMessageAt' => $messages->last()->created_at,
+            'sessionUser' => $cacTinNhan->first()->nguoiDung,
+            'startedAt' => $cacTinNhan->first()->created_at,
+            'lastMessageAt' => $cacTinNhan->last()->created_at,
         ]);
     }
 
-    public function image(string $sessionId, ChatbotImage $image)
+    public function image(string $sessionId, AnhChatbot $image)
     {
         abort_if($image->session_id !== $sessionId, 404);
 
@@ -112,71 +112,71 @@ class ChatSessionController extends Controller
         return 'CHAT-' . strtoupper(substr($sessionId, 0, 8));
     }
 
-    private function mapImagesToAssistantMessages($messages, $images): array
+    private function mapImagesToAssistantMessages($cacTinNhan, $cacAnh): array
     {
-        $availableImages = $images->values();
+        $availableImages = $cacAnh->values();
         $map = [];
 
-        foreach ($messages as $message) {
+        foreach ($cacTinNhan as $tinNhan) {
             if ($availableImages->isEmpty()) {
                 break;
             }
 
-            $matchedImage = $this->findImageNearMessage($message, $availableImages);
+            $anhKhop = $this->findImageNearMessage($tinNhan, $availableImages);
 
-            if (!$matchedImage && $this->messageReferencesImageContext($message)) {
-                $matchedImage = $availableImages
-                    ->filter(fn (ChatbotImage $image) => $image->created_at <= $message->created_at->copy()->addSeconds(5))
+            if (!$anhKhop && $this->messageReferencesImageContext($tinNhan)) {
+                $anhKhop = $availableImages
+                    ->filter(fn (AnhChatbot $anh) => $anh->created_at <= $tinNhan->created_at->copy()->addSeconds(5))
                     ->sortByDesc('created_at')
                     ->first();
             }
 
-            if (!$matchedImage) {
+            if (!$anhKhop) {
                 continue;
             }
 
-            $map[$message->MaTN] = $matchedImage;
+            $map[$tinNhan->MaTN] = $anhKhop;
         }
 
         return $map;
     }
 
-    private function findImageNearMessage(ChatMessage $message, $images): ?ChatbotImage
+    private function findImageNearMessage(TinNhanChat $tinNhan, $cacAnh): ?AnhChatbot
     {
-        $hasUploadMetadata = (bool) data_get($message->metadata, 'image_upload');
-        $looksLikeImageResult = $message->role === 'assistant'
-            && !empty($message->products)
-            && $this->messageReferencesImageContext($message);
+        $hasUploadMetadata = (bool) data_get($tinNhan->metadata, 'image_upload');
+        $looksLikeImageResult = $tinNhan->role === 'assistant'
+            && !empty($tinNhan->products)
+            && $this->messageReferencesImageContext($tinNhan);
 
         if (!$hasUploadMetadata && !$looksLikeImageResult) {
             return null;
         }
 
-        return $images
-            ->filter(function (ChatbotImage $image) use ($message): bool {
-                return $image->created_at >= $message->created_at->copy()->subSeconds(10)
-                    && $image->created_at <= $message->created_at->copy()->addSeconds(10);
+        return $cacAnh
+            ->filter(function (AnhChatbot $anh) use ($tinNhan): bool {
+                return $anh->created_at >= $tinNhan->created_at->copy()->subSeconds(10)
+                    && $anh->created_at <= $tinNhan->created_at->copy()->addSeconds(10);
             })
-            ->sortBy(fn (ChatbotImage $image) => abs($image->created_at->diffInSeconds($message->created_at, false)))
+            ->sortBy(fn (AnhChatbot $anh) => abs($anh->created_at->diffInSeconds($tinNhan->created_at, false)))
             ->first();
     }
 
-    private function messageReferencesImageContext(ChatMessage $message): bool
+    private function messageReferencesImageContext(TinNhanChat $tinNhan): bool
     {
-        if ((bool) data_get($message->metadata, 'image_upload')) {
+        if ((bool) data_get($tinNhan->metadata, 'image_upload')) {
             return true;
         }
 
-        if (!empty(data_get($message->metadata, 'image_recognition'))) {
+        if (!empty(data_get($tinNhan->metadata, 'image_recognition'))) {
             return true;
         }
 
-        $responseType = (string) data_get($message->metadata, 'response_type', '');
+        $responseType = (string) data_get($tinNhan->metadata, 'response_type', '');
         if (in_array($responseType, ['image_product_follow_up', 'image_recognition'], true)) {
             return true;
         }
 
-        $content = mb_strtolower($message->content ?? '', 'UTF-8');
+        $content = mb_strtolower($tinNhan->content ?? '', 'UTF-8');
 
         foreach ([
             'hình ảnh',

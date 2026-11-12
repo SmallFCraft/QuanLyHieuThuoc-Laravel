@@ -85,7 +85,7 @@
             </h2>
             <dl class="rx-dl row mb-0">
                 <dt class="col-sm-5">{{ __('messages.pharmacist.customer_title') }}</dt>
-                <dd class="col-sm-7">{{ $session->user?->name ?? __('messages.pharmacist.customer_unknown') }}</dd>
+                <dd class="col-sm-7">{{ $session->nguoiDung?->name ?? __('messages.pharmacist.customer_unknown') }}</dd>
 
                 <dt class="col-sm-5">{{ __('messages.pharmacist.col_age') }}</dt>
                 <dd class="col-sm-7">{{ $age !== null ? __('messages.pharmacist.age_years', ['age' => $age]) : __('messages.pharmacist.age_unknown') }}</dd>

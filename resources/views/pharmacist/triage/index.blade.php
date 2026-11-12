@@ -76,7 +76,7 @@
                             $topSeverity = $severities->contains('emergency')
                                 ? 'emergency'
                                 : ($severities->contains('urgent') ? 'urgent' : 'caution');
-                            $age = $item->user?->ageInYears();
+                            $age = $item->nguoiDung?->ageInYears();
                             $waited = $item->created_at->locale('vi')->diffForHumans(['parts' => 1]);
                             $isOverdue = $item->created_at->lt(now()->subMinutes($waitLongMinutes));
                             // Emergency first in the row's own colour, so the eye lands on it
@@ -100,7 +100,7 @@
                                 <div class="fw-medium text-gray-900">
                                     {{ $symptomText !== '' ? \Illuminate\Support\Str::limit($symptomText, 70) : __('messages.pharmacist.no_symptom') }}
                                 </div>
-                                <div class="small text-gray-600">{{ $item->user?->name ?? __('messages.pharmacist.customer_unknown') }}</div>
+                                <div class="small text-gray-600">{{ $item->nguoiDung?->name ?? __('messages.pharmacist.customer_unknown') }}</div>
                             </td>
                             <td>
                                 {{ $age !== null ? __('messages.pharmacist.age_years', ['age' => $age]) : __('messages.pharmacist.age_unknown') }}

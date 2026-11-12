@@ -5,8 +5,10 @@ namespace App\Models;
 use App\Support\VietnameseText;
 use Illuminate\Database\Eloquent\Model;
 
-class UserHealthProfile extends Model
+class HoSoSucKhoe extends Model
 {
+    protected $table = 'user_health_profiles';
+
     protected $primaryKey = 'MaHS';
 
     protected $fillable = [
@@ -42,9 +44,9 @@ class UserHealthProfile extends Model
         'notes',
     ];
 
-    public function user()
+    public function nguoiDung()
     {
-        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
     }
 
     /**

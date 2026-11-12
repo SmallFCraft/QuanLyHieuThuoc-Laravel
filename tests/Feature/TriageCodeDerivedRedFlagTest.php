@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\TriageSession;
-use App\Models\User;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -33,7 +33,7 @@ class TriageCodeDerivedRedFlagTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
@@ -41,20 +41,20 @@ class TriageCodeDerivedRedFlagTest extends TestCase
 
         Http::preventStrayRequests();
 
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.fact_extraction', true);
         config()->set('chatbot.ai.triage.clarify_round', true);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(20)->toDateString(),
         ]);
 
-        Product::create([
-            'MaDM' => Category::first()->MaDM,
+        SanPham::create([
+            'MaDM' => DanhMuc::first()->MaDM,
             'name' => 'Paracetamol 500mg',
             'ingredients' => 'Paracetamol 500mg',
             'usage' => 'Giảm đau, hạ sốt. Uống 1-2 viên mỗi 4-6 giờ',
@@ -111,7 +111,7 @@ class TriageCodeDerivedRedFlagTest extends TestCase
     /**
      * @param array<int, string> $wizardAnswers
      */
-    protected function runWizard(array $wizardAnswers = []): TriageSession
+    protected function runWizard(array $wizardAnswers = []): PhienSangLoc
     {
         $answers = $wizardAnswers !== [] ? $wizardAnswers : [
             1 => 'dính covid , và ho rất nhiều',
@@ -121,45 +121,45 @@ class TriageCodeDerivedRedFlagTest extends TestCase
             5 => 'không có thêm',
         ];
 
-        $this->actingAs($this->user)->get(route('health.check'));
-        $session = TriageSession::where('MaKH', $this->user->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        $this->actingAs($this->nguoiDung)->get(route('health.check'));
+        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
 
         foreach ($answers as $step => $answer) {
-            $current = TriageSession::find($session->MaSL);
+            $current = PhienSangLoc::find($phien->MaSL);
 
             if ($current === null || $current->status !== 'in_progress') {
                 break;
             }
 
-            $this->actingAs($this->user)->post(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+            $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+                'triage_session_id' => $phien->MaSL,
                 'step' => $step,
                 'answer' => $answer,
             ]);
         }
 
-        return $session->fresh();
+        return $phien->fresh();
     }
 
     /**
      * @param array<int, string> $answers
      */
-    protected function answerClarify(TriageSession $session, array $answers): TriageSession
+    protected function answerClarify(PhienSangLoc $phien, array $answers): PhienSangLoc
     {
-        $this->actingAs($this->user)->post(route('health.clarify'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.clarify'), [
+            'triage_session_id' => $phien->MaSL,
             'clarify' => $answers,
         ]);
 
-        return $session->fresh();
+        return $phien->fresh();
     }
 
     /**
      * @return array<int, string>
      */
-    protected function flagCodes(TriageSession $session): array
+    protected function flagCodes(PhienSangLoc $phien): array
     {
-        return collect($session->triggered_red_flags)->pluck('code')->all();
+        return collect($phien->triggered_red_flags)->pluck('code')->all();
     }
 
     public function test_an_ai_code_escalates_when_our_question_named_the_sign(): void
@@ -171,11 +171,11 @@ class TriageCodeDerivedRedFlagTest extends TestCase
             ['cough', 'shortness_breath']
         );
 
-        $session = $this->answerClarify($this->runWizard(), ['Khi nghỉ và vận động']);
+        $phien = $this->answerClarify($this->runWizard(), ['Khi nghỉ và vận động']);
 
-        $this->assertSame('emergency', $session->outcome);
-        $this->assertContains('breathing_difficulty', $this->flagCodes($session));
-        $this->assertSame([], $session->suggested_products);
+        $this->assertSame('emergency', $phien->outcome);
+        $this->assertContains('breathing_difficulty', $this->flagCodes($phien));
+        $this->assertSame([], $phien->suggested_products);
     }
 
     public function test_a_denied_danger_sign_is_not_escalated_by_an_ai_code(): void
@@ -187,11 +187,11 @@ class TriageCodeDerivedRedFlagTest extends TestCase
             ['cough', 'shortness_breath', 'chest_pain']
         );
 
-        $session = $this->answerClarify($this->runWizard(), ['không khó thở, không đau ngực']);
+        $phien = $this->answerClarify($this->runWizard(), ['không khó thở, không đau ngực']);
 
-        $this->assertNotSame('emergency', $session->outcome);
-        $this->assertNotContains('breathing_difficulty', $this->flagCodes($session));
-        $this->assertNotContains('chest_pain_severe', $this->flagCodes($session));
+        $this->assertNotSame('emergency', $phien->outcome);
+        $this->assertNotContains('breathing_difficulty', $this->flagCodes($phien));
+        $this->assertNotContains('chest_pain_severe', $this->flagCodes($phien));
     }
 
     public function test_an_ungrounded_code_is_dropped(): void
@@ -203,7 +203,7 @@ class TriageCodeDerivedRedFlagTest extends TestCase
             ['headache', 'chest_pain']
         );
 
-        $session = $this->answerClarify(
+        $phien = $this->answerClarify(
             $this->runWizard([
                 1 => 'tôi bị đau đầu',
                 2 => 'hôm nay',
@@ -214,8 +214,8 @@ class TriageCodeDerivedRedFlagTest extends TestCase
             ['âm ỉ thôi']
         );
 
-        $this->assertNotSame('emergency', $session->outcome);
-        $this->assertNotContains('chest_pain_severe', $this->flagCodes($session));
+        $this->assertNotSame('emergency', $phien->outcome);
+        $this->assertNotContains('chest_pain_severe', $this->flagCodes($phien));
     }
 
     public function test_an_alias_only_mention_is_not_anchored(): void
@@ -227,7 +227,7 @@ class TriageCodeDerivedRedFlagTest extends TestCase
             ['cough', 'chest_pain']
         );
 
-        $session = $this->answerClarify(
+        $phien = $this->answerClarify(
             $this->runWizard([
                 1 => 'hơi tức ngực khi ho',
                 2 => 'hôm nay',
@@ -238,8 +238,8 @@ class TriageCodeDerivedRedFlagTest extends TestCase
             ['khi ho mạnh']
         );
 
-        $this->assertNotSame('emergency', $session->outcome);
-        $this->assertNotContains('chest_pain_severe', $this->flagCodes($session));
+        $this->assertNotSame('emergency', $phien->outcome);
+        $this->assertNotContains('chest_pain_severe', $this->flagCodes($phien));
     }
 
     public function test_a_plain_fever_code_never_becomes_a_high_fever_flag(): void
@@ -248,17 +248,17 @@ class TriageCodeDerivedRedFlagTest extends TestCase
         // "sot 40" — never the bare name — so it is not derivable from the code.
         $this->fakeRound(['Anh/chị sốt bao nhiêu độ?'], ['cough', 'fever']);
 
-        $session = $this->answerClarify($this->runWizard(), ['chưa đo']);
+        $phien = $this->answerClarify($this->runWizard(), ['chưa đo']);
 
-        $this->assertNotContains('high_fever_persistent', $this->flagCodes($session));
-        $this->assertNotContains('stiff_neck_fever', $this->flagCodes($session));
+        $this->assertNotContains('high_fever_persistent', $this->flagCodes($phien));
+        $this->assertNotContains('stiff_neck_fever', $this->flagCodes($phien));
     }
 
     public function test_a_plain_diarrhea_code_never_becomes_severe_diarrhea(): void
     {
         $this->fakeRound(['Anh/chị tiêu chảy mấy lần một ngày?'], ['diarrhea']);
 
-        $session = $this->answerClarify(
+        $phien = $this->answerClarify(
             $this->runWizard([
                 1 => 'tôi bị tiêu chảy',
                 2 => 'hôm nay',
@@ -269,7 +269,7 @@ class TriageCodeDerivedRedFlagTest extends TestCase
             ['hai lần']
         );
 
-        $this->assertNotContains('severe_diarrhea', $this->flagCodes($session));
+        $this->assertNotContains('severe_diarrhea', $this->flagCodes($phien));
     }
 
     /**
@@ -316,7 +316,7 @@ class TriageCodeDerivedRedFlagTest extends TestCase
     ): void {
         $this->fakeRound([$question], $finalCodes);
 
-        $session = $this->answerClarify(
+        $phien = $this->answerClarify(
             $this->runWizard([
                 1 => $complaint,
                 2 => 'hôm nay',
@@ -327,8 +327,8 @@ class TriageCodeDerivedRedFlagTest extends TestCase
             [$answer]
         );
 
-        $this->assertNotSame('emergency', $session->outcome, $answer);
-        $this->assertNotContains('chest_pain_severe', $this->flagCodes($session), $answer);
+        $this->assertNotSame('emergency', $phien->outcome, $answer);
+        $this->assertNotContains('chest_pain_severe', $this->flagCodes($phien), $answer);
     }
 
     public function test_a_non_committal_answer_does_not_veto(): void
@@ -341,10 +341,10 @@ class TriageCodeDerivedRedFlagTest extends TestCase
             ['cough', 'shortness_breath']
         );
 
-        $session = $this->answerClarify($this->runWizard(), ['Khi nghỉ và vận động']);
+        $phien = $this->answerClarify($this->runWizard(), ['Khi nghỉ và vận động']);
 
-        $this->assertSame('emergency', $session->outcome);
-        $this->assertContains('breathing_difficulty', $this->flagCodes($session));
+        $this->assertSame('emergency', $phien->outcome);
+        $this->assertContains('breathing_difficulty', $this->flagCodes($phien));
     }
 
     public function test_a_derived_emergency_records_its_provenance(): void
@@ -354,12 +354,12 @@ class TriageCodeDerivedRedFlagTest extends TestCase
             ['cough', 'shortness_breath']
         );
 
-        $session = $this->answerClarify($this->runWizard(), ['Khi nghỉ và vận động']);
+        $phien = $this->answerClarify($this->runWizard(), ['Khi nghỉ và vận động']);
 
-        $this->assertSame('emergency', $session->outcome);
+        $this->assertSame('emergency', $phien->outcome);
         // Which tier decided, recorded next to the codes the model proposed, so a later
         // review can tell a derived escalation from a text one.
-        $this->assertContains('breathing_difficulty', (array) data_get($session->ai_meta, 'derived_red_flags'));
+        $this->assertContains('breathing_difficulty', (array) data_get($phien->ai_meta, 'derived_red_flags'));
     }
 
     public function test_a_derived_emergency_asks_no_further_round(): void
@@ -369,9 +369,9 @@ class TriageCodeDerivedRedFlagTest extends TestCase
             ['cough', 'shortness_breath']
         );
 
-        $session = $this->answerClarify($this->runWizard(), ['Khi nghỉ và vận động']);
+        $phien = $this->answerClarify($this->runWizard(), ['Khi nghỉ và vận động']);
 
-        $this->assertSame('completed', $session->status);
-        $this->assertSame([], $session->pendingClarifyQuestions());
+        $this->assertSame('completed', $phien->status);
+        $this->assertSame([], $phien->pendingClarifyQuestions());
     }
 }

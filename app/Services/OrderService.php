@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\Order;
-use App\Models\Product;
-use App\Models\ProductBatch;
+use App\Models\DonHang;
+use App\Models\SanPham;
+use App\Models\LoSanPham;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -16,23 +16,23 @@ class OrderService
      * @param int $orderId
      * @param string $newStatus
      * @param int $userId
-     * @return Order
+     * @return DonHang
      * @throws \Exception
      */
-    public function updateStatus(int $orderId, string $newStatus, int $userId): Order
+    public function updateStatus(int $orderId, string $newStatus, int $userId): DonHang
     {
         return DB::transaction(function () use ($orderId, $newStatus, $userId) {
-            $order = Order::lockForUpdate()->findOrFail($orderId);
+            $donHang = DonHang::lockForUpdate()->findOrFail($orderId);
 
-            if (!$this->validateStatusTransition($order->status, $newStatus)) {
-                throw new \Exception("Không thể chuyển trạng thái từ {$order->status} sang {$newStatus}.");
+            if (!$this->validateStatusTransition($donHang->status, $newStatus)) {
+                throw new \Exception("Không thể chuyển trạng thái từ {$donHang->status} sang {$newStatus}.");
             }
 
-            $oldStatus = $order->status;
-            $order->status = $newStatus;
-            $order->save();
+            $oldStatus = $donHang->status;
+            $donHang->status = $newStatus;
+            $donHang->save();
 
-            Log::info('Order status updated', [
+            Log::info('DonHang status updated', [
                 'MaDH' => $orderId,
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
@@ -42,10 +42,10 @@ class OrderService
             // Idempotent (updateOrCreate on MaDH + MaSP), so a replayed status
             // change cannot duplicate a patient's medication schedule.
             if ($newStatus === 'Completed' && $oldStatus !== 'Completed') {
-                app(MedicationReminderService::class)->createFromOrder($order);
+                app(MedicationReminderService::class)->createFromOrder($donHang);
             }
 
-            return $order;
+            return $donHang;
         });
     }
 
@@ -62,68 +62,68 @@ class OrderService
         DB::beginTransaction();
 
         try {
-            $order = Order::with('items')->lockForUpdate()->findOrFail($orderId);
+            $donHang = DonHang::with('chiTietDonHangs')->lockForUpdate()->findOrFail($orderId);
 
             // Only pending orders can be cancelled
-            if ($order->status !== 'Pending') {
+            if ($donHang->status !== 'Pending') {
                 throw new \Exception('Chỉ có thể hủy đơn hàng ở trạng thái Pending.');
             }
 
             $affectedProductIds = [];
 
             // Restore inventory for all order items (by batch)
-            foreach ($order->items as $item) {
+            foreach ($donHang->chiTietDonHangs as $item) {
                 $affectedProductIds[] = $item->MaSP;
 
                 if ($item->MaLo) {
                     // Restore to specific batch
-                    $batch = ProductBatch::lockForUpdate()->find($item->MaLo);
-                    if ($batch) {
-                        $batch->stock_quantity += $item->quantity;
-                        $batch->save();
+                    $lo = LoSanPham::lockForUpdate()->find($item->MaLo);
+                    if ($lo) {
+                        $lo->stock_quantity += $item->quantity;
+                        $lo->save();
                     }
                 } else {
                     // Không có MaLo: ưu tiên lô trùng batch_number (ProductObserver tạo lô khi tạo SP)
-                    $batch = ProductBatch::query()
+                    $lo = LoSanPham::query()
                         ->where('MaSP', $item->MaSP)
                         ->where('batch_number', $item->batch_number)
                         ->lockForUpdate()
                         ->first();
-                    if ($batch) {
-                        $batch->stock_quantity += $item->quantity;
-                        $batch->save();
+                    if ($lo) {
+                        $lo->stock_quantity += $item->quantity;
+                        $lo->save();
                     } else {
-                        $product = Product::lockForUpdate()->find($item->MaSP);
-                        if ($product) {
-                            $product->stock_quantity += $item->quantity;
-                            $product->save();
+                        $sanPham = SanPham::lockForUpdate()->find($item->MaSP);
+                        if ($sanPham) {
+                            $sanPham->stock_quantity += $item->quantity;
+                            $sanPham->save();
                         }
                     }
                 }
             }
 
             foreach (array_unique($affectedProductIds) as $productId) {
-                $product = Product::with('batches')->lockForUpdate()->find($productId);
+                $sanPham = SanPham::with('cacLo')->lockForUpdate()->find($productId);
 
-                if (!$product) {
+                if (!$sanPham) {
                     continue;
                 }
 
-                $updatedStock = $product->batches->isNotEmpty()
-                    ? (int) $product->batches->sum('stock_quantity')
-                    : (int) $product->stock_quantity;
+                $updatedStock = $sanPham->cacLo->isNotEmpty()
+                    ? (int) $sanPham->cacLo->sum('stock_quantity')
+                    : (int) $sanPham->stock_quantity;
 
-                $product->stock_quantity = $updatedStock;
-                $product->save();
+                $sanPham->stock_quantity = $updatedStock;
+                $sanPham->save();
             }
 
             // Update order status
-            $order->status = 'Cancelled';
-            $order->save();
+            $donHang->status = 'Cancelled';
+            $donHang->save();
 
             DB::commit();
 
-            Log::info('Order cancelled and inventory restored', [
+            Log::info('DonHang cancelled and inventory restored', [
                 'MaDH' => $orderId,
                 'MaKH' => $userId
             ]);
@@ -133,7 +133,7 @@ class OrderService
         } catch (\Exception $e) {
             DB::rollBack();
             
-            Log::error('Order cancellation failed', [
+            Log::error('DonHang cancellation failed', [
                 'MaDH' => $orderId,
                 'MaKH' => $userId,
                 'exception' => $e->getMessage()

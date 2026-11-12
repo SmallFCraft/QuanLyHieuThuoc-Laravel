@@ -3,12 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\AiJob;
-use App\Models\Category;
-use App\Models\Product;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
 use Illuminate\Support\Str;
-use App\Models\TriageSession;
-use App\Models\User;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -24,26 +24,26 @@ class HealthCheckResultLayoutTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(34)->toDateString(),
         ]);
     }
 
-    protected function completedSession(array $attributes = []): TriageSession
+    protected function completedSession(array $attributes = []): PhienSangLoc
     {
-        return TriageSession::create(array_merge([
-            'MaKH' => $this->user->MaKH,
+        return PhienSangLoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -62,10 +62,10 @@ class HealthCheckResultLayoutTest extends TestCase
 
     public function test_the_journey_rail_shows_every_answer_the_visitor_gave(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $response = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $response = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk();
 
         $response->assertSee('health-journey', false);
@@ -81,10 +81,10 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_duration_step_carries_its_unit(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -93,7 +93,7 @@ class HealthCheckResultLayoutTest extends TestCase
 
     public function test_a_multi_day_duration_is_pluralised(): void
     {
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'collected_data' => [
                 'raw_symptom_text' => 'Đau đầu',
                 'duration_days' => 3,
@@ -103,8 +103,8 @@ class HealthCheckResultLayoutTest extends TestCase
             ],
         ]);
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -113,10 +113,10 @@ class HealthCheckResultLayoutTest extends TestCase
 
     public function test_the_rail_names_each_of_the_five_steps(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -134,10 +134,10 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_rail_never_wraps_into_columns(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -160,10 +160,10 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_rail_connects_every_node_to_the_next(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -180,10 +180,10 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_rail_is_a_sticky_sidebar(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -221,10 +221,10 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_rail_and_the_content_are_separate_grid_cells(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -273,7 +273,7 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_emergency_call_action_renders_outside_the_rail(): void
     {
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'outcome' => 'emergency',
             'advice_given' => null,
             'safety_net' => null,
@@ -281,8 +281,8 @@ class HealthCheckResultLayoutTest extends TestCase
             'collected_data' => ['raw_symptom_text' => 'Đau ngực dữ dội'],
         ]);
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -319,10 +319,10 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_rail_is_hidden_below_the_sidebar_breakpoint(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -339,7 +339,7 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_a_skipped_step_stays_on_the_rail_marked_as_skipped(): void
     {
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'collected_data' => [
                 'symptoms' => null,
                 'raw_symptom_text' => null,
@@ -351,8 +351,8 @@ class HealthCheckResultLayoutTest extends TestCase
             ],
         ]);
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -368,13 +368,13 @@ class HealthCheckResultLayoutTest extends TestCase
     {
         // Emergency: the wizard stops at step 1, so four of the five answers were
         // never collected. A rail padded to five would invent them.
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'outcome' => 'emergency',
             'collected_data' => ['raw_symptom_text' => 'Đau ngực dữ dội'],
         ]);
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -386,10 +386,10 @@ class HealthCheckResultLayoutTest extends TestCase
 
     public function test_the_page_groups_its_sections_into_tabs(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $response = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $response = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk();
 
         $response->assertSee('role="tablist"', false);
@@ -403,15 +403,15 @@ class HealthCheckResultLayoutTest extends TestCase
 
     public function test_an_emergency_page_never_hides_content_behind_a_tab(): void
     {
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'outcome' => 'emergency',
             'advice_given' => null,
             'safety_net' => null,
             'collected_data' => ['raw_symptom_text' => 'Đau ngực dữ dội'],
         ]);
 
-        $response = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $response = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk();
 
         // A red-flag page shows everything at once: the 115 action, the red flags
@@ -429,14 +429,14 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_a_red_flag_referral_opens_the_care_tab_while_the_briefing_is_pending(): void
     {
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'outcome' => 'refer_doctor',
             'triggered_red_flags' => [['code' => 'pregnancy_symptom', 'name_vi' => 'Đang mang thai', 'severity' => 'urgent']],
             'ai_briefing_status' => null,
         ]);
 
-        $response = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $response = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk();
 
         $response->assertSee('class="tab-pane fade show active" id="hub-care"', false);
@@ -445,10 +445,10 @@ class HealthCheckResultLayoutTest extends TestCase
 
     public function test_the_hub_holds_three_panels(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $response = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $response = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk();
 
         $response->assertSee('hub-briefing', false);
@@ -463,10 +463,10 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_audit_tab_shows_its_content_without_a_click(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -483,9 +483,9 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_products_appear_once(): void
     {
-        $category = Category::first();
-        $product = Product::create([
-            'MaDM' => $category->MaDM,
+        $danhMuc = DanhMuc::first();
+        $sanPham = SanPham::create([
+            'MaDM' => $danhMuc->MaDM,
             'name' => 'Paracetamol 500mg',
             'ingredients' => 'Paracetamol 500mg',
             'usage' => 'Giảm đau đầu, hạ sốt',
@@ -496,10 +496,10 @@ class HealthCheckResultLayoutTest extends TestCase
             'batch_number' => 'B-ONCE',
         ]);
 
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'matched_symptoms' => ['dau_dau'],
             'suggested_products' => [[
-                'id' => $product->MaSP,
+                'id' => $sanPham->MaSP,
                 'name' => 'Paracetamol 500mg',
                 'price' => 25000,
                 'stock_quantity' => 50,
@@ -507,8 +507,8 @@ class HealthCheckResultLayoutTest extends TestCase
             ]],
         ]);
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -517,10 +517,10 @@ class HealthCheckResultLayoutTest extends TestCase
 
     public function test_a_browser_without_javascript_sees_every_panel(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -536,13 +536,13 @@ class HealthCheckResultLayoutTest extends TestCase
     /** An emergency result shows the no-products conclusion in its own outcome surface. */
     public function test_the_no_products_notice_is_a_conclusion_not_a_bare_paragraph(): void
     {
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'outcome' => 'emergency',
             'suggested_products' => [],
         ]);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee('class="health-no-products health-no-products--emergency"', false)
             ->assertSee(__('messages.health.no_products_title'))
@@ -560,13 +560,13 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_flat_panes_on_an_emergency_page_keep_a_gap_between_them(): void
     {
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'outcome' => 'emergency',
             'suggested_products' => [],
         ]);
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -586,7 +586,7 @@ class HealthCheckResultLayoutTest extends TestCase
     {
         // Anchored on the element: the selector for the rule is inline CSS in <head>,
         // and a bare substring check would find it on every page.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.result', $this->completedSession()->MaSL))
             ->assertOk()
             ->assertDontSee('class="health-hub mt-4 health-hub--flat"', false);
@@ -603,13 +603,13 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_emergency_notice_keeps_its_icon_on_the_first_line(): void
     {
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'outcome' => 'emergency',
             'suggested_products' => [],
         ]);
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -625,10 +625,10 @@ class HealthCheckResultLayoutTest extends TestCase
 
     public function test_the_print_block_shows_every_panel_and_drops_the_tab_bar(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -652,11 +652,11 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_poller_swaps_the_briefing_pane_instead_of_reloading(): void
     {
-        $session = $this->completedSession(['ai_briefing_status' => null]);
-        $this->queuedBriefing($session);
+        $phien = $this->completedSession(['ai_briefing_status' => null]);
+        $this->queuedBriefing($phien);
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -681,11 +681,11 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_poller_moves_the_briefing_products_into_the_care_tab(): void
     {
-        $session = $this->completedSession(['ai_briefing_status' => null]);
-        $this->queuedBriefing($session);
+        $phien = $this->completedSession(['ai_briefing_status' => null]);
+        $this->queuedBriefing($phien);
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -706,10 +706,10 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_medicines_grid_sits_in_its_own_swap_target(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -722,11 +722,11 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     public function test_the_poller_carries_the_briefing_pane_url(): void
     {
-        $session = $this->completedSession(['ai_briefing_status' => null]);
-        $this->queuedBriefing($session);
+        $phien = $this->completedSession(['ai_briefing_status' => null]);
+        $this->queuedBriefing($phien);
 
-        $content = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->getContent();
 
@@ -740,7 +740,7 @@ class HealthCheckResultLayoutTest extends TestCase
 
         $this->assertNotNull($briefing, 'The briefing job must be among the poll jobs.');
         $this->assertSame(
-            route('health.result.briefing-pane', $session->MaSL),
+            route('health.result.briefing-pane', $phien->MaSL),
             $briefing['paneUrl'] ?? null
         );
     }
@@ -748,14 +748,14 @@ class HealthCheckResultLayoutTest extends TestCase
     /**
      * A queued briefing job, so the page renders a poller for it.
      */
-    protected function queuedBriefing(TriageSession $session): AiJob
+    protected function queuedBriefing(PhienSangLoc $phien): AiJob
     {
         return AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'queued',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
     }
 }

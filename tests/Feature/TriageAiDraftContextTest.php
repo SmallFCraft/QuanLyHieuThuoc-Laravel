@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\TriageSession;
-use App\Models\User;
-use App\Models\UserHealthProfile;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use App\Models\DanhMuc;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use App\Models\HoSoSucKhoe;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -15,9 +15,9 @@ class TriageAiDraftContextTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $pharmacist;
+    protected NguoiDung $pharmacist;
 
-    protected User $customer;
+    protected NguoiDung $customer;
 
     protected function setUp(): void
     {
@@ -27,19 +27,19 @@ class TriageAiDraftContextTest extends TestCase
 
         config()->set('chatbot.ai.triage.pharmacist_draft', true);
 
-        Category::create([
+        DanhMuc::create([
             'name' => 'Thuốc giảm đau - Hạ sốt',
             'description' => 'Giảm đau, hạ sốt',
         ]);
 
-        $this->seed(MedicalKnowledgeSeeder::class);
+        $this->seed(TriThucYTeSeeder::class);
 
-        $this->pharmacist = User::factory()->create([
+        $this->pharmacist = NguoiDung::factory()->create([
             'role' => 'Pharmacist',
             'status' => 'active',
         ]);
 
-        $this->customer = User::factory()->create([
+        $this->customer = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(41)->toDateString(),
@@ -57,7 +57,7 @@ class TriageAiDraftContextTest extends TestCase
     {
         $this->fakeProviderReply();
 
-        UserHealthProfile::create([
+        HoSoSucKhoe::create([
             'MaKH' => $this->customer->MaKH,
             'allergies' => ['aspirin'],
             'chronic_conditions' => ['cao huyết áp'],
@@ -66,7 +66,7 @@ class TriageAiDraftContextTest extends TestCase
             'ai_consent_at' => now(),
         ]);
 
-        TriageSession::create([
+        PhienSangLoc::create([
             'MaKH' => $this->customer->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
@@ -76,7 +76,7 @@ class TriageAiDraftContextTest extends TestCase
             'created_at' => now()->subDays(3),
         ]);
 
-        $currentSession = TriageSession::create([
+        $currentSession = PhienSangLoc::create([
             'MaKH' => $this->customer->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
@@ -115,7 +115,7 @@ class TriageAiDraftContextTest extends TestCase
     {
         $this->fakeProviderReply();
 
-        UserHealthProfile::create([
+        HoSoSucKhoe::create([
             'MaKH' => $this->customer->MaKH,
             'allergies' => ['amoxicillin'],
             'chronic_conditions' => ['tiểu đường'],
@@ -124,7 +124,7 @@ class TriageAiDraftContextTest extends TestCase
             'ai_consent_at' => null,
         ]);
 
-        TriageSession::create([
+        PhienSangLoc::create([
             'MaKH' => $this->customer->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
@@ -134,7 +134,7 @@ class TriageAiDraftContextTest extends TestCase
             'created_at' => now()->subDays(2),
         ]);
 
-        $currentSession = TriageSession::create([
+        $currentSession = PhienSangLoc::create([
             'MaKH' => $this->customer->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
@@ -172,7 +172,7 @@ class TriageAiDraftContextTest extends TestCase
     {
         $this->fakeProviderReply();
 
-        $session = TriageSession::create([
+        $phien = PhienSangLoc::create([
             'MaKH' => $this->customer->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
@@ -186,7 +186,7 @@ class TriageAiDraftContextTest extends TestCase
         ]);
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.draft', $session->MaSL));
+            ->post(route('pharmacist.triage.draft', $phien->MaSL));
 
         Http::assertSent(function ($request) {
             $userContent = collect($request->data()['messages'] ?? [])

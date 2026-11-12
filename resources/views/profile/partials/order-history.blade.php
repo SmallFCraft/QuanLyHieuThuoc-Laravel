@@ -10,7 +10,7 @@
     @php
         // 5 đơn mỗi trang: khối này nằm trong một tab nên phân trang dài sẽ đẩy các
         // tab còn lại xuống ngoài màn hình.
-        $orders = auth()->user()->orders()->with('items.product')->latest()->paginate(5);
+        $orders = auth()->user()->donHangs()->with('chiTietDonHangs.sanPham')->latest()->paginate(5);
     @endphp
 
     @forelse($orders as $order)
@@ -47,7 +47,7 @@
                                     <i class="bi bi-calendar3 me-1"></i>{{ $order->created_at->format('d/m/Y H:i') }}
                                 </span>
                                 <span class="d-inline-flex align-items-center">
-                                    <i class="bi bi-box-seam me-1"></i>{{ $order->items->count() }} {{ __('messages.profile.product_count') }}
+                                    <i class="bi bi-box-seam me-1"></i>{{ $order->chiTietDonHangs->count() }} {{ __('messages.profile.product_count') }}
                                 </span>
                             </div>
                         </div>
@@ -161,17 +161,17 @@
                             <i class="bi bi-box-seam text-emerald-600 me-2"></i>{{ __('messages.profile.purchased_products') }}
                         </h6>
                         <div class="rounded-3 rounded-md-4 border overflow-hidden mb-3 mb-md-4 shadow-sm" style="border-color: rgba(16,185,129,0.15) !important;">
-                            @foreach($order->items as $item)
+                            @foreach($order->chiTietDonHangs as $item)
                                 <div class="d-flex align-items-center gap-2 gap-md-3 p-2 p-md-3 {{ !$loop->last ? 'border-bottom' : '' }}" style="border-color: rgba(16,185,129,0.1) !important; background: rgba(255,255,255,0.7);">
-                                    @if($item->product)
-                                        <a href="{{ route('products.show', $item->product->MaSP) }}"
+                                    @if($item->sanPham)
+                                        <a href="{{ route('products.show', $item->sanPham->MaSP) }}"
                                            class="position-relative bg-white rounded-2 rounded-md-3 overflow-hidden flex-shrink-0 border d-block"
                                            style="width: 48px; height: 48px; border-color: rgba(0,0,0,0.05) !important;"
                                            data-product-image-container
-                                           aria-label="{{ __('messages.view_details') }}: {{ $item->product->name }}">
+                                           aria-label="{{ __('messages.view_details') }}: {{ $item->sanPham->name }}">
                                             <x-product-image
-                                                :src="$item->product->image_url"
-                                                :alt="$item->product->name"
+                                                :src="$item->sanPham->image_url"
+                                                :alt="$item->sanPham->name"
                                                 class="w-100 h-100 object-fit-contain p-1"
                                                 icon-size="1rem"
                                             />
@@ -187,11 +187,11 @@
                                         </div>
                                     @endif
                                     <div class="flex-grow-1 min-w-0">
-                                        @if($item->product)
-                                            <a href="{{ route('products.show', $item->product->MaSP) }}"
+                                        @if($item->sanPham)
+                                            <a href="{{ route('products.show', $item->sanPham->MaSP) }}"
                                                class="fw-bold text-gray-800 mb-1 text-truncate text-decoration-none d-block"
                                                style="font-size: 0.85rem;">
-                                                {{ $item->product->name }}
+                                                {{ $item->sanPham->name }}
                                             </a>
                                         @else
                                             <p class="fw-bold text-gray-800 mb-1 text-truncate" style="font-size: 0.85rem;">{{ __('messages.profile.product_not_exist') }}</p>

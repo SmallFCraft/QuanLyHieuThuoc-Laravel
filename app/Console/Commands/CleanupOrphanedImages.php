@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Product;
+use App\Models\SanPham;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
@@ -36,7 +36,7 @@ class CleanupOrphanedImages extends Command
 
         $deletedCount = 0;
 
-        Product::onlyTrashed()
+        SanPham::onlyTrashed()
             ->where('deleted_at', '<', $cutoffDate)
             ->whereNotNull('image')
             ->chunkById(100, function ($deletedProducts) use ($disk, &$deletedCount) {

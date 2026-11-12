@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\TriageSession;
-use App\Models\User;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
 use App\Services\Triage\MedicalTriageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -24,19 +24,19 @@ class TriageDisclaimerPopupTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
     }
 
-    protected function completedSession(array $attributes = []): TriageSession
+    protected function completedSession(array $attributes = []): PhienSangLoc
     {
-        return TriageSession::create(array_merge([
-            'MaKH' => $this->user->MaKH,
+        return PhienSangLoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -48,7 +48,7 @@ class TriageDisclaimerPopupTest extends TestCase
 
     public function test_the_popup_shows_on_the_first_visit_of_the_day(): void
     {
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             // role="dialog", not data-disclaimer-popup: the latter also appears inside the
@@ -66,19 +66,19 @@ class TriageDisclaimerPopupTest extends TestCase
         // Escape and a scrim click mean "not now", so they must not write the daily flag —
         // but the result page reloads itself when a polled AI job lands. The close handler
         // records the refusal in the URL so those reloads do not re-steal focus.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check', ['disclaimer' => 0]))
             ->assertOk()
             ->assertDontSee('data-disclaimer-popup', false);
 
         // Nothing was persisted: a fresh visit asks again.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             ->assertSee('role="dialog"', false);
 
         $this->assertFalse(Cache::has(
-            "triage:disclaimer_ack:{$this->user->MaKH}:" . today()->toDateString()
+            "triage:disclaimer_ack:{$this->nguoiDung->MaKH}:" . today()->toDateString()
         ));
     }
 
@@ -90,7 +90,7 @@ class TriageDisclaimerPopupTest extends TestCase
         // Anchored on the href, not the label: "Xem lại" also appears in a CSS comment in
         // the styles partial, which @stack('styles') puts in <head>, so asserting the
         // label alone passes with the link deleted.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             ->assertSee('data-disclaimer-popup', false)
@@ -104,10 +104,10 @@ class TriageDisclaimerPopupTest extends TestCase
         // @media print rule that brings the full text back for the clinic copy. Without an
         // anchor on it, the notice could regress to the always-visible banner — or lose the
         // printout — with the suite green.
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        foreach ([route('health.check'), route('health.result', $session->MaSL)] as $url) {
-            $this->actingAs($this->user)
+        foreach ([route('health.check'), route('health.result', $phien->MaSL)] as $url) {
+            $this->actingAs($this->nguoiDung)
                 ->get($url)
                 ->assertOk()
                 ->assertSee('class="health-disclaimer__body', false);
@@ -120,15 +120,15 @@ class TriageDisclaimerPopupTest extends TestCase
 
     public function test_the_popup_does_not_return_after_it_is_dismissed(): void
     {
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertSee('data-disclaimer-popup', false);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->post(route('health.disclaimer.ack'))
             ->assertRedirect(route('health.check'));
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             ->assertDontSee('data-disclaimer-popup', false);
@@ -136,12 +136,12 @@ class TriageDisclaimerPopupTest extends TestCase
 
     public function test_the_scope_notice_survives_dismissal_in_full_on_both_pages(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $this->actingAs($this->user)->post(route('health.disclaimer.ack'));
+        $this->actingAs($this->nguoiDung)->post(route('health.disclaimer.ack'));
 
-        foreach ([route('health.check'), route('health.result', $session->MaSL)] as $url) {
-            $this->actingAs($this->user)
+        foreach ([route('health.check'), route('health.result', $phien->MaSL)] as $url) {
+            $this->actingAs($this->nguoiDung)
                 ->get($url)
                 ->assertOk()
                 ->assertDontSee('data-disclaimer-popup', false)
@@ -158,15 +158,15 @@ class TriageDisclaimerPopupTest extends TestCase
 
     public function test_the_review_link_reopens_the_popup_without_clearing_the_daily_flag(): void
     {
-        $this->actingAs($this->user)->post(route('health.disclaimer.ack'));
+        $this->actingAs($this->nguoiDung)->post(route('health.disclaimer.ack'));
 
         // Reopening is a read: the popup comes back for this request only.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check', ['disclaimer' => 1]))
             ->assertOk()
             ->assertSee('data-disclaimer-popup', false);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             ->assertDontSee('data-disclaimer-popup', false);
@@ -174,12 +174,12 @@ class TriageDisclaimerPopupTest extends TestCase
 
     public function test_the_review_link_also_reopens_it_on_the_result_page(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $this->actingAs($this->user)->post(route('health.disclaimer.ack'));
+        $this->actingAs($this->nguoiDung)->post(route('health.disclaimer.ack'));
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', ['MaSL' => $session->MaSL, 'disclaimer' => 1]))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', ['MaSL' => $phien->MaSL, 'disclaimer' => 1]))
             ->assertOk()
             ->assertSee('data-disclaimer-popup', false);
     }
@@ -188,26 +188,26 @@ class TriageDisclaimerPopupTest extends TestCase
     {
         // The tel:115 button is the only action on that page. Not even an explicit
         // request may put a dismissible sheet over it.
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'outcome' => 'emergency',
             'advice_given' => 'Anh/chị gọi ngay 115.',
         ]);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', ['MaSL' => $session->MaSL, 'disclaimer' => 1]))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', ['MaSL' => $phien->MaSL, 'disclaimer' => 1]))
             ->assertOk()
             ->assertDontSee('data-disclaimer-popup', false);
     }
 
     public function test_the_popup_returns_the_next_day(): void
     {
-        $this->actingAs($this->user)->post(route('health.disclaimer.ack'));
+        $this->actingAs($this->nguoiDung)->post(route('health.disclaimer.ack'));
 
         // The calendar day is in the cache key, so tomorrow is a different key regardless
         // of how much of the TTL is left.
         $this->travel(1)->day();
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             ->assertSee('data-disclaimer-popup', false);
@@ -220,15 +220,15 @@ class TriageDisclaimerPopupTest extends TestCase
         // The producer of the MaSL field is the @include's argument on the result page.
         // POSTing MaSL directly leaves that wiring untested, so render it first and post
         // exactly what the page emits.
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
-            ->assertSee('name="MaSL" value="' . $session->MaSL . '"', false);
+            ->assertSee('name="MaSL" value="' . $phien->MaSL . '"', false);
 
         // And the check page has no session id to wire, so it must not invent one.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             ->assertDontSee('name="MaSL"', false);
@@ -236,11 +236,11 @@ class TriageDisclaimerPopupTest extends TestCase
 
     public function test_dismissing_from_the_result_page_returns_to_it(): void
     {
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
-        $this->actingAs($this->user)
-            ->post(route('health.disclaimer.ack'), ['MaSL' => $session->MaSL])
-            ->assertRedirect(route('health.result', $session->MaSL));
+        $this->actingAs($this->nguoiDung)
+            ->post(route('health.disclaimer.ack'), ['MaSL' => $phien->MaSL])
+            ->assertRedirect(route('health.result', $phien->MaSL));
     }
 
     public function test_a_junk_session_id_is_rejected_rather_than_producing_a_broken_url(): void
@@ -248,13 +248,13 @@ class TriageDisclaimerPopupTest extends TestCase
         // 0 and negatives pass a bare `integer` rule and generate URLs that only 404 on
         // arrival, so min:1 rejects them at the door instead.
         foreach ([0, -5] as $junk) {
-            $this->actingAs($this->user)
+            $this->actingAs($this->nguoiDung)
                 ->post(route('health.disclaimer.ack'), ['MaSL' => $junk])
                 ->assertSessionHasErrors('MaSL');
         }
 
         // Rejected input must not have silenced the popup either.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             ->assertSee('data-disclaimer-popup', false);
@@ -265,7 +265,7 @@ class TriageDisclaimerPopupTest extends TestCase
         // ConvertEmptyStringsToNull turns '' into null before validation, so a stray
         // empty hidden input takes the "no MaSL" branch rather than reaching route(),
         // which would throw UrlGenerationException and 500.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->post(route('health.disclaimer.ack'), ['MaSL' => ''])
             ->assertRedirect(route('health.check'));
     }
@@ -274,8 +274,8 @@ class TriageDisclaimerPopupTest extends TestCase
     {
         // The redirect is built from a named route and an integer, so there is no
         // open-redirect surface; result() then 404s because it scopes by MaKH.
-        $other = User::factory()->create(['role' => 'User', 'status' => 'active']);
-        $theirs = TriageSession::create([
+        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $theirs = PhienSangLoc::create([
             'MaKH' => $other->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
@@ -285,11 +285,11 @@ class TriageDisclaimerPopupTest extends TestCase
             'collected_data' => ['raw_symptom_text' => 'x'],
         ]);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->post(route('health.disclaimer.ack'), ['MaSL' => $theirs->MaSL])
             ->assertRedirect(route('health.result', $theirs->MaSL));
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('health.result', $theirs->MaSL))
             ->assertNotFound();
     }
@@ -300,13 +300,13 @@ class TriageDisclaimerPopupTest extends TestCase
         // not share the viewport with it. The notice itself still renders — and because
         // there is no popup to reopen, it renders inline rather than offering a "Xem lại"
         // link to nothing.
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'outcome' => 'emergency',
             'advice_given' => 'Anh/chị gọi ngay 115.',
         ]);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertDontSee('data-disclaimer-popup', false)
             ->assertSee(__('messages.health.disclaimer_body'))
@@ -318,9 +318,9 @@ class TriageDisclaimerPopupTest extends TestCase
     {
         // The shared in-store tablet case, and the assertion a cookie or localStorage
         // design cannot pass.
-        $other = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
 
-        $this->actingAs($this->user)->post(route('health.disclaimer.ack'));
+        $this->actingAs($this->nguoiDung)->post(route('health.disclaimer.ack'));
 
         $this->actingAs($other)
             ->get(route('health.check'))
@@ -330,10 +330,10 @@ class TriageDisclaimerPopupTest extends TestCase
 
     public function test_the_acknowledgement_is_keyed_per_user_and_per_day(): void
     {
-        $this->actingAs($this->user)->post(route('health.disclaimer.ack'));
+        $this->actingAs($this->nguoiDung)->post(route('health.disclaimer.ack'));
 
         $this->assertTrue(Cache::has(
-            "triage:disclaimer_ack:{$this->user->MaKH}:" . today()->toDateString()
+            "triage:disclaimer_ack:{$this->nguoiDung->MaKH}:" . today()->toDateString()
         ));
     }
 
@@ -342,12 +342,12 @@ class TriageDisclaimerPopupTest extends TestCase
         // The non-nagging invariant the controller's own comment claims: the popup is
         // built only in index()'s terminal return, so no AJAX step swap can re-render it
         // mid-wizard and re-steal focus. The swapped payload is HTML for [data-triage-stage].
-        $this->actingAs($this->user)->get(route('health.check'));
-        $session = TriageSession::where('MaKH', $this->user->MaKH)->inProgress()->firstOrFail();
+        $this->actingAs($this->nguoiDung)->get(route('health.check'));
+        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->firstOrFail();
 
-        $response = $this->actingAs($this->user)
+        $response = $this->actingAs($this->nguoiDung)
             ->postJson(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+                'triage_session_id' => $phien->MaSL,
                 'step' => 1,
                 'answer' => 'đau đầu',
             ])

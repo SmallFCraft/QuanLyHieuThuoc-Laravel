@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\TriageSession;
-use App\Models\User;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
 use App\Services\Triage\MedicalTriageService;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -25,21 +25,21 @@ class TriageGoldenEvaluationTest extends TestCase
     use RefreshDatabase;
 
     protected MedicalTriageService $service;
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Category::create([
+        DanhMuc::create([
             'name' => 'Thuốc giảm đau - Hạ sốt',
             'description' => 'Giảm đau, hạ sốt',
         ]);
 
-        $this->seed(MedicalKnowledgeSeeder::class);
+        $this->seed(TriThucYTeSeeder::class);
         $this->service = app(MedicalTriageService::class);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(30)->toDateString(),
@@ -48,13 +48,13 @@ class TriageGoldenEvaluationTest extends TestCase
 
     protected function runGoldenCase(array $answers): array
     {
-        $session = $this->service->startOrResume($this->user->MaKH);
+        $phien = $this->service->startOrResume($this->nguoiDung->MaKH);
 
         foreach ($answers as $step => $answer) {
-            $session = $this->service->recordAnswer($session->fresh(), $step, $answer);
+            $phien = $this->service->recordAnswer($phien->fresh(), $step, $answer);
         }
 
-        return $this->service->evaluate($session->fresh());
+        return $this->service->evaluate($phien->fresh());
     }
 
     /**

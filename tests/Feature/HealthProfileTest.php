@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\AuditLog;
-use App\Models\TriageSession;
-use App\Models\User;
-use App\Models\UserHealthProfile;
+use App\Models\NhatKyKiemToan;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use App\Models\HoSoSucKhoe;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -39,69 +39,69 @@ class HealthProfileTest extends TestCase
 
     public function test_user_can_create_health_profile(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $response = $this->actingAs($user)->put(route('profile.health.update'), $this->payload());
+        $response = $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload());
 
         $response->assertSessionHasNoErrors()
             ->assertRedirect(route('profile.edit') . '#health-profile');
 
-        $profile = UserHealthProfile::where('MaKH', $user->MaKH)->firstOrFail();
+        $hoSo = HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail();
 
-        $this->assertSame(['Paracetamol', 'Penicillin'], $profile->allergies);
-        $this->assertSame(['loét dạ dày'], $profile->chronic_conditions);
-        $this->assertSame(['Amoxicillin 500mg'], $profile->current_medications);
-        $this->assertFalse($profile->is_pregnant);
-        $this->assertFalse($profile->is_breastfeeding);
-        $this->assertSame(62.5, $profile->weight_kg);
-        $this->assertSame('Từng bị nổi mề đay khi dùng kháng sinh.', $profile->notes);
+        $this->assertSame(['Paracetamol', 'Penicillin'], $hoSo->allergies);
+        $this->assertSame(['loét dạ dày'], $hoSo->chronic_conditions);
+        $this->assertSame(['Amoxicillin 500mg'], $hoSo->current_medications);
+        $this->assertFalse($hoSo->is_pregnant);
+        $this->assertFalse($hoSo->is_breastfeeding);
+        $this->assertSame(62.5, $hoSo->weight_kg);
+        $this->assertSame('Từng bị nổi mề đay khi dùng kháng sinh.', $hoSo->notes);
     }
 
     public function test_existing_profile_is_updated_not_duplicated(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload());
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload([
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload());
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload([
             'allergies' => ['Aspirin'],
         ]));
 
         $this->assertDatabaseCount('user_health_profiles', 1);
-        $this->assertSame(['Aspirin'], UserHealthProfile::where('MaKH', $user->MaKH)->first()->allergies);
+        $this->assertSame(['Aspirin'], HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->first()->allergies);
     }
 
     public function test_consent_checkbox_controls_consented_at(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload());
-        $this->assertNotNull(UserHealthProfile::where('MaKH', $user->MaKH)->first()->consented_at);
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload());
+        $this->assertNotNull(HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->first()->consented_at);
 
         $withoutConsent = $this->payload();
         unset($withoutConsent['consent']);
 
-        $this->actingAs($user)->put(route('profile.health.update'), $withoutConsent);
-        $this->assertNull(UserHealthProfile::where('MaKH', $user->MaKH)->first()->consented_at);
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $withoutConsent);
+        $this->assertNull(HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->first()->consented_at);
     }
 
     public function test_unconsented_profile_is_excluded_by_consented_scope(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
         $withoutConsent = $this->payload();
         unset($withoutConsent['consent']);
 
-        $this->actingAs($user)->put(route('profile.health.update'), $withoutConsent);
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $withoutConsent);
 
-        $this->assertNull(UserHealthProfile::where('MaKH', $user->MaKH)->consented()->first());
+        $this->assertNull(HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->consented()->first());
     }
 
     public function test_health_data_is_encrypted_at_rest(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload());
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload());
 
-        $row = DB::table('user_health_profiles')->where('MaKH', $user->MaKH)->first();
+        $row = DB::table('user_health_profiles')->where('MaKH', $nguoiDung->MaKH)->first();
 
         $this->assertStringNotContainsString('Paracetamol', $row->allergies);
         $this->assertStringNotContainsString('Penicillin', $row->allergies);
@@ -112,8 +112,8 @@ class HealthProfileTest extends TestCase
 
     public function test_user_cannot_touch_another_users_profile(): void
     {
-        $userA = User::factory()->create();
-        $userB = User::factory()->create();
+        $userA = NguoiDung::factory()->create();
+        $userB = NguoiDung::factory()->create();
 
         $this->actingAs($userB)->put(route('profile.health.update'), $this->payload([
             'allergies' => ['Ibuprofen'],
@@ -123,8 +123,8 @@ class HealthProfileTest extends TestCase
             'allergies' => ['Aspirin'],
         ]));
 
-        $this->assertSame(['Ibuprofen'], UserHealthProfile::where('MaKH', $userB->MaKH)->first()->allergies);
-        $this->assertSame(['Aspirin'], UserHealthProfile::where('MaKH', $userA->MaKH)->first()->allergies);
+        $this->assertSame(['Ibuprofen'], HoSoSucKhoe::where('MaKH', $userB->MaKH)->first()->allergies);
+        $this->assertSame(['Aspirin'], HoSoSucKhoe::where('MaKH', $userA->MaKH)->first()->allergies);
 
         $this->actingAs($userA)->delete(route('profile.health.destroy'));
 
@@ -134,41 +134,41 @@ class HealthProfileTest extends TestCase
 
     public function test_known_terms_merges_all_lists_in_lowercase(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload([
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload([
             'allergies' => ['Paracetamol', 'Paracetamol'],
             'chronic_conditions' => ['Loét Dạ Dày'],
             'current_medications' => ['Amoxicillin'],
         ]));
 
-        $terms = UserHealthProfile::where('MaKH', $user->MaKH)->first()->knownTerms();
+        $terms = HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->first()->knownTerms();
 
         $this->assertSame(['paracetamol', 'loét dạ dày', 'amoxicillin'], $terms);
     }
 
     public function test_profile_can_be_deleted_and_is_audited(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload());
+        $nguoiDung = NguoiDung::factory()->create();
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload());
 
-        $response = $this->actingAs($user)->delete(route('profile.health.destroy'));
+        $response = $this->actingAs($nguoiDung)->delete(route('profile.health.destroy'));
 
         $response->assertRedirect(route('profile.edit') . '#health-profile');
         $this->assertDatabaseCount('user_health_profiles', 0);
         $this->assertDatabaseHas('audit_logs', [
-            'MaKH' => $user->MaKH,
+            'MaKH' => $nguoiDung->MaKH,
             'action' => 'health_profile_deleted',
         ]);
     }
 
     public function test_update_is_audited_without_raw_health_content(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload());
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload());
 
-        $log = AuditLog::where('action', 'health_profile_updated')->firstOrFail();
+        $log = NhatKyKiemToan::where('action', 'health_profile_updated')->firstOrFail();
         $serialized = json_encode($log->getAttributes(), JSON_UNESCAPED_UNICODE);
 
         $this->assertStringNotContainsString('Paracetamol', $serialized);
@@ -182,9 +182,9 @@ class HealthProfileTest extends TestCase
 
     public function test_more_than_thirty_items_is_rejected(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $response = $this->actingAs($user)->put(route('profile.health.update'), $this->payload([
+        $response = $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload([
             'allergies' => array_map(fn (int $i) => "Chat so {$i}", range(1, 31)),
         ]));
 
@@ -194,9 +194,9 @@ class HealthProfileTest extends TestCase
 
     public function test_item_longer_than_120_characters_is_rejected(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $response = $this->actingAs($user)->put(route('profile.health.update'), $this->payload([
+        $response = $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload([
             'allergies' => [str_repeat('a', 121)],
         ]));
 
@@ -206,24 +206,24 @@ class HealthProfileTest extends TestCase
 
     public function test_blank_items_are_dropped_and_values_trimmed(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload([
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload([
             'allergies' => ['  Aspirin  ', '', '   '],
         ]));
 
-        $this->assertSame(['Aspirin'], UserHealthProfile::where('MaKH', $user->MaKH)->first()->allergies);
+        $this->assertSame(['Aspirin'], HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->first()->allergies);
     }
 
     public function test_weight_out_of_range_is_rejected(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $this->actingAs($user)
+        $this->actingAs($nguoiDung)
             ->put(route('profile.health.update'), $this->payload(['weight_kg' => '501']))
             ->assertSessionHasErrors('weight_kg');
 
-        $this->actingAs($user)
+        $this->actingAs($nguoiDung)
             ->put(route('profile.health.update'), $this->payload(['weight_kg' => '0.5']))
             ->assertSessionHasErrors('weight_kg');
     }
@@ -253,53 +253,53 @@ class HealthProfileTest extends TestCase
     #[DataProvider('negationTermProvider')]
     public function test_a_negation_only_allergy_is_not_stored(string $term): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $this->actingAs($user)->put(route('profile.health.update'), $this->payload([
+        $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload([
             'allergies' => [$term],
         ]));
 
-        $this->assertSame([], UserHealthProfile::where('MaKH', $user->MaKH)->first()->allergies, $term);
+        $this->assertSame([], HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->first()->allergies, $term);
     }
 
     public function test_known_terms_drops_negation_placeholders(): void
     {
         // The reader is cleaned too, not just the writer: rows written before the request
         // filter existed still carry the junk.
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
-        $profile = UserHealthProfile::create([
-            'MaKH' => $user->MaKH,
+        $hoSo = HoSoSucKhoe::create([
+            'MaKH' => $nguoiDung->MaKH,
             'allergies' => ['Không', 'Paracetamol'],
             'consented_at' => now(),
         ]);
 
-        $this->assertSame(['paracetamol'], $profile->knownTerms());
+        $this->assertSame(['paracetamol'], $hoSo->knownTerms());
     }
 
     public function test_a_negation_only_profile_does_not_suppress_the_history_step(): void
     {
-        $user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
 
-        UserHealthProfile::create([
-            'MaKH' => $user->MaKH,
+        HoSoSucKhoe::create([
+            'MaKH' => $nguoiDung->MaKH,
             'allergies' => ['Không'],
             'consented_at' => now(),
         ]);
 
-        $this->actingAs($user)->get(route('health.check'));
-        $session = TriageSession::where('MaKH', $user->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        $this->actingAs($nguoiDung)->get(route('health.check'));
+        $phien = PhienSangLoc::where('MaKH', $nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
 
         foreach ([1 => 'đau đầu', 2 => 'hôm nay', 3 => 'chưa dùng gì'] as $step => $answer) {
-            $this->actingAs($user)->post(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+            $this->actingAs($nguoiDung)->post(route('health.answer'), [
+                'triage_session_id' => $phien->MaSL,
                 'step' => $step,
                 'answer' => $answer,
             ]);
         }
 
         // Step 4 must be the next question, not skipped as "already known".
-        $this->actingAs($user)
+        $this->actingAs($nguoiDung)
             ->get(route('health.check'))
             ->assertOk()
             ->assertSee('Anh/chị có bệnh nền, dị ứng thuốc, hoặc đang mang thai / cho con bú không ạ?', false);

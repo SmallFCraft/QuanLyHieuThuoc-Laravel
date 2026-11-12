@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Product;
+use App\Models\SanPham;
 use App\Services\VoiceSearchNormalizer;
 use Illuminate\Console\Command;
 
@@ -103,11 +103,11 @@ class EvalVoiceSearch extends Command
     /** @return array<int, int> */
     private function ids(string $query): array
     {
-        if (trim($query) === '' || Product::searchWords($query) === []) {
+        if (trim($query) === '' || SanPham::searchWords($query) === []) {
             return [];
         }
 
-        return Product::notExpired()->storefrontSearch($query)->limit(500)->pluck('MaSP')->all();
+        return SanPham::notExpired()->storefrontSearch($query)->limit(500)->pluck('MaSP')->all();
     }
 
     private function render(

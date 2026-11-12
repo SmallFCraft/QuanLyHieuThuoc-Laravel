@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Order;
-use App\Models\Product;
+use App\Models\DonHang;
+use App\Models\SanPham;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -17,7 +17,7 @@ class DashboardService
         $startOfMonth = Carbon::now()->startOfMonth();
         $endOfMonth = Carbon::now()->endOfMonth();
 
-        return Order::whereBetween('created_at', [$startOfMonth, $endOfMonth])
+        return DonHang::whereBetween('created_at', [$startOfMonth, $endOfMonth])
             ->whereIn('status', ['Delivering', 'Completed'])
             ->sum('total_amount');
     }
@@ -27,7 +27,7 @@ class DashboardService
      */
     public function getOrderCountsByStatus(): array
     {
-        $counts = Order::select('status', DB::raw('count(*) as count'))
+        $counts = DonHang::select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status')
             ->toArray();
@@ -50,7 +50,7 @@ class DashboardService
         $today = Carbon::today();
         $futureDate = Carbon::today()->addDays($days);
 
-        return Product::whereBetween('expiration_date', [$today, $futureDate])
+        return SanPham::whereBetween('expiration_date', [$today, $futureDate])
             ->where('stock_quantity', '>', 0)
             ->count();
     }
@@ -60,7 +60,7 @@ class DashboardService
      */
     public function getLowStockCount(): int
     {
-        return Product::whereColumn('stock_quantity', '<=', 'reorder_point')
+        return SanPham::whereColumn('stock_quantity', '<=', 'reorder_point')
             ->count();
     }
 
@@ -72,7 +72,7 @@ class DashboardService
         $startDate = Carbon::today()->subDays($days - 1)->startOfDay();
         $endDate = Carbon::today()->endOfDay();
 
-        $revenues = Order::select(
+        $revenues = DonHang::select(
                 DB::raw('DATE(created_at) as date'),
                 DB::raw('SUM(total_amount) as revenue')
             )

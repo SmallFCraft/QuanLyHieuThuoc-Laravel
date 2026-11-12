@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Pharmacist;
 
 use App\Http\Controllers\Controller;
-use App\Models\ChatMessage;
-use App\Models\MedicalSymptom;
-use App\Models\TriageSession;
-use App\Models\UserHealthProfile;
+use App\Models\TinNhanChat;
+use App\Models\TrieuChungYTe;
+use App\Models\PhienSangLoc;
+use App\Models\HoSoSucKhoe;
 use App\Services\AuditLogService;
 use App\Services\Triage\Ai\TriageAiDraftService;
 use Illuminate\Http\RedirectResponse;
@@ -40,14 +40,14 @@ class TriageQueueController extends Controller
 
     public function index(Request $request): View
     {
-        $sessions = TriageSession::with('user')
+        $cacPhien = PhienSangLoc::with('nguoiDung')
             ->pendingPharmacist()
             ->oldest('created_at')
             ->oldest('MaSL')
             ->paginate(15)
             ->withQueryString();
 
-        $pendingStats = TriageSession::pendingPharmacist()
+        $pendingStats = PhienSangLoc::pendingPharmacist()
             ->selectRaw('COUNT(*) as total, MIN(created_at) as oldest')
             ->first();
 
@@ -55,10 +55,10 @@ class TriageQueueController extends Controller
         $oldestPendingAt = $pendingStats?->oldest;
 
         return view('pharmacist.triage.index', [
-            'sessions' => $sessions,
+            'sessions' => $cacPhien,
             'pendingCount' => $pendingCount,
             'oldestPendingAt' => $oldestPendingAt ? \Illuminate\Support\Carbon::parse($oldestPendingAt) : null,
-            'handledToday' => TriageSession::where('pharmacist_id', (int) auth()->id())
+            'handledToday' => PhienSangLoc::where('pharmacist_id', (int) auth()->id())
                 ->whereDate('reviewed_at', today())
                 ->count(),
         ]);
@@ -69,29 +69,29 @@ class TriageQueueController extends Controller
         // Only cases that actually entered the queue. Without this filter any
         // pharmacist could walk MaSL=1..N and read the health profile of every
         // customer, including sessions still being filled in.
-        $session = TriageSession::with(['user', 'pharmacist'])
+        $phien = PhienSangLoc::with(['nguoiDung', 'pharmacist'])
             ->whereIn('status', self::REVIEWABLE_STATUSES)
             ->where('MaSL', $MaSL)
             ->firstOrFail();
 
-        $profile = UserHealthProfile::consentedFor((int) $session->MaKH);
+        $hoSo = HoSoSucKhoe::consentedFor((int) $phien->MaKH);
 
         // Reading someone's health data is auditable every single time, not once.
-        if ($profile) {
+        if ($hoSo) {
             app(AuditLogService::class)->log(
                 action: 'health_profile_accessed',
-                modelType: UserHealthProfile::class,
-                modelId: $profile->MaHS,
+                modelType: HoSoSucKhoe::class,
+                modelId: $hoSo->MaHS,
                 oldValues: null,
-                newValues: ['MaSL' => $session->MaSL, 'MaKH' => $session->MaKH]
+                newValues: ['MaSL' => $phien->MaSL, 'MaKH' => $phien->MaKH]
             );
         }
 
         // Same REVIEWABLE_STATUSES as the current case: a session still in progress
         // was never handed to the pharmacist team, so it is not ours to read here.
-        $pastSessions = $session->MaKH
-            ? TriageSession::where('MaKH', $session->MaKH)
-                ->where('MaSL', '!=', $session->MaSL)
+        $pastSessions = $phien->MaKH
+            ? PhienSangLoc::where('MaKH', $phien->MaKH)
+                ->where('MaSL', '!=', $phien->MaSL)
                 ->whereIn('status', self::REVIEWABLE_STATUSES)
                 ->latest('created_at')
                 ->limit(5)
@@ -99,14 +99,14 @@ class TriageQueueController extends Controller
             : collect();
 
         return view('pharmacist.triage.show', [
-            'session' => $session,
+            'session' => $phien,
             'pastSessions' => $pastSessions,
-            'answers' => $this->labelledAnswers($session),
-            'skipped' => $this->labelledSkips($session),
-            'symptomNames' => $this->symptomNames($session),
-            'age' => $session->user?->ageInYears(),
-            'profile' => $profile,
-            'isPending' => $session->status === 'pending_pharmacist',
+            'answers' => $this->labelledAnswers($phien),
+            'skipped' => $this->labelledSkips($phien),
+            'symptomNames' => $this->symptomNames($phien),
+            'age' => $phien->nguoiDung?->ageInYears(),
+            'profile' => $hoSo,
+            'isPending' => $phien->status === 'pending_pharmacist',
             'aiDraftEnabled' => $draftService->isEnabled(),
         ]);
     }
@@ -117,17 +117,17 @@ class TriageQueueController extends Controller
         $pharmacistId = (int) auth()->id();
 
         $error = DB::transaction(function () use ($MaSL, $note, $pharmacistId) {
-            $session = TriageSession::lockForUpdate()->findOrFail($MaSL);
+            $phien = PhienSangLoc::lockForUpdate()->findOrFail($MaSL);
 
-            if ($session->status !== 'pending_pharmacist') {
+            if ($phien->status !== 'pending_pharmacist') {
                 return __('messages.pharmacist.error_already_reviewed');
             }
 
-            if ($session->pharmacist_id && $session->pharmacist_id !== $pharmacistId) {
+            if ($phien->pharmacist_id && $phien->pharmacist_id !== $pharmacistId) {
                 return __('messages.pharmacist.error_claimed_by_other');
             }
 
-            $session->fill([
+            $phien->fill([
                 'pharmacist_id' => $pharmacistId,
                 'pharmacist_note' => $note,
                 'reviewed_at' => now(),
@@ -135,16 +135,16 @@ class TriageQueueController extends Controller
             ])->save();
 
             // Mirror the answer into the chat thread so the customer sees a human replied.
-            if ($session->session_id) {
-                ChatMessage::create([
-                    'MaKH' => $session->MaKH,
-                    'session_id' => $session->session_id,
+            if ($phien->session_id) {
+                TinNhanChat::create([
+                    'MaKH' => $phien->MaKH,
+                    'session_id' => $phien->session_id,
                     'role' => 'assistant',
                     'content' => $note,
                     'metadata' => [
                         'reviewed_by_pharmacist' => true,
                         'pharmacist_id' => $pharmacistId,
-                        'triage_session_id' => $session->MaSL,
+                        'triage_session_id' => $phien->MaSL,
                     ],
                     'show_disclaimer' => false,
                 ]);
@@ -152,8 +152,8 @@ class TriageQueueController extends Controller
 
             app(AuditLogService::class)->log(
                 action: 'triage_pharmacist_replied',
-                modelType: TriageSession::class,
-                modelId: $session->MaSL,
+                modelType: PhienSangLoc::class,
+                modelId: $phien->MaSL,
                 oldValues: null,
                 newValues: ['pharmacist_id' => $pharmacistId]
             );
@@ -170,19 +170,19 @@ class TriageQueueController extends Controller
         $pharmacistId = (int) auth()->id();
 
         $error = DB::transaction(function () use ($MaSL, $note, $pharmacistId) {
-            $session = TriageSession::lockForUpdate()->findOrFail($MaSL);
+            $phien = PhienSangLoc::lockForUpdate()->findOrFail($MaSL);
 
-            if ($session->status !== 'pending_pharmacist') {
+            if ($phien->status !== 'pending_pharmacist') {
                 return __('messages.pharmacist.error_already_reviewed');
             }
 
-            if ($session->pharmacist_id && $session->pharmacist_id !== $pharmacistId) {
+            if ($phien->pharmacist_id && $phien->pharmacist_id !== $pharmacistId) {
                 return __('messages.pharmacist.error_claimed_by_other');
             }
 
-            $previousOutcome = $session->outcome;
+            $previousOutcome = $phien->outcome;
 
-            $session->fill([
+            $phien->fill([
                 'pharmacist_id' => $pharmacistId,
                 'pharmacist_note' => $note,
                 'reviewed_at' => now(),
@@ -192,16 +192,16 @@ class TriageQueueController extends Controller
                 'suggested_products' => [],
             ])->save();
 
-            if ($session->session_id) {
-                ChatMessage::create([
-                    'MaKH' => $session->MaKH,
-                    'session_id' => $session->session_id,
+            if ($phien->session_id) {
+                TinNhanChat::create([
+                    'MaKH' => $phien->MaKH,
+                    'session_id' => $phien->session_id,
                     'role' => 'assistant',
                     'content' => $note,
                     'metadata' => [
                         'reviewed_by_pharmacist' => true,
                         'pharmacist_id' => $pharmacistId,
-                        'triage_session_id' => $session->MaSL,
+                        'triage_session_id' => $phien->MaSL,
                         'escalated' => true,
                     ],
                     'show_disclaimer' => false,
@@ -210,8 +210,8 @@ class TriageQueueController extends Controller
 
             app(AuditLogService::class)->log(
                 action: 'triage_escalated',
-                modelType: TriageSession::class,
-                modelId: $session->MaSL,
+                modelType: PhienSangLoc::class,
+                modelId: $phien->MaSL,
                 oldValues: ['outcome' => $previousOutcome],
                 newValues: ['outcome' => 'refer_doctor', 'pharmacist_id' => $pharmacistId]
             );
@@ -231,23 +231,23 @@ class TriageQueueController extends Controller
         $pharmacistId = (int) auth()->id();
 
         $error = DB::transaction(function () use ($MaSL, $pharmacistId) {
-            $session = TriageSession::lockForUpdate()->findOrFail($MaSL);
+            $phien = PhienSangLoc::lockForUpdate()->findOrFail($MaSL);
 
-            if ($session->status !== 'pending_pharmacist') {
+            if ($phien->status !== 'pending_pharmacist') {
                 return __('messages.pharmacist.error_already_reviewed');
             }
 
-            if ($session->pharmacist_id && $session->pharmacist_id !== $pharmacistId) {
+            if ($phien->pharmacist_id && $phien->pharmacist_id !== $pharmacistId) {
                 return __('messages.pharmacist.error_claimed_by_other');
             }
 
-            $session->pharmacist_id = $pharmacistId;
-            $session->save();
+            $phien->pharmacist_id = $pharmacistId;
+            $phien->save();
 
             app(AuditLogService::class)->log(
                 action: 'triage_claimed',
-                modelType: TriageSession::class,
-                modelId: $session->MaSL,
+                modelType: PhienSangLoc::class,
+                modelId: $phien->MaSL,
                 oldValues: null,
                 newValues: ['pharmacist_id' => $pharmacistId]
             );
@@ -274,21 +274,21 @@ class TriageQueueController extends Controller
 
         $pharmacistId = (int) auth()->id();
 
-        $session = TriageSession::whereIn('status', self::REVIEWABLE_STATUSES)
+        $phien = PhienSangLoc::whereIn('status', self::REVIEWABLE_STATUSES)
             ->where('MaSL', $MaSL)
             ->firstOrFail();
 
         // Same gates as reply(): an already-answered or someone else's case must not
         // burn a provider call.
-        if ($session->status !== 'pending_pharmacist') {
+        if ($phien->status !== 'pending_pharmacist') {
             return $this->draftError($MaSL, __('messages.pharmacist.error_already_reviewed'));
         }
 
-        if ($session->pharmacist_id !== $pharmacistId) {
+        if ($phien->pharmacist_id !== $pharmacistId) {
             return $this->draftError($MaSL, __('messages.pharmacist.error_claimed_by_other'));
         }
 
-        $draft = $draftService->draftReply($session, $this->symptomNames($session));
+        $draft = $draftService->draftReply($phien, $this->symptomNames($phien));
 
         if ($draft === null) {
             return $this->draftError($MaSL, __('messages.pharmacist.ai_draft_failed'));
@@ -333,10 +333,10 @@ class TriageQueueController extends Controller
     /**
      * @return array<string, string> Vietnamese label => readable answer
      */
-    protected function labelledAnswers(TriageSession $session): array
+    protected function labelledAnswers(PhienSangLoc $phien): array
     {
-        $data = $session->collected_data ?? [];
-        $answers = [];
+        $data = $phien->collected_data ?? [];
+        $cacCauTraLoi = [];
 
         foreach (self::ANSWER_KEYS as $key) {
             if (!array_key_exists($key, $data)) {
@@ -349,18 +349,18 @@ class TriageQueueController extends Controller
                 continue;
             }
 
-            $answers[__('messages.pharmacist.answer_' . $key)] = $value;
+            $cacCauTraLoi[__('messages.pharmacist.answer_' . $key)] = $value;
         }
 
-        return $answers;
+        return $cacCauTraLoi;
     }
 
     /**
      * @return array<int, string>
      */
-    protected function labelledSkips(TriageSession $session): array
+    protected function labelledSkips(PhienSangLoc $phien): array
     {
-        $skipped = (array) data_get($session->collected_data, 'skipped', []);
+        $skipped = (array) data_get($phien->collected_data, 'skipped', []);
 
         return collect($skipped)
             ->map(fn ($key) => __('messages.pharmacist.answer_' . $key))
@@ -370,15 +370,15 @@ class TriageQueueController extends Controller
     /**
      * Matched symptoms are stored as codes; the pharmacist needs the Vietnamese names.
      */
-    protected function symptomNames(TriageSession $session): array
+    protected function symptomNames(PhienSangLoc $phien): array
     {
-        $codes = array_filter((array) $session->matched_symptoms);
+        $codes = array_filter((array) $phien->matched_symptoms);
 
         if ($codes === []) {
             return [];
         }
 
-        $names = MedicalSymptom::whereIn('code', $codes)->pluck('name_vi', 'code');
+        $names = TrieuChungYTe::whereIn('code', $codes)->pluck('name_vi', 'code');
 
         return collect($codes)->map(fn ($code) => $names[$code] ?? $code)->unique()->values()->all();
     }

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\HealthProfileRequest;
-use App\Models\UserHealthProfile;
+use App\Models\HoSoSucKhoe;
 use App\Services\AuditLogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,33 +20,33 @@ class HealthProfileController extends Controller
     public function update(HealthProfileRequest $request): RedirectResponse
     {
         $userId = auth()->id();
-        $profile = UserHealthProfile::where('MaKH', $userId)->first();
+        $hoSo = HoSoSucKhoe::where('MaKH', $userId)->first();
 
         $attributes = $request->profileAttributes();
         $attributes['consented_at'] = $request->boolean('consent')
-            ? ($profile?->consented_at ?? now())
+            ? ($hoSo?->consented_at ?? now())
             : null;
 
         // Separate from consented_at: an unticked box is a real withdrawal of the
         // AI consent, even when the safety-warning consent below stays ticked.
         $attributes['ai_consent_at'] = $request->boolean('ai_consent')
-            ? ($profile?->ai_consent_at ?? now())
+            ? ($hoSo?->ai_consent_at ?? now())
             : null;
 
-        $changed = $this->changedFields($profile, $attributes);
+        $changed = $this->changedFields($hoSo, $attributes);
 
-        if ($profile) {
-            $profile->fill($attributes)->save();
+        if ($hoSo) {
+            $hoSo->fill($attributes)->save();
         } else {
-            $profile = UserHealthProfile::create($attributes + ['MaKH' => $userId]);
+            $hoSo = HoSoSucKhoe::create($attributes + ['MaKH' => $userId]);
         }
 
         app(AuditLogService::class)->log(
             action: 'health_profile_updated',
-            modelType: UserHealthProfile::class,
-            modelId: $profile->MaHS,
+            modelType: HoSoSucKhoe::class,
+            modelId: $hoSo->MaHS,
             oldValues: null,
-            newValues: $this->safeSummary($profile, $changed),
+            newValues: $this->safeSummary($hoSo, $changed),
         );
 
         return Redirect::to(route('profile.edit') . '#health-profile')
@@ -55,15 +55,15 @@ class HealthProfileController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
-        $profile = UserHealthProfile::where('MaKH', auth()->id())->first();
+        $hoSo = HoSoSucKhoe::where('MaKH', auth()->id())->first();
 
-        if ($profile) {
-            $profileId = $profile->MaHS;
-            $profile->delete();
+        if ($hoSo) {
+            $profileId = $hoSo->MaHS;
+            $hoSo->delete();
 
             app(AuditLogService::class)->log(
                 action: 'health_profile_deleted',
-                modelType: UserHealthProfile::class,
+                modelType: HoSoSucKhoe::class,
                 modelId: $profileId,
                 oldValues: null,
                 newValues: ['MaKH' => auth()->id()],
@@ -79,16 +79,16 @@ class HealthProfileController extends Controller
      *
      * @return array<int, string>
      */
-    protected function changedFields(?UserHealthProfile $profile, array $attributes): array
+    protected function changedFields(?HoSoSucKhoe $hoSo, array $attributes): array
     {
-        if (! $profile) {
+        if (! $hoSo) {
             return array_keys($attributes);
         }
 
         $changed = [];
 
         foreach ($attributes as $field => $value) {
-            $current = $profile->{$field};
+            $current = $hoSo->{$field};
 
             if ($field === 'consented_at' || $field === 'ai_consent_at') {
                 if (($current === null) !== ($value === null)) {
@@ -120,20 +120,20 @@ class HealthProfileController extends Controller
      *
      * @return array<string, mixed>
      */
-    protected function safeSummary(UserHealthProfile $profile, array $changed): array
+    protected function safeSummary(HoSoSucKhoe $hoSo, array $changed): array
     {
         $counts = [];
 
         foreach (self::SENSITIVE_LISTS as $field) {
-            $counts[$field] = count($profile->{$field} ?? []);
+            $counts[$field] = count($hoSo->{$field} ?? []);
         }
 
         return [
-            'MaKH' => $profile->MaKH,
+            'MaKH' => $hoSo->MaKH,
             'changed_fields' => array_values($changed),
             'item_counts' => $counts,
-            'has_notes' => filled($profile->notes),
-            'consented' => $profile->hasConsented(),
+            'has_notes' => filled($hoSo->notes),
+            'consented' => $hoSo->hasConsented(),
         ];
     }
 }

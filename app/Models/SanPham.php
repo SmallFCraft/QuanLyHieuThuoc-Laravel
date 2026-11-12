@@ -12,9 +12,11 @@ use Illuminate\Support\Facades\Storage;
 use App\Traits\Auditable;
 use Carbon\Carbon;
 
-class Product extends Model
+class SanPham extends Model
 {
     use HasFactory, SoftDeletes, Auditable;
+
+    protected $table = 'products';
 
     protected $primaryKey = 'MaSP';
 
@@ -56,28 +58,28 @@ class Product extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (Product $product): void {
-            if (filled($product->product_code) || blank($product->MaDM)) {
+        static::creating(function (SanPham $sanPham): void {
+            if (filled($sanPham->product_code) || blank($sanPham->MaDM)) {
                 return;
             }
 
-            $category = Category::find($product->MaDM);
+            $danhMuc = DanhMuc::find($sanPham->MaDM);
 
-            if ($category instanceof Category) {
-                $product->product_code = ProductCodeGenerator::productCodeForCategory($category);
+            if ($danhMuc instanceof DanhMuc) {
+                $sanPham->product_code = ProductCodeGenerator::productCodeForCategory($danhMuc);
             }
         });
 
         // Kept in sync on every write rather than at the call sites, so a product
         // created by the crawler, the admin form or a factory is searchable the
         // same way.
-        static::saving(function (Product $product): void {
-            if ($product->isDirty('name')) {
-                $product->name_folded = VietnameseText::fold((string) $product->name);
+        static::saving(function (SanPham $sanPham): void {
+            if ($sanPham->isDirty('name')) {
+                $sanPham->name_folded = VietnameseText::fold((string) $sanPham->name);
             }
 
-            if ($product->isDirty('ingredients')) {
-                $product->ingredients_folded = VietnameseText::fold((string) $product->ingredients);
+            if ($sanPham->isDirty('ingredients')) {
+                $sanPham->ingredients_folded = VietnameseText::fold((string) $sanPham->ingredients);
             }
         });
     }
@@ -85,25 +87,25 @@ class Product extends Model
     /**
      * Get the category that owns the product.
      */
-    public function category()
+    public function danhMuc()
     {
-        return $this->belongsTo(Category::class, 'MaDM', 'MaDM');
+        return $this->belongsTo(DanhMuc::class, 'MaDM', 'MaDM');
     }
 
     /**
      * Get the order items for the product.
      */
-    public function orderItems()
+    public function chiTietDonHangs()
     {
-        return $this->hasMany(OrderItem::class, 'MaSP', 'MaSP');
+        return $this->hasMany(ChiTietDonHang::class, 'MaSP', 'MaSP');
     }
 
     /**
      * Get the batches for the product.
      */
-    public function batches()
+    public function cacLo()
     {
-        return $this->hasMany(ProductBatch::class, 'MaSP', 'MaSP');
+        return $this->hasMany(LoSanPham::class, 'MaSP', 'MaSP');
     }
 
     /**
@@ -115,8 +117,8 @@ class Product extends Model
      */
     public function getStockQuantityAttribute($value): int
     {
-        if ($this->relationLoaded('batches') && $this->batches->isNotEmpty()) {
-            return (int) $this->batches->sum('stock_quantity');
+        if ($this->relationLoaded('cacLo') && $this->cacLo->isNotEmpty()) {
+            return (int) $this->cacLo->sum('stock_quantity');
         }
 
         return (int) ($value ?? 0);
@@ -419,7 +421,7 @@ class Product extends Model
             $inner->where('name', 'like', $like)
                 ->orWhere('batch_number', 'like', $like)
                 ->orWhere('product_code', 'like', $like)
-                ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery->where('name', 'like', $like));
+                ->orWhereHas('danhMuc', fn ($danhMucQuery) => $danhMucQuery->where('name', 'like', $like));
         });
     }
 

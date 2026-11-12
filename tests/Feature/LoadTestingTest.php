@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Product;
-use App\Models\Category;
-use App\Models\Order;
+use App\Models\NguoiDung;
+use App\Models\SanPham;
+use App\Models\DanhMuc;
+use App\Models\DonHang;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -15,32 +15,32 @@ class LoadTestingTest extends TestCase
     use RefreshDatabase;
 
     protected $admin;
-    protected $user;
-    protected $category;
+    protected $nguoiDung;
+    protected $danhMuc;
 
     protected function setUp(): void
     {
         parent::setUp();
         
-        $this->admin = User::factory()->create([
+        $this->admin = NguoiDung::factory()->create([
             'role' => 'Administrator',
             'status' => 'active'
         ]);
         
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active'
         ]);
         
-        $this->category = Category::create([
+        $this->danhMuc = DanhMuc::create([
             'name' => 'Test Category',
             'description' => 'Test Description'
         ]);
 
         // Create test products
         for ($i = 1; $i <= 50; $i++) {
-            Product::create([
-                'MaDM' => $this->category->MaDM,
+            SanPham::create([
+                'MaDM' => $this->danhMuc->MaDM,
                 'name' => "Product {$i}",
                 'price' => 10000 * $i,
                 'expiration_date' => now()->addYear(),
@@ -71,8 +71,8 @@ class LoadTestingTest extends TestCase
     {
         // Create some orders for dashboard metrics
         for ($i = 1; $i <= 20; $i++) {
-            Order::create([
-                'MaKH' => $this->user->MaKH,
+            DonHang::create([
+                'MaKH' => $this->nguoiDung->MaKH,
                 'total_amount' => 50000,
                 'status' => ['Pending', 'Delivering', 'Completed', 'Cancelled'][rand(0, 3)],
                 'shipping_address' => '123 Test Street',
@@ -96,14 +96,14 @@ class LoadTestingTest extends TestCase
 
     public function test_concurrent_product_views_performance(): void
     {
-        $product = Product::first();
+        $sanPham = SanPham::first();
         $times = [];
 
         // Simulate 10 concurrent requests
         for ($i = 0; $i < 10; $i++) {
             $startTime = microtime(true);
             
-            $response = $this->get(route('products.show', $product->MaSP));
+            $response = $this->get(route('products.show', $sanPham->MaSP));
             
             $endTime = microtime(true);
             $times[] = ($endTime - $startTime) * 1000;
@@ -120,14 +120,14 @@ class LoadTestingTest extends TestCase
 
     public function test_multiple_cart_operations_performance(): void
     {
-        $products = Product::take(5)->get();
+        $sanPhams = SanPham::take(5)->get();
         $times = [];
 
-        foreach ($products as $product) {
+        foreach ($sanPhams as $sanPham) {
             $startTime = microtime(true);
             
             $response = $this->post(route('cart.add'), [
-                'MaSP' => $product->MaSP,
+                'MaSP' => $sanPham->MaSP,
                 'quantity' => 1
             ]);
             
@@ -164,8 +164,8 @@ class LoadTestingTest extends TestCase
     {
         // Create many orders
         for ($i = 1; $i <= 50; $i++) {
-            Order::create([
-                'MaKH' => $this->user->MaKH,
+            DonHang::create([
+                'MaKH' => $this->nguoiDung->MaKH,
                 'total_amount' => 50000,
                 'status' => ['Pending', 'Delivering', 'Completed', 'Cancelled'][rand(0, 3)],
                 'shipping_address' => '123 Test Street',
@@ -191,22 +191,22 @@ class LoadTestingTest extends TestCase
     {
         // Create orders with items
         for ($i = 1; $i <= 10; $i++) {
-            $order = Order::create([
-                'MaKH' => $this->user->MaKH,
+            $donHang = DonHang::create([
+                'MaKH' => $this->nguoiDung->MaKH,
                 'total_amount' => 100000,
                 'status' => 'Completed',
                 'shipping_address' => '123 Test Street',
                 'shipping_phone' => '0901234567'
             ]);
 
-            $products = Product::take(3)->get();
-            foreach ($products as $product) {
-                \App\Models\OrderItem::create([
-                    'MaDH' => $order->MaDH,
-                    'MaSP' => $product->MaSP,
+            $sanPhams = SanPham::take(3)->get();
+            foreach ($sanPhams as $sanPham) {
+                \App\Models\ChiTietDonHang::create([
+                    'MaDH' => $donHang->MaDH,
+                    'MaSP' => $sanPham->MaSP,
                     'quantity' => 2,
-                    'unit_price' => $product->price,
-                    'batch_number' => $product->batch_number
+                    'unit_price' => $sanPham->price,
+                    'batch_number' => $sanPham->batch_number
                 ]);
             }
         }
@@ -216,7 +216,7 @@ class LoadTestingTest extends TestCase
         $startTime = microtime(true);
         
         // Complex query with joins
-        $orders = Order::with(['user', 'items.product.category'])
+        $donHangs = DonHang::with(['nguoiDung', 'chiTietDonHangs.sanPham.danhMuc'])
             ->where('status', 'Completed')
             ->get();
         
@@ -240,7 +240,7 @@ class LoadTestingTest extends TestCase
         $memoryBefore = memory_get_usage();
 
         // Load products with pagination
-        $products = Product::paginate(12);
+        $sanPhams = SanPham::paginate(12);
 
         $memoryAfter = memory_get_usage();
         $memoryUsed = ($memoryAfter - $memoryBefore) / 1024 / 1024; // Convert to MB

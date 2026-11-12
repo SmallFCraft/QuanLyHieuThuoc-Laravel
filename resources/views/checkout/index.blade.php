@@ -304,15 +304,15 @@
                             <div class="order-item d-flex align-items-center gap-3 mb-2 pb-2 border-bottom rounded-2 p-2" style="border-color: rgba(0,0,0,0.06) !important;">
                                 <div class="bg-gray-50 rounded-3 overflow-hidden flex-shrink-0 position-relative" style="width: 56px; height: 56px;" data-product-image-container>
                                     <x-product-image
-                                        :src="$item['product']->image_url"
-                                        :alt="$item['product']->name"
+                                        :src="$item['sanPham']->image_url"
+                                        :alt="$item['sanPham']->name"
                                         class="w-100 h-100 object-fit-contain p-1"
                                         icon-size="1.5rem"
                                     />
                                 </div>
                                 <div class="flex-grow-1 min-w-0">
-                                    <p class="fw-medium text-gray-800 mb-0 small text-truncate">{{ $item['product']->name }}</p>
-                                    <small class="text-gray-400">{{ $item['product']->formatted_price }} × {{ $item['quantity'] }}</small>
+                                    <p class="fw-medium text-gray-800 mb-0 small text-truncate">{{ $item['sanPham']->name }}</p>
+                                    <small class="text-gray-400">{{ $item['sanPham']->formatted_price }} × {{ $item['quantity'] }}</small>
                                 </div>
                                 <span class="fw-bold text-gray-700 flex-shrink-0 small">
                                     {{ number_format($item['subtotal'], 0, ',', '.') }}₫

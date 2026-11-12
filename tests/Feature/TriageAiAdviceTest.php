@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\AuditLog;
-use App\Models\TriageSession;
-use App\Models\User;
+use App\Models\NhatKyKiemToan;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
 use App\Services\Triage\Ai\TriageAiAdviceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -23,7 +23,7 @@ class TriageAiAdviceTest extends TestCase
     protected const SOURCE_ADVICE = "Nghỉ ngơi, uống nhiều nước, mặc thoáng.\nĐo lại nhiệt độ mỗi 4–6 giờ.";
     protected const SOURCE_SAFETY = 'Đi khám ngay nếu sốt trên 39 độ không hạ hoặc sốt quá 3 ngày.';
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
@@ -33,7 +33,7 @@ class TriageAiAdviceTest extends TestCase
 
         config()->set('chatbot.ai.triage.advice_rewrite', true);
 
-        $this->user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
     }
 
     protected function fakeProviderReply(string $content): void
@@ -43,10 +43,10 @@ class TriageAiAdviceTest extends TestCase
         ])]);
     }
 
-    protected function selfCareSession(array $attributes = []): TriageSession
+    protected function selfCareSession(array $attributes = []): PhienSangLoc
     {
-        return TriageSession::create(array_merge([
-            'MaKH' => $this->user->MaKH,
+        return PhienSangLoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -57,22 +57,22 @@ class TriageAiAdviceTest extends TestCase
         ], $attributes));
     }
 
-    protected function rewrite(TriageSession $session): TriageSession
+    protected function rewrite(PhienSangLoc $phien): PhienSangLoc
     {
-        app(TriageAiAdviceService::class)->rewrite($session);
+        app(TriageAiAdviceService::class)->rewrite($phien);
 
-        return $session->refresh();
+        return $phien->refresh();
     }
 
     public function test_flag_off_sends_nothing(): void
     {
         config()->set('chatbot.ai.triage.advice_rewrite', false);
 
-        $session = $this->rewrite($this->selfCareSession());
+        $phien = $this->rewrite($this->selfCareSession());
 
         Http::assertNothingSent();
-        $this->assertNull($session->ai_advice);
-        $this->assertNull($session->ai_status);
+        $this->assertNull($phien->ai_advice);
+        $this->assertNull($phien->ai_status);
     }
 
     public function test_a_good_rewrite_is_stored_beside_the_original(): void
@@ -85,15 +85,15 @@ class TriageAiAdviceTest extends TestCase
             'Anh/chị đi khám ngay nếu sốt trên 39 độ không hạ, hoặc sốt quá 3 ngày ạ.',
         ]));
 
-        $session = $this->rewrite($this->selfCareSession());
+        $phien = $this->rewrite($this->selfCareSession());
 
-        $this->assertSame('ok', $session->ai_status);
-        $this->assertStringContainsString('nghỉ ngơi, uống nhiều nước', $session->ai_advice);
-        $this->assertStringContainsString('39 độ', $session->ai_safety_net);
+        $this->assertSame('ok', $phien->ai_status);
+        $this->assertStringContainsString('nghỉ ngơi, uống nhiều nước', $phien->ai_advice);
+        $this->assertStringContainsString('39 độ', $phien->ai_safety_net);
 
         // The deterministic record is untouched.
-        $this->assertSame(self::SOURCE_ADVICE, $session->advice_given);
-        $this->assertSame(self::SOURCE_SAFETY, $session->safety_net);
+        $this->assertSame(self::SOURCE_ADVICE, $phien->advice_given);
+        $this->assertSame(self::SOURCE_SAFETY, $phien->safety_net);
     }
 
     public function test_an_echoed_prompt_preamble_is_stripped_from_the_advice(): void
@@ -111,11 +111,11 @@ class TriageAiAdviceTest extends TestCase
             'Anh/chị đi khám ngay nếu sốt trên 39 độ không hạ, hoặc sốt quá 3 ngày ạ.',
         ]));
 
-        $session = $this->rewrite($this->selfCareSession());
+        $phien = $this->rewrite($this->selfCareSession());
 
-        $this->assertSame('ok', $session->ai_status);
-        $this->assertStringNotContainsString('Kết luận hệ thống', $session->ai_advice);
-        $this->assertStringStartsWith('Anh/chị nghỉ ngơi', $session->ai_advice);
+        $this->assertSame('ok', $phien->ai_status);
+        $this->assertStringNotContainsString('Kết luận hệ thống', $phien->ai_advice);
+        $this->assertStringStartsWith('Anh/chị nghỉ ngơi', $phien->ai_advice);
     }
 
     public function test_a_rewrite_that_drops_a_threshold_is_rejected(): void
@@ -129,21 +129,21 @@ class TriageAiAdviceTest extends TestCase
             'Anh/chị đi khám ngay nếu sốt cao không hạ hoặc sốt kéo dài ạ.',
         ]));
 
-        $session = $this->rewrite($this->selfCareSession());
+        $phien = $this->rewrite($this->selfCareSession());
 
-        $this->assertSame('rejected', $session->ai_status);
-        $this->assertNull($session->ai_advice);
-        $this->assertSame(self::SOURCE_ADVICE, $session->advice_given);
+        $this->assertSame('rejected', $phien->ai_status);
+        $this->assertNull($phien->ai_advice);
+        $this->assertSame(self::SOURCE_ADVICE, $phien->advice_given);
     }
 
     public function test_a_json_reply_is_rejected(): void
     {
         $this->fakeProviderReply('{"outcome":"self_care","advice":"uống nước"}');
 
-        $session = $this->rewrite($this->selfCareSession());
+        $phien = $this->rewrite($this->selfCareSession());
 
-        $this->assertSame('rejected', $session->ai_status);
-        $this->assertNull($session->ai_advice);
+        $this->assertSame('rejected', $phien->ai_status);
+        $this->assertNull($phien->ai_advice);
     }
 
     public function test_a_markdown_reply_is_rejected(): void
@@ -156,33 +156,33 @@ class TriageAiAdviceTest extends TestCase
             'Đi khám nếu sốt trên 39 độ hoặc quá 3 ngày.',
         ]));
 
-        $session = $this->rewrite($this->selfCareSession());
+        $phien = $this->rewrite($this->selfCareSession());
 
-        $this->assertSame('rejected', $session->ai_status);
+        $this->assertSame('rejected', $phien->ai_status);
     }
 
     public function test_an_emergency_outcome_is_never_rewritten(): void
     {
-        $session = $this->rewrite($this->selfCareSession([
+        $phien = $this->rewrite($this->selfCareSession([
             'outcome' => 'emergency',
             'advice_given' => 'Anh/chị hãy gọi ngay 115 hoặc đến cơ sở y tế gần nhất.',
             'safety_net' => null,
         ]));
 
         Http::assertNothingSent();
-        $this->assertNull($session->ai_advice);
-        $this->assertStringContainsString('115', $session->advice_given);
+        $this->assertNull($phien->ai_advice);
+        $this->assertStringContainsString('115', $phien->advice_given);
     }
 
     public function test_a_referral_outcome_is_never_rewritten(): void
     {
-        $session = $this->rewrite($this->selfCareSession([
+        $phien = $this->rewrite($this->selfCareSession([
             'outcome' => 'refer_doctor',
             'safety_net' => null,
         ]));
 
         Http::assertNothingSent();
-        $this->assertNull($session->ai_advice);
+        $this->assertNull($phien->ai_advice);
     }
 
     public function test_a_pharmacist_review_outcome_is_rewritten_because_the_ai_answer_is_primary(): void
@@ -194,14 +194,14 @@ class TriageAiAdviceTest extends TestCase
             'Anh/chị nghỉ ngơi, uống nhiều nước, mặc thoáng và đo nhiệt độ mỗi 4–6 giờ nhé.',
         ]));
 
-        $session = $this->rewrite($this->selfCareSession([
+        $phien = $this->rewrite($this->selfCareSession([
             'outcome' => 'pharmacist_review',
             'safety_net' => null,
         ]));
 
-        $this->assertSame('ok', $session->ai_status);
-        $this->assertStringContainsString('nghỉ ngơi', $session->ai_advice);
-        $this->assertSame(self::SOURCE_ADVICE, $session->advice_given);
+        $this->assertSame('ok', $phien->ai_status);
+        $this->assertStringContainsString('nghỉ ngơi', $phien->ai_advice);
+        $this->assertSame(self::SOURCE_ADVICE, $phien->advice_given);
     }
 
     public function test_a_queued_case_still_shows_the_human_answer_when_it_arrives(): void
@@ -213,7 +213,7 @@ class TriageAiAdviceTest extends TestCase
             'Anh/chị nghỉ ngơi, uống nhiều nước, mặc thoáng, đo nhiệt độ mỗi 4–6 giờ.',
         ]));
 
-        $session = $this->rewrite($this->selfCareSession([
+        $phien = $this->rewrite($this->selfCareSession([
             'outcome' => 'pharmacist_review',
             'status' => 'reviewed',
             'safety_net' => null,
@@ -224,8 +224,8 @@ class TriageAiAdviceTest extends TestCase
         // The pharmacist's note is what the customer acts on. The machine rewrite is
         // no longer printed beside it — two versions of one instruction on one page
         // read as two different instructions.
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee('dược sĩ Hạnh', false)
             ->assertDontSee('đo nhiệt độ mỗi 4–6 giờ nhé', false);
@@ -235,17 +235,17 @@ class TriageAiAdviceTest extends TestCase
     {
         Http::fake(['*' => Http::response('gateway down', 502)]);
 
-        $session = $this->rewrite($this->selfCareSession());
+        $phien = $this->rewrite($this->selfCareSession());
 
-        $this->assertSame('failed', $session->ai_status);
-        $this->assertNull($session->ai_advice);
-        $this->assertSame(self::SOURCE_ADVICE, $session->advice_given);
+        $this->assertSame('failed', $phien->ai_status);
+        $this->assertNull($phien->ai_advice);
+        $this->assertSame(self::SOURCE_ADVICE, $phien->advice_given);
     }
 
     public function test_the_prompt_carries_neither_free_text_nor_profile_data(): void
     {
-        \App\Models\UserHealthProfile::create([
-            'MaKH' => $this->user->MaKH,
+        \App\Models\HoSoSucKhoe::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'allergies' => ['penicillin'],
             'consented_at' => now(),
         ]);
@@ -285,13 +285,13 @@ class TriageAiAdviceTest extends TestCase
             'Đi khám ngay nếu sốt trên 39 độ hoặc quá 3 ngày ạ.',
         ]));
 
-        $session = $this->rewrite($this->selfCareSession());
+        $phien = $this->rewrite($this->selfCareSession());
 
-        $this->assertSame('ok', $session->ai_status);
-        $this->assertStringContainsString('đo nhiệt độ', (string) $session->ai_advice);
+        $this->assertSame('ok', $phien->ai_status);
+        $this->assertStringContainsString('đo nhiệt độ', (string) $phien->ai_advice);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee('Đo lại nhiệt độ mỗi 4–6 giờ.', false)
             ->assertDontSee('đo nhiệt độ mỗi 4–6 giờ nhé', false);
@@ -309,7 +309,7 @@ class TriageAiAdviceTest extends TestCase
 
         $this->rewrite($this->selfCareSession());
 
-        $log = AuditLog::where('action', 'triage_ai_advice')->firstOrFail();
+        $log = NhatKyKiemToan::where('action', 'triage_ai_advice')->firstOrFail();
         $encoded = json_encode($log->new_values, JSON_UNESCAPED_UNICODE);
 
         $this->assertSame('ok', $log->new_values['ai_status']);

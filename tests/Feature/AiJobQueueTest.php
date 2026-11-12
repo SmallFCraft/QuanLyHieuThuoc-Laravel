@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Jobs\ProcessChatbotMessage;
 use App\Models\AiJob;
-use App\Models\ChatMessage;
-use App\Models\User;
+use App\Models\TinNhanChat;
+use App\Models\NguoiDung;
 use App\Services\ChatbotService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -24,13 +24,13 @@ class AiJobQueueTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
     }
 
     /**
@@ -60,7 +60,7 @@ class AiJobQueueTest extends TestCase
         Queue::fake();
         Http::preventStrayRequests();
 
-        $response = $this->actingAs($this->user)->postJson('/api/chatbot/message', [
+        $response = $this->actingAs($this->nguoiDung)->postJson('/api/chatbot/message', [
             'message' => 'Tôi cần tư vấn thuốc cảm',
         ]);
 
@@ -75,7 +75,7 @@ class AiJobQueueTest extends TestCase
         $job = AiJob::firstOrFail();
         $this->assertSame('queued', $job->status);
         $this->assertSame(AiJob::KIND_CHAT, $job->kind);
-        $this->assertSame((int) $this->user->MaKH, (int) $job->MaKH);
+        $this->assertSame((int) $this->nguoiDung->MaKH, (int) $job->MaKH);
         $this->assertSame('Tôi cần tư vấn thuốc cảm', $job->payload['message']);
     }
 
@@ -83,13 +83,13 @@ class AiJobQueueTest extends TestCase
     {
         Queue::fake();
 
-        $this->actingAs($this->user)->postJson('/api/chatbot/message', [
+        $this->actingAs($this->nguoiDung)->postJson('/api/chatbot/message', [
             'message' => 'Tôi bị đau đầu',
         ])->assertStatus(202);
 
         // A message the model has not answered yet must not appear in the thread,
         // otherwise a reload shows a question with no reply.
-        $this->assertSame(0, ChatMessage::count());
+        $this->assertSame(0, TinNhanChat::count());
     }
 
     public function test_running_the_job_stores_the_turn_and_the_result(): void
@@ -97,7 +97,7 @@ class AiJobQueueTest extends TestCase
         Queue::fake();
         $this->fakeService($this->reply(['response' => 'Dạ, anh/chị uống nhiều nước nhé.']));
 
-        $this->actingAs($this->user)->postJson('/api/chatbot/message', [
+        $this->actingAs($this->nguoiDung)->postJson('/api/chatbot/message', [
             'message' => 'Tôi bị đau đầu',
         ])->assertStatus(202);
 
@@ -111,12 +111,12 @@ class AiJobQueueTest extends TestCase
         $this->assertNotNull($job->finished_at);
 
         $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'role' => 'user',
             'content' => 'Tôi bị đau đầu',
         ]);
         $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'role' => 'assistant',
             'content' => 'Dạ, anh/chị uống nhiều nước nhé.',
         ]);
@@ -127,13 +127,13 @@ class AiJobQueueTest extends TestCase
         Queue::fake();
         $this->fakeService($this->reply(['response' => 'Dạ, em trả lời đây ạ.']));
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
         (new ProcessChatbotMessage($jobId))->handle(app(ChatbotService::class), app(\App\Services\AiJobService::class));
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->getJson("/api/ai-jobs/{$jobId}")
             ->assertOk()
             ->assertJsonPath('status', 'done')
@@ -145,11 +145,11 @@ class AiJobQueueTest extends TestCase
     {
         Queue::fake();
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->getJson("/api/ai-jobs/{$jobId}")
             ->assertOk()
             ->assertJsonPath('status', 'queued')
@@ -161,11 +161,11 @@ class AiJobQueueTest extends TestCase
     {
         Queue::fake();
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
-        $other = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
 
         // The uuid is a public id, not a capability token.
         $this->actingAs($other)
@@ -177,7 +177,7 @@ class AiJobQueueTest extends TestCase
     {
         $job = AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'queued',
         ]);
@@ -195,7 +195,7 @@ class AiJobQueueTest extends TestCase
             $mock->shouldReceive('processMessage')->andThrow(new \RuntimeException('AI provider failed'));
         });
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'Chatbot đang lỗi à?'])
             ->json('job_id');
 
@@ -207,17 +207,17 @@ class AiJobQueueTest extends TestCase
 
         // Support must still be able to see what was asked.
         $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'role' => 'user',
             'content' => 'Chatbot đang lỗi à?',
         ]);
         $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'role' => 'system',
             'content' => 'Không thể xử lý tin nhắn do lỗi hệ thống.',
         ]);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->getJson("/api/ai-jobs/{$jobId}")
             ->assertOk()
             ->assertJsonPath('status', 'failed')
@@ -228,14 +228,14 @@ class AiJobQueueTest extends TestCase
     {
         Queue::fake();
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
         $job = AiJob::where('uuid', $jobId)->firstOrFail();
         $job->forceFill(['created_at' => now()->subSeconds(AiJob::SYNC_FALLBACK_SECONDS + 1)])->save();
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->getJson("/api/ai-jobs/{$jobId}")
             ->assertOk()
             ->assertJsonPath('stranded', true);
@@ -245,7 +245,7 @@ class AiJobQueueTest extends TestCase
     {
         Queue::fake();
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
@@ -255,7 +255,7 @@ class AiJobQueueTest extends TestCase
             'created_at' => now()->subMinutes(2),
         ])->save();
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->getJson("/api/ai-jobs/{$jobId}")
             ->assertOk()
             ->assertJsonPath('status', 'running')
@@ -270,7 +270,7 @@ class AiJobQueueTest extends TestCase
     {
         $job = AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'queued',
             'payload' => ['message' => 'Tôi bị ho', 'context' => [], 'session_id' => 'test-session'],
@@ -286,7 +286,7 @@ class AiJobQueueTest extends TestCase
         $this->fakeService($this->reply(['response' => 'Dạ, em trả lời trực tiếp ạ.']));
         $stranded = $this->strandedJob();
 
-        $response = $this->actingAs($this->user)->postJson('/api/chatbot/message', [
+        $response = $this->actingAs($this->nguoiDung)->postJson('/api/chatbot/message', [
             'message' => 'Tôi bị ho',
             'sync' => true,
             'abandon_job_id' => $stranded->uuid,
@@ -306,7 +306,7 @@ class AiJobQueueTest extends TestCase
         $this->fakeService($this->reply());
         $victim = $this->strandedJob();
 
-        $attacker = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $attacker = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
 
         $this->actingAs($attacker)->postJson('/api/chatbot/message', [
             'message' => 'Xin chào',
@@ -326,14 +326,14 @@ class AiJobQueueTest extends TestCase
             'validation_error' => true,
         ]);
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'aaaaaa'])
             ->json('job_id');
 
         (new ProcessChatbotMessage($jobId))->handle(app(ChatbotService::class), app(\App\Services\AiJobService::class));
 
         $this->assertSame('done', AiJob::where('uuid', $jobId)->firstOrFail()->status);
-        $this->assertSame(0, ChatMessage::count());
+        $this->assertSame(0, TinNhanChat::count());
     }
 
     public function test_stopping_a_turn_retires_the_job_and_keeps_the_answer_out_of_the_thread(): void
@@ -341,11 +341,11 @@ class AiJobQueueTest extends TestCase
         Queue::fake();
         $this->fakeService($this->reply(['response' => 'Câu trả lời không ai còn chờ.']));
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->deleteJson("/api/ai-jobs/{$jobId}")
             ->assertOk()
             ->assertJsonPath('status', 'cancelled');
@@ -355,21 +355,21 @@ class AiJobQueueTest extends TestCase
         (new ProcessChatbotMessage($jobId))->handle(app(ChatbotService::class), app(\App\Services\AiJobService::class));
 
         $this->assertSame('cancelled', AiJob::where('uuid', $jobId)->firstOrFail()->status);
-        $this->assertSame(0, ChatMessage::count());
+        $this->assertSame(0, TinNhanChat::count());
     }
 
     public function test_polling_a_stopped_turn_reports_cancelled_rather_than_an_error(): void
     {
         Queue::fake();
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
-        $this->actingAs($this->user)->deleteJson("/api/ai-jobs/{$jobId}")->assertOk();
+        $this->actingAs($this->nguoiDung)->deleteJson("/api/ai-jobs/{$jobId}")->assertOk();
 
         // A poll still in flight must not paint a failure the customer never caused.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->getJson("/api/ai-jobs/{$jobId}")
             ->assertOk()
             ->assertJsonPath('status', 'cancelled')
@@ -382,13 +382,13 @@ class AiJobQueueTest extends TestCase
         Queue::fake();
         $this->fakeService($this->reply(['response' => 'Dạ, em đã trả lời rồi ạ.']));
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
         (new ProcessChatbotMessage($jobId))->handle(app(ChatbotService::class), app(\App\Services\AiJobService::class));
 
-        $this->actingAs($this->user)->deleteJson("/api/ai-jobs/{$jobId}")->assertOk();
+        $this->actingAs($this->nguoiDung)->deleteJson("/api/ai-jobs/{$jobId}")->assertOk();
 
         // The answer is already on screen and in the transcript; relabelling it
         // cancelled would make the reload disagree with what the customer saw.
@@ -399,11 +399,11 @@ class AiJobQueueTest extends TestCase
     {
         Queue::fake();
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
-        $other = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
 
         $this->actingAs($other)
             ->deleteJson("/api/ai-jobs/{$jobId}")
@@ -416,7 +416,7 @@ class AiJobQueueTest extends TestCase
     {
         $job = AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'queued',
         ]);
@@ -430,14 +430,14 @@ class AiJobQueueTest extends TestCase
     {
         Queue::fake();
 
-        \App\Models\UserHealthProfile::create([
-            'MaKH' => $this->user->MaKH,
+        \App\Models\HoSoSucKhoe::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'allergies' => ['penicillin'],
             'chronic_conditions' => ['loét dạ dày'],
             'consented_at' => now(),
         ]);
 
-        $this->actingAs($this->user)->postJson('/api/chatbot/message', [
+        $this->actingAs($this->nguoiDung)->postJson('/api/chatbot/message', [
             'message' => 'Tôi bị đau đầu',
         ])->assertStatus(202);
 
@@ -453,7 +453,7 @@ class AiJobQueueTest extends TestCase
         Queue::fake();
         $this->fakeService($this->reply());
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
@@ -462,14 +462,14 @@ class AiJobQueueTest extends TestCase
         (new ProcessChatbotMessage($jobId))->handle(app(ChatbotService::class), $jobs);
 
         // A duplicate delivery must not post a second assistant reply.
-        $this->assertSame(1, ChatMessage::where('role', 'assistant')->count());
+        $this->assertSame(1, TinNhanChat::where('role', 'assistant')->count());
     }
 
     public function test_cleanup_closes_a_job_whose_worker_died_and_drops_old_payloads(): void
     {
         $stuck = AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'running',
             'payload' => ['message' => 'tôi bị đau đầu'],
@@ -478,7 +478,7 @@ class AiJobQueueTest extends TestCase
 
         $old = AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'done',
             'payload' => ['message' => 'tôi bị sốt'],
@@ -487,7 +487,7 @@ class AiJobQueueTest extends TestCase
 
         $recent = AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'done',
         ]);
@@ -506,7 +506,7 @@ class AiJobQueueTest extends TestCase
 
         $job = AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'queued',
             'payload' => ['MaSL' => 1],
@@ -540,12 +540,12 @@ class AiJobQueueTest extends TestCase
         // The worker is busy on a slow provider call, not absent.
         AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->user->MaKH,
+            'MaKH' => $this->nguoiDung->MaKH,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'running',
         ])->forceFill(['started_at' => now()->subSeconds(30)])->save();
 
-        $jobId = $this->actingAs($this->user)
+        $jobId = $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
@@ -555,7 +555,7 @@ class AiJobQueueTest extends TestCase
 
         // Reported stranded, the browser would re-run this inline and block the
         // single-process dev server for the full provider budget a second time.
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->getJson("/api/ai-jobs/{$jobId}")
             ->assertOk()
             ->assertJsonPath('stranded', false);
@@ -569,45 +569,45 @@ class AiJobQueueTest extends TestCase
         Queue::fake([\App\Jobs\ProcessTriageAdviceRewrite::class]);
         config()->set('chatbot.ai.triage.advice_rewrite', true);
 
-        $category = \App\Models\Category::create([
+        $danhMuc = \App\Models\DanhMuc::create([
             'name' => 'Thuốc giảm đau - Hạ sốt',
             'description' => 'Giảm đau, hạ sốt',
         ]);
-        $this->seed(\Database\Seeders\MedicalKnowledgeSeeder::class);
-        \App\Models\Product::factory()->create([
-            'MaDM' => $category->MaDM,
+        $this->seed(\Database\Seeders\TriThucYTeSeeder::class);
+        \App\Models\SanPham::factory()->create([
+            'MaDM' => $danhMuc->MaDM,
             'name' => 'Paracetamol 500mg',
             'ingredients' => 'Paracetamol 500mg',
             'usage' => 'Giảm đau đầu, hạ sốt',
             'stock_quantity' => 50,
         ]);
 
-        $this->user->forceFill(['birth_date' => now()->subYears(34)->toDateString()])->save();
+        $this->nguoiDung->forceFill(['birth_date' => now()->subYears(34)->toDateString()])->save();
 
-        $this->actingAs($this->user)->get(route('health.check'));
-        $session = \App\Models\TriageSession::where('MaKH', $this->user->MaKH)->inProgress()->firstOrFail();
+        $this->actingAs($this->nguoiDung)->get(route('health.check'));
+        $phien = \App\Models\PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->firstOrFail();
 
         foreach ([1 => 'đau đầu', 2 => 'hôm nay', 3 => 'chưa dùng gì', 4 => 'không có', 5 => 'không có thêm'] as $step => $answer) {
-            $this->actingAs($this->user)->post(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+            $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+                'triage_session_id' => $phien->MaSL,
                 'step' => $step,
                 'answer' => $answer,
             ]);
         }
 
-        $session->refresh();
+        $phien->refresh();
 
         // The medical conclusion is already persisted and readable; only the wording
         // is still queued. Deferring the rewrite must never defer the outcome.
-        $this->assertSame('self_care', $session->outcome);
-        $this->assertSame('completed', $session->status);
-        $this->assertNull($session->ai_advice);
-        $this->assertNotNull($session->advice_given);
+        $this->assertSame('self_care', $phien->outcome);
+        $this->assertSame('completed', $phien->status);
+        $this->assertNull($phien->ai_advice);
+        $this->assertNotNull($phien->advice_given);
 
         Queue::assertPushed(\App\Jobs\ProcessTriageAdviceRewrite::class, 1);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.outcome_self_care'))
             // Honest about what is still coming, while the conclusion is already there.
@@ -616,16 +616,16 @@ class AiJobQueueTest extends TestCase
         // A reload while the rewrite is genuinely still queued keeps saying so — the
         // banner tracks the job, not a one-shot flash, so it survives the reload that
         // a 15-second wait invites.
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.ai_pending'));
 
         // Once the rewrite lands there is nothing left to wait for.
-        $session->forceFill(['ai_status' => 'ok', 'ai_advice' => 'Anh/chị nghỉ ngơi nhé.'])->save();
+        $phien->forceFill(['ai_status' => 'ok', 'ai_advice' => 'Anh/chị nghỉ ngơi nhé.'])->save();
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.outcome_self_care'))
             ->assertDontSee(__('messages.health.ai_pending'));
@@ -642,8 +642,8 @@ class AiJobQueueTest extends TestCase
 
         config()->set('chatbot.ai.triage.advice_rewrite', true);
 
-        $session = \App\Models\TriageSession::create([
-            'MaKH' => $this->user->MaKH,
+        $phien = \App\Models\PhienSangLoc::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -652,23 +652,23 @@ class AiJobQueueTest extends TestCase
             'collected_data' => ['raw_symptom_text' => 'toi bi sot nhe'],
         ]);
 
-        $job = app(\App\Services\AiJobService::class)->dispatchAdviceRewrite($session);
+        $job = app(\App\Services\AiJobService::class)->dispatchAdviceRewrite($phien);
 
         $this->assertSame(AiJob::KIND_TRIAGE_ADVICE, $job->kind);
         // No customer free text in the payload for this kind.
-        $this->assertSame(['MaSL' => $session->MaSL], $job->payload);
+        $this->assertSame(['MaSL' => $phien->MaSL], $job->payload);
 
         (new \App\Jobs\ProcessTriageAdviceRewrite($job->uuid))->handle(
             app(\App\Services\Triage\Ai\TriageAiAdviceService::class),
             app(\App\Services\AiJobService::class)
         );
 
-        $session->refresh();
+        $phien->refresh();
 
         $this->assertSame('done', $job->refresh()->status);
-        $this->assertSame('ok', $session->ai_status);
+        $this->assertSame('ok', $phien->ai_status);
         // The deterministic record and the medical conclusion are untouched.
-        $this->assertSame('Nghỉ ngơi, uống nhiều nước trong 3 ngày.', $session->advice_given);
-        $this->assertSame('self_care', $session->outcome);
+        $this->assertSame('Nghỉ ngơi, uống nhiều nước trong 3 ngày.', $phien->advice_given);
+        $this->assertSame('self_care', $phien->outcome);
     }
 }

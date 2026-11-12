@@ -2,7 +2,7 @@
 
 namespace App\Services\Triage\Ai;
 
-use App\Models\TriageSession;
+use App\Models\PhienSangLoc;
 use App\Services\AiProviderService;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Log;
@@ -84,15 +84,15 @@ abstract class TriageAiService
      * @param  array<string, mixed>|null  $described
      */
     protected function persistWithProvenance(
-        TriageSession $session,
+        PhienSangLoc $phien,
         array $columns,
         string $metaKey,
         string $status,
         ?array $described,
         float $durationMs
     ): void {
-        $session->forceFill($columns + [
-            'ai_meta' => array_merge((array) $session->ai_meta, [
+        $phien->forceFill($columns + [
+            'ai_meta' => array_merge((array) $phien->ai_meta, [
                 $metaKey => [
                     'status' => $status,
                     'provider' => $described ?? [],
@@ -111,7 +111,7 @@ abstract class TriageAiService
      * @param  array<string, mixed>  $values
      */
     protected function auditProvenance(
-        TriageSession $session,
+        PhienSangLoc $phien,
         string $action,
         ?array $described,
         float $durationMs,
@@ -120,22 +120,22 @@ abstract class TriageAiService
         try {
             $this->auditLogService->log(
                 action: $action,
-                modelType: TriageSession::class,
-                modelId: $session->MaSL,
+                modelType: PhienSangLoc::class,
+                modelId: $phien->MaSL,
                 oldValues: null,
                 newValues: $values + [
-                    'outcome' => $session->outcome,
+                    'outcome' => $phien->outcome,
                     'ai_provider_mode' => $described['mode'] ?? null,
                     'ai_provider_model' => $described['model'] ?? null,
                     'ai_provider_index' => $described['index'] ?? null,
                     'processing_time_ms' => round($durationMs, 1),
                 ],
-                userId: $session->MaKH
+                userId: $phien->MaKH
             );
         } catch (\Throwable $exception) {
             Log::warning('Triage AI audit failed', [
                 'action' => $action,
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'error' => $exception->getMessage(),
             ]);
         }

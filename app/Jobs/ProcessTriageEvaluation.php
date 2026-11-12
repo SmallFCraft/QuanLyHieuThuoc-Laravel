@@ -3,8 +3,8 @@
 namespace App\Jobs;
 
 use App\Models\AiJob;
-use App\Models\TriageSession;
-use App\Models\UserHealthProfile;
+use App\Models\HoSoSucKhoe;
+use App\Models\PhienSangLoc;
 use App\Services\AiJobService;
 use App\Services\Triage\MedicalTriageService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -55,9 +55,9 @@ class ProcessTriageEvaluation implements ShouldQueue
             return;
         }
 
-        $session = TriageSession::find($job->payload['MaSL'] ?? null);
+        $phien = PhienSangLoc::find($job->payload['MaSL'] ?? null);
 
-        if ($session === null || $session->status !== 'in_progress') {
+        if ($phien === null || $phien->status !== 'in_progress') {
             $jobs->markFailed($job, 'triage session is no longer open');
 
             return;
@@ -70,31 +70,31 @@ class ProcessTriageEvaluation implements ShouldQueue
         Auth::onceUsingId((int) $job->MaKH);
 
         try {
-            $result = $triage->evaluate($session, UserHealthProfile::consentedFor((int) $job->MaKH));
+            $result = $triage->evaluate($phien, HoSoSucKhoe::consentedFor((int) $job->MaKH));
 
-            if ($triage->shouldAskClarify($session, $result)) {
-                $triage->storeClarifyQuestions($session, $result);
+            if ($triage->shouldAskClarify($phien, $result)) {
+                $triage->storeClarifyQuestions($phien, $result);
                 $jobs->markDone($job, ['next' => 'clarify']);
 
                 return;
             }
 
-            $session = $triage->finalize($session, $result);
+            $phien = $triage->finalize($phien, $result);
 
             // Session id only, never a URL: a worker has no incoming request, so
             // route() would build the link from APP_URL and send the browser to the
             // wrong host or port. The controller turns this into a URL.
             $jobs->markDone($job, [
                 'next' => 'result',
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
             ]);
 
             // Rephrasing is its own job: it runs after the conclusion is fixed and
             // must not hold the patient back from reading it.
-            $jobs->dispatchAdviceRewriteIfEligible($session);
+            $jobs->dispatchAdviceRewriteIfEligible($phien);
         } catch (\Throwable $exception) {
             Log::error('Triage evaluation job failed', [
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'error' => $exception->getMessage(),
             ]);
 

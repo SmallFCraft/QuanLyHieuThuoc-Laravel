@@ -8,9 +8,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
-class Category extends Model
+class DanhMuc extends Model
 {
     use HasFactory;
+
+    protected $table = 'categories';
 
     protected $primaryKey = 'MaDM';
 
@@ -40,14 +42,14 @@ class Category extends Model
 
     protected static function booted(): void
     {
-        static::saving(function (Category $category): void {
-            $category->code = ProductCodeGenerator::normalizeCategoryCode($category->code)
-                ?: ProductCodeGenerator::uniqueCategoryCode($category->name, $category->exists ? $category->getKey() : null);
+        static::saving(function (DanhMuc $danhMuc): void {
+            $danhMuc->code = ProductCodeGenerator::normalizeCategoryCode($danhMuc->code)
+                ?: ProductCodeGenerator::uniqueCategoryCode($danhMuc->name, $danhMuc->exists ? $danhMuc->getKey() : null);
 
             // Kept in sync here rather than at the call sites so a category created by
             // the crawler, the admin form or a factory folds the same way.
-            if ($category->isDirty('name')) {
-                $category->name_folded = VietnameseText::fold((string) $category->name);
+            if ($danhMuc->isDirty('name')) {
+                $danhMuc->name_folded = VietnameseText::fold((string) $danhMuc->name);
             }
         });
 
@@ -77,8 +79,10 @@ class Category extends Model
         $inStock = fn ($productQuery) => $productQuery->notExpired()->where('stock_quantity', '>', 0);
 
         return $query
-            ->whereHas('products', $inStock)
-            ->withCount(['products' => $inStock])
+            ->whereHas('sanPhams', $inStock)
+            // Alias withCount sinh san_phams_count; Blade (layouts, catalog, home)
+            // vẫn đọc products_count cho tới Task 7 nên giữ alias cũ qua as().
+            ->withCount(['sanPhams as products_count' => $inStock])
             ->orderByDesc('products_count')
             ->orderBy('name');
     }
@@ -86,9 +90,9 @@ class Category extends Model
     /**
      * Get the products for the category.
      */
-    public function products()
+    public function sanPhams()
     {
-        return $this->hasMany(Product::class, 'MaDM', 'MaDM');
+        return $this->hasMany(SanPham::class, 'MaDM', 'MaDM');
     }
 
     /**
@@ -98,7 +102,7 @@ class Category extends Model
      */
     public function hasProducts(): bool
     {
-        return $this->products()->exists();
+        return $this->sanPhams()->exists();
     }
 
     /**
@@ -108,7 +112,7 @@ class Category extends Model
      */
     public function getProductCountAttribute(): int
     {
-        return $this->products()->count();
+        return $this->sanPhams()->count();
     }
 
     /**

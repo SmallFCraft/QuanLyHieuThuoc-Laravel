@@ -3,11 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\AiJob;
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\TriageSession;
-use App\Models\User;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -16,7 +16,7 @@ class TriageAiBriefingFallbackTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
@@ -24,12 +24,12 @@ class TriageAiBriefingFallbackTest extends TestCase
 
         Http::preventStrayRequests();
 
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.briefing', true);
 
-        $this->user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
     }
 
     protected function fakeGhiDienGiaiResponse(): void
@@ -61,10 +61,10 @@ class TriageAiBriefingFallbackTest extends TestCase
         ]);
     }
 
-    protected function completedSession(array $attributes = []): TriageSession
+    protected function completedSession(array $attributes = []): PhienSangLoc
     {
-        return TriageSession::create(array_merge([
-            'MaKH' => $this->user->MaKH,
+        return PhienSangLoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -79,31 +79,31 @@ class TriageAiBriefingFallbackTest extends TestCase
     {
         $this->fakeGhiDienGiaiResponse();
 
-        $session = $this->completedSession();
+        $phien = $this->completedSession();
 
         $strandedJob = AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'MaKH' => $phien->MaKH,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'queued',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
         $strandedJob->forceFill(['created_at' => now()->subSeconds(30)])->save();
 
         $this->assertTrue($strandedJob->refresh()->isStranded());
 
-        $response = $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $response = $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk();
 
         // No provider call at all: the generation is not run in this request.
         Http::assertNothingSent();
 
-        $session->refresh();
+        $phien->refresh();
         // Recorded as failed, not left null: a null status never enters the retry
         // gate, so an abandoned attempt was stranded forever with attempts left.
-        $this->assertSame('failed', $session->ai_briefing_status);
-        $this->assertNull($session->ai_briefing);
+        $this->assertSame('failed', $phien->ai_briefing_status);
+        $this->assertNull($phien->ai_briefing);
 
         // The job is retired, not left polling forever.
         $strandedJob->refresh();
@@ -118,25 +118,25 @@ class TriageAiBriefingFallbackTest extends TestCase
     /** An abandoned attempt counts against the retry budget, so a later view retries once. */
     public function test_an_abandoned_briefing_retries_on_the_next_view_when_a_worker_is_back(): void
     {
-        $session = $this->completedSession();
-        $this->strandedBriefing($session);
+        $phien = $this->completedSession();
+        $this->strandedBriefing($phien);
 
         // First view: no worker, the job is retired and recorded failed.
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk();
-        $this->assertSame('failed', $session->refresh()->ai_briefing_status);
+        $this->assertSame('failed', $phien->refresh()->ai_briefing_status);
 
         // Provider is up now (sync driver runs the retried job in-request).
         $this->fakeGhiDienGiaiResponse();
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk();
 
         $this->assertSame(2, AiJob::where('kind', AiJob::KIND_TRIAGE_BRIEFING)->count());
-        $this->assertSame('ok', $session->refresh()->ai_briefing_status);
-        $this->assertIsArray($session->ai_briefing);
+        $this->assertSame('ok', $phien->refresh()->ai_briefing_status);
+        $this->assertIsArray($phien->ai_briefing);
     }
 
     /**
@@ -147,18 +147,18 @@ class TriageAiBriefingFallbackTest extends TestCase
     {
         Http::fake(['*/v1/chat/completions' => Http::response('gateway down', 502)]);
 
-        $session = $this->completedSession();
-        $job = $this->strandedBriefing($session);
+        $phien = $this->completedSession();
+        $job = $this->strandedBriefing($phien);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee(__('messages.health.briefing_unavailable'), false);
 
         // The job failed for lack of a worker, not because of the down provider.
         $this->assertSame('failed', $job->refresh()->status);
         $this->assertStringContainsString('no worker picked', $job->error);
-        $this->assertSame('failed', $session->refresh()->ai_briefing_status);
+        $this->assertSame('failed', $phien->refresh()->ai_briefing_status);
     }
 
     /** An emergency page was never due a briefing, so the stale job is retired outright. */
@@ -166,15 +166,15 @@ class TriageAiBriefingFallbackTest extends TestCase
     {
         Http::preventStrayRequests();
 
-        $session = $this->completedSession([
+        $phien = $this->completedSession([
             'outcome' => 'emergency',
             'advice_given' => 'Anh/chị gọi ngay 115.',
             'safety_net' => null,
         ]);
-        $job = $this->strandedBriefing($session);
+        $job = $this->strandedBriefing($phien);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk();
 
         Http::assertNothingSent();
@@ -189,55 +189,55 @@ class TriageAiBriefingFallbackTest extends TestCase
     {
         Http::preventStrayRequests();
 
-        $session = $this->completedSession();
-        $job = $this->strandedBriefing($session, 0);
+        $phien = $this->completedSession();
+        $job = $this->strandedBriefing($phien, 0);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee('triage-briefing-pending', false);
 
         Http::assertNothingSent();
         $this->assertSame('queued', $job->refresh()->status);
-        $this->assertNull($session->refresh()->ai_briefing_status);
+        $this->assertNull($phien->refresh()->ai_briefing_status);
     }
 
     public function test_a_previously_failed_briefing_recovers_on_second_view_when_provider_recovers(): void
     {
-        $session = $this->completedSession();
-        $session->forceFill(['ai_briefing_status' => 'failed'])->save();
+        $phien = $this->completedSession();
+        $phien->forceFill(['ai_briefing_status' => 'failed'])->save();
 
         // One recorded failed job from the first attempt.
         AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'MaKH' => $phien->MaKH,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'failed',
             'error' => 'provider timeout',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
 
         // Provider now succeeds.
         $this->fakeGhiDienGiaiResponse();
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk();
 
         // Second job dispatched and finished via sync driver.
         $this->assertSame(2, AiJob::where('kind', AiJob::KIND_TRIAGE_BRIEFING)->count());
-        $this->assertSame('ok', $session->refresh()->ai_briefing_status);
-        $this->assertIsArray($session->ai_briefing);
+        $this->assertSame('ok', $phien->refresh()->ai_briefing_status);
+        $this->assertIsArray($phien->ai_briefing);
     }
 
-    protected function strandedBriefing(TriageSession $session, int $ageSeconds = 30): AiJob
+    protected function strandedBriefing(PhienSangLoc $phien, int $ageSeconds = 30): AiJob
     {
         $job = AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'MaKH' => $phien->MaKH,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'queued',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
 
         $job->forceFill(['created_at' => now()->subSeconds($ageSeconds)])->save();

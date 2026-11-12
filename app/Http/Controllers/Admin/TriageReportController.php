@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Exports\AdminTriageExport;
 use App\Http\Controllers\Controller;
-use App\Models\MedicalSymptom;
-use App\Models\TriageSession;
+use App\Models\TrieuChungYTe;
+use App\Models\PhienSangLoc;
 use App\Services\Triage\TriageReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,14 +21,14 @@ class TriageReportController extends Controller
     {
         $filters = $this->filters($request);
 
-        $sessions = $this->reportService->filterSessions($filters)
-            ->with(['user:MaKH,name,email', 'pharmacist:MaKH,name'])
+        $cacPhien = $this->reportService->filterSessions($filters)
+            ->with(['nguoiDung:MaKH,name,email', 'pharmacist:MaKH,name'])
             ->orderByDesc('created_at')
             ->paginate(20)
             ->withQueryString();
 
-        $symptomNames = $this->symptomNamesFor(
-            collect($sessions->items())->flatMap(fn (TriageSession $session) => (array) ($session->matched_symptoms ?? []))
+        $cacTenTrieuChung = $this->symptomNamesFor(
+            collect($cacPhien->items())->flatMap(fn (PhienSangLoc $phien) => (array) ($phien->matched_symptoms ?? []))
         );
 
         return view('admin.triage-reports.index', [
@@ -37,8 +37,8 @@ class TriageReportController extends Controller
             'topSymptoms' => $this->reportService->getTopSymptoms(10, $filters),
             'topRedFlags' => $this->reportService->getTopRedFlags(10, $filters),
             'entryPoints' => $this->reportService->getEntryPointSplit($filters),
-            'sessions' => $sessions,
-            'symptomNames' => $symptomNames,
+            'sessions' => $cacPhien,
+            'symptomNames' => $cacTenTrieuChung,
             'filters' => $filters,
             'outcomeStyles' => TriageReportService::OUTCOME_STYLES,
             'trendDays' => min(max($request->integer('days', 30), 1), 365),
@@ -51,15 +51,15 @@ class TriageReportController extends Controller
      */
     public function show(int $MaSL)
     {
-        $session = TriageSession::with(['user:MaKH,name,email', 'pharmacist:MaKH,name'])
+        $phien = PhienSangLoc::with(['nguoiDung:MaKH,name,email', 'pharmacist:MaKH,name'])
             ->findOrFail($MaSL);
 
-        $symptomNames = $this->symptomNamesFor(collect((array) ($session->matched_symptoms ?? [])));
+        $cacTenTrieuChung = $this->symptomNamesFor(collect((array) ($phien->matched_symptoms ?? [])));
 
         return view('admin.triage-reports.show', [
-            'session' => $session,
-            'symptomNames' => $symptomNames,
-            'answers' => $this->collectedAnswers($session),
+            'session' => $phien,
+            'symptomNames' => $cacTenTrieuChung,
+            'answers' => $this->collectedAnswers($phien),
             'outcomeStyles' => TriageReportService::OUTCOME_STYLES,
         ]);
     }
@@ -103,7 +103,7 @@ class TriageReportController extends Controller
             return [];
         }
 
-        return MedicalSymptom::whereIn('code', $codes->all())
+        return TrieuChungYTe::whereIn('code', $codes->all())
             ->pluck('name_vi', 'code')
             ->toArray();
     }
@@ -111,9 +111,9 @@ class TriageReportController extends Controller
     /**
      * Wizard answers are stored under machine keys; the report shows Vietnamese labels.
      */
-    private function collectedAnswers(TriageSession $session): array
+    private function collectedAnswers(PhienSangLoc $phien): array
     {
-        $data = $session->collected_data ?? [];
+        $data = $phien->collected_data ?? [];
         $skipped = (array) ($data['skipped'] ?? []);
 
         $labels = [

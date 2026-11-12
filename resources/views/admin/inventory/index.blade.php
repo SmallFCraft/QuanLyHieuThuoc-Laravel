@@ -149,7 +149,7 @@
                         <tr>
                             <td><span class="fw-semibold">{{ $product->display_code }}</span></td>
                             <td>{{ $product->name }}</td>
-                            <td>{{ $product->category->name ?? 'Chưa phân loại' }}</td>
+                            <td>{{ $product->danhMuc->name ?? 'Chưa phân loại' }}</td>
                             <td>{{ $product->batch_number }}</td>
                             <td><span class="badge {{ $product->isLowStock() ? 'text-bg-danger' : 'text-bg-success' }}">{{ $product->stock_quantity }}</span></td>
                             <td>{{ $product->reorder_point }}</td>
@@ -176,7 +176,7 @@
                     <div class="d-flex justify-content-between gap-3">
                         <div>
                             <strong>{{ $product->name }}</strong>
-                            <div class="small text-secondary">{{ $product->display_code }} · {{ $product->category->name ?? 'Chưa phân loại' }}</div>
+                            <div class="small text-secondary">{{ $product->display_code }} · {{ $product->danhMuc->name ?? 'Chưa phân loại' }}</div>
                             <div class="small text-secondary">Lô {{ $product->batch_number }} · HSD {{ $product->expiration_date->format('d/m/Y') }}</div>
                         </div>
                         <span class="badge {{ $product->isLowStock() ? 'text-bg-danger' : 'text-bg-success' }} align-self-start">{{ $product->stock_quantity }}</span>

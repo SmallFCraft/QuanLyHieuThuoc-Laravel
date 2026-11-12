@@ -70,8 +70,8 @@
                 <dl class="triage-detail-list mb-0">
                     <dt>{{ __('triage_report.table.customer') }}</dt>
                     <dd>
-                        {{ $session->user->name ?? __('triage_report.table.unknown') }}
-                        <div class="small text-secondary">{{ $session->user->email ?? '#' . $session->MaKH }}</div>
+                        {{ $session->nguoiDung->name ?? __('triage_report.table.unknown') }}
+                        <div class="small text-secondary">{{ $session->nguoiDung->email ?? '#' . $session->MaKH }}</div>
                     </dd>
 
                     <dt>{{ __('triage_report.table.status') }}</dt>

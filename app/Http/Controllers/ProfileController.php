@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
-use App\Models\Favorite;
-use App\Models\MedicationReminder;
+use App\Models\YeuThich;
+use App\Models\NhacUongThuoc;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,18 +23,18 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): View
     {
-        $user = $request->user();
+        $nguoiDung = $request->user();
 
         return view('profile.edit', [
-            'user' => $user,
-            'favoriteItems' => Favorite::profileItemsFor($user),
-            'recentOrders' => $user->orders()->with('items')->latest()->limit(3)->get(),
-            'orderCounts' => $user->orders()
+            'user' => $nguoiDung,
+            'favoriteItems' => YeuThich::profileItemsFor($nguoiDung),
+            'recentOrders' => $nguoiDung->donHangs()->with('chiTietDonHangs')->latest()->limit(3)->get(),
+            'orderCounts' => $nguoiDung->donHangs()
                 ->selectRaw('status, COUNT(*) as total')
                 ->groupBy('status')
                 ->pluck('total', 'status'),
-            'upcomingReminders' => MedicationReminder::with('product')
-                ->where('MaKH', (int) $user->MaKH)
+            'upcomingReminders' => NhacUongThuoc::with('sanPham')
+                ->where('MaKH', (int) $nguoiDung->MaKH)
                 ->active()
                 ->orderBy('next_remind_at')
                 ->limit(3)
@@ -78,8 +78,8 @@ class ProfileController extends Controller
             'avatar.max' => __('messages.profile.avatar_too_large', ['size' => round($maxSizeKb / 1024, 1)]),
         ]);
 
-        $user = $request->user();
-        $previous = $user->avatar;
+        $nguoiDung = $request->user();
+        $previous = $nguoiDung->avatar;
         $disk = Storage::disk(config('uploads.avatars.disk', 'public'));
         $path = trim((string) config('uploads.avatars.path', 'avatars'), '/');
         $maxDimension = (int) config('uploads.avatars.max_dimension', 512);
@@ -104,8 +104,8 @@ class ProfileController extends Controller
         $filename = $path . '/' . Str::uuid() . '.jpg';
         $disk->put($filename, (string) $encoded);
 
-        $user->avatar = $filename;
-        $user->save();
+        $nguoiDung->avatar = $filename;
+        $nguoiDung->save();
 
         // Xoá ảnh cũ sau khi bản ghi đã trỏ sang ảnh mới: nếu save() lỗi thì người
         // dùng vẫn còn ảnh cũ chứ không mất cả hai.
@@ -121,12 +121,12 @@ class ProfileController extends Controller
      */
     public function destroyAvatar(Request $request): RedirectResponse
     {
-        $user = $request->user();
+        $nguoiDung = $request->user();
 
-        if ($user->avatar) {
-            Storage::disk(config('uploads.avatars.disk', 'public'))->delete($user->avatar);
-            $user->avatar = null;
-            $user->save();
+        if ($nguoiDung->avatar) {
+            Storage::disk(config('uploads.avatars.disk', 'public'))->delete($nguoiDung->avatar);
+            $nguoiDung->avatar = null;
+            $nguoiDung->save();
         }
 
         return Redirect::route('profile.edit')->with('status', 'avatar-removed');
@@ -141,11 +141,11 @@ class ProfileController extends Controller
             'password' => ['required', 'current_password'],
         ]);
 
-        $user = $request->user();
+        $nguoiDung = $request->user();
 
         Auth::logout();
 
-        $user->delete();
+        $nguoiDung->delete();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

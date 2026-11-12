@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\TriageSession;
-use App\Models\User;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use App\Models\DanhMuc;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -23,32 +23,32 @@ class TriageTypedAnswerTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Category::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
-        $this->seed(MedicalKnowledgeSeeder::class);
+        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        $this->seed(TriThucYTeSeeder::class);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(34)->toDateString(),
         ]);
     }
 
-    protected function startSession(): TriageSession
+    protected function startSession(): PhienSangLoc
     {
-        $this->actingAs($this->user)->get(route('health.check'));
+        $this->actingAs($this->nguoiDung)->get(route('health.check'));
 
-        return TriageSession::where('MaKH', $this->user->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        return PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
     }
 
     public function test_the_form_default_button_does_not_carry_a_quick_pick_value(): void
     {
-        $html = $this->actingAs($this->user)->get(route('health.check'))->assertOk()->getContent();
+        $html = $this->actingAs($this->nguoiDung)->get(route('health.check'))->assertOk()->getContent();
 
         $formStart = strpos($html, 'id="triage-form"');
         $this->assertNotFalse($formStart);
@@ -71,37 +71,37 @@ class TriageTypedAnswerTest extends TestCase
 
     public function test_pressing_enter_records_the_typed_symptom_not_the_first_option(): void
     {
-        $session = $this->startSession();
+        $phien = $this->startSession();
 
         // On Enter the browser now posts only the typed answer, because the form's
         // default submit button is unnamed. `option_answer` arrives solely from a click.
-        $this->actingAs($this->user)->post(route('health.answer'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+            'triage_session_id' => $phien->MaSL,
             'step' => 1,
             'answer' => 'tôi bị tiêu chảy từ sáng nay',
         ]);
 
-        $session->refresh();
+        $phien->refresh();
 
-        $this->assertSame('tôi bị tiêu chảy từ sáng nay', $session->collected_data['raw_symptom_text']);
-        $this->assertSame('tôi bị tiêu chảy từ sáng nay', $session->collected_data['symptoms']);
+        $this->assertSame('tôi bị tiêu chảy từ sáng nay', $phien->collected_data['raw_symptom_text']);
+        $this->assertSame('tôi bị tiêu chảy từ sáng nay', $phien->collected_data['symptoms']);
     }
 
     public function test_the_wrong_symptom_would_have_driven_the_wrong_triage(): void
     {
-        $session = $this->startSession();
+        $phien = $this->startSession();
 
         // The bug's real cost: the recorded symptom is what the rule engine matches on.
-        $this->actingAs($this->user)->post(route('health.answer'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+            'triage_session_id' => $phien->MaSL,
             'step' => 1,
             'answer' => 'tôi bị tiêu chảy nhiều lần, mất nước',
         ]);
 
-        $session->refresh();
+        $phien->refresh();
 
         $matched = app(\App\Services\Triage\MedicalTriageService::class)
-            ->detectSymptoms($session->collected_data['raw_symptom_text'])
+            ->detectSymptoms($phien->collected_data['raw_symptom_text'])
             ->pluck('code')
             ->all();
 
@@ -111,70 +111,70 @@ class TriageTypedAnswerTest extends TestCase
 
     public function test_a_clicked_option_is_still_recorded_when_nothing_was_typed(): void
     {
-        $session = $this->startSession();
+        $phien = $this->startSession();
 
-        $this->actingAs($this->user)->post(route('health.answer'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+            'triage_session_id' => $phien->MaSL,
             'step' => 1,
             'answer' => '',
             'option_answer' => 'Tiêu chảy',
         ]);
 
-        $this->assertSame('Tiêu chảy', $session->refresh()->collected_data['raw_symptom_text']);
+        $this->assertSame('Tiêu chảy', $phien->refresh()->collected_data['raw_symptom_text']);
     }
 
     public function test_a_clicked_option_still_wins_over_a_prefilled_box_on_the_same_step(): void
     {
-        $session = $this->startSession();
-        $this->actingAs($this->user)->post(route('health.answer'), [
-            'triage_session_id' => $session->MaSL,
+        $phien = $this->startSession();
+        $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+            'triage_session_id' => $phien->MaSL,
             'step' => 1,
             'answer' => 'đau đầu',
         ]);
 
         // Back prefills the box with the stored answer. Clicking a different option must
         // replace it, so the click cannot lose to the value it is meant to overwrite.
-        $this->actingAs($this->user)->post(route('health.back'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.back'), [
+            'triage_session_id' => $phien->MaSL,
         ]);
 
-        $this->actingAs($this->user)->post(route('health.answer'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+            'triage_session_id' => $phien->MaSL,
             'step' => 1,
             'answer' => 'đau đầu',
             'option_answer' => 'Tiêu chảy',
         ]);
 
-        $this->assertSame('Tiêu chảy', $session->refresh()->collected_data['raw_symptom_text']);
+        $this->assertSame('Tiêu chảy', $phien->refresh()->collected_data['raw_symptom_text']);
     }
 
     public function test_the_typed_answer_wins_on_a_later_step_too(): void
     {
-        $session = $this->startSession();
-        $this->actingAs($this->user)->post(route('health.answer'), [
-            'triage_session_id' => $session->MaSL,
+        $phien = $this->startSession();
+        $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+            'triage_session_id' => $phien->MaSL,
             'step' => 1,
             'answer' => 'tôi bị ho',
         ]);
 
-        $this->actingAs($this->user)->post(route('health.answer'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+            'triage_session_id' => $phien->MaSL,
             'step' => 2,
             'answer' => 'khoảng 5 ngày rồi',
         ]);
 
         // Step 2 parses a duration: 5 days, not the "Hôm nay" option's 1 day.
-        $this->assertSame(5, $session->refresh()->collected_data['duration_days']);
+        $this->assertSame(5, $phien->refresh()->collected_data['duration_days']);
     }
 
     public function test_every_step_form_keeps_the_unnamed_default_button(): void
     {
-        $session = $this->startSession();
+        $phien = $this->startSession();
 
         // Walk the wizard and re-check the invariant on each step that offers options:
         // one regression on one step is enough to mis-record an answer.
         foreach ([1 => 'tôi bị ho', 2 => 'hôm nay', 3 => 'chưa dùng gì', 4 => 'không có'] as $step => $answer) {
-            $html = $this->actingAs($this->user)->get(route('health.check'))->assertOk()->getContent();
+            $html = $this->actingAs($this->nguoiDung)->get(route('health.check'))->assertOk()->getContent();
 
             $start = strpos($html, 'id="triage-form"');
 
@@ -191,8 +191,8 @@ class TriageTypedAnswerTest extends TestCase
                 );
             }
 
-            $this->actingAs($this->user)->post(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+            $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+                'triage_session_id' => $phien->MaSL,
                 'step' => $step,
                 'answer' => $answer,
             ]);

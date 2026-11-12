@@ -3,8 +3,8 @@
 namespace App\Services\Triage;
 
 use App\Mail\TriageFollowUpMail;
-use App\Models\ChatMessage;
-use App\Models\TriageSession;
+use App\Models\TinNhanChat;
+use App\Models\PhienSangLoc;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -29,11 +29,11 @@ class TriageFollowUpService
     {
         $sent = 0;
 
-        TriageSession::dueForFollowUp()
-            ->with('user')
-            ->chunkById(100, function ($sessions) use (&$sent) {
-                foreach ($sessions as $session) {
-                    if ($this->askOne($session)) {
+        PhienSangLoc::dueForFollowUp()
+            ->with('nguoiDung')
+            ->chunkById(100, function ($cacPhien) use (&$sent) {
+                foreach ($cacPhien as $phien) {
+                    if ($this->askOne($phien)) {
                         $sent++;
                     }
                 }
@@ -51,10 +51,10 @@ class TriageFollowUpService
      *
      * @return array{improved: bool, message: string, products: array<int, mixed>, refer_doctor: bool, already_answered: bool}
      */
-    public function recordResponse(TriageSession $session, bool $improved): array
+    public function recordResponse(PhienSangLoc $phien, bool $improved): array
     {
-        if ($session->follow_up_responded_at !== null) {
-            $recorded = (bool) $session->follow_up_improved;
+        if ($phien->follow_up_responded_at !== null) {
+            $recorded = (bool) $phien->follow_up_improved;
 
             return [
                 'improved' => $recorded,
@@ -80,25 +80,25 @@ class TriageFollowUpService
         // Only a self-care outcome may be escalated here. An emergency or a
         // pharmacist decision already sits above refer_doctor, so overwriting it
         // would downgrade the advice the patient was given.
-        if (! $improved && $session->outcome === 'self_care') {
+        if (! $improved && $phien->outcome === 'self_care') {
             $attributes['outcome'] = 'refer_doctor';
         }
 
-        $session->update($attributes);
+        $phien->update($attributes);
 
-        $this->writeChatMessage($session, $message, [
+        $this->writeChatMessage($phien, $message, [
             'type' => 'triage_follow_up_response',
             'improved' => $improved,
-            'MaSL' => $session->MaSL,
+            'MaSL' => $phien->MaSL,
         ]);
 
         $this->audit(
             $improved ? 'triage_follow_up_improved' : 'triage_follow_up_not_improved',
-            $session,
+            $phien,
             [
-                'MaKH' => $session->MaKH,
+                'MaKH' => $phien->MaKH,
                 'improved' => $improved,
-                'outcome' => $session->outcome,
+                'outcome' => $phien->outcome,
                 'products_suggested' => 0,
             ]
         );
@@ -116,17 +116,17 @@ class TriageFollowUpService
     /**
      * @return bool whether the question actually went out
      */
-    private function askOne(TriageSession $session): bool
+    private function askOne(PhienSangLoc $phien): bool
     {
-        if ($session->user) {
+        if ($phien->nguoiDung) {
             try {
-                Mail::to($session->user->email)->send(new TriageFollowUpMail($session));
+                Mail::to($phien->nguoiDung->email)->send(new TriageFollowUpMail($phien));
             } catch (\Throwable $e) {
                 // Keep follow_up_at so the next tick retries. Clearing it here would
                 // silently drop the safety net for a self-care case, which is the one
                 // mechanism that catches a triage decision that got it wrong.
                 Log::warning('Triage follow-up mail failed, will retry', [
-                    'MaSL' => $session->MaSL,
+                    'MaSL' => $phien->MaSL,
                     'error' => $e->getMessage(),
                 ]);
 
@@ -134,18 +134,18 @@ class TriageFollowUpService
             }
         }
 
-        $this->writeChatMessage($session, __('messages.reminder.follow_up_question'), [
+        $this->writeChatMessage($phien, __('messages.reminder.follow_up_question'), [
             'type' => 'triage_follow_up_question',
-            'MaSL' => $session->MaSL,
+            'MaSL' => $phien->MaSL,
         ]);
 
         // Clearing the due date is what stops the same question being asked
         // again on the next scheduler tick.
-        $session->update(['follow_up_at' => null]);
+        $phien->update(['follow_up_at' => null]);
 
-        $this->audit('triage_follow_up_sent', $session, [
-            'MaKH' => $session->MaKH,
-            'outcome' => $session->outcome,
+        $this->audit('triage_follow_up_sent', $phien, [
+            'MaKH' => $phien->MaKH,
+            'outcome' => $phien->outcome,
         ]);
 
         return true;
@@ -155,15 +155,15 @@ class TriageFollowUpService
      * Follow-up chatter only exists for sessions that came from (or can reach)
      * a chat thread; chat_messages.session_id is not nullable.
      */
-    private function writeChatMessage(TriageSession $session, string $content, array $metadata): void
+    private function writeChatMessage(PhienSangLoc $phien, string $content, array $metadata): void
     {
-        if (empty($session->session_id)) {
+        if (empty($phien->session_id)) {
             return;
         }
 
-        ChatMessage::create([
-            'MaKH' => $session->MaKH,
-            'session_id' => $session->session_id,
+        TinNhanChat::create([
+            'MaKH' => $phien->MaKH,
+            'session_id' => $phien->session_id,
             'role' => 'assistant',
             'content' => $content,
             'products' => [],
@@ -172,20 +172,20 @@ class TriageFollowUpService
         ]);
     }
 
-    private function audit(string $action, TriageSession $session, array $values): void
+    private function audit(string $action, PhienSangLoc $phien, array $values): void
     {
         try {
             $this->auditLogService->log(
                 action: $action,
-                modelType: TriageSession::class,
-                modelId: $session->MaSL,
+                modelType: PhienSangLoc::class,
+                modelId: $phien->MaSL,
                 oldValues: null,
                 newValues: $values,
-                userId: $session->MaKH
+                userId: $phien->MaKH
             );
         } catch (\Throwable $e) {
             Log::warning('Triage follow-up audit failed', [
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'action' => $action,
                 'error' => $e->getMessage(),
             ]);

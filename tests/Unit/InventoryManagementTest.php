@@ -2,10 +2,10 @@
 
 namespace Tests\Unit;
 
-use App\Models\Product;
-use App\Models\Category;
-use App\Models\User;
-use App\Models\AuditLog;
+use App\Models\SanPham;
+use App\Models\DanhMuc;
+use App\Models\NguoiDung;
+use App\Models\NhatKyKiemToan;
 use App\Services\InventoryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +15,7 @@ class InventoryManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected $category;
+    protected $danhMuc;
     protected $admin;
     protected $inventoryService;
 
@@ -23,12 +23,12 @@ class InventoryManagementTest extends TestCase
     {
         parent::setUp();
         
-        $this->category = Category::create([
+        $this->danhMuc = DanhMuc::create([
             'name' => 'Test Category',
             'description' => 'Test Description'
         ]);
 
-        $this->admin = User::factory()->create([
+        $this->admin = NguoiDung::factory()->create([
             'role' => 'Administrator',
             'status' => 'active'
         ]);
@@ -38,8 +38,8 @@ class InventoryManagementTest extends TestCase
 
     public function test_low_stock_alert_when_quantity_below_reorder_point(): void
     {
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Low Stock Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -50,13 +50,13 @@ class InventoryManagementTest extends TestCase
 
         $lowStockProducts = $this->inventoryService->getLowStockProducts();
 
-        $this->assertTrue($lowStockProducts->contains($product));
+        $this->assertTrue($lowStockProducts->contains($sanPham));
     }
 
     public function test_fefo_sorting_by_expiration_date(): void
     {
-        $product1 = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $product1 = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Medicine A',
             'price' => 50000,
             'expiration_date' => now()->addMonths(3),
@@ -65,8 +65,8 @@ class InventoryManagementTest extends TestCase
             'batch_number' => 'BATCH-002'
         ]);
 
-        $product2 = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $product2 = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Medicine B',
             'price' => 50000,
             'expiration_date' => now()->addMonths(1),
@@ -75,8 +75,8 @@ class InventoryManagementTest extends TestCase
             'batch_number' => 'BATCH-003'
         ]);
 
-        $product3 = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $product3 = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Medicine C',
             'price' => 50000,
             'expiration_date' => now()->addMonths(6),
@@ -85,7 +85,7 @@ class InventoryManagementTest extends TestCase
             'batch_number' => 'BATCH-004'
         ]);
 
-        $sortedProducts = Product::orderBy('expiration_date', 'asc')->get();
+        $sortedProducts = SanPham::orderBy('expiration_date', 'asc')->get();
 
         $this->assertEquals($product2->MaSP, $sortedProducts->first()->MaSP);
         $this->assertEquals($product3->MaSP, $sortedProducts->last()->MaSP);
@@ -95,8 +95,8 @@ class InventoryManagementTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -106,7 +106,7 @@ class InventoryManagementTest extends TestCase
         ]);
 
         $result = $this->inventoryService->adjustStock(
-            $product->MaSP,
+            $sanPham->MaSP,
             20,
             'Received new shipment',
             $this->admin->MaKH
@@ -114,13 +114,13 @@ class InventoryManagementTest extends TestCase
 
         $this->assertTrue($result);
 
-        $product->refresh();
-        $this->assertEquals(120, $product->stock_quantity);
+        $sanPham->refresh();
+        $this->assertEquals(120, $sanPham->stock_quantity);
 
         // Verify audit log
         $this->assertDatabaseHas('audit_logs', [
-            'model_type' => Product::class,
-            'MaDoiTuong' => $product->MaSP,
+            'model_type' => SanPham::class,
+            'MaDoiTuong' => $sanPham->MaSP,
             'action' => 'inventory_adjustment',
             'MaKH' => $this->admin->MaKH
         ]);
@@ -130,8 +130,8 @@ class InventoryManagementTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -144,7 +144,7 @@ class InventoryManagementTest extends TestCase
         $this->expectExceptionMessage('Số lượng tồn kho không thể âm');
 
         $this->inventoryService->adjustStock(
-            $product->MaSP,
+            $sanPham->MaSP,
             -15,
             'Invalid adjustment',
             $this->admin->MaKH
@@ -154,9 +154,9 @@ class InventoryManagementTest extends TestCase
     public function test_concurrent_stock_updates_with_locking(): void
     {
         // Không tạo lô (bỏ qua observer): test thao tác trực tiếp cột products.stock_quantity
-        $product = Product::withoutEvents(function () {
-            return Product::create([
-                'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::withoutEvents(function () {
+            return SanPham::create([
+                'MaDM' => $this->danhMuc->MaDM,
                 'name' => 'Test Medicine',
                 'price' => 50000,
                 'expiration_date' => now()->addYear(),
@@ -167,26 +167,26 @@ class InventoryManagementTest extends TestCase
         });
 
         // Simulate concurrent updates
-        DB::transaction(function () use ($product) {
-            $lockedProduct = Product::lockForUpdate()->find($product->MaSP);
+        DB::transaction(function () use ($sanPham) {
+            $lockedProduct = SanPham::lockForUpdate()->find($sanPham->MaSP);
             $lockedProduct->stock_quantity -= 10;
             $lockedProduct->save();
         });
 
-        DB::transaction(function () use ($product) {
-            $lockedProduct = Product::lockForUpdate()->find($product->MaSP);
+        DB::transaction(function () use ($sanPham) {
+            $lockedProduct = SanPham::lockForUpdate()->find($sanPham->MaSP);
             $lockedProduct->stock_quantity -= 5;
             $lockedProduct->save();
         });
 
-        $product->refresh();
-        $this->assertEquals(85, $product->stock_quantity);
+        $sanPham->refresh();
+        $this->assertEquals(85, $sanPham->stock_quantity);
     }
 
     public function test_check_expiration_returns_expiring_products(): void
     {
-        $expiringProduct = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $expiringProduct = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Expiring Medicine',
             'price' => 50000,
             'expiration_date' => now()->addDays(15),
@@ -195,8 +195,8 @@ class InventoryManagementTest extends TestCase
             'batch_number' => 'BATCH-008'
         ]);
 
-        $validProduct = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $validProduct = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Valid Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -215,8 +215,8 @@ class InventoryManagementTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $product = Product::create([
-            'MaDM' => $this->category->MaDM,
+        $sanPham = SanPham::create([
+            'MaDM' => $this->danhMuc->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear(),
@@ -226,19 +226,19 @@ class InventoryManagementTest extends TestCase
         ]);
 
         $this->inventoryService->adjustStock(
-            $product->MaSP,
+            $sanPham->MaSP,
             150,
             'Stock replenishment',
             $this->admin->MaKH
         );
 
-        $auditLog = AuditLog::where('MaDoiTuong', $product->MaSP)
+        $nhatKy = NhatKyKiemToan::where('MaDoiTuong', $sanPham->MaSP)
             ->where('action', 'inventory_adjustment')
             ->first();
 
-        $this->assertNotNull($auditLog);
-        $this->assertEquals($this->admin->MaKH, $auditLog->MaKH);
-        $this->assertNotNull($auditLog->old_values);
-        $this->assertNotNull($auditLog->new_values);
+        $this->assertNotNull($nhatKy);
+        $this->assertEquals($this->admin->MaKH, $nhatKy->MaKH);
+        $this->assertNotNull($nhatKy->old_values);
+        $this->assertNotNull($nhatKy->new_values);
     }
 }

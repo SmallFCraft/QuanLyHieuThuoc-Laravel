@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\AiJob;
-use App\Models\MedicalSymptom;
-use App\Models\Product;
-use App\Models\TriageSession;
-use App\Models\UserHealthProfile;
+use App\Models\TrieuChungYTe;
+use App\Models\SanPham;
+use App\Models\PhienSangLoc;
+use App\Models\HoSoSucKhoe;
 use App\Services\AiJobService;
 use App\Services\DrugSafetyService;
 use App\Services\Triage\MedicalTriageService;
@@ -34,7 +34,7 @@ class HealthCheckController extends Controller
         protected MedicalTriageService $triageService,
         protected TriageAiAdviceService $adviceService,
         protected AiJobService $aiJobs,
-        protected DrugSafetyService $drugSafety,
+        protected DrugSafetyService $anToanThuoc,
     ) {
     }
 
@@ -57,72 +57,72 @@ class HealthCheckController extends Controller
      * On the `sync` queue driver the job has already finished when dispatch returns,
      * which is why the test suite and a worker-less install behave as before.
      */
-    protected function decideOutcome(Request $request, TriageSession $session): RedirectResponse|JsonResponse
+    protected function decideOutcome(Request $request, PhienSangLoc $phien): RedirectResponse|JsonResponse
     {
         // Emergency never queues. The red flag is found in plain PHP with no AI, and
         // somebody describing chest pain must see the 115 number in this response —
         // not after a worker picks the job up.
-        if ($this->triageService->hasEmergencyRedFlag($session, $this->profileFor((int) $session->MaKH))) {
-            return $this->decideOutcomeInline($request, $session);
+        if ($this->triageService->hasEmergencyRedFlag($phien, $this->profileFor((int) $phien->MaKH))) {
+            return $this->decideOutcomeInline($request, $phien);
         }
 
         // A previous attempt for this session was already retired for want of a worker.
         // Queueing again would loop: strand, retire, queue, strand — 12s per cycle,
         // forever. One failed attempt is enough evidence that nobody is consuming.
-        if ($this->hasAbandonedEvaluation($session)) {
-            return $this->decideOutcomeInline($request, $session);
+        if ($this->hasAbandonedEvaluation($phien)) {
+            return $this->decideOutcomeInline($request, $phien);
         }
 
         try {
-            $job = $this->aiJobs->dispatchEvaluation($session);
+            $job = $this->aiJobs->dispatchEvaluation($phien);
         } catch (\Throwable $exception) {
             // An unavailable queue must never strand a finished questionnaire.
             Log::warning('Triage evaluation queue unavailable, deciding inline', [
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'error' => $exception->getMessage(),
             ]);
 
-            return $this->decideOutcomeInline($request, $session);
+            return $this->decideOutcomeInline($request, $phien);
         }
 
         if ($job->status === 'failed') {
-            return $this->decideOutcomeInline($request, $session);
+            return $this->decideOutcomeInline($request, $phien);
         }
 
         if ($job->status === 'done') {
-            return $this->respondDecided($request, $session->fresh(), $job);
+            return $this->respondDecided($request, $phien->fresh(), $job);
         }
 
-        return $this->respondPending($request, $session, $job);
+        return $this->respondPending($request, $phien, $job);
     }
 
     /**
      * Run the decision in this request. Used when there is no worker to take it.
      */
-    protected function decideOutcomeInline(Request $request, TriageSession $session): RedirectResponse|JsonResponse
+    protected function decideOutcomeInline(Request $request, PhienSangLoc $phien): RedirectResponse|JsonResponse
     {
-        $result = $this->triageService->evaluate($session, $this->profileFor((int) $session->MaKH));
+        $result = $this->triageService->evaluate($phien, $this->profileFor((int) $phien->MaKH));
 
-        if ($this->triageService->shouldAskClarify($session, $result)) {
+        if ($this->triageService->shouldAskClarify($phien, $result)) {
             return $this->respondClarify(
                 $request,
-                $this->triageService->storeClarifyQuestions($session, $result)
+                $this->triageService->storeClarifyQuestions($phien, $result)
             );
         }
 
-        return $this->respondResult($request, $this->finalizeSession($session, $result));
+        return $this->respondResult($request, $this->finalizeSession($phien, $result));
     }
 
     /**
      * @param \App\Models\AiJob $job A finished evaluation job.
      */
-    protected function respondDecided(Request $request, TriageSession $session, AiJob $job): RedirectResponse|JsonResponse
+    protected function respondDecided(Request $request, PhienSangLoc $phien, AiJob $job): RedirectResponse|JsonResponse
     {
         if (($job->result['next'] ?? null) === 'clarify') {
-            return $this->respondClarify($request, $session);
+            return $this->respondClarify($request, $phien);
         }
 
-        return $this->respondResult($request, $session);
+        return $this->respondResult($request, $phien);
     }
 
     /**
@@ -135,14 +135,14 @@ class HealthCheckController extends Controller
      * @param array<string, mixed> $result Already-computed evaluate() output, so the
      *                                     rules (and any AI extraction) run once.
      */
-    protected function finalizeSession(TriageSession $session, array $result): TriageSession
+    protected function finalizeSession(PhienSangLoc $phien, array $result): PhienSangLoc
     {
-        $session = $this->triageService->finalize($session, $result);
+        $phien = $this->triageService->finalize($phien, $result);
 
-        $this->aiJobs->dispatchAdviceRewriteIfEligible($session);
-        $this->aiJobs->dispatchBriefingIfEligible($session);
+        $this->aiJobs->dispatchAdviceRewriteIfEligible($phien);
+        $this->aiJobs->dispatchBriefingIfEligible($phien);
 
-        return $session->refresh();
+        return $phien->refresh();
     }
 
     /**
@@ -152,23 +152,23 @@ class HealthCheckController extends Controller
      * @param array<string, mixed>|null $question
      * @return array<string, mixed>
      */
-    protected function stageData(TriageSession $session, ?array $question, array $clarifyQuestions, ?AiJob $pendingJob, ?UserHealthProfile $profile): array
+    protected function stageData(PhienSangLoc $phien, ?array $question, array $clarifyQuestions, ?AiJob $pendingJob, ?HoSoSucKhoe $hoSo): array
     {
         return [
-            'session' => $session,
+            'session' => $phien,
             'question' => $question,
             // Pre-fill so going back shows the user's own words, not a blank box.
             'previousAnswer' => $question
-                ? $this->triageService->previousAnswerFor($session, (int) $question['step'])
+                ? $this->triageService->previousAnswerFor($phien, (int) $question['step'])
                 : '',
-            'hasProfile' => $profile !== null,
+            'hasProfile' => $hoSo !== null,
             'clarifyQuestions' => $clarifyQuestions,
-            'clarifyRound' => (int) $session->ai_clarify_rounds,
-            'clarifyMaxRounds' => TriageSession::MAX_CLARIFY_ROUNDS,
+            'clarifyRound' => (int) $phien->ai_clarify_rounds,
+            'clarifyMaxRounds' => PhienSangLoc::MAX_CLARIFY_ROUNDS,
             // Non-null while a worker is deciding: the stage shows a waiting state and
             // polls, instead of holding the request open for the 11-30s AI call.
             'pendingJobId' => $pendingJob?->uuid,
-            'answeredSteps' => $this->answeredSteps($session),
+            'answeredSteps' => $this->answeredSteps($phien),
         ];
     }
 
@@ -180,19 +180,19 @@ class HealthCheckController extends Controller
      * every Vietnamese string — and the medical labels among them — into the client,
      * which is exactly what the "no medical content outside the server" rule forbids.
      */
-    protected function renderStage(TriageSession $session): string
+    protected function renderStage(PhienSangLoc $phien): string
     {
-        $session = $session->fresh();
-        $profile = $this->profileFor((int) $session->MaKH);
+        $phien = $phien->fresh();
+        $hoSo = $this->profileFor((int) $phien->MaKH);
 
         return view('health.partials.stage', $this->stageData(
-            $session,
-            $session->status === 'in_progress'
-                ? $this->triageService->nextQuestion($session, $profile)
+            $phien,
+            $phien->status === 'in_progress'
+                ? $this->triageService->nextQuestion($phien, $hoSo)
                 : null,
-            $this->pendingClarifyQuestions($session),
-            $this->pendingEvaluationJob($session),
-            $profile
+            $this->pendingClarifyQuestions($phien),
+            $this->pendingEvaluationJob($phien),
+            $hoSo
         ))->render();
     }
 
@@ -206,11 +206,11 @@ class HealthCheckController extends Controller
     public function index(Request $request): View|RedirectResponse
     {
         $userId = (int) auth()->id();
-        $session = $this->triageService->startOrResume($userId, session('chat_session_id'));
-        $profile = $this->profileFor($userId);
-        $question = $this->triageService->nextQuestion($session, $profile);
-        $clarifyQuestions = $this->pendingClarifyQuestions($session);
-        $pendingJob = $this->pendingEvaluationJob($session);
+        $phien = $this->triageService->startOrResume($userId, session('chat_session_id'));
+        $hoSo = $this->profileFor($userId);
+        $question = $this->triageService->nextQuestion($phien, $hoSo);
+        $clarifyQuestions = $this->pendingClarifyQuestions($phien);
+        $pendingJob = $this->pendingEvaluationJob($phien);
 
         // Checked before deciding: a pending round means the questions are already
         // stored, and a running job means the decision is already under way — either
@@ -218,13 +218,13 @@ class HealthCheckController extends Controller
         if ($question === null
             && $clarifyQuestions === []
             && $pendingJob === null
-            && !empty($session->collected_data)
+            && !empty($phien->collected_data)
         ) {
-            $decision = $this->decideOutcome($request, $session);
+            $decision = $this->decideOutcome($request, $phien);
 
-            $session = $session->fresh();
-            $pendingJob = $this->pendingEvaluationJob($session);
-            $clarifyQuestions = $this->pendingClarifyQuestions($session);
+            $phien = $phien->fresh();
+            $pendingJob = $this->pendingEvaluationJob($phien);
+            $clarifyQuestions = $this->pendingClarifyQuestions($phien);
 
             // Only a finished decision is a real navigation. A queued job renders the
             // waiting state below and a fresh follow-up round renders its form — both
@@ -235,7 +235,7 @@ class HealthCheckController extends Controller
         }
 
         return view('health.check', array_merge(
-            $this->stageData($session, $question, $clarifyQuestions, $pendingJob, $profile),
+            $this->stageData($phien, $question, $clarifyQuestions, $pendingJob, $hoSo),
             [
                 'disclaimer' => MedicalTriageService::DISCLAIMER,
                 // Terminal return only. The early `return $decision` above and stageData()
@@ -257,16 +257,16 @@ class HealthCheckController extends Controller
      * the page loops: reload finds the queued job, renders the waiting state, the
      * client polls, sees `stranded`, reloads, and finds the same job again.
      */
-    protected function pendingEvaluationJob(TriageSession $session): ?AiJob
+    protected function pendingEvaluationJob(PhienSangLoc $phien): ?AiJob
     {
-        if ($session->status !== 'in_progress') {
+        if ($phien->status !== 'in_progress') {
             return null;
         }
 
-        $job = AiJob::where('MaKH', $session->MaKH)
+        $job = AiJob::where('MaKH', $phien->MaKH)
             ->where('kind', AiJob::KIND_TRIAGE_EVALUATION)
             ->whereIn('status', ['queued', 'running'])
-            ->where('payload->MaSL', $session->MaSL)
+            ->where('payload->MaSL', $phien->MaSL)
             ->latest('MaAJ')
             ->first();
 
@@ -282,12 +282,12 @@ class HealthCheckController extends Controller
     /**
      * A decision for this session was already given up on for want of a worker.
      */
-    protected function hasAbandonedEvaluation(TriageSession $session): bool
+    protected function hasAbandonedEvaluation(PhienSangLoc $phien): bool
     {
-        return AiJob::where('MaKH', $session->MaKH)
+        return AiJob::where('MaKH', $phien->MaKH)
             ->where('kind', AiJob::KIND_TRIAGE_EVALUATION)
             ->where('status', 'failed')
-            ->where('payload->MaSL', $session->MaSL)
+            ->where('payload->MaSL', $phien->MaSL)
             ->exists();
     }
 
@@ -300,9 +300,9 @@ class HealthCheckController extends Controller
      *
      * @return array<int, array{step: int, label: string, answer: string, skipped: bool}>
      */
-    protected function answeredSteps(TriageSession $session): array
+    protected function answeredSteps(PhienSangLoc $phien): array
     {
-        $data = $session->collected_data ?? [];
+        $data = $phien->collected_data ?? [];
         $skipped = (array) ($data['skipped'] ?? []);
         $keys = [
             1 => 'raw_symptom_text',
@@ -342,15 +342,15 @@ class HealthCheckController extends Controller
      *
      * @return array<int, string>
      */
-    protected function pendingClarifyQuestions(TriageSession $session): array
+    protected function pendingClarifyQuestions(PhienSangLoc $phien): array
     {
-        if ($session->status !== 'in_progress') {
+        if ($phien->status !== 'in_progress') {
             return [];
         }
 
         // recordClarifyAnswers() clears the list once the round is answered, so a
         // non-empty list here always means "this round is still open".
-        return $session->pendingClarifyQuestions();
+        return $phien->pendingClarifyQuestions();
     }
 
     /**
@@ -360,7 +360,7 @@ class HealthCheckController extends Controller
     {
         $validated = $request->validate([
             'triage_session_id' => ['required', 'integer'],
-            'step' => ['required', 'integer', 'min:1', 'max:' . TriageSession::TOTAL_STEPS],
+            'step' => ['required', 'integer', 'min:1', 'max:' . PhienSangLoc::TOTAL_STEPS],
             'answer' => ['nullable', 'string', 'max:1000'],
             'option_answer' => ['nullable', 'string', 'max:1000'],
             'skipped' => ['nullable', 'boolean'],
@@ -369,12 +369,12 @@ class HealthCheckController extends Controller
         ]);
 
         $userId = (int) auth()->id();
-        $session = TriageSession::where('MaKH', $userId)
+        $phien = PhienSangLoc::where('MaKH', $userId)
             ->where('MaSL', $validated['triage_session_id'])
             ->inProgress()
             ->first();
 
-        if (!$session) {
+        if (!$phien) {
             return $this->respondExpired($request);
         }
 
@@ -382,14 +382,14 @@ class HealthCheckController extends Controller
         // so $validated['step'] arrives as a string and would fail === against the
         // STEP_* constants.
         $step = (int) $validated['step'];
-        $profile = $this->profileFor($userId);
+        $hoSo = $this->profileFor($userId);
 
         // The answer must belong to the question the session is actually on. Without
         // this a single crafted POST (step=5) finalises the triage with no symptom or
         // duration recorded, and every guard rule falls through to self-care. Compared
         // against nextQuestion rather than current_step because a profile-covered step
         // is skipped, so the rendered step can be ahead of the counter.
-        $expected = $this->triageService->nextQuestion($session, $profile);
+        $expected = $this->triageService->nextQuestion($phien, $hoSo);
 
         if ($expected === null || $step !== (int) $expected['step']) {
             return $this->respondStepMismatch($request);
@@ -424,19 +424,19 @@ class HealthCheckController extends Controller
         }
 
         try {
-            $session = $this->triageService->recordAnswer($session, $step, $answer, $skipped);
-            $question = $this->triageService->nextQuestion($session, $profile);
+            $phien = $this->triageService->recordAnswer($phien, $step, $answer, $skipped);
+            $question = $this->triageService->nextQuestion($phien, $hoSo);
 
             if ($question !== null) {
-                return $this->respondQuestion($request, $session, $question);
+                return $this->respondQuestion($request, $phien, $question);
             }
 
             // Questionnaire complete. The decision — including the AI hop — runs in a
             // worker, and the patient waits on it.
-            return $this->decideOutcome($request, $session);
+            return $this->decideOutcome($request, $phien);
         } catch (\Throwable $exception) {
             Log::error('Triage answer processing failed', [
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'step' => $validated['step'],
                 'error' => $exception->getMessage(),
             ]);
@@ -459,23 +459,23 @@ class HealthCheckController extends Controller
     {
         $validated = $request->validate([
             'triage_session_id' => ['required', 'integer'],
-            'clarify' => ['nullable', 'array', 'max:' . TriageSession::MAX_CLARIFY_QUESTIONS_PER_ROUND],
+            'clarify' => ['nullable', 'array', 'max:' . PhienSangLoc::MAX_CLARIFY_QUESTIONS_PER_ROUND],
             'clarify.*' => ['nullable', 'string', 'max:500'],
             'skipped' => ['nullable', 'boolean'],
         ]);
 
         $userId = (int) auth()->id();
-        $session = TriageSession::where('MaKH', $userId)
+        $phien = PhienSangLoc::where('MaKH', $userId)
             ->where('MaSL', $validated['triage_session_id'])
             ->inProgress()
             ->first();
 
-        if (!$session) {
+        if (!$phien) {
             return $this->respondExpired($request);
         }
 
         // Only reachable while a round is actually open.
-        if ($session->pendingClarifyQuestions() === []) {
+        if ($phien->pendingClarifyQuestions() === []) {
             return $this->respondStepMismatch($request);
         }
 
@@ -484,22 +484,22 @@ class HealthCheckController extends Controller
         try {
             if ($skipped) {
                 // Declining ends the conversation: no further round may be offered.
-                $session = $this->triageService->skipClarifyRounds($session);
+                $phien = $this->triageService->skipClarifyRounds($phien);
 
-                return $this->decideOutcome($request, $session);
+                return $this->decideOutcome($request, $phien);
             }
 
-            $session = $this->triageService->recordClarifyAnswers(
-                $session,
+            $phien = $this->triageService->recordClarifyAnswers(
+                $phien,
                 (array) ($validated['clarify'] ?? [])
             );
 
             // The answers may have raised new gaps — or closed them. The model decides
             // via needs_more_info, within the round ceiling, inside the job.
-            return $this->decideOutcome($request, $session);
+            return $this->decideOutcome($request, $phien);
         } catch (\Throwable $exception) {
             Log::error('Triage clarify processing failed', [
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -518,11 +518,11 @@ class HealthCheckController extends Controller
      */
     public function requestPharmacist(Request $request, int $MaSL): RedirectResponse
     {
-        $session = TriageSession::where('MaKH', (int) auth()->id())
+        $phien = PhienSangLoc::where('MaKH', (int) auth()->id())
             ->where('MaSL', $MaSL)
             ->firstOrFail();
 
-        $moved = $this->triageService->requestPharmacistReview($session);
+        $moved = $this->triageService->requestPharmacistReview($phien);
 
         return redirect()
             ->route('health.result', $MaSL)
@@ -542,14 +542,14 @@ class HealthCheckController extends Controller
             'triage_session_id' => ['required', 'integer'],
         ]);
 
-        $session = TriageSession::where('MaKH', (int) auth()->id())
+        $phien = PhienSangLoc::where('MaKH', (int) auth()->id())
             ->where('MaSL', $validated['triage_session_id'])
             ->inProgress()
             ->first();
 
-        if ($session && $session->current_step > 1) {
-            $session->current_step = $session->current_step - 1;
-            $session->save();
+        if ($phien && $phien->current_step > 1) {
+            $phien->current_step = $phien->current_step - 1;
+            $phien->save();
         }
 
         return redirect()->route('health.check');
@@ -561,48 +561,48 @@ class HealthCheckController extends Controller
     public function result(Request $request, int $MaSL): View
     {
         $userId = (int) auth()->id();
-        $session = TriageSession::where('MaKH', $userId)
+        $phien = PhienSangLoc::where('MaKH', $userId)
             ->where('MaSL', $MaSL)
             ->firstOrFail();
 
-        abort_if($session->status === 'in_progress', 404);
+        abort_if($phien->status === 'in_progress', 404);
 
-        $profile = $this->profileFor($userId);
+        $hoSo = $this->profileFor($userId);
 
         // Before reading the AI columns: on the `sync` queue driver the job this call
-        // may dispatch has already finished and written them, and $session would
+        // may dispatch has already finished and written them, and $phien would
         // otherwise still hold the pre-dispatch row.
-        $briefingJob = $this->ensureBriefingJob($session);
-        $session = $session->refresh();
+        $briefingJob = $this->ensureBriefingJob($phien);
+        $phien = $phien->refresh();
 
         return view('health.result', [
-            'session' => $session,
+            'session' => $phien,
             'disclaimer' => MedicalTriageService::DISCLAIMER,
             // Non-null while the rewrite is still being written. Looked up rather than
             // flashed, because the decision may have been taken by a worker, which has
             // no session to flash into.
-            'aiJobId' => $this->pendingAdviceJob($session)?->uuid,
+            'aiJobId' => $this->pendingAdviceJob($phien)?->uuid,
             // Same idea for the detailed briefing, which is a much slower call and so
             // is polled separately: the advice can land minutes before it.
             'briefingJobId' => $briefingJob?->uuid,
-            'briefing' => $this->briefingFor($session),
+            'briefing' => $this->briefingFor($phien),
             // Whether this session should have a briefing at all, so the page can tell
             // "none was ever due" (emergency) from "it was attempted and produced
             // nothing" without re-deriving the eligibility rule in Blade.
-            'briefingExpected' => app(TriageAiBriefingService::class)->isEligible($session),
+            'briefingExpected' => app(TriageAiBriefingService::class)->isEligible($phien),
             // Same reason as the briefing list: the stored row cannot hold a usable
             // image URL, so it is resolved here from the live product.
-            'suggestedProducts' => $this->suggestedProductsFor($session),
+            'suggestedProducts' => $this->suggestedProductsFor($phien),
             // Never in front of an emergency outcome: the tel:115 button is the only
             // action on that page and must not share the viewport with a dismissible
             // notice. The compact notice itself still renders — but in its inline form,
             // since with the popup suppressed there is nothing for "Xem lại" to reopen.
-            'showDisclaimerPopup' => !$session->isEmergency() && $this->disclaimerPopupDue($request, $userId),
-            'disclaimerReviewable' => !$session->isEmergency(),
-            'hasProfile' => $profile !== null,
-            'safety' => $this->safetyCheck($session, $profile),
-            'basis' => $this->decisionBasis($session),
-            'metrics' => $this->analysisMetrics($session),
+            'showDisclaimerPopup' => !$phien->isEmergency() && $this->disclaimerPopupDue($request, $userId),
+            'disclaimerReviewable' => !$phien->isEmergency(),
+            'hasProfile' => $hoSo !== null,
+            'safety' => $this->safetyCheck($phien, $hoSo),
+            'basis' => $this->decisionBasis($phien),
+            'metrics' => $this->analysisMetrics($phien),
         ]);
     }
 
@@ -622,9 +622,9 @@ class HealthCheckController extends Controller
      *
      * @return array<string, mixed>|null null when the session has no outcome yet
      */
-    protected function analysisMetrics(TriageSession $session): ?array
+    protected function analysisMetrics(PhienSangLoc $phien): ?array
     {
-        $rank = array_search((string) $session->outcome, array_reverse(TriageReportService::OUTCOMES), true);
+        $rank = array_search((string) $phien->outcome, array_reverse(TriageReportService::OUTCOMES), true);
 
         if ($rank === false) {
             return null;
@@ -636,14 +636,14 @@ class HealthCheckController extends Controller
         $bandTop = $bandBase + 24;
         $bandWidth = $bandTop - $bandBase + 1;
 
-        $redFlags = collect($session->triggered_red_flags ?? []);
-        $bySeverity = fn (string $severity) => $redFlags
+        $cacCoDo = collect($phien->triggered_red_flags ?? []);
+        $bySeverity = fn (string $severity) => $cacCoDo
             ->filter(fn ($flag) => is_array($flag) && ($flag['severity'] ?? '') === $severity)
             ->count();
 
-        $duration = (int) ($session->answerFor('duration_days') ?? 0);
-        $symptomCount = count(array_filter((array) $session->matched_symptoms));
-        $age = data_get($session->ai_meta, 'age');
+        $duration = (int) ($phien->answerFor('duration_days') ?? 0);
+        $symptomCount = count(array_filter((array) $phien->matched_symptoms));
+        $age = data_get($phien->ai_meta, 'age');
 
         $contributions = [
             ['key' => 'redflags', 'label' => __('messages.health.analysis_factor_redflags'), 'points' => min(30, $bySeverity('emergency') * 15 + $bySeverity('urgent') * 8 + $bySeverity('caution') * 3)],
@@ -669,7 +669,7 @@ class HealthCheckController extends Controller
             'score' => $score,
             'band_base' => $bandBase,
             'band_top' => $bandTop,
-            'level_label' => __('messages.health.outcome_' . $session->outcome),
+            'level_label' => __('messages.health.outcome_' . $phien->outcome),
             // Bars for everything: a factor that read zero shows as an empty track,
             // because "cờ đỏ = 0" IS a measured result, not an absence of data.
             'contributions' => $contributions,
@@ -692,14 +692,14 @@ class HealthCheckController extends Controller
     public function briefingPane(int $MaSL): Response
     {
         $userId = (int) auth()->id();
-        $session = TriageSession::where('MaKH', $userId)
+        $phien = PhienSangLoc::where('MaKH', $userId)
             ->where('MaSL', $MaSL)
             ->firstOrFail();
 
-        abort_if($session->isEmergency(), 404);
-        abort_if($session->status === 'in_progress', 404);
+        abort_if($phien->isEmergency(), 404);
+        abort_if($phien->status === 'in_progress', 404);
 
-        $briefing = $this->briefingFor($session);
+        $briefing = $this->briefingFor($phien);
 
         // A finished job is not pending, whatever the columns say. A worker that died
         // before recording its status leaves both null while the job is `done`; reading
@@ -711,23 +711,23 @@ class HealthCheckController extends Controller
             ->whereIn('status', ['done', 'failed', 'cancelled'])
             ->exists();
 
-        $pending = $briefing === null && $session->ai_briefing_status === null && ! $jobFinished;
+        $pending = $briefing === null && $phien->ai_briefing_status === null && ! $jobFinished;
 
         // Care products only render when the briefing actually arrived: a pending
         // poll discards the 202 body, and a failed attempt drops to the unavailable
         // notice. Calculating the snapshot for every poll tick would re-run the rule
         // picks 60+ times while waiting.
-        $profile = $briefing !== null ? $this->profileFor($userId) : null;
+        $hoSo = $briefing !== null ? $this->profileFor($userId) : null;
 
         return response()->view('health.partials.briefing-pane', [
             'briefing' => $briefing,
             'pending' => $pending,
             'unavailable' => $briefing === null && ! $pending,
-            'session' => $session,
-            'safety' => $briefing !== null ? $this->safetyCheck($session, $profile) : [],
-            'hasProfile' => $profile !== null,
-            'suggestedProducts' => $briefing !== null ? $this->suggestedProductsFor($session) : [],
-            'metrics' => $this->analysisMetrics($session),
+            'session' => $phien,
+            'safety' => $briefing !== null ? $this->safetyCheck($phien, $hoSo) : [],
+            'hasProfile' => $hoSo !== null,
+            'suggestedProducts' => $briefing !== null ? $this->suggestedProductsFor($phien) : [],
+            'metrics' => $this->analysisMetrics($phien),
         ], $pending ? 202 : 200);
     }
 
@@ -741,21 +741,21 @@ class HealthCheckController extends Controller
      *
      * @return array<int, array<string, mixed>>
      */
-    protected function suggestedProductsFor(TriageSession $session): array
+    protected function suggestedProductsFor(PhienSangLoc $phien): array
     {
         // Closure, not the 'is_array' string: Collection::filter passes ($value, $key)
         // and is_array() takes exactly one argument, so the string form is a 500.
-        $products = collect($session->suggested_products ?? [])->filter(fn ($row) => is_array($row));
+        $sanPhams = collect($phien->suggested_products ?? [])->filter(fn ($row) => is_array($row));
 
-        if ($products->isEmpty()) {
+        if ($sanPhams->isEmpty()) {
             return [];
         }
 
-        $live = Product::whereIn('MaSP', $products->pluck('id')->filter()->all())
+        $live = SanPham::whereIn('MaSP', $sanPhams->pluck('id')->filter()->all())
             ->get()
             ->keyBy('MaSP');
 
-        return $products
+        return $sanPhams
             ->map(fn (array $row) => array_merge($row, [
                 'image_url' => $live->get((int) ($row['id'] ?? 0))?->image_url,
             ]))
@@ -772,35 +772,35 @@ class HealthCheckController extends Controller
      * all", not on "none is running": a stranded or failed attempt must not be
      * retried on every reload.
      */
-    protected function ensureBriefingJob(TriageSession $session): ?AiJob
+    protected function ensureBriefingJob(PhienSangLoc $phien): ?AiJob
     {
         // Success never reruns. A failed attempt is retried once if the previous job
         // completed without producing a usable briefing.
-        if ($session->ai_briefing_status === 'ok') {
+        if ($phien->ai_briefing_status === 'ok') {
             return null;
         }
 
-        $briefingAttempts = AiJob::where('MaKH', $session->MaKH)
+        $briefingAttempts = AiJob::where('MaKH', $phien->MaKH)
             ->where('kind', AiJob::KIND_TRIAGE_BRIEFING)
-            ->where('payload->MaSL', $session->MaSL)
+            ->where('payload->MaSL', $phien->MaSL)
             ->count();
 
-        if ($session->ai_briefing_status !== null && $briefingAttempts >= 2) {
+        if ($phien->ai_briefing_status !== null && $briefingAttempts >= 2) {
             return null;
         }
 
-        $job = AiJob::where('MaKH', $session->MaKH)
+        $job = AiJob::where('MaKH', $phien->MaKH)
             ->where('kind', AiJob::KIND_TRIAGE_BRIEFING)
-            ->where('payload->MaSL', $session->MaSL)
+            ->where('payload->MaSL', $phien->MaSL)
             ->latest('MaAJ')
             ->first();
 
         // Previous job finished with failure and we have not exhausted retries.
-        if ($job !== null && $job->isFinished() && $session->ai_briefing_status === 'failed' && $briefingAttempts < 2) {
-            $session->forceFill(['ai_briefing_status' => null])->save();
-            $job = $this->aiJobs->dispatchBriefingIfEligible($session);
+        if ($job !== null && $job->isFinished() && $phien->ai_briefing_status === 'failed' && $briefingAttempts < 2) {
+            $phien->forceFill(['ai_briefing_status' => null])->save();
+            $job = $this->aiJobs->dispatchBriefingIfEligible($phien);
         } elseif ($job === null) {
-            $job = $this->aiJobs->dispatchBriefingIfEligible($session);
+            $job = $this->aiJobs->dispatchBriefingIfEligible($phien);
         }
 
         // A queued job nobody picked up: no worker is running, so polling it would
@@ -819,8 +819,8 @@ class HealthCheckController extends Controller
             // above only opens on a non-null status, so an abandoned attempt with a
             // null column never reached it — the session was stranded forever with a
             // retry still in budget.
-            if (app(TriageAiBriefingService::class)->isEligible($session)) {
-                $session->forceFill(['ai_briefing_status' => 'failed'])->save();
+            if (app(TriageAiBriefingService::class)->isEligible($phien)) {
+                $phien->forceFill(['ai_briefing_status' => 'failed'])->save();
             }
 
             return null;
@@ -842,36 +842,36 @@ class HealthCheckController extends Controller
      *
      * @return array<string, mixed>|null
      */
-    protected function briefingFor(TriageSession $session): ?array
+    protected function briefingFor(PhienSangLoc $phien): ?array
     {
-        $briefing = $session->ai_briefing;
+        $briefing = $phien->ai_briefing;
 
         if (!is_array($briefing) || $briefing === []) {
             return null;
         }
 
-        $products = collect($briefing['products'] ?? []);
+        $sanPhams = collect($briefing['products'] ?? []);
 
-        if ($products->isEmpty()) {
+        if ($sanPhams->isEmpty()) {
             return $briefing;
         }
 
-        $live = Product::whereIn('MaSP', $products->pluck('id')->filter()->all())
+        $live = SanPham::whereIn('MaSP', $sanPhams->pluck('id')->filter()->all())
             ->notExpired()
             ->where('stock_quantity', '>', 0)
             ->get()
             ->keyBy('MaSP');
 
-        $briefing['products'] = $products
+        $briefing['products'] = $sanPhams
             ->filter(fn (array $row) => $live->has((int) ($row['id'] ?? 0)))
             ->map(function (array $row) use ($live) {
-                $product = $live[(int) $row['id']];
+                $sanPham = $live[(int) $row['id']];
 
                 return array_merge($row, [
-                    'stock_quantity' => (int) $product->stock_quantity,
-                    'price' => $product->price_vnd,
-                    'url' => route('products.show', $product->MaSP),
-                    'image_url' => $product->image_url,
+                    'stock_quantity' => (int) $sanPham->stock_quantity,
+                    'price' => $sanPham->price_vnd,
+                    'url' => route('products.show', $sanPham->MaSP),
+                    'image_url' => $sanPham->image_url,
                 ]);
             })
             ->values()
@@ -893,30 +893,30 @@ class HealthCheckController extends Controller
      * forever, and leaving it to the poller would keep showing the waiting banner for
      * a worker that is never coming.
      */
-    protected function pendingAdviceJob(TriageSession $session): ?AiJob
+    protected function pendingAdviceJob(PhienSangLoc $phien): ?AiJob
     {
-        if ($session->ai_status === 'ok') {
+        if ($phien->ai_status === 'ok') {
             return null;
         }
 
-        $adviceAttempts = AiJob::where('MaKH', $session->MaKH)
+        $adviceAttempts = AiJob::where('MaKH', $phien->MaKH)
             ->where('kind', AiJob::KIND_TRIAGE_ADVICE)
-            ->where('payload->MaSL', $session->MaSL)
+            ->where('payload->MaSL', $phien->MaSL)
             ->count();
 
-        if ($session->ai_status !== null && $adviceAttempts >= 2) {
+        if ($phien->ai_status !== null && $adviceAttempts >= 2) {
             return null;
         }
 
-        $job = AiJob::where('MaKH', $session->MaKH)
+        $job = AiJob::where('MaKH', $phien->MaKH)
             ->where('kind', AiJob::KIND_TRIAGE_ADVICE)
-            ->where('payload->MaSL', $session->MaSL)
+            ->where('payload->MaSL', $phien->MaSL)
             ->latest('MaAJ')
             ->first();
 
-        if ($job !== null && $job->isFinished() && $session->ai_status === 'failed' && $adviceAttempts < 2) {
-            $session->forceFill(['ai_status' => null])->save();
-            $job = $this->aiJobs->dispatchAdviceRewriteIfEligible($session);
+        if ($job !== null && $job->isFinished() && $phien->ai_status === 'failed' && $adviceAttempts < 2) {
+            $phien->forceFill(['ai_status' => null])->save();
+            $job = $this->aiJobs->dispatchAdviceRewriteIfEligible($phien);
         }
 
         if ($job === null || !$job->isStranded()) {
@@ -940,18 +940,18 @@ class HealthCheckController extends Controller
      *
      * @return array<string, mixed>
      */
-    protected function decisionBasis(TriageSession $session): array
+    protected function decisionBasis(PhienSangLoc $phien): array
     {
-        $codes = array_values(array_filter((array) $session->matched_symptoms));
+        $codes = array_values(array_filter((array) $phien->matched_symptoms));
 
         return [
             'symptoms' => $codes === []
                 ? []
-                : MedicalSymptom::whereIn('code', $codes)->pluck('name_vi')->all(),
-            'duration_days' => $session->answerFor('duration_days'),
-            'age' => data_get($session->ai_meta, 'age'),
-            'clarify_rounds' => (int) $session->ai_clarify_rounds,
-            'red_flags' => (array) $session->triggered_red_flags,
+                : TrieuChungYTe::whereIn('code', $codes)->pluck('name_vi')->all(),
+            'duration_days' => $phien->answerFor('duration_days'),
+            'age' => data_get($phien->ai_meta, 'age'),
+            'clarify_rounds' => (int) $phien->ai_clarify_rounds,
+            'red_flags' => (array) $phien->triggered_red_flags,
         ];
     }
 
@@ -969,16 +969,16 @@ class HealthCheckController extends Controller
      *
      * @return array{warnings: array<int, array<string, mixed>>, flagged: array<int, int>}
      */
-    protected function safetyCheck(TriageSession $session, ?UserHealthProfile $profile): array
+    protected function safetyCheck(PhienSangLoc $phien, ?HoSoSucKhoe $hoSo): array
     {
-        $productIds = collect($session->suggested_products ?? [])
-            ->concat((array) data_get($session->ai_briefing, 'products', []))
+        $productIds = collect($phien->suggested_products ?? [])
+            ->concat((array) data_get($phien->ai_briefing, 'products', []))
             ->pluck('id')
             ->filter()
             ->unique()
             ->all();
 
-        if ($profile === null || $productIds === []) {
+        if ($hoSo === null || $productIds === []) {
             return ['warnings' => [], 'flagged' => []];
         }
 
@@ -987,14 +987,14 @@ class HealthCheckController extends Controller
 
         // One query for the set, then an in-memory check per product: DrugSafetyService
         // indexes the contraindication and interaction tables once per request.
-        foreach (Product::whereIn('MaSP', $productIds)->get() as $product) {
-            $result = $this->drugSafety->checkProduct($product, $profile, $session->user);
+        foreach (SanPham::whereIn('MaSP', $productIds)->get() as $sanPham) {
+            $result = $this->anToanThuoc->checkProduct($sanPham, $hoSo, $phien->nguoiDung);
 
             if ($result['warnings'] === []) {
                 continue;
             }
 
-            $flagged[] = (int) $product->MaSP;
+            $flagged[] = (int) $sanPham->MaSP;
             $warnings = [...$warnings, ...$result['warnings']];
         }
 
@@ -1007,14 +1007,14 @@ class HealthCheckController extends Controller
 
     public function history(Request $request): View
     {
-        $sessions = $this->paginateOr404(
-            TriageSession::where('MaKH', (int) auth()->id())
+        $cacPhien = $this->paginateOr404(
+            PhienSangLoc::where('MaKH', (int) auth()->id())
                 ->where('status', '!=', 'in_progress')
                 ->latest('MaSL'),
             10
         );
 
-        return view('health.history', ['sessions' => $sessions]);
+        return view('health.history', ['sessions' => $cacPhien]);
     }
 
     /**
@@ -1022,7 +1022,7 @@ class HealthCheckController extends Controller
      */
     public function restart(Request $request): RedirectResponse
     {
-        TriageSession::where('MaKH', (int) auth()->id())->inProgress()->delete();
+        PhienSangLoc::where('MaKH', (int) auth()->id())->inProgress()->delete();
 
         return redirect()->route('health.check');
     }
@@ -1094,24 +1094,24 @@ class HealthCheckController extends Controller
         return !Cache::has($this->disclaimerAckKey($userId));
     }
 
-    protected function profileFor(int $userId): ?UserHealthProfile
+    protected function profileFor(int $userId): ?HoSoSucKhoe
     {
-        return UserHealthProfile::consentedFor($userId);
+        return HoSoSucKhoe::consentedFor($userId);
     }
 
     /**
      * A worker is deciding. Tell the client to wait rather than holding the request
      * open for the 11-30s provider call.
      */
-    protected function respondPending(Request $request, TriageSession $session, AiJob $job): RedirectResponse|JsonResponse
+    protected function respondPending(Request $request, PhienSangLoc $phien, AiJob $job): RedirectResponse|JsonResponse
     {
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'mode' => 'deciding',
-                'stage' => $this->renderStage($session),
+                'stage' => $this->renderStage($phien),
                 'triage_pending' => [
-                    'triage_session_id' => $session->MaSL,
+                    'triage_session_id' => $phien->MaSL,
                     'job_id' => $job->uuid,
                     'poll_url' => route('health.decision', $job->uuid),
                 ],
@@ -1185,19 +1185,19 @@ class HealthCheckController extends Controller
         ]);
     }
 
-    protected function respondQuestion(Request $request, TriageSession $session, array $question): RedirectResponse|JsonResponse
+    protected function respondQuestion(Request $request, PhienSangLoc $phien, array $question): RedirectResponse|JsonResponse
     {
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'mode' => 'question',
-                'stage' => $this->renderStage($session),
+                'stage' => $this->renderStage($phien),
                 'triage_question' => $question,
                 // Server-side truth: a profile-covered step means the rendered step can
                 // run ahead of current_step, so the client must not derive this itself.
-                'allow_back' => (int) $session->current_step > 1,
-                'previous_answer' => $this->triageService->previousAnswerFor($session, (int) $question['step']),
-                'answered_steps' => $this->answeredSteps($session),
+                'allow_back' => (int) $phien->current_step > 1,
+                'previous_answer' => $this->triageService->previousAnswerFor($phien, (int) $question['step']),
+                'answered_steps' => $this->answeredSteps($phien),
                 'show_disclaimer' => true,
                 'disclaimer' => MedicalTriageService::DISCLAIMER,
             ]);
@@ -1206,9 +1206,9 @@ class HealthCheckController extends Controller
         return redirect()->route('health.check');
     }
 
-    protected function respondResult(Request $request, TriageSession $session): RedirectResponse|JsonResponse
+    protected function respondResult(Request $request, PhienSangLoc $phien): RedirectResponse|JsonResponse
     {
-        $url = route('health.result', $session->MaSL);
+        $url = route('health.result', $phien->MaSL);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -1217,14 +1217,14 @@ class HealthCheckController extends Controller
                 // client-side would move the outcome map, the drug-safety check and the
                 // product cards into JavaScript.
                 'mode' => 'result',
-                'triage_session_id' => $session->MaSL,
+                'triage_session_id' => $phien->MaSL,
                 'triage_result' => [
-                    'outcome' => $session->outcome,
-                    'advice_given' => $session->advice_given,
-                    'safety_net' => $session->safety_net,
-                    'possible_condition_groups' => $session->possible_condition_groups,
-                    'triggered_red_flags' => $session->triggered_red_flags,
-                    'suggested_products' => $session->suggested_products,
+                    'outcome' => $phien->outcome,
+                    'advice_given' => $phien->advice_given,
+                    'safety_net' => $phien->safety_net,
+                    'possible_condition_groups' => $phien->possible_condition_groups,
+                    'triggered_red_flags' => $phien->triggered_red_flags,
+                    'suggested_products' => $phien->suggested_products,
                 ],
                 'redirect_url' => $url,
                 'show_disclaimer' => true,
@@ -1239,19 +1239,19 @@ class HealthCheckController extends Controller
      * The AI follow-up round is offered on the wizard page itself, so the plain
      * redirect keeps the no-JS form flow intact.
      */
-    protected function respondClarify(Request $request, TriageSession $session): RedirectResponse|JsonResponse
+    protected function respondClarify(Request $request, PhienSangLoc $phien): RedirectResponse|JsonResponse
     {
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'mode' => 'clarify',
-                'stage' => $this->renderStage($session),
+                'stage' => $this->renderStage($phien),
                 'triage_clarify' => [
-                    'triage_session_id' => $session->MaSL,
-                    'questions' => $session->pendingClarifyQuestions(),
-                    'round' => (int) $session->ai_clarify_rounds,
-                    'max_rounds' => TriageSession::MAX_CLARIFY_ROUNDS,
-                    'answered_steps' => $this->answeredSteps($session),
+                    'triage_session_id' => $phien->MaSL,
+                    'questions' => $phien->pendingClarifyQuestions(),
+                    'round' => (int) $phien->ai_clarify_rounds,
+                    'max_rounds' => PhienSangLoc::MAX_CLARIFY_ROUNDS,
+                    'answered_steps' => $this->answeredSteps($phien),
                 ],
                 'show_disclaimer' => true,
                 'disclaimer' => MedicalTriageService::DISCLAIMER,
@@ -1261,35 +1261,35 @@ class HealthCheckController extends Controller
         return redirect()->route('health.check');
     }
 
-    protected function respondValidationError(Request $request, string $message): RedirectResponse|JsonResponse
+    protected function respondValidationError(Request $request, string $tinNhan): RedirectResponse|JsonResponse
     {
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => false,
-                'error' => $message,
+                'error' => $tinNhan,
                 // Matches the shape $request->validate() emits, so the client has one
                 // code path for both kinds of 422.
-                'errors' => ['answer' => [$message]],
+                'errors' => ['answer' => [$tinNhan]],
             ], 422);
         }
 
-        return redirect()->route('health.check')->withErrors(['answer' => $message]);
+        return redirect()->route('health.check')->withErrors(['answer' => $tinNhan]);
     }
 
     protected function respondExpired(Request $request): RedirectResponse|JsonResponse
     {
-        $message = 'Phiên sàng lọc đã kết thúc hoặc không còn hiệu lực. Anh/chị vui lòng bắt đầu lại nhé.';
+        $tinNhan = 'Phiên sàng lọc đã kết thúc hoặc không còn hiệu lực. Anh/chị vui lòng bắt đầu lại nhé.';
 
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => false,
-                'error' => $message,
+                'error' => $tinNhan,
                 // Nothing left to re-render in place: the client reloads the wizard.
                 'redirect_url' => route('health.check'),
             ], 410);
         }
 
-        return redirect()->route('health.check')->with('error', $message);
+        return redirect()->route('health.check')->with('error', $tinNhan);
     }
 
     /**
@@ -1299,16 +1299,16 @@ class HealthCheckController extends Controller
      */
     protected function respondStepMismatch(Request $request): RedirectResponse|JsonResponse
     {
-        $message = 'Câu hỏi này đã chuyển sang bước khác. Anh/chị trả lời tiếp câu đang hiển thị giúp em nhé.';
+        $tinNhan = 'Câu hỏi này đã chuyển sang bước khác. Anh/chị trả lời tiếp câu đang hiển thị giúp em nhé.';
 
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => false,
-                'error' => $message,
+                'error' => $tinNhan,
                 'redirect_url' => route('health.check'),
             ], 409);
         }
 
-        return redirect()->route('health.check')->with('error', $message);
+        return redirect()->route('health.check')->with('error', $tinNhan);
     }
 }

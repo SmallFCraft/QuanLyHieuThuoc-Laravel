@@ -244,7 +244,7 @@
         <form method="POST" action="{{ route('health.answer') }}" data-triage-form>
             @csrf
             <input type="hidden" name="triage_session_id" value="{{ $session->MaSL }}">
-            <input type="hidden" name="step" value="{{ \App\Models\TriageSession::TOTAL_STEPS }}">
+            <input type="hidden" name="step" value="{{ \App\Models\PhienSangLoc::TOTAL_STEPS }}">
             <input type="hidden" name="skipped" value="1">
             <button type="submit"
                     class="health-btn health-btn-primary"

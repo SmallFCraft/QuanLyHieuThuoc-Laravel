@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
+use App\Models\NguoiDung;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -12,10 +12,10 @@ class ProfileTest extends TestCase
 
     public function test_profile_page_is_displayed(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
         $response = $this
-            ->actingAs($user)
+            ->actingAs($nguoiDung)
             ->get('/profile');
 
         $response->assertOk();
@@ -23,10 +23,10 @@ class ProfileTest extends TestCase
 
     public function test_profile_information_can_be_updated(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
         $response = $this
-            ->actingAs($user)
+            ->actingAs($nguoiDung)
             ->patch('/profile', [
                 'name' => 'Test User',
                 'email' => 'test@example.com',
@@ -36,37 +36,37 @@ class ProfileTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect('/profile');
 
-        $user->refresh();
+        $nguoiDung->refresh();
 
-        $this->assertSame('Test User', $user->name);
-        $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
+        $this->assertSame('Test User', $nguoiDung->name);
+        $this->assertSame('test@example.com', $nguoiDung->email);
+        $this->assertNull($nguoiDung->email_verified_at);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
         $response = $this
-            ->actingAs($user)
+            ->actingAs($nguoiDung)
             ->patch('/profile', [
                 'name' => 'Test User',
-                'email' => $user->email,
+                'email' => $nguoiDung->email,
             ]);
 
         $response
             ->assertSessionHasNoErrors()
             ->assertRedirect('/profile');
 
-        $this->assertNotNull($user->refresh()->email_verified_at);
+        $this->assertNotNull($nguoiDung->refresh()->email_verified_at);
     }
 
     public function test_user_can_delete_their_account(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
         $response = $this
-            ->actingAs($user)
+            ->actingAs($nguoiDung)
             ->delete('/profile', [
                 'password' => 'password',
             ]);
@@ -76,15 +76,15 @@ class ProfileTest extends TestCase
             ->assertRedirect('/');
 
         $this->assertGuest();
-        $this->assertNull($user->fresh());
+        $this->assertNull($nguoiDung->fresh());
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
         $response = $this
-            ->actingAs($user)
+            ->actingAs($nguoiDung)
             ->from('/profile')
             ->delete('/profile', [
                 'password' => 'wrong-password',
@@ -94,6 +94,6 @@ class ProfileTest extends TestCase
             ->assertSessionHasErrorsIn('userDeletion', 'password')
             ->assertRedirect('/profile');
 
-        $this->assertNotNull($user->fresh());
+        $this->assertNotNull($nguoiDung->fresh());
     }
 }

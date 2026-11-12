@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Models\Product;
+use App\Models\SanPham;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -14,8 +14,8 @@ class ProductImageFallbackTest extends TestCase
         Storage::fake('public');
         Storage::disk('public')->put('products/medicine.jpg', 'image');
 
-        $legacyProduct = new Product(['image' => 'medicine.jpg']);
-        $prefixedProduct = new Product(['image' => 'products/medicine.jpg']);
+        $legacyProduct = new SanPham(['image' => 'medicine.jpg']);
+        $prefixedProduct = new SanPham(['image' => 'products/medicine.jpg']);
 
         $this->assertStringEndsWith('/storage/products/medicine.jpg', $legacyProduct->image_url);
         $this->assertSame($legacyProduct->image_url, $prefixedProduct->image_url);
@@ -25,16 +25,16 @@ class ProductImageFallbackTest extends TestCase
     {
         Storage::fake('public');
 
-        $product = new Product(['image' => 'missing.jpg']);
+        $sanPham = new SanPham(['image' => 'missing.jpg']);
 
-        $this->assertNull($product->image_url);
+        $this->assertNull($sanPham->image_url);
     }
 
     public function test_image_url_preserves_external_urls(): void
     {
-        $product = new Product(['image' => 'https://example.com/medicine.jpg']);
+        $sanPham = new SanPham(['image' => 'https://example.com/medicine.jpg']);
 
-        $this->assertSame('https://example.com/medicine.jpg', $product->image_url);
+        $this->assertSame('https://example.com/medicine.jpg', $sanPham->image_url);
     }
 
     public function test_product_image_component_contains_accessible_fallback_behavior(): void

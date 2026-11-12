@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Models\User;
-use App\Models\Category;
+use App\Models\NguoiDung;
+use App\Models\DanhMuc;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Validator;
 use Tests\TestCase;
@@ -46,7 +46,7 @@ class DataValidationTest extends TestCase
 
     public function test_email_uniqueness_validation(): void
     {
-        User::factory()->create([
+        NguoiDung::factory()->create([
             'email' => 'existing@example.com'
         ]);
 
@@ -195,13 +195,13 @@ class DataValidationTest extends TestCase
 
     public function test_product_validation_rules(): void
     {
-        $category = Category::create([
+        $danhMuc = DanhMuc::create([
             'name' => 'Test Category',
             'description' => 'Test Description'
         ]);
 
         $validData = [
-            'MaDM' => $category->MaDM,
+            'MaDM' => $danhMuc->MaDM,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -225,10 +225,10 @@ class DataValidationTest extends TestCase
 
     public function test_order_validation_rules(): void
     {
-        $user = User::factory()->create();
+        $nguoiDung = NguoiDung::factory()->create();
 
         $validData = [
-            'MaKH' => $user->MaKH,
+            'MaKH' => $nguoiDung->MaKH,
             'total_amount' => 100000,
             'status' => 'Pending',
             'shipping_address' => '123 Test Street, Test City',

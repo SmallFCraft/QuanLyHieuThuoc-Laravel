@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,17 +16,17 @@ class CatalogAsyncResultsTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Category $category;
+    private DanhMuc $danhMuc;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->category = Category::create(['name' => 'Thuốc hô hấp']);
+        $this->danhMuc = DanhMuc::create(['name' => 'Thuốc hô hấp']);
 
         for ($i = 0; $i < 14; $i++) {
-            Product::create([
-                'MaDM' => $this->category->MaDM,
+            SanPham::create([
+                'MaDM' => $this->danhMuc->MaDM,
                 'name' => "Thuốc hô hấp số {$i}",
                 'price' => 45000,
                 'expiration_date' => now()->addYears(2),
@@ -54,7 +54,7 @@ class CatalogAsyncResultsTest extends TestCase
 
         $this->assertSame(
             10,
-            $this->get("/products/category/{$this->category->MaDM}")->assertOk()->viewData('products')->count()
+            $this->get("/products/category/{$this->danhMuc->MaDM}")->assertOk()->viewData('products')->count()
         );
     }
 
@@ -75,9 +75,9 @@ class CatalogAsyncResultsTest extends TestCase
 
     public function test_the_fragment_honours_the_category_filter_and_the_page_number(): void
     {
-        $other = Category::create(['name' => 'Thuốc tiêu hoá']);
+        $other = DanhMuc::create(['name' => 'Thuốc tiêu hoá']);
 
-        Product::create([
+        SanPham::create([
             'MaDM' => $other->MaDM,
             'name' => 'Thuốc tiêu hoá đơn lẻ',
             'price' => 30000,
@@ -104,7 +104,7 @@ class CatalogAsyncResultsTest extends TestCase
     public function test_a_plain_request_still_renders_the_whole_page(): void
     {
         // Không có JS thì mọi danh mục vẫn là link thật dẫn tới trang đầy đủ.
-        $this->get("/products?category={$this->category->MaDM}")
+        $this->get("/products?category={$this->danhMuc->MaDM}")
             ->assertOk()
             ->assertViewIs('products.index')
             ->assertSee('data-catalog-results', false)

@@ -2,7 +2,7 @@
 
 namespace App\Services\Triage\Ai;
 
-use App\Models\TriageSession;
+use App\Models\PhienSangLoc;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -52,9 +52,9 @@ class TriageAiDraftService extends TriageAiService
      * A Vietnamese reply draft, or null when the provider is unavailable or the
      * output fails the length check.
      *
-     * @param  array<int, string>  $symptomNames  Vietnamese symptom names, already resolved
+     * @param  array<int, string>  $cacTenTrieuChung  Vietnamese symptom names, already resolved
      */
-    public function draftReply(TriageSession $session, array $symptomNames): ?string
+    public function draftReply(PhienSangLoc $phien, array $cacTenTrieuChung): ?string
     {
         if (! $this->isEnabled()) {
             return null;
@@ -67,7 +67,7 @@ class TriageAiDraftService extends TriageAiService
 
             $response = $this->callProvider($provider, [
                 ['role' => 'system', 'content' => $this->systemPrompt()],
-                ['role' => 'user', 'content' => $this->buildPrompt($session, $symptomNames)],
+                ['role' => 'user', 'content' => $this->buildPrompt($phien, $cacTenTrieuChung)],
             ]);
 
             $draft = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
@@ -80,7 +80,7 @@ class TriageAiDraftService extends TriageAiService
             $draft = Str::limit($draft, self::MAX_DRAFT_LENGTH, '');
 
             $this->auditProvenance(
-                $session,
+                $phien,
                 'triage_ai_draft',
                 $provider->describeLastProvider(),
                 (microtime(true) - $startedAt) * 1000,
@@ -90,7 +90,7 @@ class TriageAiDraftService extends TriageAiService
             return $draft;
         } catch (\Throwable $exception) {
             Log::warning('Triage AI draft failed', [
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -114,21 +114,21 @@ class TriageAiDraftService extends TriageAiService
      * Rule-derived material, symptom/red-flag names, and optional patient context
      * (age, consented health profile, and fenced recent triage history).
      */
-    protected function buildPrompt(TriageSession $session, array $symptomNames): string
+    protected function buildPrompt(PhienSangLoc $phien, array $cacTenTrieuChung): string
     {
-        $redFlags = collect($session->triggered_red_flags ?? [])
+        $redFlags = collect($phien->triggered_red_flags ?? [])
             ->map(fn ($flag) => is_array($flag) ? ($flag['name_vi'] ?? $flag['code'] ?? null) : $flag)
             ->filter()
             ->implode(', ');
-        $context = $this->contextService->buildContext($session);
+        $context = $this->contextService->buildContext($phien);
 
         return implode("\n", array_filter([
             $context !== '' ? "Ngữ cảnh bệnh nhân & lịch sử:\n".$context : null,
-            'Kết luận của hệ thống: '.($session->outcome ?? 'chưa có'),
-            $symptomNames !== [] ? 'Triệu chứng hệ thống khớp: '.implode(', ', $symptomNames) : null,
+            'Kết luận của hệ thống: '.($phien->outcome ?? 'chưa có'),
+            $cacTenTrieuChung !== [] ? 'Triệu chứng hệ thống khớp: '.implode(', ', $cacTenTrieuChung) : null,
             $redFlags !== '' ? 'Dấu hiệu cảnh báo: '.$redFlags : null,
-            $session->advice_given ? "Lời khuyên hệ thống đã đưa:\n".$session->advice_given : null,
-            $session->safety_net ? "Ngưỡng cần đi khám:\n".$session->safety_net : null,
+            $phien->advice_given ? "Lời khuyên hệ thống đã đưa:\n".$phien->advice_given : null,
+            $phien->safety_net ? "Ngưỡng cần đi khám:\n".$phien->safety_net : null,
             '',
             'Soạn bản nháp trả lời khách dựa đúng trên các thông tin trên.',
         ]));

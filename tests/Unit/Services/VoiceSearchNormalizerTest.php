@@ -2,9 +2,9 @@
 
 namespace Tests\Unit\Services;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\VoicePhonetic;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\PhienAmGiongNoi;
 use App\Services\VoiceSearchNormalizer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -37,10 +37,10 @@ class VoiceSearchNormalizerTest extends TestCase
         // nhân bản sản phẩm cho đủ ngưỡng.
         config(['search.voice.phonetic_min_hits' => 1]);
 
-        $category = Category::create(['name' => 'Thuốc giảm đau, hạ sốt']);
+        $danhMuc = DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt']);
 
-        Product::create([
-            'MaDM' => $category->MaDM,
+        SanPham::create([
+            'MaDM' => $danhMuc->MaDM,
             'name' => 'Thuốc hạ sốt Hapacol 500',
             'ingredients' => 'Paracetamol 500mg',
             'price' => 50000,
@@ -307,10 +307,10 @@ class VoiceSearchNormalizerTest extends TestCase
      */
     public function test_words_from_different_products_are_not_confident(): void
     {
-        $category = Category::create(['name' => 'Khẩu trang']);
+        $danhMuc = DanhMuc::create(['name' => 'Khẩu trang']);
 
-        Product::create([
-            'MaDM' => $category->MaDM,
+        SanPham::create([
+            'MaDM' => $danhMuc->MaDM,
             'name' => 'Khẩu trang y tế 4 lớp',
             'ingredients' => 'Vải không dệt',
             'price' => 30000,
@@ -366,8 +366,8 @@ class VoiceSearchNormalizerTest extends TestCase
      */
     private function seedSpelledOutDrug(): void
     {
-        Product::create([
-            'MaDM' => Category::first()->MaDM,
+        SanPham::create([
+            'MaDM' => DanhMuc::first()->MaDM,
             'name' => 'Paracetamol Kabi 500mg',
             'ingredients' => 'Paracetamol 500mg',
             'price' => 20000,

@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Exceptions\AiProviderVisionNotSupportedException;
-use App\Models\ChatbotImage;
-use App\Models\Product;
+use App\Models\AnhChatbot;
+use App\Models\SanPham;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -74,16 +74,16 @@ class ImageRecognitionService
     /**
      * Process a prescription image using the configured AI provider.
      *
-     * @param UploadedFile $image
+     * @param UploadedFile $anh
      * @param int $userId
      * @return array
      */
-    public function processPrescription(UploadedFile $image, int $userId): array
+    public function processPrescription(UploadedFile $anh, int $userId): array
     {
         $startTime = microtime(true);
         
         try {
-            $imagePath = $this->storeImage($image, $userId, 'prescription');
+            $imagePath = $this->storeImage($anh, $userId, 'prescription');
             
             $analysisResult = $this->analyzeImageWithProvider($imagePath, 'prescription');
             
@@ -108,7 +108,7 @@ class ImageRecognitionService
             // Log audit
             $this->auditLogService->log(
                 action: 'chatbot_image_processed',
-                modelType: ChatbotImage::class,
+                modelType: AnhChatbot::class,
                 modelId: null,
                 oldValues: null,
                 newValues: [
@@ -167,16 +167,16 @@ class ImageRecognitionService
     /**
      * Process a receipt image using the configured AI provider.
      *
-     * @param UploadedFile $image
+     * @param UploadedFile $anh
      * @param int $userId
      * @return array
      */
-    public function processReceipt(UploadedFile $image, int $userId): array
+    public function processReceipt(UploadedFile $anh, int $userId): array
     {
         $startTime = microtime(true);
         
         try {
-            $imagePath = $this->storeImage($image, $userId, 'receipt');
+            $imagePath = $this->storeImage($anh, $userId, 'receipt');
             
             $analysisResult = $this->analyzeImageWithProvider($imagePath, 'receipt');
             
@@ -201,7 +201,7 @@ class ImageRecognitionService
             // Log audit
             $this->auditLogService->log(
                 action: 'chatbot_image_processed',
-                modelType: ChatbotImage::class,
+                modelType: AnhChatbot::class,
                 modelId: null,
                 oldValues: null,
                 newValues: [
@@ -299,9 +299,9 @@ class ImageRecognitionService
 
             throw new \Exception('Dạ, model AI hiện tại chưa hỗ trợ đọc ảnh. Anh/chị vui lòng đổi sang model có hỗ trợ hình ảnh hoặc nhập trực tiếp tên thuốc/sản phẩm để em tra cứu nhanh nhé.', previous: $e);
         } catch (\Exception $e) {
-            $message = mb_strtolower($e->getMessage(), 'UTF-8');
+            $tinNhan = mb_strtolower($e->getMessage(), 'UTF-8');
 
-            if (str_contains($message, 'quota') || str_contains($message, 'rate limit') || str_contains($message, 'too many requests') || str_contains($message, '429')) {
+            if (str_contains($tinNhan, 'quota') || str_contains($tinNhan, 'rate limit') || str_contains($tinNhan, 'too many requests') || str_contains($tinNhan, '429')) {
                 Log::warning('AI provider vision capacity limit hit', [
                     'type' => $type,
                     'error' => $e->getMessage(),
@@ -483,12 +483,12 @@ PROMPT;
     /**
      * Store uploaded image to local disk.
      *
-     * @param UploadedFile $image
+     * @param UploadedFile $anh
      * @param int $userId
      * @param string $type
      * @return string Absolute path to stored image
      */
-    protected function storeImage(UploadedFile $image, int $userId, string $type): string
+    protected function storeImage(UploadedFile $anh, int $userId, string $type): string
     {
         $storagePath = (string) config('chatbot.images.storage_path', 'chatbot-uploads');
 
@@ -498,20 +498,20 @@ PROMPT;
             session(['chat_session_id' => $sessionId]);
         }
 
-        $filename = Str::uuid() . '.' . $image->extension();
-        $path = $image->storeAs($storagePath, $filename, 'local');
+        $filename = Str::uuid() . '.' . $anh->extension();
+        $path = $anh->storeAs($storagePath, $filename, 'local');
 
         $this->lastStoredImageId = null;
 
-        $stored = ChatbotImage::create([
+        $stored = AnhChatbot::create([
             'MaKH' => $userId,
             'session_id' => $sessionId,
             'filename' => $filename,
-            'original_name' => $image->getClientOriginalName(),
+            'original_name' => $anh->getClientOriginalName(),
             'image_path' => $path,
             'file_path' => $path,
-            'file_size' => $image->getSize(),
-            'mime_type' => $image->getMimeType(),
+            'file_size' => $anh->getSize(),
+            'mime_type' => $anh->getMimeType(),
             'image_type' => $type
         ]);
 
@@ -530,17 +530,17 @@ PROMPT;
             return;
         }
 
-        $image = ChatbotImage::where('MaKH', $userId)
+        $anh = AnhChatbot::where('MaKH', $userId)
             ->where('session_id', $sessionId)
             ->where('image_type', $type)
             ->latest('MaAnh')
             ->first();
 
-        if (!$image) {
+        if (!$anh) {
             return;
         }
 
-        $image->update([
+        $anh->update([
             'analysis_result' => json_encode(['debug' => $debug], JSON_UNESCAPED_UNICODE),
             'processed_at' => now(),
         ]);
@@ -553,19 +553,19 @@ PROMPT;
             return;
         }
 
-        $image = ChatbotImage::where('MaKH', $userId)
+        $anh = AnhChatbot::where('MaKH', $userId)
             ->where('session_id', $sessionId)
             ->where('image_type', $type)
             ->latest('MaAnh')
             ->first();
 
-        if (!$image) {
+        if (!$anh) {
             return;
         }
 
         $provider = $this->aiProviderService->describeLastProvider();
 
-        $image->update([
+        $anh->update([
             'analysis_result' => json_encode([
                 'description' => $analysisResult['description'] ?? '',
                 'debug' => [
@@ -600,28 +600,28 @@ PROMPT;
             }
             
             // Search for product in database with provider-extracted context.
-            $product = $this->findProductByParsedData($parsedProduct);
+            $sanPham = $this->findProductByParsedData($parsedProduct);
             
-            if ($product) {
+            if ($sanPham) {
                 $matched[] = [
                     'parsed_name' => $productName,
                     'matched' => true,
                     'product' => [
-                        'id' => $product->MaSP,
-                        'name' => $product->name,
-                        'price' => $product->price_vnd,
-                        'stock_quantity' => $product->stock_quantity,
-                        'image_url' => $product->image_url,
-                        'expiration_date' => $product->expiration_date,
-                        'is_expired' => $product->isExpired(),
+                        'id' => $sanPham->MaSP,
+                        'name' => $sanPham->name,
+                        'price' => $sanPham->price_vnd,
+                        'stock_quantity' => $sanPham->stock_quantity,
+                        'image_url' => $sanPham->image_url,
+                        'expiration_date' => $sanPham->expiration_date,
+                        'is_expired' => $sanPham->isExpired(),
                     ],
                     'quantity' => $parsedProduct['quantity'] ?? 1,
                     'dosage' => $parsedProduct['dosage'] ?? null,
                     'instructions' => $parsedProduct['instructions'] ?? null,
-                    'confidence' => $this->calculateMatchConfidenceFromParsedData($parsedProduct, $product)
+                    'confidence' => $this->calculateMatchConfidenceFromParsedData($parsedProduct, $sanPham)
                 ];
             } else {
-                // Product not found
+                // SanPham not found
                 $matched[] = [
                     'parsed_name' => $productName,
                     'matched' => false,
@@ -640,10 +640,10 @@ PROMPT;
     /**
      * Find product by name with fuzzy matching.
      *
-     * @param string $name Product name to search
-     * @return \App\Models\Product|null
+     * @param string $name SanPham name to search
+     * @return \App\Models\SanPham|null
      */
-    protected function findProductByParsedData(array $parsedProduct): ?Product
+    protected function findProductByParsedData(array $parsedProduct): ?SanPham
     {
         $name = trim((string) ($parsedProduct['name'] ?? ''));
         if ($name === '') {
@@ -654,18 +654,18 @@ PROMPT;
         $cleanName = $this->cleanProductName($name);
         
         // Try exact match first
-        $product = Product::notExpired()
+        $sanPham = SanPham::notExpired()
             ->where('stock_quantity', '>', 0)
             ->where('name', 'LIKE', $name)
             ->FEFO()
             ->first();
             
-        if ($product) {
-            return $product;
+        if ($sanPham) {
+            return $sanPham;
         }
         
         // Try partial match with cleaned name
-        $product = Product::notExpired()
+        $sanPham = SanPham::notExpired()
             ->where('stock_quantity', '>', 0)
             ->where(function($query) use ($name, $cleanName) {
                 $query->where('name', 'LIKE', "%{$name}%")
@@ -677,8 +677,8 @@ PROMPT;
 
         // "Vitamin A" must not settle for "Vitamin C 1000mg" just because the
         // cleaned name is a substring of it.
-        if ($product && !$this->conflictsWithParsedProduct($parsedProduct, $product)) {
-            return $product;
+        if ($sanPham && !$this->conflictsWithParsedProduct($parsedProduct, $sanPham)) {
+            return $sanPham;
         }
 
         $scoredProduct = $this->findProductByProviderContext($parsedProduct);
@@ -701,7 +701,7 @@ PROMPT;
             return null;
         }
 
-        $query = Product::notExpired()
+        $query = SanPham::notExpired()
             ->where('stock_quantity', '>', 0);
 
         foreach ($meaningfulWords as $word) {
@@ -711,23 +711,23 @@ PROMPT;
             });
         }
 
-        $product = $query->FEFO()->first();
+        $sanPham = $query->FEFO()->first();
 
-        return $product && !$this->conflictsWithParsedProduct($parsedProduct, $product) ? $product : null;
+        return $sanPham && !$this->conflictsWithParsedProduct($parsedProduct, $sanPham) ? $sanPham : null;
     }
 
     /**
      * True when the catalog row clearly is not what the image shows.
      */
-    protected function conflictsWithParsedProduct(array $parsedProduct, Product $product): bool
+    protected function conflictsWithParsedProduct(array $parsedProduct, SanPham $sanPham): bool
     {
         return $this->hasVitaminLetterConflict(
             $this->normalizeProductText($this->buildProviderIdentityText($parsedProduct)),
-            $this->normalizeProductText(implode(' ', array_filter([$product->name, $product->ingredients])))
+            $this->normalizeProductText(implode(' ', array_filter([$sanPham->name, $sanPham->ingredients])))
         );
     }
 
-    protected function findProductByProviderContext(array $parsedProduct): ?Product
+    protected function findProductByProviderContext(array $parsedProduct): ?SanPham
     {
         $identityTokens = $this->extractMeaningfulProductTokens(
             $this->buildProviderIdentityText($parsedProduct)
@@ -737,15 +737,15 @@ PROMPT;
             return null;
         }
 
-        $candidates = Product::with('category')
+        $candidates = SanPham::with('danhMuc')
             ->notExpired()
             ->where('stock_quantity', '>', 0)
             ->FEFO()
             ->get()
-            ->map(function (Product $product) use ($parsedProduct, $identityTokens) {
+            ->map(function (SanPham $sanPham) use ($parsedProduct, $identityTokens) {
                 return [
-                    'product' => $product,
-                    'score' => $this->scoreProductIdentity($parsedProduct, $identityTokens, $product),
+                    'product' => $sanPham,
+                    'score' => $this->scoreProductIdentity($parsedProduct, $identityTokens, $sanPham),
                 ];
             })
             ->filter(fn (array $candidate): bool => $candidate['score'] >= self::IDENTITY_MATCH_MIN_SCORE)
@@ -846,15 +846,15 @@ PROMPT;
      * Score a candidate on identifying evidence only. Returns 0 when the image
      * and the product clearly describe different things.
      */
-    protected function scoreProductIdentity(array $parsedProduct, array $identityTokens, Product $product): int
+    protected function scoreProductIdentity(array $parsedProduct, array $identityTokens, SanPham $sanPham): int
     {
         $parsedName = trim((string) ($parsedProduct['name'] ?? ''));
         $normalizedParsedName = $this->normalizeProductText($parsedName);
         $normalizedCleanParsedName = $this->normalizeProductText($this->cleanProductName($parsedName));
-        $normalizedProductName = $this->normalizeProductText($product->name);
+        $normalizedProductName = $this->normalizeProductText($sanPham->name);
         $normalizedProductText = $this->normalizeProductText(implode(' ', array_filter([
-            $product->name,
-            $product->ingredients,
+            $sanPham->name,
+            $sanPham->ingredients,
         ])));
 
         $identityText = $this->normalizeProductText($this->buildProviderIdentityText($parsedProduct));
@@ -930,26 +930,26 @@ PROMPT;
      * dominates, purpose/category overlap breaks ties, and products from the same
      * family (e.g. another vitamin) outrank unrelated supplements.
      */
-    protected function scoreProductCandidate(array $parsedProduct, string $queryText, array $queryTokens, Product $product): int
+    protected function scoreProductCandidate(array $parsedProduct, string $queryText, array $queryTokens, SanPham $sanPham): int
     {
         $identityTokens = $this->extractMeaningfulProductTokens(
             $this->buildProviderIdentityText($parsedProduct)
         );
-        $identityScore = $this->scoreProductIdentity($parsedProduct, $identityTokens, $product);
+        $identityScore = $this->scoreProductIdentity($parsedProduct, $identityTokens, $sanPham);
 
         $productText = $this->normalizeProductText(implode(' ', array_filter([
-            $product->name,
-            $product->ingredients,
-            $product->usage,
-            $product->category?->name,
+            $sanPham->name,
+            $sanPham->ingredients,
+            $sanPham->usage,
+            $sanPham->danhMuc?->name,
         ])));
 
         // Family affinity is judged on name/ingredients only: every supplement in
         // the catalog shares the category name "Vitamin va khoang chat", so using
         // the category here would give the bonus to all of them equally.
         $productIdentityText = $this->normalizeProductText(implode(' ', array_filter([
-            $product->name,
-            $product->ingredients,
+            $sanPham->name,
+            $sanPham->ingredients,
         ])));
 
         $contextTokens = array_values(array_diff(
@@ -1060,14 +1060,14 @@ PROMPT;
      * @param string $actualName Actual product name from database
      * @return float Confidence score (0-1)
      */
-    protected function calculateMatchConfidenceFromParsedData(array $parsedProduct, Product $product): float
+    protected function calculateMatchConfidenceFromParsedData(array $parsedProduct, SanPham $sanPham): float
     {
         $parsedName = trim((string) ($parsedProduct['name'] ?? ''));
-        $baseConfidence = $this->calculateMatchConfidence($parsedName, $product->name);
+        $baseConfidence = $this->calculateMatchConfidence($parsedName, $sanPham->name);
         $identityTokens = $this->extractMeaningfulProductTokens(
             $this->buildProviderIdentityText($parsedProduct)
         );
-        $identityScore = $this->scoreProductIdentity($parsedProduct, $identityTokens, $product);
+        $identityScore = $this->scoreProductIdentity($parsedProduct, $identityTokens, $sanPham);
 
         return max($baseConfidence, min(0.95, $identityScore / 100));
     }
@@ -1102,7 +1102,7 @@ PROMPT;
     /**
      * Find similar products for suggestions.
      *
-     * @param string $name Product name
+     * @param string $name SanPham name
      * @return array
      */
     protected function findSimilarProductsFromParsedData(array $parsedProduct): array
@@ -1114,15 +1114,15 @@ PROMPT;
             return [];
         }
 
-        $products = Product::with('category')
+        $sanPhams = SanPham::with('danhMuc')
             ->notExpired()
             ->where('stock_quantity', '>', 0)
             ->FEFO()
             ->get()
-            ->map(function (Product $product) use ($parsedProduct, $queryText, $words) {
+            ->map(function (SanPham $sanPham) use ($parsedProduct, $queryText, $words) {
                 return [
-                    'product' => $product,
-                    'score' => $this->scoreProductCandidate($parsedProduct, $queryText, $words, $product),
+                    'product' => $sanPham,
+                    'score' => $this->scoreProductCandidate($parsedProduct, $queryText, $words, $sanPham),
                 ];
             })
             ->filter(fn (array $candidate): bool => $candidate['score'] >= 24)
@@ -1130,12 +1130,12 @@ PROMPT;
             ->take(3)
             ->pluck('product');
 
-        return $products->map(function(Product $product) {
+        return $sanPhams->map(function(SanPham $sanPham) {
             return [
-                'id' => $product->MaSP,
-                'name' => $product->name,
-                'price' => $product->price_vnd,
-                'stock_quantity' => $product->stock_quantity
+                'id' => $sanPham->MaSP,
+                'name' => $sanPham->name,
+                'price' => $sanPham->price_vnd,
+                'stock_quantity' => $sanPham->stock_quantity
             ];
         })->toArray();
     }

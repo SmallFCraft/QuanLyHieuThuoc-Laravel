@@ -6,9 +6,11 @@ use App\Helpers\VietnameseHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class OrderItem extends Model
+class ChiTietDonHang extends Model
 {
     use HasFactory;
+
+    protected $table = 'order_items';
 
     protected $primaryKey = 'MaCTDH';
 
@@ -39,25 +41,25 @@ class OrderItem extends Model
     /**
      * Get the order that owns the order item.
      */
-    public function order()
+    public function donHang()
     {
-        return $this->belongsTo(Order::class, 'MaDH', 'MaDH');
+        return $this->belongsTo(DonHang::class, 'MaDH', 'MaDH');
     }
 
     /**
      * Get the product that owns the order item.
      */
-    public function product()
+    public function sanPham()
     {
-        return $this->belongsTo(Product::class, 'MaSP', 'MaSP');
+        return $this->belongsTo(SanPham::class, 'MaSP', 'MaSP');
     }
 
     /**
      * Get the batch that owns the order item.
      */
-    public function batch()
+    public function loSanPham()
     {
-        return $this->belongsTo(ProductBatch::class, 'MaLo', 'MaLo');
+        return $this->belongsTo(LoSanPham::class, 'MaLo', 'MaLo');
     }
 
     /**

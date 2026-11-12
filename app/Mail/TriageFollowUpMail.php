@@ -2,7 +2,7 @@
 
 namespace App\Mail;
 
-use App\Models\TriageSession;
+use App\Models\PhienSangLoc;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -19,7 +19,7 @@ class TriageFollowUpMail extends Mailable implements ShouldQueue
     private const LINK_VALID_DAYS = 14;
 
     public function __construct(
-        public TriageSession $session,
+        public PhienSangLoc $phien,
     ) {
     }
 
@@ -35,8 +35,8 @@ class TriageFollowUpMail extends Mailable implements ShouldQueue
         return new Content(
             view: 'emails.triage-follow-up',
             with: [
-                'session' => $this->session,
-                'userName' => $this->session->user->name ?? '',
+                'session' => $this->phien,
+                'userName' => $this->phien->nguoiDung->name ?? '',
                 'improvedUrl' => $this->responseUrl(true),
                 'notImprovedUrl' => $this->responseUrl(false),
             ],
@@ -54,7 +54,7 @@ class TriageFollowUpMail extends Mailable implements ShouldQueue
             'health.followup.confirm',
             now()->addDays(self::LINK_VALID_DAYS),
             [
-                'MaSL' => $this->session->MaSL,
+                'MaSL' => $this->phien->MaSL,
                 'improved' => $improved ? 1 : 0,
             ]
         );

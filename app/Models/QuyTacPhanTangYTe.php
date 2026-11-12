@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class MedicalTriageRule extends Model
+class QuyTacPhanTangYTe extends Model
 {
+    protected $table = 'medical_triage_rules';
+
     protected $primaryKey = 'MaQT';
 
     protected $fillable = [
@@ -34,7 +36,7 @@ class MedicalTriageRule extends Model
 
     public function symptom()
     {
-        return $this->belongsTo(MedicalSymptom::class, 'MaTC', 'MaTC');
+        return $this->belongsTo(TrieuChungYTe::class, 'MaTC', 'MaTC');
     }
 
     public function scopeActive($query)

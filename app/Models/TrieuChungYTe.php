@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class MedicalSymptom extends Model
+class TrieuChungYTe extends Model
 {
+    protected $table = 'medical_symptoms';
+
     protected $primaryKey = 'MaTC';
 
     protected $fillable = [
@@ -26,7 +28,7 @@ class MedicalSymptom extends Model
 
     public function redFlags()
     {
-        return $this->hasMany(MedicalRedFlag::class, 'applies_to_symptom', 'MaTC');
+        return $this->hasMany(CoDoYTe::class, 'applies_to_symptom', 'MaTC');
     }
 
     public function scopeActive($query)

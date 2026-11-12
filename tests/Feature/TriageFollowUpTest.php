@@ -3,13 +3,13 @@
 namespace Tests\Feature;
 
 use App\Mail\TriageFollowUpMail;
-use App\Models\AuditLog;
-use App\Models\Category;
-use App\Models\ChatMessage;
-use App\Models\TriageSession;
-use App\Models\User;
+use App\Models\NhatKyKiemToan;
+use App\Models\DanhMuc;
+use App\Models\TinNhanChat;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
 use App\Services\Triage\TriageFollowUpService;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -25,23 +25,23 @@ class TriageFollowUpTest extends TestCase
     use RefreshDatabase;
 
     protected TriageFollowUpService $service;
-    protected Category $category;
-    protected User $user;
+    protected DanhMuc $danhMuc;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->category = Category::create([
+        $this->danhMuc = DanhMuc::create([
             'name' => 'Thuốc giảm đau - Hạ sốt',
             'description' => 'Giảm đau, hạ sốt',
         ]);
 
-        $this->seed(MedicalKnowledgeSeeder::class);
+        $this->seed(TriThucYTeSeeder::class);
 
         $this->service = app(TriageFollowUpService::class);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(34)->toDateString(),
@@ -105,14 +105,14 @@ class TriageFollowUpTest extends TestCase
     public function test_dispatch_due_mails_the_customer_and_logs_a_chat_message(): void
     {
         Mail::fake();
-        $session = $this->triageSession(['follow_up_at' => now()->subHour()]);
+        $phien = $this->triageSession(['follow_up_at' => now()->subHour()]);
 
         $this->service->dispatchDue();
 
         Mail::assertQueued(TriageFollowUpMail::class);
         $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $this->user->MaKH,
-            'session_id' => $session->session_id,
+            'MaKH' => $this->nguoiDung->MaKH,
+            'session_id' => $phien->session_id,
             'role' => 'assistant',
         ]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'triage_follow_up_sent']);
@@ -125,7 +125,7 @@ class TriageFollowUpTest extends TestCase
 
         $this->assertSame(1, $this->service->dispatchDue());
         Mail::assertQueued(TriageFollowUpMail::class);
-        $this->assertSame(0, ChatMessage::count());
+        $this->assertSame(0, TinNhanChat::count());
     }
 
     public function test_console_command_dispatches_follow_ups(): void
@@ -142,9 +142,9 @@ class TriageFollowUpTest extends TestCase
 
     public function test_not_improved_advises_a_doctor_and_returns_no_products(): void
     {
-        $session = $this->triageSession(['follow_up_at' => null]);
+        $phien = $this->triageSession(['follow_up_at' => null]);
 
-        $result = $this->service->recordResponse($session, false);
+        $result = $this->service->recordResponse($phien, false);
 
         $this->assertFalse($result['improved']);
         $this->assertTrue($result['refer_doctor']);
@@ -154,27 +154,27 @@ class TriageFollowUpTest extends TestCase
         // The wording itself is the safety net, so assert the copy, not just the key.
         // Read from lang/vi/reminder.php directly: messages.php wiring is owned elsewhere.
         $this->assertStringContainsString('đi khám', $this->reminderLang('response_not_improved'));
-        $this->assertSame('refer_doctor', $session->fresh()->outcome);
+        $this->assertSame('refer_doctor', $phien->fresh()->outcome);
 
-        $message = ChatMessage::where('session_id', $session->session_id)->latest('MaTN')->firstOrFail();
-        $this->assertSame('assistant', $message->role);
-        $this->assertEmpty($message->products ?? []);
+        $tinNhan = TinNhanChat::where('session_id', $phien->session_id)->latest('MaTN')->firstOrFail();
+        $this->assertSame('assistant', $tinNhan->role);
+        $this->assertEmpty($tinNhan->products ?? []);
 
         $this->assertDatabaseHas('audit_logs', ['action' => 'triage_follow_up_not_improved']);
     }
 
     public function test_improved_is_acknowledged_and_audited(): void
     {
-        $session = $this->triageSession(['follow_up_at' => null]);
+        $phien = $this->triageSession(['follow_up_at' => null]);
 
-        $result = $this->service->recordResponse($session, true);
+        $result = $this->service->recordResponse($phien, true);
 
         $this->assertTrue($result['improved']);
         $this->assertFalse($result['refer_doctor']);
         $this->assertSame([], $result['products']);
         $this->assertSame(__('messages.reminder.response_improved'), $result['message']);
         $this->assertStringContainsString('liệu trình', $this->reminderLang('response_improved'));
-        $this->assertSame('self_care', $session->fresh()->outcome);
+        $this->assertSame('self_care', $phien->fresh()->outcome);
 
         $this->assertDatabaseHas('audit_logs', ['action' => 'triage_follow_up_improved']);
     }
@@ -184,31 +184,31 @@ class TriageFollowUpTest extends TestCase
         $this->service->recordResponse($this->triageSession(['follow_up_at' => null]), true);
         $this->service->recordResponse($this->triageSession(['follow_up_at' => null]), false);
 
-        $this->assertSame(1, AuditLog::where('action', 'triage_follow_up_improved')->count());
-        $this->assertSame(1, AuditLog::where('action', 'triage_follow_up_not_improved')->count());
+        $this->assertSame(1, NhatKyKiemToan::where('action', 'triage_follow_up_improved')->count());
+        $this->assertSame(1, NhatKyKiemToan::where('action', 'triage_follow_up_not_improved')->count());
     }
 
     // --- Ownership ---
 
     public function test_a_customer_cannot_answer_someone_elses_session(): void
     {
-        $other = User::factory()->create(['role' => 'User', 'status' => 'active']);
-        $session = $this->triageSession(['follow_up_at' => null]);
+        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $phien = $this->triageSession(['follow_up_at' => null]);
 
         $this->actingAs($other)
-            ->post(route('health.followup', $session->MaSL), ['improved' => 0])
+            ->post(route('health.followup', $phien->MaSL), ['improved' => 0])
             ->assertRedirect();
 
         $this->assertDatabaseMissing('audit_logs', ['action' => 'triage_follow_up_not_improved']);
-        $this->assertSame('self_care', $session->fresh()->outcome);
+        $this->assertSame('self_care', $phien->fresh()->outcome);
     }
 
     public function test_owner_can_answer_through_the_route(): void
     {
-        $session = $this->triageSession(['follow_up_at' => null]);
+        $phien = $this->triageSession(['follow_up_at' => null]);
 
-        $this->actingAs($this->user)
-            ->post(route('health.followup', $session->MaSL), ['improved' => 0])
+        $this->actingAs($this->nguoiDung)
+            ->post(route('health.followup', $phien->MaSL), ['improved' => 0])
             ->assertRedirect();
 
         $this->assertDatabaseHas('audit_logs', ['action' => 'triage_follow_up_not_improved']);
@@ -216,18 +216,18 @@ class TriageFollowUpTest extends TestCase
 
     public function test_improved_flag_is_required(): void
     {
-        $session = $this->triageSession(['follow_up_at' => null]);
+        $phien = $this->triageSession(['follow_up_at' => null]);
 
-        $this->actingAs($this->user)
-            ->post(route('health.followup', $session->MaSL), [])
+        $this->actingAs($this->nguoiDung)
+            ->post(route('health.followup', $phien->MaSL), [])
             ->assertSessionHasErrors('improved');
     }
 
     public function test_guest_cannot_answer_a_follow_up(): void
     {
-        $session = $this->triageSession(['follow_up_at' => null]);
+        $phien = $this->triageSession(['follow_up_at' => null]);
 
-        $this->post(route('health.followup', $session->MaSL), ['improved' => 1])
+        $this->post(route('health.followup', $phien->MaSL), ['improved' => 1])
             ->assertRedirect(route('login'));
     }
 
@@ -245,10 +245,10 @@ class TriageFollowUpTest extends TestCase
         return $lines[$key];
     }
 
-    private function triageSession(array $attributes = []): TriageSession
+    private function triageSession(array $attributes = []): PhienSangLoc
     {
-        return TriageSession::create(array_merge([
-            'MaKH' => $this->user->MaKH,
+        return PhienSangLoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
             'session_id' => (string) Str::uuid(),
             'collected_data' => ['raw_symptom_text' => 'đau đầu nhẹ'],
             'outcome' => 'self_care',

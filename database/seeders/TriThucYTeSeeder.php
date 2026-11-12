@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\Category;
-use App\Models\DrugContraindication;
-use App\Models\DrugInteraction;
-use App\Models\MedicalRedFlag;
-use App\Models\MedicalSymptom;
-use App\Models\MedicalTriageRule;
+use App\Models\DanhMuc;
+use App\Models\ChungChiDinhThuoc;
+use App\Models\TuongTacThuoc;
+use App\Models\CoDoYTe;
+use App\Models\TrieuChungYTe;
+use App\Models\QuyTacPhanTangYTe;
 use Illuminate\Database\Seeder;
 
 /**
@@ -20,41 +20,41 @@ use Illuminate\Database\Seeder;
  * Vietnamese pharmacies. Products are crawled from Nhà Thuốc Long Châu, so a
  * crawled product only triggers a check when its ingredient appears here.
  */
-class MedicalKnowledgeSeeder extends Seeder
+class TriThucYTeSeeder extends Seeder
 {
     public function run(): void
     {
-        $symptoms = $this->seedSymptoms();
-        $this->seedRedFlags($symptoms);
-        $this->seedTriageRules($symptoms);
-        $this->seedDrugInteractions();
-        $this->seedContraindications();
+        $cacTrieuChung = $this->napTrieuChung();
+        $this->napCoDo($cacTrieuChung);
+        $this->napQuyTacSangLoc($cacTrieuChung);
+        $this->napTuongTacThuoc();
+        $this->napChungChiDinh();
     }
 
     /**
      * @return array<string, int> symptom code => MaTC
      */
-    protected function seedSymptoms(): array
+    protected function napTrieuChung(): array
     {
-        $ids = [];
+        $maSo = [];
 
-        foreach ($this->symptomDefinitions() as $definition) {
-            $symptom = MedicalSymptom::updateOrCreate(
-                ['code' => $definition['code']],
-                $definition
+        foreach ($this->danhSachTrieuChung() as $dinhNghia) {
+            $trieuChung = TrieuChungYTe::updateOrCreate(
+                ['code' => $dinhNghia['code']],
+                $dinhNghia
             );
 
-            $ids[$definition['code']] = $symptom->MaTC;
+            $maSo[$dinhNghia['code']] = $trieuChung->MaTC;
         }
 
-        return $ids;
+        return $maSo;
     }
 
     /**
      * Aliases are stored accent-free because MedicalTriageService normalises the
      * user's message with Str::ascii before matching.
      */
-    protected function symptomDefinitions(): array
+    protected function danhSachTrieuChung(): array
     {
         return [
             ['code' => 'fever', 'name_vi' => 'sốt', 'body_system' => 'general', 'catalog_query' => 'hạ sốt',
@@ -136,24 +136,24 @@ class MedicalKnowledgeSeeder extends Seeder
      * The emergency wording below is carried over from
      * ChatbotService::buildUrgentMedicalGuidanceResponse so behaviour is unchanged.
      *
-     * @param array<string, int> $symptoms
+     * @param array<string, int> $cacTrieuChung
      */
-    protected function seedRedFlags(array $symptoms): void
+    protected function napCoDo(array $cacTrieuChung): void
     {
-        foreach ($this->redFlagDefinitions() as $definition) {
-            $symptomCode = $definition['symptom'] ?? null;
-            unset($definition['symptom']);
+        foreach ($this->danhSachCoDo() as $dinhNghia) {
+            $maTrieuChung = $dinhNghia['symptom'] ?? null;
+            unset($dinhNghia['symptom']);
 
-            $definition['applies_to_symptom'] = $symptomCode ? ($symptoms[$symptomCode] ?? null) : null;
+            $dinhNghia['applies_to_symptom'] = $maTrieuChung ? ($cacTrieuChung[$maTrieuChung] ?? null) : null;
             // Explicit on every row: re-seeding must reset a flag that was flipped,
             // not inherit whatever the previous run left behind.
-            $definition['chat_short_circuit'] = $definition['chat_short_circuit'] ?? true;
+            $dinhNghia['chat_short_circuit'] = $dinhNghia['chat_short_circuit'] ?? true;
 
-            MedicalRedFlag::updateOrCreate(['code' => $definition['code']], $definition);
+            CoDoYTe::updateOrCreate(['code' => $dinhNghia['code']], $dinhNghia);
         }
     }
 
-    protected function redFlagDefinitions(): array
+    protected function danhSachCoDo(): array
     {
         $callEmergency = 'Anh/chị hãy gọi ngay 115 hoặc đến cơ sở y tế gần nhất. Không nên tự dùng thuốc trong tình huống này.';
 
@@ -305,38 +305,38 @@ class MedicalKnowledgeSeeder extends Seeder
      * Higher priority wins, so age/pregnancy guards sit above the generic rule
      * for the same symptom.
      *
-     * @param array<string, int> $symptoms
+     * @param array<string, int> $cacTrieuChung
      */
-    protected function seedTriageRules(array $symptoms): void
+    protected function napQuyTacSangLoc(array $cacTrieuChung): void
     {
-        $categoryIds = Category::pluck('MaDM', 'name');
+        $maDanhMucs = DanhMuc::pluck('MaDM', 'name');
 
-        foreach ($this->triageRuleDefinitions() as $definition) {
-            $symptomCode = $definition['symptom'];
-            unset($definition['symptom']);
+        foreach ($this->danhSachQuyTac() as $dinhNghia) {
+            $maTrieuChung = $dinhNghia['symptom'];
+            unset($dinhNghia['symptom']);
 
-            if (!isset($symptoms[$symptomCode])) {
+            if (!isset($cacTrieuChung[$maTrieuChung])) {
                 continue;
             }
 
-            $definition['MaTC'] = $symptoms[$symptomCode];
-            $definition['suggest_categories'] = collect($definition['categories'] ?? [])
-                ->map(fn (string $name) => $categoryIds[$name] ?? null)
+            $dinhNghia['MaTC'] = $cacTrieuChung[$maTrieuChung];
+            $dinhNghia['suggest_categories'] = collect($dinhNghia['categories'] ?? [])
+                ->map(fn (string $name) => $maDanhMucs[$name] ?? null)
                 ->filter()
                 ->values()
                 ->all();
-            unset($definition['categories']);
+            unset($dinhNghia['categories']);
 
             // reviewed_by stays null on purpose: no licensed pharmacist has signed
             // off on this seed data. See the class docblock.
-            MedicalTriageRule::updateOrCreate(
-                ['MaTC' => $definition['MaTC'], 'priority' => $definition['priority']],
-                $definition
+            QuyTacPhanTangYTe::updateOrCreate(
+                ['MaTC' => $dinhNghia['MaTC'], 'priority' => $dinhNghia['priority']],
+                $dinhNghia
             );
         }
     }
 
-    protected function triageRuleDefinitions(): array
+    protected function danhSachQuyTac(): array
     {
         $painCategory = 'Thuốc giảm đau - Hạ sốt';
         $digestiveCategory = 'Thuốc tiêu hóa';
@@ -523,7 +523,7 @@ class MedicalKnowledgeSeeder extends Seeder
      * harder to audit than named arguments.
      */
     protected function rule(
-        string $symptom,
+        string $trieuChung,
         string $outcome,
         int $priority,
         ?array $conditions,
@@ -534,7 +534,7 @@ class MedicalKnowledgeSeeder extends Seeder
         array $categories = [],
     ): array {
         return [
-            'symptom' => $symptom,
+            'symptom' => $trieuChung,
             'outcome' => $outcome,
             'priority' => $priority,
             'conditions' => $conditions,
@@ -552,28 +552,28 @@ class MedicalKnowledgeSeeder extends Seeder
      * DrugSafetyService normalises products.ingredients before lookup. The crawler
      * writes ingredients in the same "Name 500mg" form the parser expects.
      */
-    protected function seedDrugInteractions(): void
+    protected function napTuongTacThuoc(): void
     {
-        $nsaidPairNote = 'Dùng đồng thời hai thuốc chống viêm không steroid làm tăng rõ nguy cơ loét và xuất huyết tiêu hóa mà không tăng hiệu quả giảm đau.';
-        $nsaidPairAction = 'Chỉ dùng một thuốc trong nhóm. Anh/chị nên hỏi dược sĩ để chọn loại phù hợp.';
+        $ghiChuCapNsaid = 'Dùng đồng thời hai thuốc chống viêm không steroid làm tăng rõ nguy cơ loét và xuất huyết tiêu hóa mà không tăng hiệu quả giảm đau.';
+        $khuyenNghiCapNsaid = 'Chỉ dùng một thuốc trong nhóm. Anh/chị nên hỏi dược sĩ để chọn loại phù hợp.';
 
-        $nsaids = ['ibuprofen', 'diclofenac', 'meloxicam', 'naproxen', 'ketoprofen', 'celecoxib', 'acid acetylsalicylic'];
-        $pairs = [];
+        $nhomNsaid = ['ibuprofen', 'diclofenac', 'meloxicam', 'naproxen', 'ketoprofen', 'celecoxib', 'acid acetylsalicylic'];
+        $cacCap = [];
 
         // Every NSAID pair is a major interaction; generate them instead of listing 21 rows.
-        for ($i = 0; $i < count($nsaids); $i++) {
-            for ($j = $i + 1; $j < count($nsaids); $j++) {
-                $pairs[] = [
-                    'ingredient_a' => $nsaids[$i],
-                    'ingredient_b' => $nsaids[$j],
+        for ($i = 0; $i < count($nhomNsaid); $i++) {
+            for ($j = $i + 1; $j < count($nhomNsaid); $j++) {
+                $cacCap[] = [
+                    'ingredient_a' => $nhomNsaid[$i],
+                    'ingredient_b' => $nhomNsaid[$j],
                     'severity' => 'major',
-                    'description_vi' => $nsaidPairNote,
-                    'recommendation_vi' => $nsaidPairAction,
+                    'description_vi' => $ghiChuCapNsaid,
+                    'recommendation_vi' => $khuyenNghiCapNsaid,
                 ];
             }
         }
 
-        $pairs = array_merge($pairs, [
+        $cacCap = array_merge($cacCap, [
             [
                 'ingredient_a' => 'clopidogrel', 'ingredient_b' => 'ibuprofen', 'severity' => 'major',
                 'description_vi' => 'Thuốc chống kết tập tiểu cầu dùng cùng thuốc chống viêm không steroid làm tăng nguy cơ chảy máu tiêu hóa.',
@@ -726,10 +726,10 @@ class MedicalKnowledgeSeeder extends Seeder
             ],
         ]);
 
-        foreach ($pairs as $pair) {
-            DrugInteraction::updateOrCreate(
-                ['ingredient_a' => $pair['ingredient_a'], 'ingredient_b' => $pair['ingredient_b']],
-                $pair + ['is_active' => true]
+        foreach ($cacCap as $cap) {
+            TuongTacThuoc::updateOrCreate(
+                ['ingredient_a' => $cap['ingredient_a'], 'ingredient_b' => $cap['ingredient_b']],
+                $cap + ['is_active' => true]
             );
         }
     }
@@ -738,9 +738,9 @@ class MedicalKnowledgeSeeder extends Seeder
      * `absolute` blocks the suggestion outright; `relative` warns and asks the
      * user to confirm. Age values are years, matched against users.birth_date.
      */
-    protected function seedContraindications(): void
+    protected function napChungChiDinh(): void
     {
-        $rows = [
+        $cacDong = [
             // Pregnancy — NSAIDs are the main risk group in this catalog.
             ['ingredient' => 'ibuprofen', 'condition_type' => 'pregnancy', 'severity' => 'absolute',
                 'warning_vi' => 'Ibuprofen không dùng khi mang thai, đặc biệt từ tuần 20 trở đi, vì ảnh hưởng tuần hoàn và thận của thai. Anh/chị vui lòng hỏi bác sĩ sản khoa.'],
@@ -848,14 +848,14 @@ class MedicalKnowledgeSeeder extends Seeder
                 'warning_vi' => 'Cần bác sĩ đánh giá trước khi dùng thuốc chẹn beta ở người hen.'],
         ];
 
-        foreach ($rows as $row) {
-            DrugContraindication::updateOrCreate(
+        foreach ($cacDong as $dong) {
+            ChungChiDinhThuoc::updateOrCreate(
                 [
-                    'ingredient' => $row['ingredient'],
-                    'condition_type' => $row['condition_type'],
-                    'condition_value' => $row['condition_value'] ?? null,
+                    'ingredient' => $dong['ingredient'],
+                    'condition_type' => $dong['condition_type'],
+                    'condition_value' => $dong['condition_value'] ?? null,
                 ],
-                $row + ['is_active' => true]
+                $dong + ['is_active' => true]
             );
         }
     }

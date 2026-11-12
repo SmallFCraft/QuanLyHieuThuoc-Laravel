@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\Auditable;
 
-class Order extends Model
+class DonHang extends Model
 {
     use HasFactory, Auditable;
+
+    protected $table = 'orders';
 
     protected $primaryKey = 'MaDH';
 
@@ -40,17 +42,17 @@ class Order extends Model
     /**
      * Get the user that owns the order.
      */
-    public function user()
+    public function nguoiDung()
     {
-        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
     }
 
     /**
      * Get the order items for the order.
      */
-    public function items()
+    public function chiTietDonHangs()
     {
-        return $this->hasMany(OrderItem::class, 'MaDH', 'MaDH');
+        return $this->hasMany(ChiTietDonHang::class, 'MaDH', 'MaDH');
     }
 
     /**

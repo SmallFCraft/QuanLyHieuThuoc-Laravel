@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -24,10 +24,10 @@ class VoiceEvalCommandTest extends TestCase
         Http::preventStrayRequests();
         config(['search.voice.ai' => false, 'search.voice.phonetic_min_hits' => 1]);
 
-        $category = Category::create(['name' => 'Thuốc giảm đau, hạ sốt']);
+        $danhMuc = DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt']);
 
-        Product::create([
-            'MaDM' => $category->MaDM,
+        SanPham::create([
+            'MaDM' => $danhMuc->MaDM,
             'name' => 'Thuốc hạ sốt Hapacol 500',
             'ingredients' => 'Paracetamol 500mg',
             'price' => 50000,

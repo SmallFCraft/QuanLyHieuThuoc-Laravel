@@ -2,14 +2,14 @@
 
 namespace Tests\Unit\Services;
 
-use App\Models\Category;
-use App\Models\MedicationReminder;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Product;
-use App\Models\User;
+use App\Models\DanhMuc;
+use App\Models\NhacUongThuoc;
+use App\Models\DonHang;
+use App\Models\ChiTietDonHang;
+use App\Models\SanPham;
+use App\Models\NguoiDung;
 use App\Services\MedicationReminderService;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -20,23 +20,23 @@ class MedicationReminderServiceTest extends TestCase
     use RefreshDatabase;
 
     protected MedicationReminderService $service;
-    protected Category $category;
-    protected User $user;
+    protected DanhMuc $danhMuc;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->category = Category::create([
+        $this->danhMuc = DanhMuc::create([
             'name' => 'Thuốc giảm đau - Hạ sốt',
             'description' => 'Giảm đau, hạ sốt',
         ]);
 
-        $this->seed(MedicalKnowledgeSeeder::class);
+        $this->seed(TriThucYTeSeeder::class);
 
         $this->service = app(MedicationReminderService::class);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(34)->toDateString(),
@@ -74,22 +74,22 @@ class MedicationReminderServiceTest extends TestCase
 
     public function test_create_from_order_makes_one_reminder_per_line(): void
     {
-        $order = $this->orderWithProducts(3);
+        $donHang = $this->orderWithProducts(3);
 
-        $created = $this->service->createFromOrder($order);
+        $created = $this->service->createFromOrder($donHang);
 
         $this->assertSame(3, $created);
-        $this->assertSame(3, MedicationReminder::where('MaDH', $order->MaDH)->count());
+        $this->assertSame(3, NhacUongThuoc::where('MaDH', $donHang->MaDH)->count());
     }
 
     public function test_create_from_order_is_idempotent(): void
     {
-        $order = $this->orderWithProducts(2);
+        $donHang = $this->orderWithProducts(2);
 
-        $this->service->createFromOrder($order);
-        $this->service->createFromOrder($order);
+        $this->service->createFromOrder($donHang);
+        $this->service->createFromOrder($donHang);
 
-        $this->assertSame(2, MedicationReminder::where('MaDH', $order->MaDH)->count());
+        $this->assertSame(2, NhacUongThuoc::where('MaDH', $donHang->MaDH)->count());
     }
 
     public function test_first_reminder_falls_inside_waking_hours(): void
@@ -98,64 +98,64 @@ class MedicationReminderServiceTest extends TestCase
         // 08:00–20:00 rather than waking the customer up.
         $this->travelTo(now()->startOfDay()->setTime(3, 0));
 
-        $order = $this->orderWithProducts(1);
+        $donHang = $this->orderWithProducts(1);
 
-        $this->service->createFromOrder($order);
-        $reminder = MedicationReminder::where('MaDH', $order->MaDH)->firstOrFail();
+        $this->service->createFromOrder($donHang);
+        $nhacUong = NhacUongThuoc::where('MaDH', $donHang->MaDH)->firstOrFail();
 
-        $this->assertNotNull($reminder->next_remind_at);
-        $this->assertGreaterThanOrEqual(8, $reminder->next_remind_at->hour);
-        $this->assertLessThan(20, $reminder->next_remind_at->hour);
+        $this->assertNotNull($nhacUong->next_remind_at);
+        $this->assertGreaterThanOrEqual(8, $nhacUong->next_remind_at->hour);
+        $this->assertLessThan(20, $nhacUong->next_remind_at->hour);
     }
 
     public function test_reminder_copies_usage_text_and_frequency_from_the_product(): void
     {
-        $product = $this->product('Uống 1 viên x 3 lần/ngày');
-        $order = $this->order();
-        OrderItem::create([
-            'MaDH' => $order->MaDH,
-            'MaSP' => $product->MaSP,
+        $sanPham = $this->product('Uống 1 viên x 3 lần/ngày');
+        $donHang = $this->order();
+        ChiTietDonHang::create([
+            'MaDH' => $donHang->MaDH,
+            'MaSP' => $sanPham->MaSP,
             'quantity' => 9,
             'unit_price' => 10000,
             'batch_number' => 'B-1',
         ]);
 
-        $this->service->createFromOrder($order->fresh());
-        $reminder = MedicationReminder::where('MaSP', $product->MaSP)->firstOrFail();
+        $this->service->createFromOrder($donHang->fresh());
+        $nhacUong = NhacUongThuoc::where('MaSP', $sanPham->MaSP)->firstOrFail();
 
-        $this->assertSame('Uống 1 viên x 3 lần/ngày', $reminder->dosage_text);
-        $this->assertSame(3, $reminder->times_per_day);
-        $this->assertSame(3, $reminder->duration_days);
+        $this->assertSame('Uống 1 viên x 3 lần/ngày', $nhacUong->dosage_text);
+        $this->assertSame(3, $nhacUong->times_per_day);
+        $this->assertSame(3, $nhacUong->duration_days);
     }
 
     // --- advanceSchedule ---
 
     public function test_schedule_completes_once_the_course_is_over(): void
     {
-        $reminder = $this->reminder([
+        $nhacUong = $this->reminder([
             'times_per_day' => 1,
             'duration_days' => 1,
             'start_date' => now()->subDays(5)->toDateString(),
             'next_remind_at' => now()->subDays(1)->setTime(10, 0),
         ]);
 
-        $reminder->advanceSchedule();
+        $nhacUong->advanceSchedule();
 
-        $this->assertSame('completed', $reminder->fresh()->status);
-        $this->assertNull($reminder->fresh()->next_remind_at);
+        $this->assertSame('completed', $nhacUong->fresh()->status);
+        $this->assertNull($nhacUong->fresh()->next_remind_at);
     }
 
     public function test_schedule_stays_inside_waking_hours_when_it_rolls_over(): void
     {
-        $reminder = $this->reminder([
+        $nhacUong = $this->reminder([
             'times_per_day' => 1,
             'duration_days' => 30,
             'start_date' => now()->toDateString(),
             'next_remind_at' => now()->setTime(19, 0),
         ]);
 
-        $reminder->advanceSchedule();
-        $next = $reminder->fresh()->next_remind_at;
+        $nhacUong->advanceSchedule();
+        $next = $nhacUong->fresh()->next_remind_at;
 
         $this->assertNotNull($next);
         $this->assertGreaterThanOrEqual(8, $next->hour);
@@ -200,13 +200,13 @@ class MedicationReminderServiceTest extends TestCase
 
     public function test_cancel_for_user_only_cancels_that_users_reminder(): void
     {
-        $other = User::factory()->create(['role' => 'User', 'status' => 'active']);
-        $product = $this->product('Uống 1 viên/ngày');
+        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $sanPham = $this->product('Uống 1 viên/ngày');
 
-        $mine = $this->reminder(['MaSP' => $product->MaSP]);
-        $theirs = $this->reminder(['MaSP' => $product->MaSP, 'MaKH' => $other->MaKH]);
+        $mine = $this->reminder(['MaSP' => $sanPham->MaSP]);
+        $theirs = $this->reminder(['MaSP' => $sanPham->MaSP, 'MaKH' => $other->MaKH]);
 
-        $this->service->cancelForUser((int) $this->user->MaKH, (int) $product->MaSP);
+        $this->service->cancelForUser((int) $this->nguoiDung->MaKH, (int) $sanPham->MaSP);
 
         $this->assertSame('cancelled', $mine->fresh()->status);
         $this->assertSame('active', $theirs->fresh()->status);
@@ -228,7 +228,7 @@ class MedicationReminderServiceTest extends TestCase
 
     public function test_a_customer_only_sees_their_own_active_reminders(): void
     {
-        $other = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
         $mineProduct = $this->product('Uống 1 viên/ngày');
         $theirsProduct = $this->product('Uống 1 viên x 2 lần/ngày');
 
@@ -238,9 +238,9 @@ class MedicationReminderServiceTest extends TestCase
         // Neo vào aria-label của nút huỷ, không phải tên sản phẩm trần: panel tìm kiếm
         // nhúng sản phẩm xem nhiều vào mọi trang storefront, nên quét cả trang thì tên
         // nào cũng có thể xuất hiện ngoài bảng nhắc thuốc.
-        $cancelLabel = fn (Product $product) => __('messages.reminder.btn_cancel_aria', ['name' => $product->name]);
+        $cancelLabel = fn (SanPham $sanPham) => __('messages.reminder.btn_cancel_aria', ['name' => $sanPham->name]);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->get(route('reminders.index'))
             ->assertOk()
             ->assertSee($cancelLabel($mineProduct))
@@ -249,10 +249,10 @@ class MedicationReminderServiceTest extends TestCase
 
     public function test_a_customer_cannot_cancel_someone_elses_reminder(): void
     {
-        $other = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
         $theirs = $this->reminder(['MaKH' => $other->MaKH]);
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->post(route('reminders.cancel', $theirs->MaNN))
             ->assertRedirect(route('reminders.index'));
 
@@ -263,7 +263,7 @@ class MedicationReminderServiceTest extends TestCase
     {
         $mine = $this->reminder();
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->post(route('reminders.cancel', $mine->MaNN))
             ->assertRedirect(route('reminders.index'));
 
@@ -272,18 +272,18 @@ class MedicationReminderServiceTest extends TestCase
 
     // --- helpers ---
 
-    private function product(string $usage): Product
+    private function product(string $usage): SanPham
     {
-        return Product::factory()->create([
-            'MaDM' => $this->category->MaDM,
+        return SanPham::factory()->create([
+            'MaDM' => $this->danhMuc->MaDM,
             'usage' => $usage,
         ]);
     }
 
-    private function order(?User $user = null): Order
+    private function order(?NguoiDung $nguoiDung = null): DonHang
     {
-        return Order::create([
-            'MaKH' => ($user ?? $this->user)->MaKH,
+        return DonHang::create([
+            'MaKH' => ($nguoiDung ?? $this->nguoiDung)->MaKH,
             'total_amount' => 100000,
             'status' => 'Completed',
             'shipping_address' => '12 Nguyễn Huệ, Quận 1',
@@ -291,9 +291,9 @@ class MedicationReminderServiceTest extends TestCase
         ]);
     }
 
-    private function orderWithProducts(int $lines): Order
+    private function orderWithProducts(int $lines): DonHang
     {
-        $order = $this->order();
+        $donHang = $this->order();
         $usages = [
             'Uống 1 viên/ngày',
             'Uống 1 viên x 2-3 lần/ngày sau ăn',
@@ -301,23 +301,23 @@ class MedicationReminderServiceTest extends TestCase
         ];
 
         for ($i = 0; $i < $lines; $i++) {
-            $product = $this->product($usages[$i % count($usages)]);
-            OrderItem::create([
-                'MaDH' => $order->MaDH,
-                'MaSP' => $product->MaSP,
+            $sanPham = $this->product($usages[$i % count($usages)]);
+            ChiTietDonHang::create([
+                'MaDH' => $donHang->MaDH,
+                'MaSP' => $sanPham->MaSP,
                 'quantity' => 6,
                 'unit_price' => 10000,
                 'batch_number' => 'B-' . $i,
             ]);
         }
 
-        return $order->fresh();
+        return $donHang->fresh();
     }
 
-    private function reminder(array $attributes = []): MedicationReminder
+    private function reminder(array $attributes = []): NhacUongThuoc
     {
-        return MedicationReminder::create(array_merge([
-            'MaKH' => $this->user->MaKH,
+        return NhacUongThuoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
             'MaDH' => null,
             'MaSP' => $this->product('Uống 1 viên x 2 lần/ngày')->MaSP,
             'dosage_text' => 'Uống 1 viên x 2 lần/ngày',

@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
-class UserSeeder extends Seeder
+class NguoiDungSeeder extends Seeder
 {
     /**
      * Run the database seeds.
@@ -13,7 +13,7 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         // Tài khoản quản trị (đăng nhập: admin@load99 / Gunny123456@)
-        User::updateOrCreate(
+        NguoiDung::updateOrCreate(
             ['email' => 'admin@load99'],
             [
                 'name' => 'Quản trị viên',
@@ -29,7 +29,7 @@ class UserSeeder extends Seeder
         );
 
         // Dược sĩ phụ trách hàng đợi sàng lọc (đăng nhập: duocsi@load99 / Gunny123456@)
-        User::updateOrCreate(
+        NguoiDung::updateOrCreate(
             ['email' => 'duocsi@load99'],
             [
                 'name' => 'Dược sĩ Nguyễn Thị Hạnh',
@@ -44,7 +44,7 @@ class UserSeeder extends Seeder
             ]
         );
 
-        $users = [
+        $nguoiDungs = [
             [
                 'name' => 'Nguyễn Văn An',
                 'email' => 'nguyenvanan@example.com',
@@ -107,10 +107,10 @@ class UserSeeder extends Seeder
             ],
         ];
 
-        foreach ($users as $userData) {
-            User::updateOrCreate(
-                ['email' => $userData['email']],
-                $userData
+        foreach ($nguoiDungs as $duLieuNguoiDung) {
+            NguoiDung::updateOrCreate(
+                ['email' => $duLieuNguoiDung['email']],
+                $duLieuNguoiDung
             );
         }
     }

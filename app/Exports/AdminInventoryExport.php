@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\Product;
+use App\Models\SanPham;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -20,8 +20,8 @@ class AdminInventoryExport implements FromCollection, WithHeadings, WithMapping,
 
     public function collection(): Collection
     {
-        return Product::query()
-            ->with('category')
+        return SanPham::query()
+            ->with('danhMuc')
             ->inventoryStatus($this->status, $this->days)
             ->search($this->search)
             ->FEFO()
@@ -47,7 +47,7 @@ class AdminInventoryExport implements FromCollection, WithHeadings, WithMapping,
         return [
             $product->display_code,
             $product->name,
-            $product->category->name ?? 'Chưa phân loại',
+            $product->danhMuc->name ?? 'Chưa phân loại',
             $product->batch_number,
             $product->stock_quantity,
             $product->reorder_point,
@@ -56,17 +56,17 @@ class AdminInventoryExport implements FromCollection, WithHeadings, WithMapping,
         ];
     }
 
-    private function statusLabel(Product $product): string
+    private function statusLabel(SanPham $sanPham): string
     {
-        if ($product->isExpired()) {
+        if ($sanPham->isExpired()) {
             return 'Đã hết hạn';
         }
 
-        if ($product->isExpiringSoon($this->days)) {
+        if ($sanPham->isExpiringSoon($this->days)) {
             return 'Sắp hết hạn';
         }
 
-        if ($product->isLowStock()) {
+        if ($sanPham->isLowStock()) {
             return 'Tồn thấp';
         }
 

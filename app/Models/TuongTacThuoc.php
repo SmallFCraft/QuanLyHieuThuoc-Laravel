@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DrugInteraction extends Model
+class TuongTacThuoc extends Model
 {
+    protected $table = 'drug_interactions';
+
     protected $primaryKey = 'MaTT';
 
     protected $fillable = [

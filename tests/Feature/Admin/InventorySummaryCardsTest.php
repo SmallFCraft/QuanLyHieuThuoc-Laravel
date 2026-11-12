@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Admin;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\User;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\NguoiDung;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,19 +18,19 @@ class InventorySummaryCardsTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $admin;
+    protected NguoiDung $admin;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->admin = User::factory()->create(['role' => 'Administrator', 'status' => 'active']);
+        $this->admin = NguoiDung::factory()->create(['role' => 'Administrator', 'status' => 'active']);
 
-        $category = Category::create(['name' => 'Thuốc giảm đau']);
+        $danhMuc = DanhMuc::create(['name' => 'Thuốc giảm đau']);
 
-        $make = function (string $name, string $batch, int $stock, int $reorder, string $expiry) use ($category) {
-            return Product::create([
-                'MaDM' => $category->MaDM,
+        $make = function (string $name, string $batch, int $stock, int $reorder, string $expiry) use ($danhMuc) {
+            return SanPham::create([
+                'MaDM' => $danhMuc->MaDM,
                 'name' => $name,
                 'price' => 20000,
                 'expiration_date' => $expiry,

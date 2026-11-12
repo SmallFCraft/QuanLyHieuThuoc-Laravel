@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Product;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -28,13 +28,13 @@ class CatalogCategoryFilterTest extends TestCase
         $this->stock('Dược mỹ phẩm', 1);
     }
 
-    private function stock(string $categoryName, int $products): Category
+    private function stock(string $categoryName, int $products): DanhMuc
     {
-        $category = Category::create(['name' => $categoryName]);
+        $danhMuc = DanhMuc::create(['name' => $categoryName]);
 
         for ($i = 0; $i < $products; $i++) {
-            Product::create([
-                'MaDM' => $category->MaDM,
+            SanPham::create([
+                'MaDM' => $danhMuc->MaDM,
                 'name' => "{$categoryName} sản phẩm {$i}",
                 'price' => 50000,
                 'expiration_date' => now()->addYears(2),
@@ -44,7 +44,7 @@ class CatalogCategoryFilterTest extends TestCase
             ]);
         }
 
-        return $category;
+        return $danhMuc;
     }
 
     /** @return array<string> Category names in the order the filter renders them. */
@@ -76,21 +76,21 @@ class CatalogCategoryFilterTest extends TestCase
 
     public function test_a_category_without_stock_is_left_out(): void
     {
-        Category::create(['name' => 'Danh mục rỗng']);
+        DanhMuc::create(['name' => 'Danh mục rỗng']);
 
         $this->assertNotContains('Danh mục rỗng', $this->renderedOrder());
     }
 
     public function test_the_all_row_counts_the_whole_catalog_even_while_filtered(): void
     {
-        $category = Category::where('name', 'Dược mỹ phẩm')->first();
+        $danhMuc = DanhMuc::where('name', 'Dược mỹ phẩm')->first();
 
         // Reading $products->total() here showed the filtered count, so the "all"
         // row claimed 1 product while sitting above 10.
         //
         // Anchored on catalog-filter-count: a bare '>10</span>' also matches the header
         // dropdown's own total, so the regression above would still pass.
-        $this->get("/products?category={$category->MaDM}")
+        $this->get("/products?category={$danhMuc->MaDM}")
             ->assertOk()
             ->assertSee('<span class="catalog-filter-count">10</span>', false);
     }
@@ -123,9 +123,9 @@ class CatalogCategoryFilterTest extends TestCase
 
     public function test_the_mobile_summary_names_the_active_category(): void
     {
-        $category = Category::where('name', 'Dụng cụ y tế')->first();
+        $danhMuc = DanhMuc::where('name', 'Dụng cụ y tế')->first();
 
-        $this->get("/products?category={$category->MaDM}")
+        $this->get("/products?category={$danhMuc->MaDM}")
             ->assertOk()
             ->assertSee('catalog-filter__toggle-current">Dụng cụ y tế', false);
     }
@@ -139,9 +139,9 @@ class CatalogCategoryFilterTest extends TestCase
 
     public function test_the_active_category_is_marked_for_assistive_tech(): void
     {
-        $category = Category::where('name', 'Dụng cụ y tế')->first();
+        $danhMuc = DanhMuc::where('name', 'Dụng cụ y tế')->first();
 
-        $this->get("/products?category={$category->MaDM}")
+        $this->get("/products?category={$danhMuc->MaDM}")
             ->assertOk()
             ->assertSee('aria-current="page"', false);
 
@@ -157,12 +157,12 @@ class CatalogCategoryFilterTest extends TestCase
     {
         // <details> carries the open/close state, and every category is a real link.
         $html = $this->get('/products')->assertOk()->getContent();
-        $category = Category::where('name', 'Dụng cụ y tế')->first();
+        $danhMuc = DanhMuc::where('name', 'Dụng cụ y tế')->first();
 
         $this->assertStringContainsString('<details', $html);
         $this->assertStringContainsString('<summary', $html);
         $this->assertStringContainsString(
-            route('products.index', ['category' => $category->MaDM]),
+            route('products.index', ['category' => $danhMuc->MaDM]),
             $html
         );
     }
@@ -178,14 +178,14 @@ class CatalogCategoryFilterTest extends TestCase
             $nav[1]
         );
 
-        // Both read Category::scopeBrowsable(), so the header and the sidebar cannot
+        // Both read DanhMuc::scopeBrowsable(), so the header and the sidebar cannot
         // disagree about which categories exist.
         $this->assertSame($this->renderedOrder(), $navNames);
     }
 
     public function test_the_header_dropdown_leaves_out_categories_with_nothing_in_stock(): void
     {
-        Category::create(['name' => 'Danh mục rỗng']);
+        DanhMuc::create(['name' => 'Danh mục rỗng']);
 
         // It used to list every category, so those rows opened an empty product page.
         $this->get('/')

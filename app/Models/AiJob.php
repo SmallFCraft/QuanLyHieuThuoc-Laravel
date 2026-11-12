@@ -29,6 +29,8 @@ class AiJob extends Model
      */
     public const WORKER_ALIVE_SECONDS = 120;
 
+    protected $table = 'ai_jobs';
+
     protected $fillable = [
         'uuid',
         'MaKH',
@@ -52,7 +54,7 @@ class AiJob extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
     }
 
     public function isFinished(): bool

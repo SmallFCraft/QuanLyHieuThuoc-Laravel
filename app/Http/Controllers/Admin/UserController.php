@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Exports\AdminUsersExport;
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\NguoiDung;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
@@ -17,7 +17,7 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::orderBy('created_at', 'desc')->get();
+        $users = NguoiDung::orderBy('created_at', 'desc')->get();
         return view('admin.users.index', compact('users'));
     }
 
@@ -51,7 +51,7 @@ class UserController extends Controller
             'role.required' => 'Vai trò là bắt buộc',
         ]);
 
-        User::create([
+        NguoiDung::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
@@ -68,7 +68,7 @@ class UserController extends Controller
      */
     public function update(Request $request, $MaKH)
     {
-        $user = User::findOrFail($MaKH);
+        $nguoiDung = NguoiDung::findOrFail($MaKH);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -84,15 +84,15 @@ class UserController extends Controller
             'password.confirmed' => 'Xác nhận mật khẩu không khớp',
         ]);
 
-        $user->name = $validated['name'];
-        $user->email = $validated['email'];
-        $user->role = $validated['role'];
+        $nguoiDung->name = $validated['name'];
+        $nguoiDung->email = $validated['email'];
+        $nguoiDung->role = $validated['role'];
 
         if (!empty($validated['password'])) {
-            $user->password = Hash::make($validated['password']);
+            $nguoiDung->password = Hash::make($validated['password']);
         }
 
-        $user->save();
+        $nguoiDung->save();
 
         return redirect()->route('admin.users.index')
             ->with('success', 'Cập nhật người dùng thành công');
@@ -103,14 +103,14 @@ class UserController extends Controller
      */
     public function updateStatus(Request $request, $MaKH)
     {
-        $user = User::findOrFail($MaKH);
+        $nguoiDung = NguoiDung::findOrFail($MaKH);
 
         $validated = $request->validate([
             'status' => ['required', 'in:active,inactive'],
         ]);
 
-        $user->status = $validated['status'];
-        $user->save();
+        $nguoiDung->status = $validated['status'];
+        $nguoiDung->save();
 
         $message = $validated['status'] === 'active' 
             ? 'Kích hoạt người dùng thành công' 

@@ -2,8 +2,8 @@
 
 namespace App\Support;
 
-use App\Models\Category;
-use App\Models\Product;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
 use Illuminate\Support\Str;
 
 class ProductCodeGenerator
@@ -46,7 +46,7 @@ class ProductCodeGenerator
         $code = $base;
         $suffix = 2;
 
-        while (Category::query()
+        while (DanhMuc::query()
             ->when($ignoreCategoryId, fn ($query) => $query->whereKeyNot($ignoreCategoryId))
             ->where('code', $code)
             ->exists()) {
@@ -57,22 +57,22 @@ class ProductCodeGenerator
         return $code;
     }
 
-    public static function productCodeForCategory(Category $category): string
+    public static function productCodeForCategory(DanhMuc $danhMuc): string
     {
-        $prefix = self::normalizeCategoryCode($category->code)
-            ?: self::categoryCodeFromName($category->name);
+        $prefix = self::normalizeCategoryCode($danhMuc->code)
+            ?: self::categoryCodeFromName($danhMuc->name);
 
         for ($attempt = 0; $attempt < 50; $attempt++) {
             $code = $prefix . str_pad((string) random_int(0, 99999), 5, '0', STR_PAD_LEFT);
 
-            if (! Product::query()->where('product_code', $code)->exists()) {
+            if (! SanPham::query()->where('product_code', $code)->exists()) {
                 return $code;
             }
         }
 
         do {
             $code = $prefix . str_pad((string) random_int(0, 99999), 5, '0', STR_PAD_LEFT);
-        } while (Product::query()->where('product_code', $code)->exists());
+        } while (SanPham::query()->where('product_code', $code)->exists());
 
         return $code;
     }

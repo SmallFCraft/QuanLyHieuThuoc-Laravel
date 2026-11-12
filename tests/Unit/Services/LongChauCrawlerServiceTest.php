@@ -92,8 +92,8 @@ class LongChauCrawlerServiceTest extends TestCase
             'https://nhathuoclongchau.com.vn/thuoc/bisoloc-25mg-4482.html',
             'https://nhathuoclongchau.com.vn/thuoc/missing-9999.html',
             'https://nhathuoclongchau.com.vn/thuoc/broken-8888.html',
-        ], function ($product) use (&$seen) {
-            $seen[] = $product->sku;
+        ], function ($sanPham) use (&$seen) {
+            $seen[] = $sanPham->sku;
         });
 
         $this->assertSame(['00005713'], $seen);

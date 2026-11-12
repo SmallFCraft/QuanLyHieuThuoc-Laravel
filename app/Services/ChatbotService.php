@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Helpers\VietnameseHelper;
-use App\Models\Category;
-use App\Models\MedicalRedFlag;
-use App\Models\MedicalSymptom;
-use App\Models\Product;
-use App\Models\User;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\CoDoYTe;
+use App\Models\NguoiDung;
+use App\Models\TrieuChungYTe;
 use App\Support\VietnameseText;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -713,8 +713,8 @@ PROMPT;
                 ];
             $response = $this->aiService->chat($messages, $chatOptions);
 
-            $products = [];
-            $categories = [];
+            $sanPhams = [];
+            $danhMucs = [];
             $explanations = [];
             $showDisclaimer = false;
             $responseText = '';
@@ -762,16 +762,16 @@ PROMPT;
                             $lookupSymptoms
                         );
 
-                        $products = $catalogResponse['products'];
-                        $categories = $catalogResponse['categories'];
+                        $sanPhams = $catalogResponse['products'];
+                        $danhMucs = $catalogResponse['categories'];
                         $explanations = $catalogResponse['explanations'];
                         $showDisclaimer = $catalogResponse['show_disclaimer'];
                         $responseType = $catalogResponse['response_type'] ?? 'general';
                         $responseText = $this->shouldUseGroundedAiStep()
                             ? $this->buildGroundedAiResponse(
                                 $catalogLookupMessage,
-                                $products,
-                                $categories,
+                                $sanPhams,
+                                $danhMucs,
                                 $explanations,
                                 $catalogResponse['response'],
                                 $showDisclaimer
@@ -784,16 +784,16 @@ PROMPT;
                         $limit = (int) ($arguments['limit'] ?? 6);
                         $categoryResponse = $this->buildCategoryLookupResponseFromQuery($query, $workingMessage, $limit);
 
-                        $products = $categoryResponse['products'];
-                        $categories = $categoryResponse['categories'];
+                        $sanPhams = $categoryResponse['products'];
+                        $danhMucs = $categoryResponse['categories'];
                         $explanations = $categoryResponse['explanations'];
                         $showDisclaimer = $categoryResponse['show_disclaimer'];
                         $responseType = $categoryResponse['response_type'] ?? 'general';
                         $responseText = $this->shouldUseGroundedAiStep()
                             ? $this->buildGroundedAiResponse(
                                 $workingMessage,
-                                $products,
-                                $categories,
+                                $sanPhams,
+                                $danhMucs,
                                 $explanations,
                                 $categoryResponse['response'],
                                 false
@@ -827,8 +827,8 @@ PROMPT;
                             $userId
                         );
 
-                        $products = $safetyResponse['products'];
-                        $categories = [];
+                        $sanPhams = $safetyResponse['products'];
+                        $danhMucs = [];
                         $explanations = [];
                         $showDisclaimer = $safetyResponse['show_disclaimer'];
                         $responseType = $safetyResponse['response_type'];
@@ -873,14 +873,14 @@ PROMPT;
                         $showDisclaimer,
                         $contextSymptoms
                     );
-                    $products = $catalogResponse['products'];
-                    $categories = $catalogResponse['categories'];
+                    $sanPhams = $catalogResponse['products'];
+                    $danhMucs = $catalogResponse['categories'];
                     $explanations = $catalogResponse['explanations'];
                     $showDisclaimer = $catalogResponse['show_disclaimer'];
                     $responseType = $catalogResponse['response_type'] ?? 'general';
 
                     $assistantText = $hadInternalToolNarration ? '' : $responseText;
-                    $hasCatalogData = !empty($products) || !empty($categories);
+                    $hasCatalogData = !empty($sanPhams) || !empty($danhMucs);
 
                     if (!$hasCatalogData) {
                         // The lookup found nothing, so its "chưa thấy sản phẩm" block
@@ -896,8 +896,8 @@ PROMPT;
                         $responseText = $this->shouldUseGroundedAiStep()
                             ? $this->buildGroundedAiResponse(
                                 $catalogLookupMessage,
-                                $products,
-                                $categories,
+                                $sanPhams,
+                                $danhMucs,
                                 $explanations,
                                 $fallbackResponse,
                                 $showDisclaimer
@@ -908,19 +908,19 @@ PROMPT;
             }
 
             if (trim($responseText) === '') {
-                $responseText = (!empty($products) || !empty($categories))
+                $responseText = (!empty($sanPhams) || !empty($danhMucs))
                     ? 'Da tim du lieu lien quan. Anh/chi xem cac goi y ben duoi de tiep tuc.'
                     : 'Da nhan duoc yeu cau. Anh/chi co the mo ta cu the hon de em ho tro chinh xac.';
             }
 
             $responseText = $this->sanitizeAssistantResponse($responseText);
             $responseText = $this->enforceMetaResponsePolicy($workingMessage, $responseText);
-            $responseText = $this->formatFriendlyProductLinks($responseText, $products);
+            $responseText = $this->formatFriendlyProductLinks($responseText, $sanPhams);
 
             // A turn that retrieved nothing has no product link to offer. Anything the
             // model wrote in that shape came from its memory of an earlier turn, with a
             // host and a label it made up.
-            if (empty($products)) {
+            if (empty($sanPhams)) {
                 $responseText = $this->stripInventedProductLinks($responseText);
             }
 
@@ -933,8 +933,8 @@ PROMPT;
             $result = [
                 'success' => true,
                 'response' => $responseText,
-                'products' => $products,
-                'categories' => $categories,
+                'products' => $sanPhams,
+                'categories' => $danhMucs,
                 'explanations' => $explanations,
                 'show_disclaimer' => $showDisclaimer,
                 'disclaimer' => $showDisclaimer
@@ -951,8 +951,8 @@ PROMPT;
                 $message,
                 (microtime(true) - $startTime) * 1000,
                 $responseType,
-                $products,
-                $categories,
+                $sanPhams,
+                $danhMucs,
                 $showDisclaimer
             );
 
@@ -1051,7 +1051,7 @@ PROMPT;
                         ];
                     }
                 } catch (\Exception $categoryFallbackError) {
-                    Log::error('Category fallback failed', ['error' => $categoryFallbackError->getMessage()]);
+                    Log::error('DanhMuc fallback failed', ['error' => $categoryFallbackError->getMessage()]);
                 }
             }
 
@@ -1241,15 +1241,15 @@ PROMPT;
         return trim($responseText);
     }
 
-    protected function formatFriendlyProductLinks(string $responseText, array $products): string
+    protected function formatFriendlyProductLinks(string $responseText, array $sanPhams): string
     {
         $responseText = trim($responseText);
-        if ($responseText === '' || empty($products)) {
+        if ($responseText === '' || empty($sanPhams)) {
             return $responseText;
         }
 
-        foreach ($products as $product) {
-            $url = trim((string) ($product['url'] ?? ''));
+        foreach ($sanPhams as $sanPham) {
+            $url = trim((string) ($sanPham['url'] ?? ''));
             if ($url === '') {
                 continue;
             }
@@ -1275,7 +1275,7 @@ PROMPT;
      * "[Sản phẩm 322](http://localhost/products/322)" — a host without the dev port,
      * a label that is an id rather than a name, and a product this answer never
      * looked up. Only real product cards carry a link, and they are rendered from
-     * `$products` after this runs.
+     * `$sanPhams` after this runs.
      *
      * A `/products?category=` listing URL is not a product and is left alone.
      */
@@ -1795,12 +1795,12 @@ PROMPT;
             return null;
         }
 
-        $products = $this->resolveRecognizedProductsForCatalogResponse($recognizedProducts);
-        if ($products->isEmpty()) {
+        $sanPhams = $this->resolveRecognizedProductsForCatalogResponse($recognizedProducts);
+        if ($sanPhams->isEmpty()) {
             return null;
         }
 
-        $payload = $this->formatProductsPayload($products);
+        $payload = $this->formatProductsPayload($sanPhams);
         $explanations = $this->buildProductExplanations($payload, $message);
         $displayQuery = implode(', ', array_column($payload, 'name'));
         $response = $this->buildDetailedProductResponseText($displayQuery, $payload, $explanations, false);
@@ -1841,9 +1841,9 @@ PROMPT;
 
     protected function extractRecentImageProductsFromContext(array $context): array
     {
-        $products = $context['recent_image_products'] ?? [];
-        if (is_array($products) && !empty($products)) {
-            return $products;
+        $sanPhams = $context['recent_image_products'] ?? [];
+        if (is_array($sanPhams) && !empty($sanPhams)) {
+            return $sanPhams;
         }
 
         $messages = $context['previous_messages'] ?? [];
@@ -1876,14 +1876,14 @@ PROMPT;
                 continue;
             }
 
-            $product = $item['product'] ?? [];
-            if (is_array($product)) {
-                $id = (int) ($product['id'] ?? $product['MaSP'] ?? 0);
+            $sanPham = $item['product'] ?? [];
+            if (is_array($sanPham)) {
+                $id = (int) ($sanPham['id'] ?? $sanPham['MaSP'] ?? 0);
                 if ($id > 0) {
                     $ids[] = $id;
                 }
 
-                $name = trim((string) ($product['name'] ?? ''));
+                $name = trim((string) ($sanPham['name'] ?? ''));
                 if ($name !== '') {
                     $names[] = $name;
                 }
@@ -1895,7 +1895,7 @@ PROMPT;
             }
         }
 
-        $query = Product::with('category')
+        $query = SanPham::with('danhMuc')
             ->notExpired()
             ->where('stock_quantity', '>', 0);
 
@@ -1954,31 +1954,31 @@ PROMPT;
             }
         }
 
-        $products = $this->formatProductsPayload($searchResults);
-        $explanations = $this->buildProductExplanations($products, $originalMessage);
-        $categories = [];
+        $sanPhams = $this->formatProductsPayload($searchResults);
+        $explanations = $this->buildProductExplanations($sanPhams, $originalMessage);
+        $danhMucs = [];
         $displayQuery = $query !== '' ? $query : (string) ($symptomQueries[0] ?? '');
 
         if (($displayQuery === '' || $this->isBroadCatalogQuery($displayQuery)) && !empty($goalQueries)) {
             $displayQuery = $goalQueries[0];
         }
 
-        if (!empty($products)) {
-            $response = $this->buildDetailedProductResponseText($displayQuery, $products, $explanations, $showDisclaimer);
+        if (!empty($sanPhams)) {
+            $response = $this->buildDetailedProductResponseText($displayQuery, $sanPhams, $explanations, $showDisclaimer);
         } else {
             $categoryQuery = $displayQuery;
-            $categories = $this->formatCategoriesPayload($this->searchCategories($displayQuery, 3));
-            if (empty($categories) && !empty($searchQueries)) {
+            $danhMucs = $this->formatCategoriesPayload($this->searchCategories($displayQuery, 3));
+            if (empty($danhMucs) && !empty($searchQueries)) {
                 $categoryQuery = $searchQueries[0];
-                $categories = $this->formatCategoriesPayload($this->searchCategories($categoryQuery, 3));
+                $danhMucs = $this->formatCategoriesPayload($this->searchCategories($categoryQuery, 3));
             }
 
-            if (empty($categories)) {
+            if (empty($danhMucs)) {
                 $tokenQueries = array_values(array_filter(array_merge([$displayQuery], $searchQueries)));
                 $tokenCategories = $this->resolveCategoriesForQueries($tokenQueries, 3);
                 if ($tokenCategories->isNotEmpty()) {
                     $categoryQuery = $displayQuery !== '' ? $displayQuery : (string) ($searchQueries[0] ?? '');
-                    $categories = $this->formatCategoriesPayload($tokenCategories);
+                    $danhMucs = $this->formatCategoriesPayload($tokenCategories);
                 }
             }
 
@@ -1988,34 +1988,34 @@ PROMPT;
             // stock instead of telling the customer nothing was found. Requires an
             // unambiguous match: an empty query returns the top categories by volume,
             // and several matches make "products of the first one" an arbitrary pick.
-            $categoryProducts = $categoryQuery !== '' && count($categories) === 1
-                ? $this->getFeaturedProductsForCategory((int) $categories[0]['id'])
+            $categoryProducts = $categoryQuery !== '' && count($danhMucs) === 1
+                ? $this->getFeaturedProductsForCategory((int) $danhMucs[0]['id'])
                 : collect();
 
             if ($categoryProducts->isNotEmpty()) {
-                $products = $this->formatProductsPayload($categoryProducts);
-                $explanations = $this->buildProductExplanations($products, $originalMessage);
+                $sanPhams = $this->formatProductsPayload($categoryProducts);
+                $explanations = $this->buildProductExplanations($sanPhams, $originalMessage);
                 $response = $this->buildCategoryProductFallbackResponseText(
-                    $categories[0],
-                    $products,
+                    $danhMucs[0],
+                    $sanPhams,
                     $explanations
                 );
             } else {
-                $response = $this->buildNoProductMatchResponse($displayQuery, $categories, $originalMessage);
+                $response = $this->buildNoProductMatchResponse($displayQuery, $danhMucs, $originalMessage);
             }
         }
 
         return [
             'success' => true,
             'response' => $response,
-            'products' => $products,
-            'categories' => $categories,
+            'products' => $sanPhams,
+            'categories' => $danhMucs,
             'explanations' => $explanations,
             'show_disclaimer' => $showDisclaimer,
             'disclaimer' => $showDisclaimer
                 ? 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.'
                 : null,
-            'response_type' => !empty($products) ? 'product_search' : (!empty($categories) ? 'category_search' : 'general')
+            'response_type' => !empty($sanPhams) ? 'product_search' : (!empty($danhMucs) ? 'category_search' : 'general')
         ];
     }
 
@@ -2032,30 +2032,30 @@ PROMPT;
     ): array {
         $query = trim($query);
         $limit = max(1, min($limit, 10));
-        $categories = $this->searchCategories($query, $query === '' ? min($limit, 6) : $limit);
+        $danhMucs = $this->searchCategories($query, $query === '' ? min($limit, 6) : $limit);
 
-        if ($categories->isEmpty()) {
-            $categories = $this->searchCategories('', 6);
+        if ($danhMucs->isEmpty()) {
+            $danhMucs = $this->searchCategories('', 6);
         }
 
-        if ($categories->isEmpty() && $query !== '') {
+        if ($danhMucs->isEmpty() && $query !== '') {
             return $this->buildCatalogLookupResponse($query, $originalMessage, false);
         }
 
         $featuredProducts = collect();
-        if ($categories->count() === 1) {
-            $featuredProducts = $this->getFeaturedProductsForCategory((int) $categories->first()->MaDM);
+        if ($danhMucs->count() === 1) {
+            $featuredProducts = $this->getFeaturedProductsForCategory((int) $danhMucs->first()->MaDM);
         }
 
         return [
             'success' => true,
             'response' => $this->buildCategoryResponseText(
-                $this->formatCategoriesPayload($categories),
+                $this->formatCategoriesPayload($danhMucs),
                 $this->formatProductsPayload($featuredProducts),
                 $query
             ),
             'products' => $this->formatProductsPayload($featuredProducts),
-            'categories' => $this->formatCategoriesPayload($categories),
+            'categories' => $this->formatCategoriesPayload($danhMucs),
             'explanations' => [],
             'show_disclaimer' => false,
             'disclaimer' => null,
@@ -2074,16 +2074,16 @@ PROMPT;
 
     protected function buildGroundedAiResponse(
         string $userMessage,
-        array $products,
-        array $categories,
+        array $sanPhams,
+        array $danhMucs,
         array $explanations,
         string $fallbackResponse,
         bool $showDisclaimer
     ): string {
         try {
             $payload = [
-                'products' => array_values($products),
-                'categories' => array_values($categories),
+                'products' => array_values($sanPhams),
+                'categories' => array_values($danhMucs),
                 'explanations' => $explanations,
                 'show_disclaimer' => $showDisclaimer,
             ];
@@ -2116,7 +2116,7 @@ PROMPT;
                 trim((string) ($response['choices'][0]['message']['content'] ?? ''))
             );
             $responseText = $this->enforceMetaResponsePolicy($userMessage, $responseText);
-            $responseText = $this->stripDuplicateCategoryCardLinks($responseText, $categories);
+            $responseText = $this->stripDuplicateCategoryCardLinks($responseText, $danhMucs);
             if ($responseText !== '') {
                 return $responseText;
             }
@@ -2134,16 +2134,16 @@ PROMPT;
      * message, so a link to the same URL inside the text is a duplicate. A line
      * that was only that link is dropped; elsewhere the label stays as plain text.
      */
-    protected function stripDuplicateCategoryCardLinks(string $responseText, array $categories): string
+    protected function stripDuplicateCategoryCardLinks(string $responseText, array $danhMucs): string
     {
         $responseText = trim($responseText);
-        if ($responseText === '' || empty($categories)) {
+        if ($responseText === '' || empty($danhMucs)) {
             return $responseText;
         }
 
         $urls = [];
-        foreach ($categories as $category) {
-            $url = trim((string) ($category['url'] ?? ''));
+        foreach ($danhMucs as $danhMuc) {
+            $url = trim((string) ($danhMuc['url'] ?? ''));
             if ($url !== '') {
                 $urls[] = $url;
             }
@@ -2298,14 +2298,14 @@ PROMPT;
 
     protected function summarizeParsedImageProducts(array $parsedProducts, string $imageDescription): array
     {
-        $products = [];
+        $sanPhams = [];
 
         foreach (array_slice($parsedProducts, 0, 5) as $parsed) {
             if (!is_array($parsed)) {
                 continue;
             }
 
-            $products[] = array_filter([
+            $sanPhams[] = array_filter([
                 'ten_doc_duoc' => trim((string) ($parsed['name'] ?? '')),
                 'ham_luong' => trim((string) ($parsed['dosage'] ?? '')),
                 'hoat_chat' => array_values(array_filter((array) ($parsed['active_ingredients'] ?? []))),
@@ -2318,7 +2318,7 @@ PROMPT;
 
         return [
             'mo_ta_anh' => Str::limit(trim($imageDescription), 400),
-            'products' => $products,
+            'products' => $sanPhams,
         ];
     }
 
@@ -2367,7 +2367,7 @@ PROMPT;
     }
 
     /**
-     * Product URLs for the rows the image matched, so a model that ignored the
+     * SanPham URLs for the rows the image matched, so a model that ignored the
      * "no links" rule can have them stripped before the shared block is appended.
      *
      * @param array<int, mixed> $recognizedProducts matchProducts() output
@@ -2421,27 +2421,27 @@ PROMPT;
 
         // Re-read the rows: category and usage drive two lines of the shared block and
         // are not part of the recognition payload.
-        $products = Product::with('category')
+        $sanPhams = SanPham::with('danhMuc')
             ->whereIn('MaSP', $ids)
             ->FEFO()
             ->get();
 
-        if ($products->isEmpty()) {
+        if ($sanPhams->isEmpty()) {
             return '';
         }
 
-        $lines = $this->renderProductDetailLines($this->formatProductsPayload($products), []);
+        $lines = $this->renderProductDetailLines($this->formatProductsPayload($sanPhams), []);
 
         return trim(implode("\n", $lines));
     }
 
     protected function buildWebsiteIntroductionResponse(): array
     {
-        $categories = $this->formatCategoriesPayload($this->searchCategories('', 4));
+        $danhMucs = $this->formatCategoriesPayload($this->searchCategories('', 4));
 
         $response = 'Dạ, đây là website của Medicare Pharmacy. Hệ thống này hỗ trợ tra cứu sản phẩm nhà thuốc, xem danh mục, tham khảo công dụng cơ bản, kiểm tra tình trạng còn hàng và hỗ trợ đặt hàng trực tuyến.';
 
-        if (!empty($categories)) {
+        if (!empty($danhMucs)) {
             $response .= "\n\nAnh/chị có thể bắt đầu từ một số danh mục nổi bật bên dưới để lọc nhanh sản phẩm phù hợp.";
         } else {
             $response .= "\n\nAnh/chị có thể nhắn tên thuốc, hoạt chất, công dụng hoặc danh mục cần tìm để em hỗ trợ ngay.";
@@ -2451,7 +2451,7 @@ PROMPT;
             'success' => true,
             'response' => $response,
             'products' => [],
-            'categories' => $categories,
+            'categories' => $danhMucs,
             'explanations' => [],
             'show_disclaimer' => false,
             'disclaimer' => null,
@@ -2549,8 +2549,8 @@ PROMPT;
         string $message,
         float $processingTimeMs,
         string $responseType,
-        array $products,
-        array $categories,
+        array $sanPhams,
+        array $danhMucs,
         bool $showDisclaimer
     ): void {
         try {
@@ -2563,8 +2563,8 @@ PROMPT;
                     'MaKH' => $userId,
                     'query' => $message,
                     'response_type' => $responseType,
-                    'products_returned' => count($products),
-                    'categories_returned' => count($categories),
+                    'products_returned' => count($sanPhams),
+                    'categories_returned' => count($danhMucs),
                     'processing_time_ms' => $processingTimeMs,
                     'show_disclaimer' => $showDisclaimer
                 ],
@@ -2582,13 +2582,13 @@ PROMPT;
 
     protected function searchCategories(string $query = '', int $limit = 5): Collection
     {
-        return Category::query()
+        return DanhMuc::query()
             ->select('MaDM', 'name', 'description', 'icon')
-            ->whereHas('products', function ($builder) {
+            ->whereHas('sanPhams', function ($builder) {
                 $builder->notExpired()->where('stock_quantity', '>', 0);
             })
             ->withCount([
-                'products' => function ($builder) {
+                'sanPhams' => function ($builder) {
                     $builder->notExpired()->where('stock_quantity', '>', 0);
                 }
             ])
@@ -2598,7 +2598,7 @@ PROMPT;
                         ->orWhere('description', 'like', '%' . $query . '%');
                 });
             })
-            ->orderByDesc('products_count')
+            ->orderByDesc('san_phams_count')
             ->orderBy('name')
             ->limit($limit)
             ->get();
@@ -2606,7 +2606,7 @@ PROMPT;
 
     protected function getFeaturedProductsForCategory(int $categoryId): Collection
     {
-        return Product::with('category')
+        return SanPham::with('danhMuc')
             ->notExpired()
             ->where('stock_quantity', '>', 0)
             ->where('MaDM', $categoryId)
@@ -2616,7 +2616,7 @@ PROMPT;
     }
 
     /**
-     * Category lookup for functional queries. searchCategories() LIKE-matches the
+     * DanhMuc lookup for functional queries. searchCategories() LIKE-matches the
      * whole phrase, so "hỗ trợ tiêu hóa nhanh" misses the "Thuốc tiêu hóa" category
      * that holds every product being asked for. Matching runs in PHP over folded
      * name + description: the table is tiny, and the collation cannot be trusted to
@@ -2637,21 +2637,21 @@ PROMPT;
             return collect();
         }
 
-        $categories = $this->searchCategories('', 50);
-        if ($categories->isEmpty()) {
+        $danhMucs = $this->searchCategories('', 50);
+        if ($danhMucs->isEmpty()) {
             return collect();
         }
 
         $haystacks = [];
-        foreach ($categories as $category) {
-            $haystacks[(int) $category->MaDM] = VietnameseText::fold(
-                trim(((string) $category->name) . ' ' . ((string) $category->description))
+        foreach ($danhMucs as $danhMuc) {
+            $haystacks[(int) $danhMuc->MaDM] = VietnameseText::fold(
+                trim(((string) $danhMuc->name) . ' ' . ((string) $danhMuc->description))
             );
         }
 
         foreach (array_keys($candidates) as $candidate) {
-            $matched = $categories->filter(fn ($category): bool => VietnameseText::containsWord(
-                $haystacks[(int) $category->MaDM] ?? '',
+            $matched = $danhMucs->filter(fn ($danhMuc): bool => VietnameseText::containsWord(
+                $haystacks[(int) $danhMuc->MaDM] ?? '',
                 $candidate
             ))->values();
 
@@ -2784,41 +2784,41 @@ PROMPT;
         return $this->stripQueryNoiseTokens($tokens) === $tokens;
     }
 
-    protected function formatProductsPayload(Collection $products): array
+    protected function formatProductsPayload(Collection $sanPhams): array
     {
-        return $products->map(function ($product) {
+        return $sanPhams->map(function ($sanPham) {
             return [
-                'id' => $product->MaSP,
-                'name' => $product->name,
-                'price' => $product->price_vnd,
-                'stock_quantity' => (int) $product->stock_quantity,
-                'image_url' => $product->image_url,
-                'ingredients' => $product->ingredients,
-                'usage' => $product->usage,
-                'expiration_date' => optional($product->expiration_date)->toDateString(),
-                'category' => $product->category ? $product->category->name : null,
-                'url' => route('products.show', $product->MaSP)
+                'id' => $sanPham->MaSP,
+                'name' => $sanPham->name,
+                'price' => $sanPham->price_vnd,
+                'stock_quantity' => (int) $sanPham->stock_quantity,
+                'image_url' => $sanPham->image_url,
+                'ingredients' => $sanPham->ingredients,
+                'usage' => $sanPham->usage,
+                'expiration_date' => optional($sanPham->expiration_date)->toDateString(),
+                'category' => $sanPham->danhMuc ? $sanPham->danhMuc->name : null,
+                'url' => route('products.show', $sanPham->MaSP)
             ];
         })->values()->all();
     }
 
-    protected function formatCategoriesPayload(Collection $categories): array
+    protected function formatCategoriesPayload(Collection $danhMucs): array
     {
-        return $categories->map(function ($category) {
+        return $danhMucs->map(function ($danhMuc) {
             return [
-                'id' => $category->MaDM,
-                'name' => $category->name,
-                'description' => $category->description,
-                'icon' => $category->icon,
-                'product_count' => (int) ($category->products_count ?? 0),
-                'url' => route('products.index', ['category' => $category->MaDM])
+                'id' => $danhMuc->MaDM,
+                'name' => $danhMuc->name,
+                'description' => $danhMuc->description,
+                'icon' => $danhMuc->icon,
+                'product_count' => (int) ($danhMuc->san_phams_count ?? 0),
+                'url' => route('products.index', ['category' => $danhMuc->MaDM])
             ];
         })->values()->all();
     }
 
     protected function buildDetailedProductResponseText(
         string $query,
-        array $products,
+        array $sanPhams,
         array $explanations,
         bool $showDisclaimer
     ): string {
@@ -2835,7 +2835,7 @@ PROMPT;
 
         $lines = [$intro, ''];
 
-        foreach ($this->renderProductDetailLines($products, $explanations) as $line) {
+        foreach ($this->renderProductDetailLines($sanPhams, $explanations) as $line) {
             $lines[] = $line;
         }
 
@@ -2850,12 +2850,12 @@ PROMPT;
      * says what was matched.
      */
     protected function buildCategoryProductFallbackResponseText(
-        array $category,
-        array $products,
+        array $danhMuc,
+        array $sanPhams,
         array $explanations
     ): string {
-        $categoryName = (string) ($category['name'] ?? '');
-        $productCount = (int) ($category['product_count'] ?? 0);
+        $categoryName = (string) ($danhMuc['name'] ?? '');
+        $productCount = (int) ($danhMuc['product_count'] ?? 0);
         $scope = $productCount > 0
             ? "**{$categoryName}** (đang có {$productCount} sản phẩm)"
             : "**{$categoryName}**";
@@ -2865,7 +2865,7 @@ PROMPT;
             '',
         ];
 
-        foreach ($this->renderProductDetailLines($products, $explanations) as $line) {
+        foreach ($this->renderProductDetailLines($sanPhams, $explanations) as $line) {
             $lines[] = $line;
         }
 
@@ -2877,32 +2877,32 @@ PROMPT;
     /**
      * @return array<int, string>
      */
-    protected function renderProductDetailLines(array $products, array $explanations): array
+    protected function renderProductDetailLines(array $sanPhams, array $explanations): array
     {
         $lines = [];
 
-        foreach ($products as $index => $product) {
-            $lines[] = ($index + 1) . '. **' . $product['name'] . '**';
-            $lines[] = '- Danh mục: ' . ($product['category'] ?? 'Chưa phân loại');
-            $lines[] = '- Giá tham khảo: ' . VietnameseHelper::formatCurrency($product['price']);
-            $lines[] = '- Tồn kho hiện tại: ' . $product['stock_quantity'] . ' sản phẩm';
+        foreach ($sanPhams as $index => $sanPham) {
+            $lines[] = ($index + 1) . '. **' . $sanPham['name'] . '**';
+            $lines[] = '- Danh mục: ' . ($sanPham['category'] ?? 'Chưa phân loại');
+            $lines[] = '- Giá tham khảo: ' . VietnameseHelper::formatCurrency($sanPham['price']);
+            $lines[] = '- Tồn kho hiện tại: ' . $sanPham['stock_quantity'] . ' sản phẩm';
 
-            if (!empty($product['usage'])) {
-                $lines[] = '- Công dụng: ' . $this->summarizeText($product['usage'], 180);
+            if (!empty($sanPham['usage'])) {
+                $lines[] = '- Công dụng: ' . $this->summarizeText($sanPham['usage'], 180);
             }
 
-            if (!empty($explanations[$product['id']])) {
-                $lines[] = '- Phù hợp vì: ' . $explanations[$product['id']];
+            if (!empty($explanations[$sanPham['id']])) {
+                $lines[] = '- Phù hợp vì: ' . $explanations[$sanPham['id']];
             }
 
-            $lines[] = '- Xem chi tiết: [' . self::PRODUCT_LINK_LABEL . '](' . $product['url'] . ')';
+            $lines[] = '- Xem chi tiết: [' . self::PRODUCT_LINK_LABEL . '](' . $sanPham['url'] . ')';
             $lines[] = '';
         }
 
         return $lines;
     }
 
-    protected function buildNoProductMatchResponse(string $query, array $categories, string $originalMessage): string
+    protected function buildNoProductMatchResponse(string $query, array $danhMucs, string $originalMessage): string
     {
         $query = $this->isPresentableQuery($query) ? $query : '';
         $lines = [];
@@ -2913,19 +2913,19 @@ PROMPT;
             $lines[] = 'Dạ, hiện tại em chưa tìm thấy sản phẩm phù hợp với mô tả vừa rồi.';
         }
 
-        if (!empty($categories)) {
+        if (!empty($danhMucs)) {
             $lines[] = '';
             $lines[] = 'Anh/chị có thể xem các danh mục gần nhất để lọc nhanh hơn:';
 
-            foreach ($categories as $category) {
-                $line = '- **' . $category['name'] . '**';
-                if (!empty($category['product_count'])) {
-                    $line .= ' (' . $category['product_count'] . ' sản phẩm)';
+            foreach ($danhMucs as $danhMuc) {
+                $line = '- **' . $danhMuc['name'] . '**';
+                if (!empty($danhMuc['product_count'])) {
+                    $line .= ' (' . $danhMuc['product_count'] . ' sản phẩm)';
                 }
-                if (!empty($category['description'])) {
-                    $line .= ': ' . $this->summarizeText($category['description'], 120);
+                if (!empty($danhMuc['description'])) {
+                    $line .= ': ' . $this->summarizeText($danhMuc['description'], 120);
                 }
-                $line .= ' - [Mở danh mục](' . $category['url'] . ')';
+                $line .= ' - [Mở danh mục](' . $danhMuc['url'] . ')';
                 $lines[] = $line;
             }
         }
@@ -2940,7 +2940,7 @@ PROMPT;
         return trim(implode("\n", $lines));
     }
 
-    protected function buildCategoryResponseText(array $categories, array $products, string $query): string
+    protected function buildCategoryResponseText(array $danhMucs, array $sanPhams, string $query): string
     {
         $query = $this->isPresentableQuery($query) ? $query : '';
         $lines = [
@@ -2950,53 +2950,53 @@ PROMPT;
             ''
         ];
 
-        foreach ($categories as $category) {
-            $line = '- **' . $category['name'] . '**';
-            if (!empty($category['product_count'])) {
-                $line .= ' (' . $category['product_count'] . ' sản phẩm)';
+        foreach ($danhMucs as $danhMuc) {
+            $line = '- **' . $danhMuc['name'] . '**';
+            if (!empty($danhMuc['product_count'])) {
+                $line .= ' (' . $danhMuc['product_count'] . ' sản phẩm)';
             }
-            if (!empty($category['description'])) {
-                $line .= ': ' . $this->summarizeText($category['description'], 120);
+            if (!empty($danhMuc['description'])) {
+                $line .= ': ' . $this->summarizeText($danhMuc['description'], 120);
             }
-            $line .= ' - [Xem danh mục](' . $category['url'] . ')';
+            $line .= ' - [Xem danh mục](' . $danhMuc['url'] . ')';
             $lines[] = $line;
         }
 
-        if (!empty($products)) {
+        if (!empty($sanPhams)) {
             $lines[] = '';
             $lines[] = 'Một vài sản phẩm tiêu biểu trong danh mục phù hợp:';
 
-            foreach ($products as $product) {
-                $lines[] = '- **' . $product['name'] . '** - ' . VietnameseHelper::formatCurrency($product['price']) . ' - [Xem chi tiết](' . $product['url'] . ')';
+            foreach ($sanPhams as $sanPham) {
+                $lines[] = '- **' . $sanPham['name'] . '** - ' . VietnameseHelper::formatCurrency($sanPham['price']) . ' - [Xem chi tiết](' . $sanPham['url'] . ')';
             }
         }
 
         return trim(implode("\n", $lines));
     }
 
-    protected function buildProductExplanations(array $products, string $originalMessage): array
+    protected function buildProductExplanations(array $sanPhams, string $originalMessage): array
     {
         $explanations = [];
 
-        foreach ($products as $product) {
-            $explanations[$product['id']] = $this->buildProductExplanationFromData($product, $originalMessage);
+        foreach ($sanPhams as $sanPham) {
+            $explanations[$sanPham['id']] = $this->buildProductExplanationFromData($sanPham, $originalMessage);
         }
 
         return $explanations;
     }
 
-    protected function buildProductExplanationFromData(array $product, string $originalMessage): string
+    protected function buildProductExplanationFromData(array $sanPham, string $originalMessage): string
     {
-        if (!empty($product['usage'])) {
-            return 'Công dụng đang lưu trên hệ thống là ' . $this->summarizeText($product['usage'], 160) . '.';
+        if (!empty($sanPham['usage'])) {
+            return 'Công dụng đang lưu trên hệ thống là ' . $this->summarizeText($sanPham['usage'], 160) . '.';
         }
 
-        if (!empty($product['ingredients'])) {
-            return 'Sản phẩm có thành phần nổi bật: ' . $this->summarizeText($product['ingredients'], 120) . '.';
+        if (!empty($sanPham['ingredients'])) {
+            return 'Sản phẩm có thành phần nổi bật: ' . $this->summarizeText($sanPham['ingredients'], 120) . '.';
         }
 
-        if (!empty($product['category'])) {
-            return 'Sản phẩm thuộc danh mục ' . $product['category'] . ', phù hợp để anh/chị tham khảo thêm các lựa chọn cùng nhóm.';
+        if (!empty($sanPham['category'])) {
+            return 'Sản phẩm thuộc danh mục ' . $sanPham['category'] . ', phù hợp để anh/chị tham khảo thêm các lựa chọn cùng nhóm.';
         }
 
         return $this->isSymptomRelatedQuery($originalMessage)
@@ -3360,7 +3360,7 @@ PROMPT;
         }
 
         try {
-            $keywords = MedicalRedFlag::active()
+            $keywords = CoDoYTe::active()
                 ->chatShortCircuit()
                 ->whereIn('severity', ['emergency', 'urgent'])
                 ->pluck('keywords')
@@ -3460,9 +3460,9 @@ PROMPT;
     protected function buildDrugSafetyCheckResponse(string $productName, int $userId): array
     {
         $productName = trim($productName);
-        $product = $productName !== '' ? $this->searchProducts($productName)->first() : null;
+        $sanPham = $productName !== '' ? $this->searchProducts($productName)->first() : null;
 
-        if ($product === null) {
+        if ($sanPham === null) {
             return [
                 'response' => __('messages.chatbot.drug_safety_not_found', [
                     'name' => $productName !== '' ? $productName : 'này',
@@ -3474,15 +3474,15 @@ PROMPT;
         }
 
         // Health profile data is personal, so it is only read once consent is on record.
-        $user = User::with('healthProfile')->find($userId);
-        $profile = $user?->healthProfile?->hasConsented() ? $user->healthProfile : null;
+        $nguoiDung = NguoiDung::with('hoSoSucKhoe')->find($userId);
+        $profile = $nguoiDung?->hoSoSucKhoe?->hasConsented() ? $nguoiDung->hoSoSucKhoe : null;
 
-        $result = app(DrugSafetyService::class)->checkProduct($product, $profile, $user);
+        $result = app(DrugSafetyService::class)->checkProduct($sanPham, $profile, $nguoiDung);
         $warnings = $result['warnings'] ?? [];
-        $payload = $this->formatProductsPayload(collect([$product]));
+        $payload = $this->formatProductsPayload(collect([$sanPham]));
 
         if ($warnings === []) {
-            $lines = [__('messages.chatbot.drug_safety_clear', ['name' => $product->name])];
+            $lines = [__('messages.chatbot.drug_safety_clear', ['name' => $sanPham->name])];
             if ($profile === null) {
                 $lines[] = __('messages.chatbot.drug_safety_no_profile');
             }
@@ -3496,7 +3496,7 @@ PROMPT;
         }
 
         $hasMajor = false;
-        $lines = [__('messages.chatbot.drug_safety_found', ['name' => $product->name]), ''];
+        $lines = [__('messages.chatbot.drug_safety_found', ['name' => $sanPham->name]), ''];
 
         foreach ($warnings as $warning) {
             $severity = (string) ($warning['severity'] ?? 'minor');
@@ -5166,7 +5166,7 @@ PROMPT;
         }
 
         // ponytail: direct lookup per turn; add request-scoped caching if profiling shows chatbot turns bound on this read.
-        return User::find($userId)?->ageInYears();
+        return NguoiDung::find($userId)?->ageInYears();
     }
 
     protected function resolveUserDisplayName(string $message, array $context): ?string
@@ -5478,7 +5478,7 @@ PROMPT;
         $map = [];
 
         try {
-            foreach (MedicalSymptom::active()->get(['name_vi', 'aliases', 'guard_words', 'catalog_query']) as $symptom) {
+            foreach (TrieuChungYTe::active()->get(['name_vi', 'aliases', 'guard_words', 'catalog_query']) as $symptom) {
                 $query = $symptom->catalog_query ?: $symptom->name_vi;
                 $guards = collect($symptom->guard_words ?? [])
                     ->map(fn ($word) => $this->normalizeIntentText((string) $word))
@@ -5548,7 +5548,7 @@ PROMPT;
 
         $userId = (int) ($context['user_id'] ?? 0);
         if ($userId > 0) {
-            $gender = User::where('MaKH', $userId)->value('gender');
+            $gender = NguoiDung::where('MaKH', $userId)->value('gender');
             if ($gender === 'male') {
                 $messages[] = [
                     'role' => 'system',
@@ -5922,7 +5922,7 @@ PROMPT;
         $query = trim($query);
         $queryLower = mb_strtolower($query, 'UTF-8');
 
-        $products = Product::with('category')
+        $sanPhams = SanPham::with('danhMuc')
             ->notExpired()
             ->where('stock_quantity', '>', 0)
             ->where(function ($q) use ($query) {
@@ -5935,8 +5935,8 @@ PROMPT;
             ->limit(5)
             ->get();
 
-        if ($products->count() < 5) {
-            $partialMatches = Product::with('category')
+        if ($sanPhams->count() < 5) {
+            $partialMatches = SanPham::with('danhMuc')
                 ->notExpired()
                 ->where('stock_quantity', '>', 0)
                 ->where(function ($q) use ($query) {
@@ -5944,32 +5944,32 @@ PROMPT;
                         ->orWhere('ingredients', 'LIKE', "%{$query}%")
                         ->orWhere('usage', 'LIKE', "%{$query}%");
                 })
-                ->when($products->isNotEmpty(), function ($q) use ($products) {
-                    $q->whereNotIn('MaSP', $products->pluck('MaSP'));
+                ->when($sanPhams->isNotEmpty(), function ($q) use ($sanPhams) {
+                    $q->whereNotIn('MaSP', $sanPhams->pluck('MaSP'));
                 })
                 ->FEFO()
                 ->limit(self::QUERY_MATCH_FETCH_LIMIT)
                 ->get();
 
             $partialMatches = $this->keepGenuineMatches($partialMatches, $query)
-                ->take(5 - $products->count());
+                ->take(5 - $sanPhams->count());
 
             if ($partialMatches->isNotEmpty()) {
-                $products = $products->concat($partialMatches)->values();
+                $sanPhams = $sanPhams->concat($partialMatches)->values();
             }
         }
 
-        if ($products->isEmpty()) {
-            $products = $this->searchProductsByNarrowingQuery($query);
+        if ($sanPhams->isEmpty()) {
+            $sanPhams = $this->searchProductsByNarrowingQuery($query);
         }
 
-        if ($products->isEmpty() && mb_strlen($query, 'UTF-8') >= 3) {
+        if ($sanPhams->isEmpty() && mb_strlen($query, 'UTF-8') >= 3) {
             $words = array_filter(explode(' ', $queryLower), function ($word) {
                 return mb_strlen($word, 'UTF-8') >= 2;
             });
 
             if (!empty($words)) {
-                $queryBuilder = Product::with('category')
+                $queryBuilder = SanPham::with('danhMuc')
                     ->notExpired()
                     ->where('stock_quantity', '>', 0);
 
@@ -5985,8 +5985,8 @@ PROMPT;
                 $candidates = $queryBuilder->limit(20)->get();
 
                 if ($candidates->isNotEmpty()) {
-                    $candidates = $candidates->map(function ($product) use ($queryLower, $words) {
-                        $nameLower = mb_strtolower($product->name, 'UTF-8');
+                    $candidates = $candidates->map(function ($sanPham) use ($queryLower, $words) {
+                        $nameLower = mb_strtolower($sanPham->name, 'UTF-8');
                         $score = 0;
 
                         if ($nameLower === $queryLower) {
@@ -6014,18 +6014,18 @@ PROMPT;
                             $score -= 10;
                         }
 
-                        $product->similarity = $score;
-                        return $product;
+                        $sanPham->similarity = $score;
+                        return $sanPham;
                     })->sortByDesc('similarity')->values();
 
-                    $products = $candidates->filter(function ($product) {
-                        return $product->similarity >= 15;
+                    $sanPhams = $candidates->filter(function ($sanPham) {
+                        return $sanPham->similarity >= 15;
                     })->take(5);
                 }
             }
         }
 
-        return $products;
+        return $sanPhams;
     }
 
     /**
@@ -6045,7 +6045,7 @@ PROMPT;
                 continue;
             }
 
-            $matches = Product::with('category')
+            $matches = SanPham::with('danhMuc')
                 ->notExpired()
                 ->where('stock_quantity', '>', 0)
                 ->where(function ($builder) use ($candidate) {
@@ -6079,21 +6079,21 @@ PROMPT;
      * Diacritics are enforced only when the customer typed them, so "dau da day" keeps
      * finding "đau dạ dày" while "thử thai" no longer matches "thu thải".
      */
-    protected function keepGenuineMatches(Collection $products, string $phrase): Collection
+    protected function keepGenuineMatches(Collection $sanPhams, string $phrase): Collection
     {
         $phrase = trim($phrase);
-        if ($phrase === '' || $products->isEmpty()) {
-            return $products;
+        if ($phrase === '' || $sanPhams->isEmpty()) {
+            return $sanPhams;
         }
 
-        return $products
-            ->filter(fn (Product $product): bool => $this->phraseOccursInProduct($product, $phrase))
+        return $sanPhams
+            ->filter(fn (SanPham $sanPham): bool => $this->phraseOccursInProduct($sanPham, $phrase))
             ->values();
     }
 
-    protected function phraseOccursInProduct(Product $product, string $phrase): bool
+    protected function phraseOccursInProduct(SanPham $sanPham, string $phrase): bool
     {
-        foreach ([$product->name, $product->ingredients, $product->usage] as $field) {
+        foreach ([$sanPham->name, $sanPham->ingredients, $sanPham->usage] as $field) {
             if ($this->phraseOccursAsWord((string) $field, $phrase)) {
                 return true;
             }
@@ -6193,19 +6193,19 @@ PROMPT;
     /**
      * Create draft order from recognized products.
      *
-     * @param array $products Array of products with quantities
+     * @param array $sanPhams Array of products with quantities
      * @param int $userId User ID
      * @return array Draft order data with validation results
      * @throws \Exception
      */
-    public function createDraftOrder(array $products, int $userId): array
+    public function createDraftOrder(array $sanPhams, int $userId): array
     {
         try {
             $validProducts = [];
             $invalidProducts = [];
             $totalAmount = 0;
 
-            foreach ($products as $productData) {
+            foreach ($sanPhams as $productData) {
                 if (!isset($productData['product']) || !$productData['matched']) {
                     $invalidProducts[] = [
                         'name' => $productData['parsed_name'] ?? 'Unknown',
@@ -6215,39 +6215,39 @@ PROMPT;
                     continue;
                 }
 
-                $product = $productData['product'];
+                $sanPham = $productData['product'];
                 $quantity = $productData['quantity'] ?? 1;
 
-                if ($product['stock_quantity'] < $quantity) {
+                if ($sanPham['stock_quantity'] < $quantity) {
                     $invalidProducts[] = [
-                        'name' => $product['name'],
-                        'reason' => "Không đủ hàng trong kho. Chỉ còn {$product['stock_quantity']} sản phẩm.",
-                        'available_quantity' => $product['stock_quantity']
+                        'name' => $sanPham['name'],
+                        'reason' => "Không đủ hàng trong kho. Chỉ còn {$sanPham['stock_quantity']} sản phẩm.",
+                        'available_quantity' => $sanPham['stock_quantity']
                     ];
                     continue;
                 }
 
-                if ($product['is_expired']) {
+                if ($sanPham['is_expired']) {
                     $invalidProducts[] = [
-                        'name' => $product['name'],
+                        'name' => $sanPham['name'],
                         'reason' => 'Sản phẩm đã hết hạn',
-                        'expiration_date' => $product['expiration_date']
+                        'expiration_date' => $sanPham['expiration_date']
                     ];
                     continue;
                 }
 
-                $unitPrice = (int) round((float) $product['price']);
+                $unitPrice = (int) round((float) $sanPham['price']);
                 $itemTotal = $unitPrice * $quantity;
                 $totalAmount += $itemTotal;
 
                 $validProducts[] = [
-                    'MaSP' => $product['id'],
-                    'name' => $product['name'],
+                    'MaSP' => $sanPham['id'],
+                    'name' => $sanPham['name'],
                     'price' => $unitPrice,
                     'quantity' => $quantity,
                     'subtotal' => $itemTotal,
-                    'image_url' => $product['image_url'],
-                    'stock_quantity' => $product['stock_quantity'],
+                    'image_url' => $sanPham['image_url'],
+                    'stock_quantity' => $sanPham['stock_quantity'],
                     'dosage' => $productData['dosage'] ?? null,
                     'instructions' => $productData['instructions'] ?? null
                 ];

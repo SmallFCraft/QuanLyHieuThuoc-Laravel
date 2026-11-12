@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\AiJob;
-use App\Models\TriageSession;
-use App\Models\User;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -24,7 +24,7 @@ class TriageAdviceFallbackTest extends TestCase
     protected const SOURCE_ADVICE = "Nghỉ ngơi, uống nhiều nước.\nĐo lại nhiệt độ mỗi 4–6 giờ.";
     protected const SOURCE_SAFETY = 'Đi khám ngay nếu sốt trên 39 độ không hạ hoặc sốt quá 3 ngày.';
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
@@ -34,7 +34,7 @@ class TriageAdviceFallbackTest extends TestCase
 
         config()->set('chatbot.ai.triage.advice_rewrite', true);
 
-        $this->user = User::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
     }
 
     protected function fakeRewrite(): void
@@ -50,10 +50,10 @@ class TriageAdviceFallbackTest extends TestCase
         ])]);
     }
 
-    protected function selfCareSession(array $attributes = []): TriageSession
+    protected function selfCareSession(array $attributes = []): PhienSangLoc
     {
-        return TriageSession::create(array_merge([
-            'MaKH' => $this->user->MaKH,
+        return PhienSangLoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -64,14 +64,14 @@ class TriageAdviceFallbackTest extends TestCase
         ], $attributes));
     }
 
-    protected function strandedAdvice(TriageSession $session, int $ageSeconds = 30): AiJob
+    protected function strandedAdvice(PhienSangLoc $phien, int $ageSeconds = 30): AiJob
     {
         $job = AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'MaKH' => $phien->MaKH,
             'kind' => AiJob::KIND_TRIAGE_ADVICE,
             'status' => 'queued',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
 
         $job->forceFill(['created_at' => now()->subSeconds($ageSeconds)])->save();
@@ -83,26 +83,26 @@ class TriageAdviceFallbackTest extends TestCase
     {
         Http::preventStrayRequests();
 
-        $session = $this->selfCareSession();
-        $job = $this->strandedAdvice($session);
+        $phien = $this->selfCareSession();
+        $job = $this->strandedAdvice($phien);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk();
 
         // No provider call: the rewrite never runs inside the request.
         Http::assertNothingSent();
 
-        $session->refresh();
-        $this->assertNull($session->ai_status);
-        $this->assertNull($session->ai_advice);
+        $phien->refresh();
+        $this->assertNull($phien->ai_status);
+        $this->assertNull($phien->ai_advice);
 
         // The job is retired rather than polled forever for a worker that never comes.
         $this->assertSame('failed', $job->refresh()->status);
         $this->assertStringContainsString('no worker picked', $job->error);
 
         // The pharmacist's authoritative text still renders.
-        $this->assertSame(self::SOURCE_ADVICE, $session->advice_given);
+        $this->assertSame(self::SOURCE_ADVICE, $phien->advice_given);
     }
 
     /**
@@ -113,16 +113,16 @@ class TriageAdviceFallbackTest extends TestCase
     {
         Http::fake();
 
-        $session = $this->selfCareSession();
-        $job = $this->strandedAdvice($session, 0);
+        $phien = $this->selfCareSession();
+        $job = $this->strandedAdvice($phien, 0);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk();
 
         Http::assertNothingSent();
         $this->assertSame('queued', $job->refresh()->status);
-        $this->assertNull($session->refresh()->ai_status);
+        $this->assertNull($phien->refresh()->ai_status);
     }
 
     /**
@@ -133,15 +133,15 @@ class TriageAdviceFallbackTest extends TestCase
     {
         Http::preventStrayRequests();
 
-        $session = $this->selfCareSession();
-        $this->strandedAdvice($session);
+        $phien = $this->selfCareSession();
+        $this->strandedAdvice($phien);
 
-        $this->actingAs($this->user)->get(route('health.result', $session->MaSL))->assertOk();
+        $this->actingAs($this->nguoiDung)->get(route('health.result', $phien->MaSL))->assertOk();
 
-        $session->refresh();
-        $this->assertNull($session->ai_status);
+        $phien->refresh();
+        $this->assertNull($phien->ai_status);
 
-        $second = $this->actingAs($this->user)->get(route('health.result', $session->MaSL));
+        $second = $this->actingAs($this->nguoiDung)->get(route('health.result', $phien->MaSL));
 
         $second->assertOk();
         Http::assertNothingSent();
@@ -152,29 +152,29 @@ class TriageAdviceFallbackTest extends TestCase
 
     public function test_a_previously_failed_advice_job_retries_once_and_caps_at_two_attempts(): void
     {
-        $session = $this->selfCareSession(['ai_status' => 'failed']);
+        $phien = $this->selfCareSession(['ai_status' => 'failed']);
 
         AiJob::create([
             'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'MaKH' => $phien->MaKH,
             'kind' => AiJob::KIND_TRIAGE_ADVICE,
             'status' => 'failed',
             'error' => 'timeout',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['MaSL' => $phien->MaSL],
         ]);
 
         $this->fakeRewrite();
 
         // Second load triggers the single retry.
-        $this->actingAs($this->user)->get(route('health.result', $session->MaSL))->assertOk();
+        $this->actingAs($this->nguoiDung)->get(route('health.result', $phien->MaSL))->assertOk();
 
-        $this->assertSame('ok', $session->refresh()->ai_status);
+        $this->assertSame('ok', $phien->refresh()->ai_status);
         $this->assertSame(2, AiJob::where('kind', AiJob::KIND_TRIAGE_ADVICE)->count());
 
         // Subsequent loads never retry further even if forced back to failed.
-        $session->forceFill(['ai_status' => 'failed'])->save();
+        $phien->forceFill(['ai_status' => 'failed'])->save();
         Http::fake();
-        $this->actingAs($this->user)->get(route('health.result', $session->MaSL))->assertOk();
+        $this->actingAs($this->nguoiDung)->get(route('health.result', $phien->MaSL))->assertOk();
         Http::assertNothingSent();
         $this->assertSame(2, AiJob::where('kind', AiJob::KIND_TRIAGE_ADVICE)->count());
     }

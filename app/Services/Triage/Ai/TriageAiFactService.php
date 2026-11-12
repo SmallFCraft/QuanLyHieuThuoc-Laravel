@@ -2,9 +2,9 @@
 
 namespace App\Services\Triage\Ai;
 
-use App\Models\MedicalSymptom;
-use App\Models\TriageSession;
-use App\Models\UserHealthProfile;
+use App\Models\TrieuChungYTe;
+use App\Models\PhienSangLoc;
+use App\Models\HoSoSucKhoe;
 use App\Services\MedicalTriageService;
 use App\Support\VietnameseText;
 use Illuminate\Support\Facades\Log;
@@ -116,7 +116,7 @@ class TriageAiFactService extends TriageAiService
      *     provider: array<string, mixed>
      * }|null
      */
-    public function extract(TriageSession $session, string $text, array $allowedCodes, array $wizardTranscript = []): ?array
+    public function extract(PhienSangLoc $phien, string $text, array $allowedCodes, array $wizardTranscript = []): ?array
     {
         if (! $this->isEnabled() || trim($text) === '') {
             return null;
@@ -128,14 +128,14 @@ class TriageAiFactService extends TriageAiService
         // be re-asked either. Both are read before the call; the filtering below uses
         // the same list, so a topic cannot be dropped from the prompt but still asked,
         // or vice versa.
-        $known = $this->knownFacts($session, $text);
+        $known = $this->knownFacts($phien, $text);
 
         try {
             $provider = $this->provider();
 
             $response = $this->callProvider($provider, [
                 ['role' => 'system', 'content' => $this->systemPrompt()],
-                ['role' => 'user', 'content' => $this->buildUserMessage($session, $text, $wizardTranscript, $known['prompt'])],
+                ['role' => 'user', 'content' => $this->buildUserMessage($phien, $text, $wizardTranscript, $known['prompt'])],
             ], [
                 'functions' => [$this->toolSchema($allowedCodes)],
                 'function_call' => 'auto',
@@ -147,15 +147,15 @@ class TriageAiFactService extends TriageAiService
                 return null;
             }
 
-            $facts = $this->validate($raw, $allowedCodes, $known['topics'], $this->deniedSymptomTerms($session));
+            $facts = $this->validate($raw, $allowedCodes, $known['topics'], $this->deniedSymptomTerms($phien));
             $facts['provider'] = $provider->describeLastProvider() ?? [];
 
-            $this->audit($session, $facts, (microtime(true) - $startedAt) * 1000);
+            $this->audit($phien, $facts, (microtime(true) - $startedAt) * 1000);
 
             return $facts;
         } catch (\Throwable $exception) {
             Log::warning('Triage AI fact extraction failed', [
-                'MaSL' => $session->MaSL,
+                'MaSL' => $phien->MaSL,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -240,7 +240,7 @@ class TriageAiFactService extends TriageAiService
      * @param  array<string, string>  $knownFacts  human-readable, already filtered
      */
     protected function buildUserMessage(
-        TriageSession $session,
+        PhienSangLoc $phien,
         string $text,
         array $wizardTranscript = [],
         array $knownFacts = []
@@ -265,7 +265,7 @@ class TriageAiFactService extends TriageAiService
             }
         }
 
-        $history = $session->clarifyHistory();
+        $history = $phien->clarifyHistory();
 
         if ($history !== []) {
             $lines[] = '';
@@ -278,9 +278,9 @@ class TriageAiFactService extends TriageAiService
                 $lines[] = ($question !== '' ? "- Hỏi: {$question}\n  " : '- ')."Đáp: {$answer}";
             }
 
-            $round = (int) $session->ai_clarify_rounds + 1;
+            $round = (int) $phien->ai_clarify_rounds + 1;
             $lines[] = '';
-            $lines[] = "Đây là vòng hỏi thêm thứ {$round}/".TriageSession::MAX_CLARIFY_ROUNDS.'.';
+            $lines[] = "Đây là vòng hỏi thêm thứ {$round}/".PhienSangLoc::MAX_CLARIFY_ROUNDS.'.';
         }
 
         return implode("\n", $lines);
@@ -445,7 +445,7 @@ class TriageAiFactService extends TriageAiService
                 return ! preg_match('#https?://|www\.|[{}<>]#u', $question);
             })
             ->unique()
-            ->take(TriageSession::MAX_CLARIFY_QUESTIONS_PER_ROUND)
+            ->take(PhienSangLoc::MAX_CLARIFY_QUESTIONS_PER_ROUND)
             ->values()
             ->all();
     }
@@ -462,11 +462,11 @@ class TriageAiFactService extends TriageAiService
      *
      * @return array<int, string>
      */
-    protected function deniedSymptomTerms(TriageSession $session): array
+    protected function deniedSymptomTerms(PhienSangLoc $phien): array
     {
         $terms = [];
 
-        foreach ($session->clarifyHistory() as $pair) {
+        foreach ($phien->clarifyHistory() as $pair) {
             $answer = (string) ($pair['answer'] ?? '');
 
             // "nhưng" makes the denial cover only part of the answer ("Không, nhưng có
@@ -541,12 +541,12 @@ class TriageAiFactService extends TriageAiService
      */
     protected function clarifySymptomTerms(): array
     {
-        return $this->clarifySymptomTerms ??= MedicalSymptom::active()
+        return $this->clarifySymptomTerms ??= TrieuChungYTe::active()
             ->select(['name_vi', 'aliases'])
             ->get()
-            ->flatMap(fn (MedicalSymptom $symptom) => array_merge(
-                [(string) $symptom->name_vi],
-                (array) $symptom->aliases
+            ->flatMap(fn (TrieuChungYTe $trieuChung) => array_merge(
+                [(string) $trieuChung->name_vi],
+                (array) $trieuChung->aliases
             ))
             ->filter(fn ($term) => is_string($term) && trim($term) !== '' && mb_strlen($term) >= 2)
             ->push(...self::BARE_DANGER_SIGNS)
@@ -570,7 +570,7 @@ class TriageAiFactService extends TriageAiService
      *
      * @return array{prompt: array<string, string>, topics: array<int, string>}
      */
-    protected function knownFacts(TriageSession $session, string $text): array
+    protected function knownFacts(PhienSangLoc $phien, string $text): array
     {
         $prompt = [];
         $topics = [];
@@ -579,14 +579,14 @@ class TriageAiFactService extends TriageAiService
 
         // A child's age is not the account age, so the topic stays open — the model
         // still has to ask whose symptom it is and how old that person is.
-        $age = $aboutAChild ? null : $session->user?->ageInYears();
+        $age = $aboutAChild ? null : $phien->nguoiDung?->ageInYears();
 
         if ($age !== null) {
             $prompt['Tuổi người bệnh'] = "{$age} tuổi (từ ngày sinh trong hồ sơ tài khoản)";
             $topics[] = 'age';
         }
 
-        $profile = $this->consentedAiProfile($session);
+        $profile = $this->consentedAiProfile($phien);
 
         if ($profile !== null) {
             // Labels only, never the values. Suppressing a question needs the model to
@@ -624,13 +624,13 @@ class TriageAiFactService extends TriageAiService
     /**
      * The health profile this seam may send to the provider, or null.
      */
-    protected function consentedAiProfile(TriageSession $session): ?UserHealthProfile
+    protected function consentedAiProfile(PhienSangLoc $phien): ?HoSoSucKhoe
     {
-        if (! $session->MaKH) {
+        if (! $phien->MaKH) {
             return null;
         }
 
-        $profile = UserHealthProfile::consentedFor((int) $session->MaKH);
+        $profile = HoSoSucKhoe::consentedFor((int) $phien->MaKH);
 
         return $profile?->hasAiConsent() ? $profile : null;
     }
@@ -678,10 +678,10 @@ class TriageAiFactService extends TriageAiService
     /**
      * @param  array<string, mixed>  $facts
      */
-    protected function audit(TriageSession $session, array $facts, float $durationMs): void
+    protected function audit(PhienSangLoc $phien, array $facts, float $durationMs): void
     {
         $this->auditProvenance(
-            $session,
+            $phien,
             'triage_ai_facts',
             $facts['provider'] ?? [],
             $durationMs,

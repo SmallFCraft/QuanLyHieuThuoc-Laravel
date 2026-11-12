@@ -2,17 +2,17 @@
 
 namespace Tests\Feature;
 
-use App\Models\DrugContraindication;
-use App\Models\MedicationReminder;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Product;
-use App\Models\TriageSession;
-use App\Models\User;
-use App\Models\UserHealthProfile;
+use App\Models\ChungChiDinhThuoc;
+use App\Models\NhacUongThuoc;
+use App\Models\DonHang;
+use App\Models\ChiTietDonHang;
+use App\Models\SanPham;
+use App\Models\PhienSangLoc;
+use App\Models\NguoiDung;
+use App\Models\HoSoSucKhoe;
 use App\Services\Triage\MedicalTriageService;
 use App\Services\MedicationReminderService;
-use Database\Seeders\MedicalKnowledgeSeeder;
+use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
@@ -25,15 +25,15 @@ class TriageSafetyRegressionTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected NguoiDung $nguoiDung;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->seed(MedicalKnowledgeSeeder::class);
+        $this->seed(TriThucYTeSeeder::class);
 
-        $this->user = User::factory()->create([
+        $this->nguoiDung = NguoiDung::factory()->create([
             'role' => 'User',
             'status' => 'active',
             'birth_date' => now()->subYears(40)->toDateString(),
@@ -44,55 +44,55 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_an_out_of_order_step_cannot_finalise_the_wizard(): void
     {
-        $session = $this->startSession();
+        $phien = $this->startSession();
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->post(route('health.answer'), [
-                'triage_session_id' => $session->MaSL,
+                'triage_session_id' => $phien->MaSL,
                 'step' => 5,
                 'answer' => 'khong co gi them',
             ])
             ->assertRedirect(route('health.check'));
 
-        $session->refresh();
+        $phien->refresh();
 
-        $this->assertSame('in_progress', $session->status);
-        $this->assertNull($session->outcome);
-        $this->assertSame(1, $session->current_step);
-        $this->assertSame([], $session->collected_data);
+        $this->assertSame('in_progress', $phien->status);
+        $this->assertNull($phien->outcome);
+        $this->assertSame(1, $phien->current_step);
+        $this->assertSame([], $phien->collected_data);
     }
 
     public function test_a_replayed_answer_does_not_rewind_the_wizard(): void
     {
-        $session = $this->startSession();
-        $this->answer($session->MaSL, 1, 'dau dau');
-        $this->answer($session->MaSL, 2, '3 ngay');
+        $phien = $this->startSession();
+        $this->answer($phien->MaSL, 1, 'dau dau');
+        $this->answer($phien->MaSL, 2, '3 ngay');
 
-        $this->assertSame(3, $session->fresh()->current_step);
+        $this->assertSame(3, $phien->fresh()->current_step);
 
         // Browser Back then resubmit: the stale form still carries step=1.
-        $this->answer($session->MaSL, 1, 'dau dau');
+        $this->answer($phien->MaSL, 1, 'dau dau');
 
-        $this->assertSame(3, $session->fresh()->current_step, 'A stale form must not rewind the wizard.');
+        $this->assertSame(3, $phien->fresh()->current_step, 'A stale form must not rewind the wizard.');
     }
 
     public function test_answering_a_skipped_step_clears_its_skipped_marker(): void
     {
-        $session = $this->startSession();
-        $this->answer($session->MaSL, 1, 'dau dau');
+        $phien = $this->startSession();
+        $this->answer($phien->MaSL, 1, 'dau dau');
 
-        $this->actingAs($this->user)->post(route('health.answer'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+            'triage_session_id' => $phien->MaSL,
             'step' => 2,
             'skipped' => 1,
         ]);
 
-        $this->assertContains('duration_days', $session->fresh()->collected_data['skipped']);
+        $this->assertContains('duration_days', $phien->fresh()->collected_data['skipped']);
 
-        $this->actingAs($this->user)->post(route('health.back'), ['triage_session_id' => $session->MaSL]);
-        $this->answer($session->MaSL, 2, '5 ngay');
+        $this->actingAs($this->nguoiDung)->post(route('health.back'), ['triage_session_id' => $phien->MaSL]);
+        $this->answer($phien->MaSL, 2, '5 ngay');
 
-        $data = $session->fresh()->collected_data;
+        $data = $phien->fresh()->collected_data;
 
         $this->assertSame(5, $data['duration_days']);
         $this->assertNotContains('duration_days', $data['skipped'], 'An answered step must not stay marked as skipped.');
@@ -100,18 +100,18 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_a_clicked_option_is_recorded_instead_of_the_empty_text_box(): void
     {
-        $session = $this->startSession();
-        $this->answer($session->MaSL, 1, 'ho');
+        $phien = $this->startSession();
+        $this->answer($phien->MaSL, 1, 'ho');
 
         // What the browser sends when a quick-pick button is clicked.
-        $this->actingAs($this->user)->post(route('health.answer'), [
-            'triage_session_id' => $session->MaSL,
+        $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
+            'triage_session_id' => $phien->MaSL,
             'step' => 2,
             'option_answer' => '2–3 ngày',
             'answer' => '',
         ]);
 
-        $data = $session->fresh()->collected_data;
+        $data = $phien->fresh()->collected_data;
 
         $this->assertSame(3, $data['duration_days']);
         $this->assertNotContains('duration_days', $data['skipped']);
@@ -121,8 +121,8 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_a_duration_in_months_is_not_read_as_an_infant_age(): void
     {
-        $session = TriageSession::create([
-            'MaKH' => $this->user->MaKH,
+        $phien = PhienSangLoc::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'collected_data' => [
@@ -133,15 +133,15 @@ class TriageSafetyRegressionTest extends TestCase
             ],
         ]);
 
-        $result = app(MedicalTriageService::class)->evaluate($session, null);
+        $result = app(MedicalTriageService::class)->evaluate($phien, null);
 
         $this->assertStringNotContainsString('Trẻ dưới 2 tuổi', (string) $result['advice_given']);
     }
 
     public function test_a_stated_child_age_in_months_still_resolves_to_an_infant(): void
     {
-        $session = TriageSession::create([
-            'MaKH' => $this->user->MaKH,
+        $phien = PhienSangLoc::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'collected_data' => [
@@ -152,7 +152,7 @@ class TriageSafetyRegressionTest extends TestCase
             ],
         ]);
 
-        $result = app(MedicalTriageService::class)->evaluate($session, null);
+        $result = app(MedicalTriageService::class)->evaluate($phien, null);
 
         $this->assertSame('refer_doctor', $result['outcome']);
         $this->assertStringContainsString('Trẻ dưới 2 tuổi', (string) $result['advice_given']);
@@ -168,13 +168,13 @@ class TriageSafetyRegressionTest extends TestCase
      */
     public function test_a_severity_answer_to_our_own_scale_question_is_not_an_emergency(): void
     {
-        $session = $this->clarifiedSession('toi toi ky kinh nguyet, dau bung', [
+        $phien = $this->clarifiedSession('toi toi ky kinh nguyet, dau bung', [
             ['round' => 1, 'question' => 'Anh/chị bao nhiêu tuổi ạ?', 'answer' => '20'],
             ['round' => 1, 'question' => 'Anh/chị đau mức độ nhẹ, vừa hay dữ dội ạ?', 'answer' => 'đau dữ dội'],
             ['round' => 1, 'question' => 'Anh/chị đau liên tục hay từng cơn ạ?', 'answer' => 'liên tục'],
         ]);
 
-        $result = app(MedicalTriageService::class)->evaluate($session, null);
+        $result = app(MedicalTriageService::class)->evaluate($phien, null);
 
         $this->assertNotSame('emergency', $result['outcome']);
         $this->assertNotContains('severe_pain', $this->flagCodes($result));
@@ -187,11 +187,11 @@ class TriageSafetyRegressionTest extends TestCase
      */
     public function test_a_danger_sign_volunteered_in_a_follow_up_answer_still_escalates(): void
     {
-        $session = $this->clarifiedSession('toi bi ho va sot nhe', [
+        $phien = $this->clarifiedSession('toi bi ho va sot nhe', [
             ['round' => 1, 'question' => 'Anh/chị còn triệu chứng nào khác không ạ?', 'answer' => 'khó thở nhiều lắm'],
         ]);
 
-        $result = app(MedicalTriageService::class)->evaluate($session, null);
+        $result = app(MedicalTriageService::class)->evaluate($phien, null);
 
         $this->assertSame('emergency', $result['outcome']);
         $this->assertContains('breathing_difficulty', $this->flagCodes($result));
@@ -203,11 +203,11 @@ class TriageSafetyRegressionTest extends TestCase
      */
     public function test_a_confirmed_named_danger_sign_still_escalates(): void
     {
-        $session = $this->clarifiedSession('toi hoi tuc nguc khi ho', [
+        $phien = $this->clarifiedSession('toi hoi tuc nguc khi ho', [
             ['round' => 1, 'question' => 'Anh/chị có đau ngực dữ dội không ạ?', 'answer' => 'đau ngực dữ dội lắm'],
         ]);
 
-        $result = app(MedicalTriageService::class)->evaluate($session, null);
+        $result = app(MedicalTriageService::class)->evaluate($phien, null);
 
         $this->assertSame('emergency', $result['outcome']);
         $this->assertContains('chest_pain_severe', $this->flagCodes($result));
@@ -216,9 +216,9 @@ class TriageSafetyRegressionTest extends TestCase
     /** `severe_pain` keeps its original job: severe pain the patient reports unprompted. */
     public function test_unexplained_severe_pain_stated_by_the_patient_still_escalates(): void
     {
-        $session = $this->clarifiedSession('toi dau du doi tu sang, khong biet vi sao', []);
+        $phien = $this->clarifiedSession('toi dau du doi tu sang, khong biet vi sao', []);
 
-        $result = app(MedicalTriageService::class)->evaluate($session, null);
+        $result = app(MedicalTriageService::class)->evaluate($phien, null);
 
         $this->assertSame('emergency', $result['outcome']);
         $this->assertContains('severe_pain', $this->flagCodes($result));
@@ -228,9 +228,9 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_typical_menstrual_cramps_reach_self_care_with_a_safety_net(): void
     {
-        $session = $this->clarifiedSession('toi bi dau bung kinh, dau bung duoi', []);
+        $phien = $this->clarifiedSession('toi bi dau bung kinh, dau bung duoi', []);
 
-        $result = app(MedicalTriageService::class)->evaluate($session, null);
+        $result = app(MedicalTriageService::class)->evaluate($phien, null);
 
         $this->assertSame('self_care', $result['outcome']);
         $this->assertContains('menstrual_cramps', $result['matched_symptoms']);
@@ -243,9 +243,9 @@ class TriageSafetyRegressionTest extends TestCase
      */
     public function test_period_pain_outranks_the_generic_abdominal_pain_rule(): void
     {
-        $session = $this->clarifiedSession('dau bung kinh', []);
+        $phien = $this->clarifiedSession('dau bung kinh', []);
 
-        $result = app(MedicalTriageService::class)->evaluate($session, null);
+        $result = app(MedicalTriageService::class)->evaluate($phien, null);
 
         $this->assertContains('abdominal_pain', $result['matched_symptoms']);
         $this->assertSame('self_care', $result['outcome']);
@@ -253,9 +253,9 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_heavy_menstrual_bleeding_is_referred(): void
     {
-        $session = $this->clarifiedSession('dau bung kinh va bi rong kinh', []);
+        $phien = $this->clarifiedSession('dau bung kinh va bi rong kinh', []);
 
-        $result = app(MedicalTriageService::class)->evaluate($session, null);
+        $result = app(MedicalTriageService::class)->evaluate($phien, null);
 
         $this->assertSame('refer_doctor', $result['outcome']);
     }
@@ -264,16 +264,16 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_a_pharmacist_cannot_open_a_session_that_never_entered_the_queue(): void
     {
-        $pharmacist = User::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
+        $pharmacist = NguoiDung::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
 
-        UserHealthProfile::create([
-            'MaKH' => $this->user->MaKH,
+        HoSoSucKhoe::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'allergies' => ['penicillin'],
             'consented_at' => now(),
         ]);
 
-        $session = TriageSession::create([
-            'MaKH' => $this->user->MaKH,
+        $phien = PhienSangLoc::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 2,
             'status' => 'in_progress',
@@ -281,7 +281,7 @@ class TriageSafetyRegressionTest extends TestCase
         ]);
 
         $this->actingAs($pharmacist)
-            ->get(route('pharmacist.triage.show', $session->MaSL))
+            ->get(route('pharmacist.triage.show', $phien->MaSL))
             ->assertNotFound();
     }
 
@@ -289,45 +289,45 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_the_follow_up_link_only_renders_a_confirmation(): void
     {
-        $session = $this->selfCareSession();
+        $phien = $this->selfCareSession();
 
-        $this->actingAs($this->user)
-            ->get($this->signedFollowUpUrl($session, false))
+        $this->actingAs($this->nguoiDung)
+            ->get($this->signedFollowUpUrl($phien, false))
             ->assertOk()
             ->assertSee(__('messages.reminder.response_confirm_button'));
 
-        $session->refresh();
+        $phien->refresh();
 
-        $this->assertNull($session->follow_up_responded_at, 'Opening the link must not record an answer.');
-        $this->assertSame('self_care', $session->outcome);
+        $this->assertNull($phien->follow_up_responded_at, 'Opening the link must not record an answer.');
+        $this->assertSame('self_care', $phien->outcome);
     }
 
     public function test_an_unsigned_follow_up_link_is_rejected(): void
     {
-        $session = $this->selfCareSession();
+        $phien = $this->selfCareSession();
 
-        $this->actingAs($this->user)
-            ->get(route('health.followup.confirm', ['MaSL' => $session->MaSL, 'improved' => 0]))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.followup.confirm', ['MaSL' => $phien->MaSL, 'improved' => 0]))
             ->assertForbidden();
     }
 
     public function test_a_follow_up_answer_is_recorded_once(): void
     {
-        $session = $this->selfCareSession();
+        $phien = $this->selfCareSession();
 
         for ($i = 0; $i < 3; $i++) {
-            $this->actingAs($this->user)
-                ->post(route('health.followup', $session->MaSL), ['improved' => 0]);
+            $this->actingAs($this->nguoiDung)
+                ->post(route('health.followup', $phien->MaSL), ['improved' => 0]);
         }
 
-        $this->assertSame(1, \App\Models\AuditLog::where('action', 'triage_follow_up_not_improved')->count());
-        $this->assertNotNull($session->fresh()->follow_up_responded_at);
+        $this->assertSame(1, \App\Models\NhatKyKiemToan::where('action', 'triage_follow_up_not_improved')->count());
+        $this->assertNotNull($phien->fresh()->follow_up_responded_at);
     }
 
     public function test_a_follow_up_answer_never_downgrades_an_emergency(): void
     {
-        $session = TriageSession::create([
-            'MaKH' => $this->user->MaKH,
+        $phien = PhienSangLoc::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -336,32 +336,32 @@ class TriageSafetyRegressionTest extends TestCase
             'collected_data' => ['raw_symptom_text' => 'dau nguc du doi'],
         ]);
 
-        $this->actingAs($this->user)
-            ->post(route('health.followup', $session->MaSL), ['improved' => 0]);
+        $this->actingAs($this->nguoiDung)
+            ->post(route('health.followup', $phien->MaSL), ['improved' => 0]);
 
-        $this->assertSame('emergency', $session->fresh()->outcome);
+        $this->assertSame('emergency', $phien->fresh()->outcome);
     }
 
     public function test_a_failed_follow_up_mail_keeps_the_due_date_for_a_retry(): void
     {
-        $session = $this->selfCareSession(['follow_up_at' => now()->subHour()]);
+        $phien = $this->selfCareSession(['follow_up_at' => now()->subHour()]);
 
         \Illuminate\Support\Facades\Mail::shouldReceive('to')->andThrow(new \RuntimeException('smtp down'));
 
         $sent = app(\App\Services\Triage\TriageFollowUpService::class)->dispatchDue();
 
         $this->assertSame(0, $sent, 'A failed send must not be counted.');
-        $this->assertNotNull($session->fresh()->follow_up_at, 'The safety net must survive a mail failure.');
+        $this->assertNotNull($phien->fresh()->follow_up_at, 'The safety net must survive a mail failure.');
     }
 
     // --- Escalated note visibility ---
 
     public function test_an_escalated_pharmacist_note_reaches_the_customer(): void
     {
-        $pharmacist = User::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
+        $pharmacist = NguoiDung::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
 
-        $session = TriageSession::create([
-            'MaKH' => $this->user->MaKH,
+        $phien = PhienSangLoc::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'pending_pharmacist',
@@ -370,14 +370,14 @@ class TriageSafetyRegressionTest extends TestCase
             'collected_data' => ['raw_symptom_text' => 'dau dau'],
         ]);
 
-        $this->actingAs($pharmacist)->post(route('pharmacist.triage.escalate', $session->MaSL), [
+        $this->actingAs($pharmacist)->post(route('pharmacist.triage.escalate', $phien->MaSL), [
             'pharmacist_note' => 'Anh/chị cần đến khám chuyên khoa thần kinh trong hôm nay.',
         ]);
 
-        $this->assertSame('refer_doctor', $session->fresh()->outcome);
+        $this->assertSame('refer_doctor', $phien->fresh()->outcome);
 
-        $this->actingAs($this->user)
-            ->get(route('health.result', $session->MaSL))
+        $this->actingAs($this->nguoiDung)
+            ->get(route('health.result', $phien->MaSL))
             ->assertOk()
             ->assertSee('chuyên khoa thần kinh', false);
     }
@@ -386,76 +386,76 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_the_chatbot_cart_endpoint_enforces_drug_safety(): void
     {
-        UserHealthProfile::create([
-            'MaKH' => $this->user->MaKH,
+        HoSoSucKhoe::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'allergies' => ['Paracetamol'],
             'consented_at' => now(),
         ]);
 
-        $product = Product::factory()->create([
+        $sanPham = SanPham::factory()->create([
             'name' => 'Panadol 500mg',
             'ingredients' => 'Paracetamol 500mg',
             'stock_quantity' => 50,
         ]);
 
-        $this->actingAs($this->user)
-            ->postJson('/api/chatbot/cart/add', ['MaSP' => $product->MaSP, 'quantity' => 1])
+        $this->actingAs($this->nguoiDung)
+            ->postJson('/api/chatbot/cart/add', ['MaSP' => $sanPham->MaSP, 'quantity' => 1])
             ->assertStatus(409)
             ->assertJson(['requires_confirmation' => true]);
 
         $this->assertEmpty(session('cart', []));
 
-        $this->actingAs($this->user)
+        $this->actingAs($this->nguoiDung)
             ->postJson('/api/chatbot/cart/add', [
-                'MaSP' => $product->MaSP,
+                'MaSP' => $sanPham->MaSP,
                 'quantity' => 1,
                 'confirm_warning' => 1,
             ])
             ->assertOk();
 
-        $this->assertArrayHasKey($product->MaSP, session('cart'));
+        $this->assertArrayHasKey($sanPham->MaSP, session('cart'));
         $this->assertDatabaseHas('audit_logs', ['action' => 'drug_warning_overridden']);
     }
 
     public function test_a_one_character_allergy_does_not_block_the_catalog(): void
     {
-        UserHealthProfile::create([
-            'MaKH' => $this->user->MaKH,
+        HoSoSucKhoe::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'allergies' => ['C'],
             'consented_at' => now(),
         ]);
 
-        $product = Product::factory()->create([
+        $sanPham = SanPham::factory()->create([
             'name' => 'Paracetamol 500mg',
             'ingredients' => 'Paracetamol 500mg',
             'stock_quantity' => 50,
         ]);
 
-        $this->actingAs($this->user)->post(route('cart.add'), [
-            'MaSP' => $product->MaSP,
+        $this->actingAs($this->nguoiDung)->post(route('cart.add'), [
+            'MaSP' => $sanPham->MaSP,
             'quantity' => 1,
         ]);
 
         $this->assertSame([], session('drug_warnings', []));
-        $this->assertArrayHasKey($product->MaSP, session('cart'));
+        $this->assertArrayHasKey($sanPham->MaSP, session('cart'));
     }
 
     public function test_a_real_allergy_still_blocks(): void
     {
-        UserHealthProfile::create([
-            'MaKH' => $this->user->MaKH,
+        HoSoSucKhoe::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'allergies' => ['Paracetamol'],
             'consented_at' => now(),
         ]);
 
-        $product = Product::factory()->create([
+        $sanPham = SanPham::factory()->create([
             'name' => 'Panadol Extra',
             'ingredients' => 'Paracetamol 500mg',
             'stock_quantity' => 50,
         ]);
 
-        $this->actingAs($this->user)->post(route('cart.add'), [
-            'MaSP' => $product->MaSP,
+        $this->actingAs($this->nguoiDung)->post(route('cart.add'), [
+            'MaSP' => $sanPham->MaSP,
             'quantity' => 1,
         ]);
 
@@ -468,14 +468,14 @@ class TriageSafetyRegressionTest extends TestCase
         $cart = [];
 
         for ($i = 0; $i < 10; $i++) {
-            $product = Product::factory()->create([
+            $sanPham = SanPham::factory()->create([
                 'ingredients' => "Paracetamol{$i} 500mg",
                 'stock_quantity' => 100,
             ]);
-            $cart[$product->MaSP] = 1;
+            $cart[$sanPham->MaSP] = 1;
         }
 
-        DrugContraindication::create([
+        ChungChiDinhThuoc::create([
             'ingredient' => 'paracetamol0',
             'condition_type' => 'pregnancy',
             'condition_value' => null,
@@ -489,7 +489,7 @@ class TriageSafetyRegressionTest extends TestCase
             $queries++;
         });
 
-        $this->actingAs($this->user)->withSession(['cart' => $cart])->get(route('checkout.index'))->assertOk();
+        $this->actingAs($this->nguoiDung)->withSession(['cart' => $cart])->get(route('checkout.index'))->assertOk();
 
         // Was 61 before the interaction/contraindication tables were indexed in memory.
         $this->assertLessThan(20, $queries, "A 10-item checkout must not fan out; ran {$queries} queries.");
@@ -499,16 +499,16 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_a_multi_batch_order_line_produces_one_correct_reminder(): void
     {
-        $product = Product::factory()->create(['usage' => 'x 2 lần/ngày', 'name' => 'Amoxicillin']);
-        $order = $this->order();
+        $sanPham = SanPham::factory()->create(['usage' => 'x 2 lần/ngày', 'name' => 'Amoxicillin']);
+        $donHang = $this->order();
 
         // FEFO splits 20 tablets across two batches.
-        OrderItem::create(['MaDH' => $order->MaDH, 'MaSP' => $product->MaSP, 'quantity' => 18, 'unit_price' => 1, 'batch_number' => 'B1']);
-        OrderItem::create(['MaDH' => $order->MaDH, 'MaSP' => $product->MaSP, 'quantity' => 2, 'unit_price' => 1, 'batch_number' => 'B2']);
+        ChiTietDonHang::create(['MaDH' => $donHang->MaDH, 'MaSP' => $sanPham->MaSP, 'quantity' => 18, 'unit_price' => 1, 'batch_number' => 'B1']);
+        ChiTietDonHang::create(['MaDH' => $donHang->MaDH, 'MaSP' => $sanPham->MaSP, 'quantity' => 2, 'unit_price' => 1, 'batch_number' => 'B2']);
 
-        $created = app(MedicationReminderService::class)->createFromOrder($order->fresh());
+        $created = app(MedicationReminderService::class)->createFromOrder($donHang->fresh());
 
-        $reminders = MedicationReminder::where('MaDH', $order->MaDH)->get();
+        $reminders = NhacUongThuoc::where('MaDH', $donHang->MaDH)->get();
 
         $this->assertSame(1, $created, 'The return value must match the rows written.');
         $this->assertCount(1, $reminders);
@@ -517,12 +517,12 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_cancelling_one_course_leaves_the_other_running(): void
     {
-        $product = Product::factory()->create(['usage' => 'x 1 lần/ngày']);
+        $sanPham = SanPham::factory()->create(['usage' => 'x 1 lần/ngày']);
 
-        $first = $this->reminder($product);
-        $second = $this->reminder($product);
+        $first = $this->reminder($sanPham);
+        $second = $this->reminder($sanPham);
 
-        $this->actingAs($this->user)->post(route('reminders.cancel', $first->MaNN));
+        $this->actingAs($this->nguoiDung)->post(route('reminders.cancel', $first->MaNN));
 
         $this->assertSame('cancelled', $first->fresh()->status);
         $this->assertSame('active', $second->fresh()->status, 'A refill course must survive cancelling the original.');
@@ -530,27 +530,27 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_a_soft_deleted_product_does_not_cancel_an_active_course(): void
     {
-        $product = Product::factory()->create(['usage' => 'x 1 lần/ngày']);
-        $reminder = $this->reminder($product, ['next_remind_at' => now()->subMinute()]);
+        $sanPham = SanPham::factory()->create(['usage' => 'x 1 lần/ngày']);
+        $nhacUong = $this->reminder($sanPham, ['next_remind_at' => now()->subMinute()]);
 
-        $product->delete();
+        $sanPham->delete();
 
         app(MedicationReminderService::class)->dispatchDue();
 
-        $this->assertSame('active', $reminder->fresh()->status);
+        $this->assertSame('active', $nhacUong->fresh()->status);
     }
 
     public function test_long_usage_text_is_truncated_to_fit_the_column(): void
     {
-        $product = Product::factory()->create([
+        $sanPham = SanPham::factory()->create([
             'usage' => '<p>' . str_repeat('Uống sau ăn 30 phút. ', 40) . '</p>',
         ]);
-        $order = $this->order();
-        OrderItem::create(['MaDH' => $order->MaDH, 'MaSP' => $product->MaSP, 'quantity' => 4, 'unit_price' => 1, 'batch_number' => 'B1']);
+        $donHang = $this->order();
+        ChiTietDonHang::create(['MaDH' => $donHang->MaDH, 'MaSP' => $sanPham->MaSP, 'quantity' => 4, 'unit_price' => 1, 'batch_number' => 'B1']);
 
-        app(MedicationReminderService::class)->createFromOrder($order->fresh());
+        app(MedicationReminderService::class)->createFromOrder($donHang->fresh());
 
-        $dosage = MedicationReminder::where('MaDH', $order->MaDH)->value('dosage_text');
+        $dosage = NhacUongThuoc::where('MaDH', $donHang->MaDH)->value('dosage_text');
 
         $this->assertLessThanOrEqual(255, mb_strlen($dosage));
         $this->assertStringNotContainsString('<p>', $dosage);
@@ -560,7 +560,7 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_an_unparseable_date_filter_does_not_break_the_report(): void
     {
-        $admin = User::factory()->create(['role' => 'Administrator', 'status' => 'active']);
+        $admin = NguoiDung::factory()->create(['role' => 'Administrator', 'status' => 'active']);
 
         $this->actingAs($admin)
             ->get(route('admin.triageReports.index', ['date_from' => 'abc']))
@@ -569,11 +569,11 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_the_trend_chart_honours_the_active_filters(): void
     {
-        $admin = User::factory()->create(['role' => 'Administrator', 'status' => 'active']);
+        $admin = NguoiDung::factory()->create(['role' => 'Administrator', 'status' => 'active']);
 
         foreach (['emergency', 'self_care', 'self_care'] as $outcome) {
-            TriageSession::create([
-                'MaKH' => $this->user->MaKH,
+            PhienSangLoc::create([
+                'MaKH' => $this->nguoiDung->MaKH,
                 'entry_point' => 'page',
                 'current_step' => 6,
                 'status' => 'completed',
@@ -591,11 +591,11 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_the_average_wait_is_aggregated_in_sql(): void
     {
-        $pharmacist = User::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
+        $pharmacist = NguoiDung::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
 
         foreach ([30, 90, 150] as $minutes) {
-            $session = TriageSession::create([
-                'MaKH' => $this->user->MaKH,
+            $phien = PhienSangLoc::create([
+                'MaKH' => $this->nguoiDung->MaKH,
                 'entry_point' => 'page',
                 'current_step' => 6,
                 'status' => 'reviewed',
@@ -605,7 +605,7 @@ class TriageSafetyRegressionTest extends TestCase
                 'collected_data' => ['raw_symptom_text' => 'dau dau'],
             ]);
 
-            TriageSession::where('MaSL', $session->MaSL)
+            PhienSangLoc::where('MaSL', $phien->MaSL)
                 ->update(['created_at' => now()->subMinutes($minutes + 10)]);
         }
 
@@ -632,8 +632,8 @@ class TriageSafetyRegressionTest extends TestCase
 
     public function test_a_pharmacist_survives_an_unrelated_profile_edit(): void
     {
-        $admin = User::factory()->create(['role' => 'Administrator', 'status' => 'active']);
-        $pharmacist = User::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
+        $admin = NguoiDung::factory()->create(['role' => 'Administrator', 'status' => 'active']);
+        $pharmacist = NguoiDung::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
 
         $this->actingAs($admin)
             ->put(route('admin.users.update', $pharmacist->MaKH), [
@@ -649,16 +649,16 @@ class TriageSafetyRegressionTest extends TestCase
 
     // --- Helpers ---
 
-    protected function startSession(): TriageSession
+    protected function startSession(): PhienSangLoc
     {
-        $this->actingAs($this->user)->get(route('health.check'));
+        $this->actingAs($this->nguoiDung)->get(route('health.check'));
 
-        return TriageSession::where('MaKH', $this->user->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        return PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
     }
 
     protected function answer(int $MaSL, int $step, string $answer): void
     {
-        $this->actingAs($this->user)->post(route('health.answer'), [
+        $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
             'triage_session_id' => $MaSL,
             'step' => $step,
             'answer' => $answer,
@@ -671,10 +671,10 @@ class TriageSafetyRegressionTest extends TestCase
      *
      * @param array<int, array{round: int, question: string, answer: string}> $clarifyAnswers
      */
-    protected function clarifiedSession(string $symptomText, array $clarifyAnswers): TriageSession
+    protected function clarifiedSession(string $symptomText, array $clarifyAnswers): PhienSangLoc
     {
-        return TriageSession::create([
-            'MaKH' => $this->user->MaKH,
+        return PhienSangLoc::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'collected_data' => [
@@ -699,10 +699,10 @@ class TriageSafetyRegressionTest extends TestCase
         return collect($result['triggered_red_flags'] ?? [])->pluck('code')->all();
     }
 
-    protected function selfCareSession(array $attributes = []): TriageSession
+    protected function selfCareSession(array $attributes = []): PhienSangLoc
     {
-        return TriageSession::create(array_merge([
-            'MaKH' => $this->user->MaKH,
+        return PhienSangLoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -712,18 +712,18 @@ class TriageSafetyRegressionTest extends TestCase
         ], $attributes));
     }
 
-    protected function signedFollowUpUrl(TriageSession $session, bool $improved): string
+    protected function signedFollowUpUrl(PhienSangLoc $phien, bool $improved): string
     {
         return URL::temporarySignedRoute('health.followup.confirm', now()->addDays(7), [
-            'MaSL' => $session->MaSL,
+            'MaSL' => $phien->MaSL,
             'improved' => $improved ? 1 : 0,
         ]);
     }
 
-    protected function order(): Order
+    protected function order(): DonHang
     {
-        return Order::create([
-            'MaKH' => $this->user->MaKH,
+        return DonHang::create([
+            'MaKH' => $this->nguoiDung->MaKH,
             'customer_name' => 'Khách hàng',
             'shipping_address' => '1 Đường A',
             'shipping_phone' => '0900000000',
@@ -732,11 +732,11 @@ class TriageSafetyRegressionTest extends TestCase
         ]);
     }
 
-    protected function reminder(Product $product, array $attributes = []): MedicationReminder
+    protected function reminder(SanPham $sanPham, array $attributes = []): NhacUongThuoc
     {
-        return MedicationReminder::create(array_merge([
-            'MaKH' => $this->user->MaKH,
-            'MaSP' => $product->MaSP,
+        return NhacUongThuoc::create(array_merge([
+            'MaKH' => $this->nguoiDung->MaKH,
+            'MaSP' => $sanPham->MaSP,
             'dosage_text' => 'Uống 1 lần/ngày',
             'times_per_day' => 1,
             'duration_days' => 5,

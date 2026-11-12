@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ContactInquiry extends Model
+class YeuCauLienHe extends Model
 {
     use HasFactory;
+
+    protected $table = 'contact_inquiries';
 
     protected $primaryKey = 'MaLH';
 

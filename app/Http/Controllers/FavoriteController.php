@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Favorite;
-use App\Models\Product;
+use App\Models\YeuThich;
+use App\Models\SanPham;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,7 +18,7 @@ class FavoriteController extends Controller
 
     public function section(Request $request): JsonResponse
     {
-        $favoriteItems = Favorite::profileItemsFor($request->user());
+        $favoriteItems = YeuThich::profileItemsFor($request->user());
 
         return response()->json([
             'favorites' => $this->favoriteIdsFor($request),
@@ -44,12 +44,12 @@ class FavoriteController extends Controller
         $syncedCount = 0;
 
         foreach ($productIds as $productId) {
-            $favorite = Favorite::firstOrCreate([
+            $yeuThich = YeuThich::firstOrCreate([
                 'MaKH' => $request->user()->MaKH,
                 'MaSP' => $productId,
             ]);
 
-            if ($favorite->wasRecentlyCreated) {
+            if ($yeuThich->wasRecentlyCreated) {
                 $syncedCount++;
             }
         }
@@ -60,17 +60,17 @@ class FavoriteController extends Controller
         ]);
     }
 
-    public function toggle(Request $request, Product $product): JsonResponse
+    public function toggle(Request $request, SanPham $product): JsonResponse
     {
-        $favorite = Favorite::where('MaKH', $request->user()->MaKH)
+        $yeuThich = YeuThich::where('MaKH', $request->user()->MaKH)
             ->where('MaSP', $product->MaSP)
             ->first();
 
-        if ($favorite) {
-            $favorite->delete();
+        if ($yeuThich) {
+            $yeuThich->delete();
             $saved = false;
         } else {
-            Favorite::create([
+            YeuThich::create([
                 'MaKH' => $request->user()->MaKH,
                 'MaSP' => $product->MaSP,
             ]);
@@ -84,9 +84,9 @@ class FavoriteController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, Product $product): JsonResponse
+    public function destroy(Request $request, SanPham $product): JsonResponse
     {
-        Favorite::where('MaKH', $request->user()->MaKH)
+        YeuThich::where('MaKH', $request->user()->MaKH)
             ->where('MaSP', $product->MaSP)
             ->delete();
 
@@ -99,6 +99,6 @@ class FavoriteController extends Controller
 
     private function favoriteIdsFor(Request $request): array
     {
-        return Favorite::idsForUser($request->user());
+        return YeuThich::idsForUser($request->user());
     }
 }

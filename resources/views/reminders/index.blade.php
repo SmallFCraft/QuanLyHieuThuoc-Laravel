@@ -38,7 +38,7 @@
                         </thead>
                         <tbody>
                             @foreach ($reminders as $reminder)
-                                @php $productName = $reminder->product->name ?? $reminder->dosage_text; @endphp
+                                @php $productName = $reminder->sanPham->name ?? $reminder->dosage_text; @endphp
                                 <tr>
                                     <td class="fw-semibold text-gray-900">{{ $productName }}</td>
                                     <td class="small text-gray-600">{{ $reminder->dosage_text }}</td>
