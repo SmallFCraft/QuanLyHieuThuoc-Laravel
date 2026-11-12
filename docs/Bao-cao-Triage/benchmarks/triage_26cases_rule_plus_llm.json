@@ -1,0 +1,360 @@
+{
+    "total_cases": 26,
+    "exact_match_pct": 69.2,
+    "under_triage": 3,
+    "under_triage_pct": 11.5,
+    "over_triage": 5,
+    "over_triage_pct": 19.2,
+    "emergency_recall_pct": 83.3,
+    "latency_avg_ms": 3101,
+    "latency_median_ms": 1920.5,
+    "latency_max_ms": 9459.9,
+    "details": [
+        {
+            "id": "EM_01",
+            "category": "Tim mạch",
+            "expected": "emergency",
+            "actual": "emergency",
+            "verdict": "exact",
+            "latency_ms": 27,
+            "symptoms": [
+                "shortness_breath",
+                "chest_pain"
+            ],
+            "red_flag_count": 2,
+            "rule_id": null
+        },
+        {
+            "id": "EM_02",
+            "category": "Đột quỵ",
+            "expected": "emergency",
+            "actual": "pharmacist_review",
+            "verdict": "under",
+            "latency_ms": 1651.3,
+            "symptoms": [
+                "headache",
+                "dizziness"
+            ],
+            "red_flag_count": 0,
+            "rule_id": null
+        },
+        {
+            "id": "EM_03",
+            "category": "Nhi khoa",
+            "expected": "emergency",
+            "actual": "emergency",
+            "verdict": "exact",
+            "latency_ms": 1.6,
+            "symptoms": [
+                "fever"
+            ],
+            "red_flag_count": 2,
+            "rule_id": null
+        },
+        {
+            "id": "EM_04",
+            "category": "Xuất huyết tiêu hoá",
+            "expected": "emergency",
+            "actual": "emergency",
+            "verdict": "exact",
+            "latency_ms": 1.7,
+            "symptoms": [
+                "blood_in_stool",
+                "vomiting_blood"
+            ],
+            "red_flag_count": 2,
+            "rule_id": null
+        },
+        {
+            "id": "EM_05",
+            "category": "Phản vệ",
+            "expected": "emergency",
+            "actual": "emergency",
+            "verdict": "exact",
+            "latency_ms": 1.7,
+            "symptoms": [
+                "shortness_breath",
+                "rash"
+            ],
+            "red_flag_count": 2,
+            "rule_id": null
+        },
+        {
+            "id": "EM_06",
+            "category": "Rối loạn ý thức",
+            "expected": "emergency",
+            "actual": "emergency",
+            "verdict": "exact",
+            "latency_ms": 1.5,
+            "symptoms": [],
+            "red_flag_count": 1,
+            "rule_id": null
+        },
+        {
+            "id": "RD_01",
+            "category": "Nhiễm trùng dai dẳng",
+            "expected": "refer_doctor",
+            "actual": "refer_doctor",
+            "verdict": "exact",
+            "latency_ms": 1.6,
+            "symptoms": [
+                "fever"
+            ],
+            "red_flag_count": 1,
+            "rule_id": null
+        },
+        {
+            "id": "RD_02",
+            "category": "Nhi khoa dưới 1 tuổi",
+            "expected": "refer_doctor",
+            "actual": "refer_doctor",
+            "verdict": "exact",
+            "latency_ms": 1920.5,
+            "symptoms": [
+                "cough",
+                "shortness_breath"
+            ],
+            "red_flag_count": 0,
+            "rule_id": 9
+        },
+        {
+            "id": "RD_03",
+            "category": "Mất nước",
+            "expected": "refer_doctor",
+            "actual": "self_care",
+            "verdict": "under",
+            "latency_ms": 7708.8,
+            "symptoms": [
+                "diarrhea",
+                "fatigue",
+                "dehydration"
+            ],
+            "red_flag_count": 0,
+            "rule_id": 18
+        },
+        {
+            "id": "RD_04",
+            "category": "Thần kinh kéo dài",
+            "expected": "refer_doctor",
+            "actual": "emergency",
+            "verdict": "over",
+            "latency_ms": 2.4,
+            "symptoms": [
+                "headache"
+            ],
+            "red_flag_count": 2,
+            "rule_id": null
+        },
+        {
+            "id": "RD_05",
+            "category": "Sản phụ khoa",
+            "expected": "refer_doctor",
+            "actual": "refer_doctor",
+            "verdict": "exact",
+            "latency_ms": 1.8,
+            "symptoms": [],
+            "red_flag_count": 2,
+            "rule_id": null
+        },
+        {
+            "id": "PR_01",
+            "category": "Thuốc không đáp ứng",
+            "expected": "pharmacist_review",
+            "actual": "pharmacist_review",
+            "verdict": "exact",
+            "latency_ms": 5837.3,
+            "symptoms": [
+                "headache"
+            ],
+            "red_flag_count": 1,
+            "rule_id": 7
+        },
+        {
+            "id": "PR_02",
+            "category": "Thai kỳ",
+            "expected": "pharmacist_review",
+            "actual": "refer_doctor",
+            "verdict": "over",
+            "latency_ms": 1.7,
+            "symptoms": [
+                "runny_nose",
+                "common_cold"
+            ],
+            "red_flag_count": 1,
+            "rule_id": null
+        },
+        {
+            "id": "PR_03",
+            "category": "Cho con bú",
+            "expected": "pharmacist_review",
+            "actual": "refer_doctor",
+            "verdict": "over",
+            "latency_ms": 1.5,
+            "symptoms": [
+                "sore_throat"
+            ],
+            "red_flag_count": 1,
+            "rule_id": null
+        },
+        {
+            "id": "PR_04",
+            "category": "Bệnh nền",
+            "expected": "pharmacist_review",
+            "actual": "self_care",
+            "verdict": "under",
+            "latency_ms": 2807.6,
+            "symptoms": [
+                "stomach_pain"
+            ],
+            "red_flag_count": 0,
+            "rule_id": 22
+        },
+        {
+            "id": "PR_05",
+            "category": "Không đặc hiệu",
+            "expected": "pharmacist_review",
+            "actual": "pharmacist_review",
+            "verdict": "exact",
+            "latency_ms": 1890.1,
+            "symptoms": [
+                "fatigue"
+            ],
+            "red_flag_count": 1,
+            "rule_id": 36
+        },
+        {
+            "id": "SC_01",
+            "category": "Đau đầu căng thẳng",
+            "expected": "self_care",
+            "actual": "self_care",
+            "verdict": "exact",
+            "latency_ms": 8771.5,
+            "symptoms": [
+                "headache"
+            ],
+            "red_flag_count": 0,
+            "rule_id": 8
+        },
+        {
+            "id": "SC_02",
+            "category": "Viêm họng nhẹ",
+            "expected": "self_care",
+            "actual": "self_care",
+            "verdict": "exact",
+            "latency_ms": 8936.8,
+            "symptoms": [
+                "sore_throat",
+                "common_cold"
+            ],
+            "red_flag_count": 0,
+            "rule_id": 14
+        },
+        {
+            "id": "SC_03",
+            "category": "Cảm lạnh",
+            "expected": "self_care",
+            "actual": "self_care",
+            "verdict": "exact",
+            "latency_ms": 2638,
+            "symptoms": [
+                "runny_nose",
+                "common_cold"
+            ],
+            "red_flag_count": 0,
+            "rule_id": 15
+        },
+        {
+            "id": "SC_04",
+            "category": "Khó tiêu",
+            "expected": "self_care",
+            "actual": "self_care",
+            "verdict": "exact",
+            "latency_ms": 2649.6,
+            "symptoms": [
+                "bloating",
+                "indigestion"
+            ],
+            "red_flag_count": 0,
+            "rule_id": 24
+        },
+        {
+            "id": "SC_05",
+            "category": "Đau cơ",
+            "expected": "self_care",
+            "actual": "pharmacist_review",
+            "verdict": "over",
+            "latency_ms": 5600.1,
+            "symptoms": [
+                "muscle_pain"
+            ],
+            "red_flag_count": 0,
+            "rule_id": null
+        },
+        {
+            "id": "SC_06",
+            "category": "Ợ chua",
+            "expected": "self_care",
+            "actual": "self_care",
+            "verdict": "exact",
+            "latency_ms": 9459.9,
+            "symptoms": [
+                "heartburn",
+                "stomach_pain"
+            ],
+            "red_flag_count": 0,
+            "rule_id": 28
+        },
+        {
+            "id": "SC_07",
+            "category": "Khó ngủ",
+            "expected": "self_care",
+            "actual": "self_care",
+            "verdict": "exact",
+            "latency_ms": 2742.7,
+            "symptoms": [
+                "insomnia"
+            ],
+            "red_flag_count": 0,
+            "rule_id": 38
+        },
+        {
+            "id": "SC_08",
+            "category": "Đau răng",
+            "expected": "self_care",
+            "actual": "refer_doctor",
+            "verdict": "over",
+            "latency_ms": 1814,
+            "symptoms": [
+                "toothache"
+            ],
+            "red_flag_count": 0,
+            "rule_id": 34
+        },
+        {
+            "id": "SC_09",
+            "category": "Ngứa da",
+            "expected": "self_care",
+            "actual": "self_care",
+            "verdict": "exact",
+            "latency_ms": 8194.4,
+            "symptoms": [
+                "itching"
+            ],
+            "red_flag_count": 0,
+            "rule_id": 40
+        },
+        {
+            "id": "SC_10",
+            "category": "Mỏi khớp",
+            "expected": "self_care",
+            "actual": "self_care",
+            "verdict": "exact",
+            "latency_ms": 7960.2,
+            "symptoms": [
+                "joint_pain"
+            ],
+            "red_flag_count": 0,
+            "rule_id": 32
+        }
+    ]
+}

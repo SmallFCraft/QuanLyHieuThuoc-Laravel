@@ -1,0 +1,603 @@
+% ---------------------------------------------------------------------
+%  CHƯƠNG 3 — PHÂN TÍCH VÀ THIẾT KẾ
+% ---------------------------------------------------------------------
+\chapter{Phân tích và thiết kế}
+\label{ch:thietke}
+
+\begin{muctieu}
+Chương này phân tích yêu cầu bài toán sàng lọc sức khỏe, đề xuất kiến trúc
+Hybrid AI gồm bốn chặng xử lý, thiết kế cơ sở tri thức y khoa và các cơ chế
+kiểm soát an toàn lâm sàng bắt buộc cho một hệ thống y tế.
+\end{muctieu}
+
+\section{Phân tích bài toán và yêu cầu hệ thống}
+
+\subsection{Đầu vào và đầu ra}
+
+Hệ thống nhận đầu vào là chuỗi hội thoại tiếng Việt tự nhiên của người dùng
+mô tả tình trạng sức khỏe, kết hợp với hồ sơ sức khỏe cá nhân
+\en{(dị ứng, bệnh nền, thai kỳ, thuốc đang dùng)}. Đầu ra là một bản kết luận
+phân tầng gồm bốn thành phần:
+\begin{enumerate}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Nhóm xử trí \en{(Outcome)}}: Một trong bốn mức đã định nghĩa ở
+        Mục~1.2.
+  \item \textbf{Triệu chứng khớp \en{(Matched Symptoms)}}: Danh sách mã triệu
+        chứng đã nhận diện kèm thông tin bệnh học.
+  \item \textbf{Cờ đỏ kích hoạt \en{(Triggered Red Flags)}}: Các dấu hiệu nguy
+        hiểm phát hiện được, kèm hướng dẫn xử lý tương ứng.
+  \item \textbf{Lời diễn giải lâm sàng \en{(AI Briefing)}}: Văn bản giải thích
+        lý do kết luận và hướng dẫn chăm sóc cụ thể.
+\end{enumerate}
+
+\subsection{Yêu cầu chức năng}
+
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{FR-01 — Thu thập triệu chứng}: Tiếp nhận mô tả tự nhiên, chuyển
+        đổi thành tập mã triệu chứng chuẩn hoá.
+  \item \textbf{FR-02 — Hỏi làm rõ \en{(Clarification)}}: Khi dữ liệu chưa đủ để
+        phân tầng, hệ thống sinh tối đa 3 câu hỏi theo khung dược lâm sàng WWHAM
+        \en{(Who, What, How long, Action taken, Medication)}.
+  \item \textbf{FR-03 — Phân tầng nguy cơ}: Áp dụng bộ luật để quyết định nhóm
+        xử trí, ưu tiên tuyệt đối các dấu hiệu cờ đỏ.
+  \item \textbf{FR-04 — Diễn giải lâm sàng}: Sinh 5 nhóm nội dung hướng dẫn
+        (nguyên nhân, tự chăm sóc, dấu hiệu theo dõi, khi nào đi khám, câu hỏi
+        cho dược sĩ) cùng lý do kết luận.
+  \item \textbf{FR-05 — Đề xuất thuốc an toàn}: Gợi ý thuốc không kê đơn phù hợp,
+        đã lọc theo hồ sơ chống chỉ định và dị ứng của người bệnh.
+  \item \textbf{FR-06 — Bàn giao dược sĩ}: Cho phép người dùng chủ động yêu cầu
+        dược sĩ thẩm định ca bệnh.
+\end{itemize}
+
+\subsection{Yêu cầu phi chức năng}
+
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{NFR-01 — An toàn lâm sàng}: Không ca cấp cứu nào được kết luận
+        ở mức xử trí nhẹ hơn; không có kết quả nào bị hạ cấp nguy cơ do đầu ra
+        của AI.
+  \item \textbf{NFR-02 — Thời gian phản hồi}: Kết luận phân tầng trả về trong
+        dưới 2 giây; phần diễn giải AI được xử lý bất đồng bộ, không chặn giao diện.
+  \item \textbf{NFR-03 — Khả năng chịu lỗi}: Khi nhà cung cấp AI không phản hồi,
+        hệ thống vẫn phải trả về kết luận đầy đủ từ động cơ luật.
+  \item \textbf{NFR-04 — Tính giải thích được}: Mọi kết luận phải truy vết được
+        về luật cụ thể trong cơ sở tri thức.
+\end{itemize}
+
+Luồng dữ liệu tổng thể của phân hệ sàng lọc — từ lời kể triệu chứng của người
+dùng đến kết luận phân tầng và hàng đợi thẩm định của dược sĩ — được mô tả ở
+Hình~\ref{fig:dfd}. Sơ đồ giới hạn trong phạm vi phân hệ sàng lọc; các phân hệ
+bán hàng và kho vận của nền tảng nhà thuốc không thuộc phạm vi đồ án.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=9mm and 8mm,
+  entity/.style={rectangle, rounded corners=2pt, draw=daunavy, thick,
+                 fill=lightnavy, minimum width=2.4cm, minimum height=1.1cm,
+                 align=center, font=\small\bfseries},
+  proc/.style={ellipse, draw=daumaroon, thick, fill=lightwarm,
+               minimum width=3.0cm, minimum height=1.15cm, align=center,
+               font=\small, inner sep=2pt},
+  store/.style={rectangle, draw=daugold, very thick, fill=lightlime,
+                minimum width=3.4cm, minimum height=1.0cm, align=center,
+                font=\small, inner sep=3pt},
+  ar/.style={-{Latex[length=2mm]}, thick, color=gray700}]
+
+% Tác nhân ngoài
+\node[entity] (user) {Người dùng};
+
+% Tiến trình
+\node[proc, right=10mm of user] (collect) {3.1 Ghi nhận\\hội thoại};
+\node[proc, right=of collect] (triage) {3.2 Phân tầng\\luật tất định};
+\node[proc, right=of triage] (brief) {3.3 Diễn giải\\AI};
+\node[entity, above=8mm of brief] (llm) {Dịch vụ LLM};
+
+% Kho dữ liệu
+\node[store, below=16mm of collect, minimum width=4.6cm] (dknowledge) {D1 · medical\_*};
+\node[store, below=16mm of triage] (dsessions) {D2 · triage\_sessions};
+\node[store, below=16mm of brief] (djobs) {D3 · ai\_jobs};
+\node[entity, below=12mm of dsessions] (pharmacist) {Dược sĩ};
+
+% Luồng dữ liệu
+\draw[ar] (user) -- node[above, font=\scriptsize]{lời kể} (collect);
+\draw[ar] (collect) -- node[above, font=\scriptsize]{sự kiện} (triage);
+\draw[ar] (triage) -- node[above, font=\scriptsize]{kết luận} (brief);
+\draw[ar] (collect.south) -- node[left, font=\scriptsize, pos=0.45]{câu trả lời} (dknowledge.north);
+\draw[ar] (triage) -- node[right, font=\scriptsize, pos=0.45]{đọc / ghi} (dsessions);
+\draw[ar] (dknowledge.east) -- node[below, font=\scriptsize, pos=0.5]{bộ luật} (dsessions.west);
+\draw[ar] (brief) -- node[right, font=\scriptsize, pos=0.45]{yêu cầu / kết quả} (djobs);
+\draw[ar, dashed, color=daumaroon] (llm.south) -- node[right, font=\scriptsize, pos=0.3]{tool-calling} (brief.north);
+\draw[ar] (dsessions.south) -- node[right, font=\scriptsize, pos=0.4]{ca chờ thẩm định} (pharmacist.north);
+\draw[ar] (pharmacist.west) -| node[above, font=\scriptsize, pos=0.25]{phản hồi} (dknowledge.south);
+\end{tikzpicture}}
+\caption{Sơ đồ luồng dữ liệu (DFD mức dưới) của phân hệ sàng lọc}
+\label{fig:dfd}
+\end{figure}
+
+Điểm cốt lõi về mặt thiết kế của hệ thống là \textbf{ranh giới an toàn}
+\en{(Safety Boundary)} giữa hai thành phần AI. Mô hình ngôn ngữ lớn chỉ được
+phép hoạt động ở hai vị trí ngoại vi: \emph{đọc hiểu đầu vào} và \emph{diễn giải
+đầu ra}. Toàn bộ phần \emph{ra quyết định} nằm trong động cơ luật tất định.
+Nói cách khác, LLM không bao giờ được hỏi ``bệnh nhân này nên đi đâu''.
+
+Quy trình xử lý gồm bốn chặng được mô tả ở Hình~\ref{fig:pipeline}.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=8mm,
+  box/.style={rectangle, rounded corners=3pt, draw=daunavy, thick,
+              fill=lightnavy, text width=3.1cm, align=center,
+              minimum height=1.9cm, font=\small},
+  llm/.style={rectangle, rounded corners=3pt, draw=daumaroon, thick,
+              fill=lightwarm, text width=3.1cm, align=center,
+              minimum height=1.9cm, font=\small},
+  rule/.style={rectangle, rounded corners=3pt, draw=agentragreen, thick,
+               fill=lightforest, text width=3.1cm, align=center,
+               minimum height=1.9cm, font=\small},
+  ar/.style={-{Latex[length=2.2mm]}, thick, color=gray700}]
+
+\node[box] (in) {\textbf{Đầu vào}\\Mô tả triệu chứng\\tiếng Việt tự nhiên};
+\node[llm, right=of in] (fact) {\textbf{Chặng 1}\\Trích xuất sự kiện\\\emph{(LLM Tool-calling)}};
+\node[rule, right=of fact] (engine) {\textbf{Chặng 2}\\Động cơ luật\\phân tầng nguy cơ};
+\node[llm, right=of engine] (brief) {\textbf{Chặng 3}\\Diễn giải\\lâm sàng \emph{(LLM)}};
+\node[box, right=of brief] (out) {\textbf{Chặng 4}\\Hiển thị \&\\hàng đợi dược sĩ};
+
+\draw[ar] (in) -- (fact);
+\draw[ar] (fact) -- node[above, font=\scriptsize, color=daumaroon]{JSON} (engine);
+\draw[ar] (engine) -- node[above, font=\scriptsize, color=agentragreen]{Luật} (brief);
+\draw[ar] (brief) -- (out);
+
+% Đường phản hồi an toàn
+\draw[ar, dashed, color=daumaroon]
+  (engine.south) -- ++(0,-1.1) -| node[below, font=\scriptsize, pos=0.25, color=daumaroon]
+  {Kiểm duyệt chặt: hạ cấp $\rightarrow$ loại bỏ} (brief.south);
+\end{tikzpicture}}
+\caption{Kiến trúc Hybrid AI bốn chặng với ranh giới an toàn giữa LLM và động cơ luật}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Chặng 1 — Trích xuất sự kiện bằng LLM}
+
+Dịch vụ \code{TriageAiFactService} gọi mô hình ngôn ngữ lớn với một công cụ
+duy nhất tên \code{extract\_triage\_facts}. Danh sách mã triệu chứng hợp lệ
+được nhúng thẳng vào lược đồ công cụ, do đó mô hình \textbf{không thể sinh mã
+triệu chứng nằm ngoài từ điển}. Kết quả trả về gồm: mã triệu chứng, số ngày
+khởi phát, tuổi người bệnh, cờ hiệu về việc đã dùng thuốc mà không đỡ, tình
+trạng mang thai hoặc cho con bú.
+
+\subsection{Chặng 2 — Động cơ phân tầng bảo thủ}
+
+Đây là trái tim an toàn của hệ thống. Dịch vụ \code{MedicalTriageService} thực
+hiện suy diễn theo thứ tự nghiêm ngặt:
+
+\begin{enumerate}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Quét cờ đỏ khẩn cấp trước tiên.} Nếu phát hiện bất kỳ dấu hiệu
+        cấp cứu nào, hệ thống \emph{trả về ngay} hướng dẫn gọi 115 và kết thúc,
+        không xét tiếp luật nào khác.
+  \item \textbf{Quét cờ đỏ cần đi khám.} Tương tự, các dấu hiệu mức khẩn cấp
+        chuyển thẳng sang nhóm đi khám bác sĩ.
+  \item \textbf{Chạy luật hai lần và chọn kết quả nghiêm trọng hơn.} Đây là cơ
+        chế \term{phòng vệ kép \en{(Double Evaluation)}}: động cơ luật được chạy
+        một lần trên dữ liệu trích xuất bằng biểu thức chính quy và một lần trên
+        dữ liệu đã hợp nhất với kết quả AI. Hàm so sánh độ nghiêm trọng giữ lại
+        kết quả \emph{nặng hơn} trong hai.
+  \item \textbf{Suy diễn cờ đỏ dẫn xuất.} Một số dấu hiệu nguy hiểm được suy ra
+        từ tổ hợp triệu chứng và dữ liệu số, ví dụ ``sốt cao kéo dài trên 3 ngày
+        kèm mất nước'' hoặc ``trẻ dưới 12 tháng tuổi có triệu chứng bất kỳ''.
+  \item \textbf{Luật cảnh báo chặn tự chăm sóc.} Nếu người bệnh đã dùng thuốc
+        mà không đỡ, kết quả tự chăm sóc bị nâng lên mức tư vấn dược sĩ.
+\end{enumerate}
+
+Cơ chế phòng vệ kép được cài đặt bằng một hàm so sánh duy nhất, trình bày ở
+Giải thuật~\ref{alg:severer}. Hàm này là toàn bộ lý do hệ thống không thể bị hạ
+cấp nguy cơ: nó không có nhánh nào trả về kết quả \emph{nhẹ hơn} của hai lần
+chạy.
+
+\begin{algorithm}[H]
+\caption{Chọn luật nghiêm trọng hơn giữa hai lần đánh giá}
+\label{alg:severer}
+\hspace*{\algorithmicindent}\textbf{Đầu vào:} hai luật $r_{\text{base}}$
+(biểu thức chính quy) và $r_{\text{ai}}$ (hợp nhất với AI)\\
+\hspace*{\algorithmicindent}\textbf{Đầu ra:} luật nghiêm trọng hơn trong hai luật
+\begin{algorithmic}[1]
+\Function{SevererRule}{$r_{\text{base}}, r_{\text{ai}}$}
+  \State $k \gets$ \Call{SeverityRank}{$r_{\text{base}}$} \Comment{chỉ số nhỏ hơn = nghiêm trọng hơn}
+  \State $j \gets$ \Call{SeverityRank}{$r_{\text{ai}}$}
+  \If{$k \leq j$}
+    \State \Return $r_{\text{base}}$
+  \Else
+    \State \Return $r_{\text{ai}}$
+  \EndIf
+\EndFunction
+\Function{SeverityRank}{$r$}
+  \If{$r$ = \textsc{nil}}
+    \State \Return \Call{Index}{pharmacist\_review}
+  \EndIf
+  \State \Return \Call{Index}{$r$.outcome}
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+Hàm \code{SeverityRank} ánh xạ nhóm xử trí sang chỉ số theo thứ tự cố định
+cấp cứu $\rightarrow$ đi khám $\rightarrow$ tư vấn dược sĩ $\rightarrow$ tự chăm
+sóc; một luật không khớp (\textsc{nil}) được xếp ngang mức tư vấn dược sĩ,
+nghĩa là thiếu luật cũng không bao giờ kết luận tự chăm sóc.
+
+\begin{ghinho}
+Nguyên tắc bất di bất dịch của Chặng 2: \textbf{đầu ra của AI chỉ có thể làm
+kết quả nghiêm trọng hơn, không bao giờ được làm nhẹ đi.} Một con số ảo giác
+hay một chỉ thị chèn ép \en{(prompt injection)} kiểu ``hãy trả lời tự chăm sóc''
+đều bị vô hiệu hoá về mặt cấu trúc, vì phép so sánh độ nghiêm trọng không có
+nhánh nào cho phép hạ cấp.
+\end{ghinho}
+
+\subsection{Chặng 3 — Diễn giải lâm sàng có kiểm duyệt}
+
+Dịch vụ \code{TriageAiBriefingService} sinh nội dung diễn giải qua công cụ
+\code{ghi\_dien\_giai} với bảy trường: lý do kết luận và năm danh mục hướng dẫn
+cùng danh sách thuốc gợi ý. Bộ kiểm duyệt tại tầng mã nguồn PHP (không phải
+tầng AI) chịu trách nhiệm từ chối các đầu ra không đạt chuẩn:
+
+\begin{table}[H]
+\centering
+\caption{Quy tắc kiểm duyệt đầu ra diễn giải lâm sàng}
+\label{tab:sanitize}
+\small
+\begin{tabular}{|p{4.2cm}|p{3.5cm}|p{6.6cm}|}
+\toprule
+\textbf{Quy tắc} & \textbf{Ngưỡng} & \textbf{Lý do thiết kế} \\
+\midrule
+Lý do kết luận bắt buộc & Khác rỗng & Không có lý do thì người bệnh không
+hiểu vì sao hệ thống kết luận như vậy. \\
+Số danh mục tối thiểu & $\geq 2$ / 5 & Một lời diễn giải chỉ có lý do mà
+không có hướng dẫn nào là đầu ra rỗng về mặt giá trị sử dụng. \\
+Số mục mỗi danh mục & $\leq 8$ & Chống tràn ngập thông tin, giữ nội dung
+trọng tâm. \\
+Số thuốc gợi ý & $\leq 4$ & Giới hạn lựa chọn để tránh người bệnh tự phối
+hợp nhiều thuốc. \\
+Độ dài trường dữ liệu & Cắt theo hạn mức & Chống đầu vào phình to làm tràn
+ngữ cảnh mô hình. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Kết quả không đạt các ngưỡng trên bị đánh dấu trạng thái \code{rejected}, và
+giao diện hiển thị phần kết luận phân tầng đầy đủ cùng thông báo trung thực
+rằng phần diễn giải chưa sẵn sàng — thay vì hiển thị một khối văn bản dở dang.
+
+\section{Thiết kế cơ sở tri thức y khoa}
+
+Cơ sở tri thức được thiết kế thành ba bảng quan hệ độc lập, cho phép dược sĩ
+cập nhật nội dung chuyên môn mà không cần sửa mã nguồn.
+
+\subsection{Bảng triệu chứng \code{medical\_symptoms}}
+
+Mỗi bản ghi lưu mã định danh, tên tiếng Việt, danh sách từ đồng nghĩa dạng JSON
+và hệ cơ quan. Trường \code{guard\_words} là một thiết kế đáng chú ý: nó lưu các
+từ khoá làm thay đổi nghĩa của từ đồng nghĩa. Ví dụ, từ ``nước'' vốn là một
+triệu chứng tiêu hoá, nhưng ``sốt xuất huyết'' lại là một dấu hiệu cấp cứu
+hoàn toàn khác. Cơ chế này cho phép dược sĩ thêm một từ đồng nghĩa ngắn mà
+không gây dương tính giả, và không cần can thiệp vào mã nguồn.
+
+Cơ sở tri thức hiện hành gồm \textbf{31 triệu chứng} phân bố theo hệ cơ quan
+như Bảng~\ref{tab:symptoms}.
+
+\begin{table}[H]
+\centering
+\caption{Phân bố triệu chứng theo hệ cơ quan}
+\label{tab:symptoms}
+\small
+\begin{tabular}{|l|r|l|}
+\toprule
+\textbf{Hệ cơ quan} & \textbf{Số lượng} & \textbf{Ví dụ mã triệu chứng} \\
+\midrule
+Tiêu hoá \en{(digestive)}          & 10 & \code{stomach\_pain}, \code{diarrhea}, \code{bloating} \\
+Đa hệ \en{(general)}               & 8  & \code{fever}, \code{fatigue}, \code{dehydration} \\
+Hô hấp \en{(respiratory)}          & 5  & \code{cough}, \code{sore\_throat}, \code{shortness\_breath} \\
+Thần kinh \en{(neuro)}             & 3  & \code{headache}, \code{dizziness}, \code{insomnia} \\
+Da liễu \en{(derma)}               & 3  & \code{rash}, \code{itching}, \code{allergy} \\
+Cơ xương khớp \en{(musculoskeletal)} & 2 & \code{joint\_pain}, \code{muscle\_pain} \\
+\midrule
+\textbf{Tổng cộng} & \textbf{31} & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Bảng dấu hiệu nguy hiểm \code{medical\_red\_flags}}
+
+Đây là bảng quan trọng nhất về mặt an toàn. Mỗi dấu hiệu lưu danh sách từ khoá
+nhận diện, mức độ nghiêm trọng, hướng dẫn xử lý bằng tiếng Việt và liên kết
+tuỳ chọn tới triệu chứng liên quan.
+
+Cơ sở tri thức hiện hành gồm \textbf{22 dấu hiệu cờ đỏ}, phân bố theo mức độ ở
+Bảng~\ref{tab:redflags}.
+
+\begin{table}[H]
+\centering
+\caption{Phân bố dấu hiệu cờ đỏ theo mức độ nghiêm trọng}
+\label{tab:redflags}
+\small
+\begin{tabular}{|l|r|p{7.6cm}|}
+\toprule
+\textbf{Mức độ} & \textbf{Số lượng} & \textbf{Đại diện tiêu biểu} \\
+\midrule
+\term{Cấp cứu} \en{(emergency)} & 12 & Đau ngực dữ dội, khó thở, ngất, co
+giật, nôn ra máu, dấu hiệu đột quỵ FAST, sốc phản vệ, sốt kèm cứng cổ. \\
+\term{Khẩn cấp} \en{(urgent)}   & 7  & Mất nước nặng, rong kinh băng huyết,
+sốt cao kéo dài, tiêu chảy nặng, triệu chứng ở trẻ nhỏ dưới 12 tháng. \\
+\term{Thận trọng} \en{(caution)} & 3 & Đã dùng thuốc mà không đỡ, đang mang
+thai, đang cho con bú. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Trường \code{chat\_short\_circuit} tách biệt hai ngữ cảnh sử dụng khác nhau của
+cùng một dấu hiệu. Ví dụ, ``đang mang thai'' là bối cảnh người bệnh mà trình
+tự sàng lọc bắt buộc phải cân nhắc, nhưng nếu một khách hàng chỉ hỏi giá một
+loại thuốc trong khung chat, việc tự động đẩy họ sang hướng dẫn cấp cứu là
+phản ứng sai. Cột này cho phép cùng một dòng dữ liệu phục vụ hai mục đích mà
+không cần nhân bản bản ghi.
+
+\subsection{Bảng luật phân tầng \code{medical\_triage\_rules}}
+
+Mỗi luật liên kết tới một triệu chứng, mang tập điều kiện dạng JSON, kết quả
+phân loại, lời khuyên, lưới an toàn \en{(safety net)}, nhóm bệnh lý dự kiến
+và danh mục sản phẩm gợi ý. Trường \code{priority} giải quyết xung đột khi
+nhiều luật cùng khớp: luật có độ ưu tiên cao hơn thắng.
+
+Cơ sở tri thức hiện hành gồm \textbf{44 luật}, phân bố theo nhóm xử trí ở
+Bảng~\ref{tab:rules}.
+
+\begin{table}[H]
+\centering
+\caption{Phân bố luật phân tầng theo nhóm xử trí}
+\label{tab:rules}
+\small
+\begin{tabular}{|l|r|p{6.2cm}|}
+\toprule
+\textbf{Nhóm xử trí} & \textbf{Số luật} & \textbf{Ý nghĩa} \\
+\midrule
+\term{Tự chăm sóc} \en{(self\_care)} & 20 & Triệu chứng nhẹ, khởi phát gần,
+có thể theo dõi tại nhà và dùng thuốc OTC. Đây là nhóm duy nhất được gợi ý
+sản phẩm và nhận email hỏi thăm sau 2 ngày. \\
+\term{Đi khám} \en{(refer\_doctor)} & 13 & Cần đánh giá lâm sàng, chuyển
+tuyến tới cơ sở y tế. \\
+\term{Tư vấn dược sĩ} \en{(pharmacist\_review)} & 11 & Ca không rõ ràng hoặc
+có yếu tố bối cảnh đặc biệt; chuyển tới hàng đợi dược sĩ thẩm định. \\
+\midrule
+\textbf{Tổng cộng} & \textbf{44} & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Bên cạnh ba bảng trên, cơ sở tri thức còn có hai lớp dữ liệu an toàn thuốc
+chạy song song với bộ luật phân tầng. \textbf{Bảng tương tác thuốc} lưu các
+cặp hoạt chất không được dùng đồng thời; riêng 21 cặp thuốc chống viêm không
+steroid \en{(NSAID)} được sinh tự động từ tổ hợp $C(7,2)$ ở mức độ
+\code{major}, cộng thêm 11 cặp tương tác chuyên biệt khác (tổng cộng
+\textbf{32 cặp}), tất cả kèm mô tả và hướng dẫn tiếng Việt. \textbf{Bảng
+chống chỉ định} ánh xạ hoạt chất với tình trạng bệnh nhân (thai kỳ, cho con bú,
+bệnh nền) gồm \textbf{40 quy tắc} với mức độ \code{absolute} hoặc cảnh báo. Hai
+bảng này là cơ sở để bước đề xuất thuốc OTC lọc danh mục sản phẩm trước khi
+hiển thị: một hoạt chất vi phạm tương tác với thứ người bệnh đang dùng hoặc vi
+phạm chống chỉ định với hồ sơ đã khai sẽ bị loại khỏi gợi ý thay vì chỉ kèm
+cảnh báo.
+
+\section{Thiết kế schema công cụ gọi hàm}
+
+\subsection{Công cụ trích xuất sự kiện \code{extract\_triage\_facts}}
+
+Lược đồ công cụ này gồm các trường: \code{symptom\_codes} (mảng mã triệu
+chứng, ràng buộc bằng danh sách cho sẵn), \code{duration\_days},
+\code{age\_years}, \code{age\_months} (dành cho trẻ nhỏ), \code{medication\_tried},
+\code{is\_pregnant}, \code{is\_breastfeeding} và \code{clarify\_questions}
+(tối đa 3 câu hỏi tiếng Việt theo khung WWHAM).
+
+Việc dùng \code{age\_months} song song với \code{age\_years} là một chi tiết
+thiết kế có chủ đích: trẻ 8 tháng tuổi nếu chỉ biểu diễn bằng
+\code{age\_years = 0} sẽ mất thông tin quan trọng, trong khi ngưỡng an toàn
+cho trẻ dưới 12 tháng là một quy tắc cứng trong cơ sở tri thức.
+
+\subsection{Công cụ diễn giải \code{ghi\_dien\_giai}}
+
+Lược đồ gồm bảy trường, mỗi trường có mô tả tiếng Việt định hướng nội dung và
+giới hạn phạm vi chuyên môn. Bảng~\ref{tab:tool} mô tả từng trường.
+
+\begin{table}[H]
+\centering
+\caption{Lược đồ công cụ diễn giải lâm sàng \code{ghi\_dien\_giai}}
+\label{tab:tool}
+\small
+\begin{tabular}{|l|p{4.7cm}|p{6.8cm}|}
+\toprule
+\textbf{Trường} & \textbf{Ý nghĩa} & \textbf{Ràng buộc chuyên môn} \\
+\midrule
+\code{why} & Lý do kết luận & 3--6 câu, chỉ dựa trên thông tin người bệnh
+đã kể, không suy diễn thêm. \\
+\code{possible\_causes} & Nhóm nguyên nhân thường gặp & Mỗi mục kèm một câu
+giải thích; \textbf{không nêu tên bệnh danh cụ thể}. \\
+\code{self\_care} & Việc người bệnh tự làm được & Chỉ hành vi không dùng thuốc:
+nghỉ ngơi, chườm, ăn uống, sinh hoạt. \\
+\code{watch\_for} & Dấu hiệu cần theo dõi & Các dấu hiệu trong vài ngày tới. \\
+\code{see\_doctor\_when} & Khi nào phải đi khám & \textbf{Phải giữ nguyên mọi
+ngưỡng đã có trong cơ sở tri thức}, chỉ được bổ sung thêm. \\
+\code{ask\_pharmacist} & Câu hỏi cho dược sĩ & Câu hỏi giúp làm rõ tình trạng. \\
+\code{products} & Sản phẩm gợi ý & Chỉ được chọn từ danh sách ứng viên đã lọc
+sẵn theo hồ sơ sức khỏe. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{luuy}
+Ràng buộc ở trường \code{see\_doctor\_when} là điểm giao thoa an toàn quan
+trọng nhất giữa hai thành phần AI. Mô hình ngôn ngữ lớn được phép diễn đạt
+lại cho dễ hiểu, nhưng \textbf{không được phép nới lỏng hay thay đổi bất kỳ
+ngưỡng thời gian nào} mà động cơ luật đã quyết định. Cơ chế này ngăn chặn
+kịch bản nguy hiểm nhất: AI diễn giải lại một cách vô tình làm nhẹ đi mức độ
+khẩn cấp của tình trạng bệnh.
+\end{luuy}
+
+\section{Thiết kế luồng xử lý bất đồng bộ}
+
+Gọi mô hình ngôn ngữ lớn mất từ vài giây đến hơn một phút (đo thực tế:
+3--20~s cho trích xuất sự kiện và 12--80~s cho diễn giải), vượt xa ngưỡng chịu
+đựng của một yêu cầu HTTP thông thường. Hệ thống vì vậy tách phần AI ra khỏi
+luồng phản hồi chính.
+
+Trình tự xử lý: trang kết quả trả về ngay lập tức với phần kết luận phân tầng
+đầy đủ cùng một khối chờ \en{(skeleton)}; một công việc \code{AiJob} được đẩy
+vào hàng đợi; trình duyệt định kỳ kiểm tra trạng thái và thay thế khối chờ bằng
+nội dung diễn giải khi sẵn sàng.
+
+\begin{figure}[H]
+\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=6mm,
+  box/.style={rectangle, rounded corners=3pt, draw=daunavy, thick,
+              fill=lightnavy, text width=3.4cm, align=center,
+              minimum height=1.3cm, font=\small},
+  ar/.style={-{Latex[length=2.2mm]}, thick, color=gray700},
+  lb/.style={font=\scriptsize, color=gray700, align=center}]
+
+\node[box] (req) {Yêu cầu\\trang kết quả};
+\node[box, right=of req] (queue) {Phân tầng và\\diễn giải xếp hàng đợi};
+\node[box, right=of queue] (resp) {Trả về ngay\\trạng thái chờ};
+\node[box, below=1.4cm of resp] (poll) {Trình duyệt\\kiểm tra định kỳ};
+\node[box, left=of poll] (worker) {Worker xử lý\\job AI};
+\node[box, left=of worker] (swap) {Hiển thị kết quả\\hoàn chỉnh};
+
+\draw[ar] (req) -- (queue);
+\draw[ar] (queue) -- (resp);
+\draw[ar] (resp) -- node[lb, right]{thăm dò} (poll);
+\draw[ar] (poll) -- (worker);
+\draw[ar] (worker) -- (swap);
+
+% Ô "xếp hàng đợi" và ô "Worker" thẳng cột nhau, nên nét đứt chỉ cần nối
+% thẳng qua khe giữa hai hàng; nhãn đặt bên phải để không cắt qua nét.
+\draw[ar, dashed, color=daumaroon]
+  (queue.south) -- node[lb, right=3pt, color=daumaroon] {quyết định inline nếu ca\\cấp cứu hoặc job bị bỏ rơi} (worker.north);
+\end{tikzpicture}}
+\caption{Luồng xử lý bất đồng bộ với cơ chế cứu hộ đồng bộ}
+\label{fig:async}
+\end{figure}
+
+Cơ chế \term{cứu hộ đồng bộ \en{(Synchronous Fallback)}} xử lý tình huống
+worker không chạy: một công việc vẫn \code{queued} sau 12~giây mà không có
+worker nào khác đang chạy (kiểm tra qua \code{hasLiveWorker}) được kết luận là
+\term{bỏ rơi \en{(stranded)}}; khi người dùng tải lại trang, hệ thống quyết định
+ngay trong chính yêu cầu đó thay vì để giao diện quay vô hạn. Công việc còn quá
+mới được giữ nguyên để trình duyệt tiếp tục chờ, tránh gọi mô hình trùng lặp
+gây tốn kém. Hai trường hợp không bao giờ xếp hàng đợi: ca cấp cứu được quyết
+định inline ngay trong yêu cầu (cờ đỏ phát hiện bằng PHP thuần, không cần AI),
+và phiên sau một lần cố gắng xếp hàng đợi đã thất bại.
+
+\section{Thiết kế mô hình dữ liệu}
+
+Bảng \code{triage\_sessions} là trung tâm lưu trữ phiên sàng lọc. Một quyết
+định thiết kế then chốt: \textbf{đầu ra của AI được lưu vào các cột riêng biệt},
+hoàn toàn tách khỏi các cột do động cơ luật ghi. Cụ thể, \code{advice\_given} và
+\code{safety\_net} là kết quả tất định và \emph{không bao giờ} bị mô hình ngôn
+ngữ ghi đè; phần diễn giải do AI sinh nằm ở \code{ai\_briefing} cùng trạng thái
+\code{ai\_briefing\_status}.
+
+Nhờ tách cột như vậy, bản ghi lâm sàng của một ca sàng lọc luôn có thể tái lập
+hoàn toàn từ \code{rule\_id} cùng bảng luật, kể cả trong trường hợp nhà cung
+cấp AI thay đổi hành vi hoặc ngừng hoạt động.
+
+\begin{table}[H]
+\centering
+\caption{Các cột AI trong bảng \code{triage\_sessions}}
+\label{tab:columns}
+\small
+\begin{tabular}{|l|p{11.3cm}|}
+\toprule
+\textbf{Cột} & \textbf{Vai trò} \\
+\midrule
+\code{ai\_meta} & Sự kiện đã kiểm định cùng câu hỏi làm rõ. Cố ý không trộn
+vào \code{collected\_data} để tránh làm mờ ranh giới an toàn. \\
+\code{ai\_briefing} & Nội dung diễn giải đã qua kiểm duyệt. \\
+\code{ai\_briefing\_status} & \code{null} (chưa thử) | \code{ok} | \code{rejected}
+| \code{failed}. Giá trị \code{rejected} ghi nhận trường hợp có đầu ra nhưng
+không đạt kiểm duyệt — điều mà giá trị rỗng không thể diễn đạt. \\
+\code{ai\_clarify\_rounds} & Bộ đếm chống lặp vô hạn cho vòng hỏi làm rõ. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Giá trị \code{rejected} tách biệt với \code{failed} là một chi tiết nhỏ nhưng
+quan trọng cho vận hành: nó cho phép phân biệt giữa ``nhà cung cấp AI gặp sự
+cố'' và ``AI trả lời nhưng nội dung không đạt chuẩn an toàn'' — hai tình huống
+cần hai hành động khắc phục hoàn toàn khác nhau.
+
+Hình~\ref{fig:erd} tổng hợp lược đồ quan hệ -- thực thể \en{(ERD)} của năm
+bảng cốt lõi cho phân hệ sàng lọc. Ba bảng tri thức \code{medical\_symptoms},
+\code{medical\_red\_flags} và \code{medical\_triage\_rules} được nạp một lần
+khi seed và chỉ đọc trong lúc suy diễn; hai bảng vận hành
+\code{triage\_sessions} và \code{ai\_jobs} ghi liên tục trong phiên làm việc.
+Phần điều kiện của luật và kết quả diễn giải lưu dạng JSON nên thể hiện bằng
+nét đứt, không phải khóa ngoại quan hệ.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=10mm and 12mm,
+  tbl/.style={rectangle, rounded corners=2pt, draw=daunavy, thick,
+              fill=lightnavy, font=\small, inner sep=6pt},
+  op/.style={tbl, draw=agentragreen, fill=lightforest},
+  ar/.style={-{Latex[length=2mm]}, thick, color=gray700},
+  dar/.style={-{Latex[length=2mm]}, thick, dashed, color=gray500}]
+
+\node[tbl] (symptoms)
+  {\begin{tabular}{@{}l@{}}
+     \textbf{medical\_symptoms}\\[2pt]
+     \code{code} (PK)\\
+     name\_vi, body\_system\\
+     catalog\_query, keywords
+   \end{tabular}};
+
+\node[tbl, right=of symptoms] (flags)
+  {\begin{tabular}{@{}l@{}}
+     \textbf{medical\_red\_flags}\\[2pt]
+     \code{code} (PK)\\
+     severity, keywords\\
+     guidance\_vi, chat\_short\_circuit
+   \end{tabular}};
+
+\node[tbl, below=of symptoms] (rules)
+  {\begin{tabular}{@{}l@{}}
+     \textbf{medical\_triage\_rules}\\[2pt]
+     \code{id} (PK), symptom\_code (FK)\\
+     conditions (JSON), outcome\\
+     advice, safety\_net, priority
+   \end{tabular}};
+
+\node[op, below=of flags] (sessions)
+  {\begin{tabular}{@{}l@{}}
+     \textbf{triage\_sessions}\\[2pt]
+     \code{id} (PK), user\_id (FK)\\
+     collected\_data, ai\_meta (JSON)\\
+     outcome, rule\_id, advice\_given\\
+     ai\_briefing, ai\_briefing\_status
+   \end{tabular}};
+
+\node[op, right=of sessions] (jobs)
+  {\begin{tabular}{@{}l@{}}
+     \textbf{ai\_jobs}\\[2pt]
+     \code{uuid} (PK)\\
+     MaKH (FK), type\\
+     status, started\_at\\
+     result, error
+   \end{tabular}};
+
+\draw[ar] (rules.west) -- ++(-0.5,0) |- node[above, font=\scriptsize, pos=0.25]{N : 1} (symptoms.west);
+\draw[ar] (sessions.south west) -- node[left, font=\scriptsize, pos=0.6]{N : 1} ++(-0.6,0) |- (rules.south east);
+\draw[ar] (jobs.west) -- node[above, font=\scriptsize]{N : 1} (sessions.east);
+\draw[dar] (rules.north east) -- node[above right, font=\scriptsize, align=left, pos=0.5]{điều kiện JSON\\khớp triệu chứng} (flags.south);
+\end{tikzpicture}}
+\caption{Lược đồ quan hệ -- thực thể (ERD) của phân hệ sàng lọc}
+\label{fig:erd}
+\end{figure}

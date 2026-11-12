@@ -1,0 +1,251 @@
+% ---------------------------------------------------------------------
+%  CHƯƠNG 4 — CÀI ĐẶT VÀ THỰC NGHIỆM
+% ---------------------------------------------------------------------
+\chapter{Cài đặt và thực nghiệm}
+\label{ch:caidat}
+
+\begin{muctieu}
+Chương này mô tả môi trường công nghệ triển khai, cách thức hiện thực hóa
+các dịch vụ cốt lõi trong hệ thống Hybrid AI, kiến trúc xử lý công việc bất
+đồng bộ và minh hoạ các giao diện người dùng thực tế đã được chụp từ hệ thống.
+\end{muctieu}
+
+\section{Môi trường công nghệ triển khai}
+
+Hệ thống được phát triển và vận hành thực nghiệm trên máy trạm với cấu hình:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Phần cứng}: CPU AMD Ryzen 7 / Intel Core i7, 16~GB RAM, ổ cứng SSD NVMe.
+  \item \textbf{Hệ điều hành}: Microsoft Windows 11 Pro 64-bit, môi trường thực
+        thi dòng lệnh Git Bash (POSIX shell).
+  \item \textbf{Ngôn ngữ và Framework máy chủ}: PHP 8.4 (yêu cầu tối thiểu 8.2),
+        Laravel Framework 13.9 sử dụng kiến trúc MVC và Eloquent ORM.
+  \item \textbf{Cơ sở dữ liệu}: MySQL 8.0 với bảng mã UTF-8 đầy đủ (\code{utf8mb4}),
+        lập chỉ mục kết hợp trên các trường trạng thái và độ ưu tiên.
+  \item \textbf{Giao diện người dùng}: Blade Template Engine, Tailwind CSS 3.1,
+        Vite 6.0 và Chart.js 4.4.
+  \item \textbf{Cổng giao tiếp AI}: Dịch vụ tương thích OpenAI Chat Completions
+        API với mô hình đa phương thức, hỗ trợ gọi công cụ (\code{function
+        calling}) và cơ chế chuyển đổi dự phòng giữa nhà cung cấp chính/phụ.
+\end{itemize}
+
+\section{Hiện thực hóa các dịch vụ cốt lõi}
+
+Toàn bộ logic nghiệp vụ được đóng gói trong các lớp Service chuyên biệt, đặt
+tại thư mục \code{app/Services/}.
+
+\subsection{Dịch vụ trích xuất sự kiện \code{TriageAiFactService}}
+
+Dịch vụ này gửi chuỗi mô tả của người bệnh tới mô hình ngôn ngữ cùng lược đồ
+công cụ \code{extract\_triage\_facts}. Danh sách mã triệu chứng được giới hạn
+chặt chẽ bằng tham số \code{\$allowedCodes} lấy từ bảng
+\code{medical\_symptoms}. Trước khi gọi mô hình, phương thức \code{knownFacts}
+tự nạp các dữ kiện hồ sơ người dùng đã khai (tuổi, thai kỳ, cho con bú, đã
+dùng thuốc) để đưa vào lời nhắc, tránh hỏi lại người bệnh những thông tin hệ
+thống đã có. Toàn bộ gọi mô hình nằm trong khối \code{try/catch}: mọi lỗi
+nhà cung cấp chỉ được ghi log và trả về \code{null} để luồng luật tất định
+tiếp tục, như Mã nguồn~\ref{lst:fact} minh hoạ.
+
+\begin{lstlisting}[language=PHP, caption={Trích xuất sự kiện lâm sàng qua Tool-calling.}, label={lst:fact}]
+public function extract(
+    TriageSession $session,
+    string $text,
+    array $allowedCodes,
+    array $wizardTranscript = []
+): ?array {
+    if (! $this->isEnabled() || trim($text) === '') {
+        return null;
+    }
+
+    try {
+        $known = $this->knownFacts($session, $text);
+
+        $response = $this->callProvider($this->provider(), [
+            ['role' => 'system', 'content' => $this->systemPrompt()],
+            ['role' => 'user', 'content' => $this->buildUserMessage($session, $text, $wizardTranscript, $known['prompt'])],
+        ], [
+            'functions' => [$this->toolSchema($allowedCodes)],
+            'function_call' => 'auto',
+        ]);
+
+        $raw = $this->decodeToolCall($response);
+
+        if ($raw === null) {
+            return null;
+        }
+
+        return $this->validate($raw, $allowedCodes, $known['topics'],
+            $this->deniedSymptomTerms($session));
+    } catch (\Throwable $exception) {
+        Log::warning('Triage AI fact extraction failed');
+
+        return null;
+    }
+}
+\end{lstlisting}
+
+\subsection{Động cơ suy diễn bảo thủ \code{MedicalTriageService}}
+
+Trái tim của hệ thống là phương thức \code{resolveOutcomeWithAi}, trình bày
+tại Mã nguồn~\ref{lst:evaluate}. Động cơ thực hiện đánh giá hai lần: một lần
+trên các sự kiện rút trích từ biểu thức chính quy cơ bản (\code{\$baseRule})
+và một lần trên dữ liệu hợp nhất với AI (\code{\$aiRule}).
+
+\begin{lstlisting}[language=PHP, caption={Cơ chế phòng vệ kép đảm bảo an toàn lâm sàng.}, label={lst:evaluate}]
+protected function resolveOutcomeWithAi(
+    TriageSession $session,
+    string $text,
+    Collection $symptoms,
+    array $facts
+): array {
+    $baseRule = $this->resolveRule($symptoms, $facts);
+    $factService = app(TriageAiFactService::class);
+
+    if (!$factService->isEnabled()) {
+        return ['rule' => $baseRule, 'symptoms' => $symptoms, 'ai' => null];
+    }
+
+    $aiFacts = $factService->extract($session, $text,
+        $this->symptomDictionary()->pluck('code')->all(),
+        $this->wizardTranscript($session)
+    );
+
+    if ($aiFacts === null) {
+        return ['rule' => $baseRule, 'symptoms' => $symptoms, 'ai' => null];
+    }
+
+    $aiSymptoms = $symptoms
+        ->concat($this->symptomDictionary()->whereIn('code', $aiFacts['symptom_codes']))
+        ->unique('MaTC')->values();
+
+    $aiRule = $this->resolveRule($aiSymptoms,
+        $factService->mergeConservatively($facts, $aiFacts));
+
+    // |Nguyên tắc then chốt: Giữ lại luật có mức độ nghiêm trọng hơn|
+    $winner = $this->severerRule($baseRule, $aiRule);
+
+    return [
+        'rule' => $winner,
+        'symptoms' => $aiSymptoms,
+        'ai' => ['status' => 'ok', 'winning_outcome' => $winner?->outcome]
+    ];
+}
+\end{lstlisting}
+
+\subsection{Dịch vụ diễn giải và bộ kiểm duyệt \code{TriageAiBriefingService}}
+
+Dịch vụ \code{TriageAiBriefingService} chịu trách nhiệm soạn thảo văn bản giải
+thích chi tiết sau khi kết luận phân tầng đã được xác định. Điểm cốt lõi là
+bộ kiểm duyệt \code{sanitize} tại tầng ứng dụng (Mã nguồn~\ref{lst:sanitize}):
+
+\begin{lstlisting}[language=PHP, caption={Bộ kiểm duyệt loại bỏ các kết quả AI không đạt chuẩn.}, label={lst:sanitize}]
+protected function sanitize(array $raw, array $candidates, TriageSession $session): ?array
+{
+    $why = $this->cleanWhy($raw['why'] ?? '');
+
+    $briefing = ['why' => $why];
+
+    foreach (self::SECTIONS as $section) {
+        $briefing[$section] = $this->cleanList($raw[$section] ?? null);
+    }
+
+    // |Id sản phẩm được giao với danh mục ứng viên từ catalogue,
+    // mô hình không thể gán tên hay giá thuốc tùy ý|
+    $briefing['products'] = $this->cleanProducts($raw['products'] ?? null,
+        $candidates, $session);
+
+    // |Loại bỏ hoàn toàn nếu thiếu lý do hoặc không đủ 2/5 danh mục hướng dẫn|
+    $filledSectionCount = collect(self::SECTIONS)
+        ->filter(fn (string $s) => $briefing[$s] !== [])
+        ->count();
+    $hasContent = $why !== '' && $filledSectionCount >= 2;
+
+    return $hasContent ? $briefing : null;
+}
+\end{lstlisting}
+
+\section{Kiến trúc bất đồng bộ và cơ chế tự phục hồi}
+
+Để không làm tắc nghẽn yêu cầu HTTP của người dùng, hệ thống sử dụng kiến trúc
+xử lý nền gồm ba chặng:
+
+\begin{enumerate}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Đẩy tác vụ vào hàng đợi}: Khi người dùng hoàn thành bước cuối
+        của quy trình sàng lọc, hệ thống ghi bản ghi phiên với trạng thái
+        \code{completed}, đồng thời tạo một bản ghi \code{AiJob} thuộc loại
+        \code{triage\_briefing} được xếp vào hàng đợi nền
+        (\code{ProcessTriageBriefing}).
+  \item \textbf{Thăm dò giao diện (Client-side Polling)}: Trình duyệt nhận ngay
+        trang kết quả hiển thị nhóm nguy cơ và lời khuyên chuẩn. Khối giao diện
+        diễn giải hiển thị hiệu ứng khung xương tải trước (\emph{skeleton loader})
+        và gửi yêu cầu kiểm tra trạng thái \code{AiJob} theo lịch giãn dần
+        (900--2~400~ms, tối đa 60 lượt) thay vì một chu kỳ cố định.
+  \item \textbf{Cơ chế cứu hộ đồng bộ (Synchronous Fallback Seam)}: Một tác vụ
+        vẫn ở trạng thái \code{queued} sau 12 giây mà không có worker nào đang
+        chạy (\code{AiJob::isStranded} kiểm tra qua \code{hasLiveWorker}) được
+        coi là bị bỏ rơi. Khi người dùng tải lại trang, phương thức
+        \code{ensureBriefingJob} trong \code{HealthCheckController} phát hiện và
+        thực thi đồng bộ ngay trong lượt tải lại đó, bảo đảm người dùng không
+        phải chờ vô hạn. Ca cấp cứu không bao giờ vào hàng đợi: cờ đỏ được phát
+        hiện bằng PHP thuần nên kết luận trả về ngay trong yêu cầu.
+\end{enumerate}
+
+\section{Giao diện thực tế của hệ thống}
+
+Các hình ảnh dưới đây được chụp trực tiếp từ ứng dụng thực tế thông qua kịch
+bản tự động hóa kiểm thử Playwright trên cổng thử nghiệm cục bộ.
+
+\subsection{Giao diện khảo sát triệu chứng từng bước}
+
+Hình~\ref{fig:wizard} minh hoạ bước đầu tiên trong quy trình khảo sát 5 bước.
+Người dùng có thể chọn nhanh các triệu chứng thường gặp bằng thẻ nút bấm hoặc
+nhập mô tả tự do bằng tiếng Việt, kèm cảnh báo pháp lý về tính chất sàng lọc y tế.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{01-wizard-step1.png}
+\caption{Giao diện khảo sát triệu chứng trực quan với thanh tiến trình và các nút chọn nhanh}
+\label{fig:wizard}
+\end{figure}
+
+\subsection{Giao diện kết quả phân tầng tự chăm sóc kèm AI Briefing}
+
+Hình~\ref{fig:result_briefing} thể hiện trang kết quả khi hệ thống xếp ca bệnh
+vào nhóm \term{Có thể tự chăm sóc}. Bên cạnh kết luận chính, khối
+\emph{«Em giải thích kỹ hơn cho anh/chị»} được gắn nhãn AI minh bạch, hiển thị
+lý do lâm sàng dựa trên thông tin người bệnh đã kể và các thẻ gợi ý thuốc không
+kê đơn phù hợp.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.82\textwidth]{03-result-briefing.png}
+\caption{Trang kết quả phân tầng tự chăm sóc hiển thị phần diễn giải chi tiết AI Briefing}
+\label{fig:result_briefing}
+\end{figure}
+
+\subsection{Giao diện kết quả cảnh báo cấp cứu khẩn cấp}
+
+Hình~\ref{fig:result_emergency} thể hiện phản ứng tức thời của hệ thống khi
+phát hiện cờ đỏ cấp cứu (ví dụ: đau ngực dữ dội, khó thở). Hệ thống lập tức
+bật viền đỏ cảnh báo, loại bỏ toàn bộ phần gợi ý thuốc và hiển thị nổi bật nút
+bấm gọi cấp cứu 115, không cho phép tiếp tục tự chăm sóc.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{04-result-emergency.png}
+\caption{Giao diện cảnh báo cấp cứu lập tức kích hoạt khi phát hiện cờ đỏ nguy kịch}
+\label{fig:result_emergency}
+\end{figure}
+
+\subsection{Giao diện hàng đợi duyệt ca của dược sĩ}
+
+Hình~\ref{fig:pharmacist_queue} là phân hệ nội bộ dành cho dược sĩ chuyên môn.
+Các ca bệnh thuộc nhóm \code{pharmacist\_review} hoặc do người bệnh bấm yêu
+cầu hỗ trợ sẽ được đưa vào hàng đợi tập trung, cho phép dược sĩ tiếp nhận, xem
+lịch sử triệu chứng và gửi phản hồi y khoa chính thức.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{05-pharmacist-queue.png}
+\caption{Giao diện hàng đợi phân tầng dành cho dược sĩ tiếp nhận và thẩm định ca bệnh}
+\label{fig:pharmacist_queue}
+\end{figure}

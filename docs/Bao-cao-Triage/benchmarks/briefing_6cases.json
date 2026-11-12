@@ -1,0 +1,78 @@
+{
+    "cases": 6,
+    "status_counts": {
+        "ok": 6
+    },
+    "avg_sections_filled": 5,
+    "latency_avg_ms": 10707,
+    "latency_min_ms": 7968,
+    "latency_max_ms": 13915,
+    "rows": [
+        {
+            "id": "B_01",
+            "outcome": "self_care",
+            "status": "ok",
+            "latency_ms": 7968,
+            "sections_filled": "5\/5",
+            "total_items": 28,
+            "has_why": true,
+            "why_len": 514,
+            "products": 0
+        },
+        {
+            "id": "B_02",
+            "outcome": "self_care",
+            "status": "ok",
+            "latency_ms": 9787,
+            "sections_filled": "5\/5",
+            "total_items": 27,
+            "has_why": true,
+            "why_len": 534,
+            "products": 0
+        },
+        {
+            "id": "B_03",
+            "outcome": "self_care",
+            "status": "ok",
+            "latency_ms": 13915,
+            "sections_filled": "5\/5",
+            "total_items": 16,
+            "has_why": true,
+            "why_len": 388,
+            "products": 0
+        },
+        {
+            "id": "B_04",
+            "outcome": "self_care",
+            "status": "ok",
+            "latency_ms": 13749,
+            "sections_filled": "5\/5",
+            "total_items": 18,
+            "has_why": true,
+            "why_len": 374,
+            "products": 0
+        },
+        {
+            "id": "B_05",
+            "outcome": "refer_doctor",
+            "status": "ok",
+            "latency_ms": 10432,
+            "sections_filled": "5\/5",
+            "total_items": 29,
+            "has_why": true,
+            "why_len": 641,
+            "products": 0
+        },
+        {
+            "id": "B_06",
+            "outcome": "refer_doctor",
+            "status": "ok",
+            "latency_ms": 8388,
+            "sections_filled": "5\/5",
+            "total_items": 27,
+            "has_why": true,
+            "why_len": 538,
+            "products": 0
+        }
+    ]
+}

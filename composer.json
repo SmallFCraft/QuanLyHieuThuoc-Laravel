@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "smallfcraft/quan-ly-hieu-thuoc",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "Hệ thống quản lý nhà thuốc trên Laravel: cửa hàng trực tuyến, chatbot AI, sàng lọc sức khỏe.",
+    "keywords": ["laravel", "pharmacy", "triage", "chatbot"],
     "license": "MIT",
     "require": {
         "php": "^8.2",

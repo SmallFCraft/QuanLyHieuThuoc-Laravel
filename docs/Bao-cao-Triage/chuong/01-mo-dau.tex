@@ -1,0 +1,125 @@
+% ---------------------------------------------------------------------
+%  PHẦN MỞ ĐẦU (không đánh số chương)
+% ---------------------------------------------------------------------
+\chapter*{Mở đầu}
+\phantomsection
+\addcontentsline{toc}{chapter}{Mở đầu}
+\markboth{Mở đầu}{}
+\label{ch:modau}
+
+\begin{muctieu}
+Chương mở đầu trình bày bối cảnh và lý do lựa chọn đề tài xây dựng hệ thống
+hỗ trợ sàng lọc và phân tầng nguy cơ y tế, xác lập các mục tiêu kỹ thuật cụ
+thể, giới hạn phạm vi bài toán trong khuôn khổ phân tầng nguy cơ và tóm lược
+bố cục báo cáo.
+\end{muctieu}
+
+\section*{Lý do chọn đề tài}
+\phantomsection
+\addcontentsline{toc}{section}{Lý do chọn đề tài}
+
+Trong bối cảnh hệ thống y tế cơ sở tại Việt Nam thường xuyên đối mặt với tình
+trạng quá tải bệnh nhân, nhu cầu tự tìm kiếm thông tin y tế và tự sử dụng thuốc
+không kê đơn \en{(Over-the-counter - OTC)} của người dân ngày càng gia tăng.
+Theo Tổ chức Y tế Thế giới \cite{WHO2021}, việc thiếu định hướng y tế ban đầu
+dẫn tới hai hệ quả tiêu cực phổ biến: hoặc người bệnh chủ quan bỏ sót các
+triệu chứng cảnh báo nguy kịch \en{(red flags)}, dẫn đến chậm trễ thời gian
+vàng cấp cứu; hoặc người bệnh hoang mang, đi khám vượt tuyến không cần thiết,
+gây lãng phí nguồn lực xã hội.
+
+Sự bùng nổ của các mô hình ngôn ngữ lớn \en{(Large Language Models - LLMs)}
+gần đây mở ra tiềm năng to lớn trong việc giao tiếp tự nhiên và giải thích
+thông tin sức khỏe \cite{Singhal2023, Thirunavukarasu2023}. Tuy nhiên, việc áp
+dụng trực tiếp các mô hình AI tạo sinh đơn thuần vào bài toán ra quyết định y tế
+tiềm ẩn nguy cơ nghiêm trọng về mặt an toàn người bệnh:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \term{Hiện tượng ảo giác \en{(Hallucination)}:} Mô hình có thể tự bịa đặt
+        liều lượng, tương tác thuốc hoặc bỏ qua các triệu chứng cảnh báo cấp
+        cứu, sinh ra các tư vấn sai lệch nhưng với giọng điệu tự tin.
+  \item \term{Tính thiếu nhất quán \en{(Non-determinism)}:} Với cùng một tập triệu
+        chứng lâm sàng, mô hình tạo sinh có thể đưa ra các mức độ xử trí khác
+        nhau tại các lần chạy, vi phạm nguyên tắc an toàn y khoa.
+  \item \term{Thiếu kiểm soát hộp đen \en{(Black-box nature)}:} Các bác sĩ và dược
+        sĩ chuyên môn không thể truy vết hoặc kiểm soát tuyệt đối biên giới an
+        toàn của các mô hình mạng nơ-ron sâu \cite{Musen2014}.
+\end{itemize}
+
+Để giải quyết bài toán này một cách khoa học và an toàn, đề tài lựa chọn phương
+pháp tiếp cận \term{Kiến trúc lai \en{(Hybrid AI Architecture)}}: kết hợp sức mạnh
+của \textbf{Hệ chuyên gia dựa trên tri thức luật tất định} \en{(Deterministic
+Rule-based System)} \cite{Buchanan1984} với khả năng tương tác linh hoạt, trích
+xuất sự kiện và diễn giải người dùng của \textbf{Mô hình ngôn ngữ lớn có cấu trúc
+hóa} \en{(Function/Tool Calling)} \cite{Schick2023}. Cách tiếp cận này đảm bảo
+rằng mọi quyết định sinh tử (cấp cứu, chuyển tuyến) đều được neo chặt vào các quy
+tắc lâm sàng đã được kiểm chứng, trong khi người bệnh vẫn có được trải nghiệm tư
+vấn tự nhiên, ân cần và dễ hiểu.
+
+\section*{Mục tiêu của đồ án}
+\phantomsection
+\addcontentsline{toc}{section}{Mục tiêu của đồ án}
+
+Đề tài đặt ra các mục tiêu cụ thể, đo lường được nhằm hoàn thiện giải pháp:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Mục tiêu 1 — Chuẩn hóa cơ sở tri thức phân tầng y tế:} Xây dựng
+        tập dữ liệu lâm sàng gồm tối thiểu 30 triệu chứng, 20 dấu hiệu cờ đỏ cấp
+        cứu và 40 quy tắc phân tầng nguy cơ theo tiêu chuẩn phân tầng cấp cứu
+        quốc tế \cite{Mackway2014}, hỗ trợ nhận diện 4 mức độ: Cấp cứu
+        \en{(Emergency)}, Đi khám bác sĩ \en{(Refer Doctor)}, Tư vấn dược sĩ
+        \en{(Pharmacist Review)} và Tự chăm sóc tại nhà \en{(Self-care)}.
+  \item \textbf{Mục tiêu 2 — Thiết kế và cài đặt động cơ phân tầng an toàn:} Xây
+        dựng hệ thống ra quyết định theo nguyên tắc bảo thủ lâm sàng
+        \en{(Conservative Evaluation)}, đảm bảo trên mọi kịch bản kiểm thử không
+        có ca cấp cứu nào bị xếp xuống mức xử trí nhẹ hơn, cơ chế phân tầng có
+        tính tất định và không bị hạ cấp nguy cơ bởi kết quả trích xuất của AI.
+  \item \textbf{Mục tiêu 3 — Xây dựng mô-đun diễn giải lâm sàng bằng Tool-calling:}
+        Hiện thực hóa dịch vụ sinh lời giải thích \en{(AI Briefing)} qua schema
+        gọi hàm có cấu trúc, tích hợp bộ kiểm duyệt chặt chẽ \en{(Sanitization)}
+        loại bỏ nội dung mỏng, đảm bảo luôn có lý do lâm sàng và tối thiểu hai
+        danh mục hướng dẫn sức khỏe thiết thực.
+  \item \textbf{Mục tiêu 4 — Hiện thực hóa hệ sinh thái tương tác thực tế:} Triển
+        khai giải pháp thành ứng dụng web hoàn chỉnh trên nền tảng Laravel, hỗ
+        trợ xử lý bất đồng bộ chống nghẽn \en{(Async Jobs)}, cơ chế phục hồi
+        đồng bộ \en{(Fallback Seam)} và hàng đợi cho dược sĩ duyệt ca.
+\end{itemize}
+
+\section*{Phạm vi và đối tượng}
+\phantomsection
+\addcontentsline{toc}{section}{Phạm vi và đối tượng}
+
+Phạm vi thực hiện của đồ án được xác định rõ ràng như sau:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Đối tượng phục vụ:} Người dùng đại chúng có các triệu chứng bệnh
+        thông thường (đau đầu, sốt, tiêu hóa, hô hấp, cơ xương khớp nhẹ) tìm
+        kiếm hướng dẫn chăm sóc sức khỏe ban đầu.
+  \item \textbf{Phạm vi chuyên môn:} Hệ thống chỉ thực hiện \term{sàng lọc và phân
+        tầng nguy cơ} \en{(Triage \& Risk Stratification)}, không thực hiện chẩn
+        đoán bệnh danh y khoa chuyên sâu và không kê đơn thuốc đặc trị.
+  \item \textbf{Ngôn ngữ và dữ liệu:} Hỗ trợ ngôn ngữ tiếng Việt tự nhiên; danh
+        mục thuốc gợi ý chỉ giới hạn trong nhóm thuốc không kê đơn \en{(OTC)}
+        hiện diện trong cơ sở dữ liệu nhà thuốc và đã đối chiếu hồ sơ chống chỉ
+        định của người bệnh.
+  \item \textbf{Giới hạn kỹ thuật:} Hệ thống hoạt động dưới hình thức tương tác
+        văn bản trên giao diện web, dữ liệu lưu trữ tại cơ sở dữ liệu quan hệ nội
+        bộ, kết nối mô hình ngôn ngữ lớn thông qua giao thức API chuẩn hóa.
+\end{itemize}
+
+\section*{Bố cục báo cáo}
+\phantomsection
+\addcontentsline{toc}{section}{Bố cục báo cáo}
+
+Nội dung báo cáo được kết cấu thành phần Mở đầu và 5 chương chính:
+\begin{itemize}[leftmargin=1.6em, itemsep=0pt]
+  \item \textbf{Phần Mở đầu:} Đặt vấn đề, lý do nghiên cứu, mục tiêu, phạm vi và cấu trúc báo cáo.
+  \item \textbf{Chương~\ref{ch:coso} — Cơ sở lý thuyết:} Tổng quan về hệ chuyên gia
+        y tế, phân tầng lâm sàng, mô hình ngôn ngữ lớn và kỹ thuật gọi hàm.
+  \item \textbf{Chương~\ref{ch:thietke} — Phân tích và thiết kế:} Mô hình hóa yêu
+        cầu, thiết kế kiến trúc hệ thống Hybrid AI Pipeline, thiết kế cơ sở tri
+        thức y khoa và schema kiểm soát an toàn.
+  \item \textbf{Chương~\ref{ch:caidat} — Cài đặt:} Hiện thực hóa các dịch vụ lõi,
+        quy trình xử lý công việc bất đồng bộ, bộ kiểm duyệt dữ liệu và cơ chế
+        cứu hộ tự động.
+  \item \textbf{Chương~\ref{ch:ketqua} — Kết quả và đánh giá:} Báo cáo chỉ số
+        thực nghiệm, khả năng phát hiện cờ đỏ và thời gian đáp ứng.
+  \item \textbf{Chương~\ref{ch:ketluan} — Kết luận:} Đánh giá mức độ hoàn thành so
+        với mục tiêu, các bài học rút ra và hướng phát triển tiếp theo.
+\end{itemize}

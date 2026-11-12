@@ -1,0 +1,82 @@
+% ---------------------------------------------------------------------
+%  CHƯƠNG 6 — KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
+% ---------------------------------------------------------------------
+\chapter{Kết luận và hướng phát triển}
+\label{ch:ketluan}
+
+\begin{muctieu}
+Chương này tổng kết mức độ hoàn thành của các mục tiêu nghiên cứu, đúc kết các
+bài học kinh nghiệm quý giá trong quá trình phát triển hệ thống AI y tế và đề
+xuất các hướng phát triển mở rộng tiếp theo của đề tài.
+\end{muctieu}
+
+\section{Kết luận}
+
+Đồ án đã xây dựng thành công \textbf{Hệ thống trợ lý sàng lọc sức khỏe và phân
+tầng nguy cơ y tế} tích hợp trí tuệ nhân tạo lai, đi trọn vòng đời từ phân tích
+yêu cầu, thiết kế cơ sở tri thức, cài đặt các dịch vụ suy diễn đến triển khai
+thực nghiệm đo lường định lượng. Hệ thống đã hoàn thành cả 4 mục tiêu nghiên
+cứu đã xác lập:
+
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Về mặt khoa học}: Đã hiện thực hóa kiến trúc Hybrid AI bền vững,
+        trong đó động cơ quy tắc tất định niêm phong mọi quyết định an toàn
+        (\textbf{88,5\%} xử trí an toàn lâm sàng trên 26 ca thực nghiệm), còn
+        mô hình ngôn ngữ lớn đảm nhận lớp tương tác và diễn giải (\textbf{100\%}
+        đạt chuẩn kiểm duyệt, độ phủ \textbf{5/5} danh mục hướng dẫn trên mỗi ca).
+  \item \textbf{Về mặt kỹ thuật}: Đã triển khai ứng dụng web Laravel hoàn chỉnh
+        với kiến trúc hàng đợi bất đồng bộ (\code{AiJob}), cơ chế cứu hộ đồng bộ
+        khi worker bị treo và hệ thống hàng đợi thẩm duyệt của dược sĩ, được kiểm
+        chứng bằng bộ kiểm thử tự động 298 ca (965 phép khẳng định) đều vượt qua.
+  \item \textbf{Về mặt xã hội}: Giải pháp mang lại công cụ định hướng y tế ban
+        đầu tiện lợi, kịp thời và ân cần cho người dân, đồng thời góp phần giảm
+        tải cho hệ thống y tế cơ sở trong các bệnh cảnh thông thường.
+\end{itemize}
+
+\section{Bài học rút ra}
+
+\begin{enumerate}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Trong y tế, kiểm soát đầu ra quan trọng hơn sức mạnh mô hình}:
+        Điều quyết định độ an toàn của hệ thống không phải là chọn mô hình ngôn
+        ngữ lớn mạnh nhất, mà là thiết kế các lớp kiểm duyệt tại tầng mã nguồn
+        (\code{sanitize}, \code{severerRule}). Với chỉ vài dòng lệnh PHP kiểm
+        tra \emph{«tối thiểu 2 danh mục»} và phép so sánh độ nghiêm trọng, toàn
+        bộ nguy cơ ảo giác y khoa nghiêm trọng đã được chặn đứng tận gốc.
+  \item \textbf{Cơ sở tri thức là linh hồn của hệ chuyên gia}: Cả ba trường hợp
+        phân tầng thiếu hụt trong thực nghiệm đều xuất phát từ khoảng trống cơ
+        sở tri thức (thiếu cụm từ FAST của đột quỵ, thiếu dấu hiệu mắt trũng
+        trong mất nước, thiếu nhánh xét bệnh nền đa thuốc), chứ không phải do
+        thuật toán suy diễn sai. Đối chứng ở Mục~4.5 xác nhận điều này: bật hay
+        tắt lớp AI cho kết quả y hệt trên cả 26 ca. Nếu làm lại, nhóm sẽ dành
+        thời gian đầu tiên để hoàn thiện từ điển lâm sàng cùng thầy thuốc chuyên
+        môn trước khi tối ưu hoá các lớp AI.
+  \item \textbf{Kiến trúc bất đồng bộ giải quyết mâu thuẫn thời gian}: Mâu thuẫn
+        cố hữu giữa việc AI tạo sinh cần hàng chục giây để suy nghĩ và yêu cầu
+        trải nghiệm web phải phản hồi trong vài giây chỉ có thể hóa giải bằng
+        cách tách lớp quyết định (đồng bộ, tức thì) và lớp diễn giải (bất đồng
+        bộ, thăm dò). Đây là bài học nền tảng cho mọi ứng dụng tích hợp LLM.
+\end{enumerate}
+
+\section{Hướng phát triển}
+
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Mở rộng tri thức cờ đỏ và bối cảnh bệnh nền}: Bổ sung các từ khóa
+        thang điểm FAST (méo miệng, yếu tay chân, nói khó), dấu hiệu mất nước
+        tiến triển (mắt trũng, tiểu ít), và một nhánh luật nâng mức khi hồ sơ có
+        bệnh nền đang dùng nhiều thuốc — nhằm khắc phục ba trường hợp phân tầng
+        thiếu hụt đã phát hiện, nâng tỷ lệ xử trí an toàn tiến về 100\%.
+  \item \textbf{Tích hợp nhận diện giọng nói tiếng Việt (STT)}: Cho phép người
+        cao tuổi hoặc người bệnh nặng chỉ cần nói trực tiếp vào thiết bị di động
+        thay vì gõ chữ, mở rộng khả năng tiếp cận tới nhóm dân cư dễ tổn thương nhất.
+  \item \textbf{Nâng cấp mô hình trích xuất sự kiện tiếng Việt chuyên sâu}: Thử
+        nghiệm các mô hình ngôn ngữ tiền huấn luyện dành riêng cho tiếng Việt
+        như PhoBERT \cite{Nguyen2020} để nâng cao khả năng nhận diện triệu chứng
+        với lối diễn đạt dân gian, phương ngữ vùng miền.
+  \item \textbf{Liên thông hồ sơ bệnh án điện tử (EHR)}: Kết nối tự động với lịch
+        sử khám chữa bệnh và đơn thuốc điện tử của người bệnh tại các cơ sở y tế,
+        giúp hệ thống có thêm bối cảnh tiền sử và nâng cao độ chính xác phân tầng.
+  \item \textbf{Triển khai quy mô sản xuất (Production Deployment)}: Đóng gói hệ
+        thống thành kiến trúc vi dịch vụ (Microservices), áp dụng bộ cân bằng tải
+        và giám sát nhật ký y tế tập trung để phục vụ đồng thời hàng ngàn người
+        dùng tại nhiều nhà thuốc và phòng khám trên toàn quốc.
+\end{itemize}
