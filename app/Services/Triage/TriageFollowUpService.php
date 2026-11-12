@@ -37,7 +37,7 @@ class TriageFollowUpService
                         $sent++;
                     }
                 }
-            }, 'MaSL');
+            }, 'ma_sl');
 
         return $sent;
     }
@@ -89,14 +89,14 @@ class TriageFollowUpService
         $this->writeChatMessage($phien, $message, [
             'type' => 'triage_follow_up_response',
             'improved' => $improved,
-            'MaSL' => $phien->MaSL,
+            'ma_sl' => $phien->ma_sl,
         ]);
 
         $this->audit(
             $improved ? 'triage_follow_up_improved' : 'triage_follow_up_not_improved',
             $phien,
             [
-                'MaKH' => $phien->MaKH,
+                'ma_nd' => $phien->ma_nd,
                 'improved' => $improved,
                 'outcome' => $phien->outcome,
                 'products_suggested' => 0,
@@ -126,7 +126,7 @@ class TriageFollowUpService
                 // silently drop the safety net for a self-care case, which is the one
                 // mechanism that catches a triage decision that got it wrong.
                 Log::warning('Triage follow-up mail failed, will retry', [
-                    'MaSL' => $phien->MaSL,
+                    'ma_sl' => $phien->ma_sl,
                     'error' => $e->getMessage(),
                 ]);
 
@@ -136,7 +136,7 @@ class TriageFollowUpService
 
         $this->writeChatMessage($phien, __('messages.reminder.follow_up_question'), [
             'type' => 'triage_follow_up_question',
-            'MaSL' => $phien->MaSL,
+            'ma_sl' => $phien->ma_sl,
         ]);
 
         // Clearing the due date is what stops the same question being asked
@@ -144,7 +144,7 @@ class TriageFollowUpService
         $phien->update(['follow_up_at' => null]);
 
         $this->audit('triage_follow_up_sent', $phien, [
-            'MaKH' => $phien->MaKH,
+            'ma_nd' => $phien->ma_nd,
             'outcome' => $phien->outcome,
         ]);
 
@@ -162,7 +162,7 @@ class TriageFollowUpService
         }
 
         TinNhanChat::create([
-            'MaKH' => $phien->MaKH,
+            'ma_nd' => $phien->ma_nd,
             'session_id' => $phien->session_id,
             'role' => 'assistant',
             'content' => $content,
@@ -178,14 +178,14 @@ class TriageFollowUpService
             $this->auditLogService->log(
                 action: $action,
                 modelType: PhienSangLoc::class,
-                modelId: $phien->MaSL,
+                modelId: $phien->ma_sl,
                 oldValues: null,
                 newValues: $values,
-                userId: $phien->MaKH
+                userId: $phien->ma_nd
             );
         } catch (\Throwable $e) {
             Log::warning('Triage follow-up audit failed', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'action' => $action,
                 'error' => $e->getMessage(),
             ]);

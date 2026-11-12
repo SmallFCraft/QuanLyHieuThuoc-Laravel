@@ -15,7 +15,7 @@ use Illuminate\Console\Command;
  * cổng khi cần: mặc định chính là số nền đo ngày 2026-09-02.
  *
  * THƯỚC ĐO — xem thêm đầu tests/fixtures/voice-search-corpus.php:
- *   coverage : |A ∩ B| >= |B| / 2, với A = MaSP của normalize, B = MaSP của intended
+ *   coverage : |A ∩ B| >= |B| / 2, với A = ma_sp của normalize, B = ma_sp của intended
  *   lies     : confident === true mà ca đó KHÔNG đạt — hệ thống nói dối khách
  *   conf_zero: confident === true mà catalog trả 0 sản phẩm
  */
@@ -107,7 +107,7 @@ class EvalVoiceSearch extends Command
             return [];
         }
 
-        return SanPham::notExpired()->storefrontSearch($query)->limit(500)->pluck('MaSP')->all();
+        return SanPham::notExpired()->storefrontSearch($query)->limit(500)->pluck('ma_sp')->all();
     }
 
     private function render(

@@ -10,7 +10,7 @@
 
 @if($url)
     <img src="{{ $url }}"
-         alt="{{ $user->name }}"
+         alt="{{ $user->ho_ten }}"
          width="{{ $px }}" height="{{ $px }}"
          loading="lazy"
          {{ $attributes->class(['profile-avatar', 'profile-avatar--ring' => $ring]) }}

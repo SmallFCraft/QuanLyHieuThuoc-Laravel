@@ -78,7 +78,7 @@ class TriageAiAdviceService extends TriageAiService
             $provider = $this->provider();
 
             $response = $this->callProvider($provider, [
-                ['role' => 'system', 'content' => $this->systemPrompt(TriageAiContextService::honorificFor($phien->nguoiDung?->gender))],
+                ['role' => 'system', 'content' => $this->systemPrompt(TriageAiContextService::honorificFor($phien->nguoiDung?->gioi_tinh))],
                 ['role' => 'user', 'content' => $this->buildPrompt($phien)],
             ]);
 
@@ -104,7 +104,7 @@ class TriageAiAdviceService extends TriageAiService
             );
         } catch (\Throwable $exception) {
             Log::warning('Triage AI advice rewrite failed', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
 

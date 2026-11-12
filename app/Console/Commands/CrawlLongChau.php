@@ -20,7 +20,7 @@ class CrawlLongChau extends Command
         {--concurrency= : Pages fetched at once, overriding config}
         {--dry-run : Report what would be imported without writing to the database}';
 
-    protected $description = 'Nạp danh mục sản phẩm từ Nhà Thuốc Long Châu vào bảng products';
+    protected $description = 'Nạp danh mục sản phẩm từ Nhà Thuốc Long Châu vào bảng san_phams';
 
     public function handle(LongChauCrawlerService $crawler, ProductImportService $importer): int
     {

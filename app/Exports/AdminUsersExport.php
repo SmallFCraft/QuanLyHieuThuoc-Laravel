@@ -22,11 +22,11 @@ class AdminUsersExport implements FromCollection, WithHeadings, WithMapping, Sho
                 $search = $this->search;
 
                 $query->where(function ($inner) use ($search) {
-                    $inner->where('MaKH', 'like', "%{$search}%")
-                        ->orWhere('name', 'like', "%{$search}%")
+                    $inner->where('ma_nd', 'like', "%{$search}%")
+                        ->orWhere('ho_ten', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhere('role', 'like', "%{$search}%")
-                        ->orWhere('status', 'like', "%{$search}%");
+                        ->orWhere('vai_tro', 'like', "%{$search}%")
+                        ->orWhere('trang_thai', 'like', "%{$search}%");
                 });
             })
             ->orderByDesc('created_at')
@@ -48,11 +48,11 @@ class AdminUsersExport implements FromCollection, WithHeadings, WithMapping, Sho
     public function map($nguoiDung): array
     {
         return [
-            '#' . $nguoiDung->MaKH,
-            $nguoiDung->name,
+            '#' . $nguoiDung->ma_nd,
+            $nguoiDung->ho_ten,
             $nguoiDung->email,
-            $nguoiDung->role,
-            $nguoiDung->status === 'active' ? 'Hoạt động' : 'Vô hiệu hóa',
+            $nguoiDung->vai_tro,
+            $nguoiDung->trang_thai === 'active' ? 'Hoạt động' : 'Vô hiệu hóa',
             optional($nguoiDung->created_at)->format('d/m/Y H:i'),
         ];
     }

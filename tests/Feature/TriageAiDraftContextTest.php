@@ -27,22 +27,19 @@ class TriageAiDraftContextTest extends TestCase
 
         config()->set('chatbot.ai.triage.pharmacist_draft', true);
 
-        DanhMuc::create([
-            'name' => 'Thuốc giảm đau - Hạ sốt',
-            'description' => 'Giảm đau, hạ sốt',
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt',
+            'mo_ta' => 'Giảm đau, hạ sốt',
         ]);
 
         $this->seed(TriThucYTeSeeder::class);
 
-        $this->pharmacist = NguoiDung::factory()->create([
-            'role' => 'Pharmacist',
-            'status' => 'active',
+        $this->pharmacist = NguoiDung::factory()->create(['vai_tro' => 'Pharmacist',
+            'trang_thai' => 'active',
         ]);
 
-        $this->customer = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(41)->toDateString(),
+        $this->customer = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(41)->toDateString(),
         ]);
     }
 
@@ -57,8 +54,7 @@ class TriageAiDraftContextTest extends TestCase
     {
         $this->fakeProviderReply();
 
-        HoSoSucKhoe::create([
-            'MaKH' => $this->customer->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->customer->ma_nd,
             'allergies' => ['aspirin'],
             'chronic_conditions' => ['cao huyết áp'],
             'current_medications' => ['amlodipine'],
@@ -66,8 +62,7 @@ class TriageAiDraftContextTest extends TestCase
             'ai_consent_at' => now(),
         ]);
 
-        PhienSangLoc::create([
-            'MaKH' => $this->customer->MaKH,
+        PhienSangLoc::create(['ma_nd' => $this->customer->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'reviewed',
@@ -76,8 +71,7 @@ class TriageAiDraftContextTest extends TestCase
             'created_at' => now()->subDays(3),
         ]);
 
-        $currentSession = PhienSangLoc::create([
-            'MaKH' => $this->customer->MaKH,
+        $currentSession = PhienSangLoc::create(['ma_nd' => $this->customer->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'pending_pharmacist',
@@ -86,11 +80,11 @@ class TriageAiDraftContextTest extends TestCase
             'safety_net' => 'Đi khám nếu sốt cao.',
             'matched_symptoms' => ['fever'],
             'triggered_red_flags' => [],
-            'pharmacist_id' => $this->pharmacist->MaKH,
+            'pharmacist_id' => $this->pharmacist->ma_nd,
         ]);
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.draft', $currentSession->MaSL));
+            ->post(route('pharmacist.triage.draft', $currentSession->ma_sl));
 
         Http::assertSent(function ($request) {
             $userContent = collect($request->data()['messages'] ?? [])
@@ -115,8 +109,7 @@ class TriageAiDraftContextTest extends TestCase
     {
         $this->fakeProviderReply();
 
-        HoSoSucKhoe::create([
-            'MaKH' => $this->customer->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->customer->ma_nd,
             'allergies' => ['amoxicillin'],
             'chronic_conditions' => ['tiểu đường'],
             'current_medications' => ['metformin'],
@@ -124,8 +117,7 @@ class TriageAiDraftContextTest extends TestCase
             'ai_consent_at' => null,
         ]);
 
-        PhienSangLoc::create([
-            'MaKH' => $this->customer->MaKH,
+        PhienSangLoc::create(['ma_nd' => $this->customer->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'reviewed',
@@ -134,8 +126,7 @@ class TriageAiDraftContextTest extends TestCase
             'created_at' => now()->subDays(2),
         ]);
 
-        $currentSession = PhienSangLoc::create([
-            'MaKH' => $this->customer->MaKH,
+        $currentSession = PhienSangLoc::create(['ma_nd' => $this->customer->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'pending_pharmacist',
@@ -144,11 +135,11 @@ class TriageAiDraftContextTest extends TestCase
             'safety_net' => 'Khám nếu đau ngực.',
             'matched_symptoms' => ['cough'],
             'triggered_red_flags' => [],
-            'pharmacist_id' => $this->pharmacist->MaKH,
+            'pharmacist_id' => $this->pharmacist->ma_nd,
         ]);
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.draft', $currentSession->MaSL));
+            ->post(route('pharmacist.triage.draft', $currentSession->ma_sl));
 
         Http::assertSent(function ($request) {
             $userContent = collect($request->data()['messages'] ?? [])
@@ -172,8 +163,7 @@ class TriageAiDraftContextTest extends TestCase
     {
         $this->fakeProviderReply();
 
-        $phien = PhienSangLoc::create([
-            'MaKH' => $this->customer->MaKH,
+        $phien = PhienSangLoc::create(['ma_nd' => $this->customer->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'pending_pharmacist',
@@ -182,11 +172,11 @@ class TriageAiDraftContextTest extends TestCase
             'safety_net' => 'Đi cấp cứu nếu co giật.',
             'matched_symptoms' => ['fever'],
             'triggered_red_flags' => [],
-            'pharmacist_id' => $this->pharmacist->MaKH,
+            'pharmacist_id' => $this->pharmacist->ma_nd,
         ]);
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.draft', $phien->MaSL));
+            ->post(route('pharmacist.triage.draft', $phien->ma_sl));
 
         Http::assertSent(function ($request) {
             $userContent = collect($request->data()['messages'] ?? [])

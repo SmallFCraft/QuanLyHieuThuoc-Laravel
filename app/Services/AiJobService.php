@@ -49,7 +49,7 @@ class AiJobService
     ): AiJob {
         $job = AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $userId,
+            'ma_nd' => $userId,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'queued',
             'payload' => [
@@ -81,10 +81,10 @@ class AiJobService
     {
         $job = AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $phien->MaKH,
+            'ma_nd' => $phien->ma_nd,
             'kind' => AiJob::KIND_TRIAGE_EVALUATION,
             'status' => 'queued',
-            'payload' => ['MaSL' => $phien->MaSL],
+            'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
 
         // Queued, not run inline: the caller falls back to deciding in-request when
@@ -104,10 +104,10 @@ class AiJobService
     {
         $job = AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $phien->MaKH,
+            'ma_nd' => $phien->ma_nd,
             'kind' => AiJob::KIND_TRIAGE_ADVICE,
             'status' => 'queued',
-            'payload' => ['MaSL' => $phien->MaSL],
+            'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
 
         ProcessTriageAdviceRewrite::dispatch($job->uuid);
@@ -129,7 +129,7 @@ class AiJobService
             return $this->dispatchAdviceRewrite($phien);
         } catch (\Throwable $exception) {
             Log::warning('Triage advice rewrite skipped', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -148,10 +148,10 @@ class AiJobService
     {
         $job = AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $phien->MaKH,
+            'ma_nd' => $phien->ma_nd,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'queued',
-            'payload' => ['MaSL' => $phien->MaSL],
+            'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
 
         ProcessTriageBriefing::dispatch($job->uuid);
@@ -173,7 +173,7 @@ class AiJobService
             return $this->dispatchBriefing($phien);
         } catch (\Throwable $exception) {
             Log::warning('Triage briefing skipped', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -192,7 +192,7 @@ class AiJobService
      */
     public function poll(string $uuid, int $userId): ?array
     {
-        $job = AiJob::where('uuid', $uuid)->where('MaKH', $userId)->first();
+        $job = AiJob::where('uuid', $uuid)->where('ma_nd', $userId)->first();
 
         if ($job === null) {
             return null;
@@ -333,17 +333,17 @@ class AiJobService
             $this->auditLogService->log(
                 action: $action,
                 modelType: AiJob::class,
-                modelId: $job->MaAJ,
+                modelId: $job->ma_aj,
                 oldValues: null,
                 newValues: [
-                    'MaKH' => $job->MaKH,
+                    'ma_nd' => $job->ma_nd,
                     'kind' => $job->kind,
                     'status' => $job->status,
                     'attempts' => $job->attempts,
                 ],
                 // Written from a queue worker as often as from a request, so the
                 // owner comes from the job row rather than the guard.
-                userId: $job->MaKH
+                userId: $job->ma_nd
             );
         } catch (\Throwable $exception) {
             Log::warning('AI job audit failed', [

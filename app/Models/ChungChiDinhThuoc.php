@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class ChungChiDinhThuoc extends Model
 {
-    protected $table = 'drug_contraindications';
+    protected $table = 'chung_chi_dinh_thuocs';
 
-    protected $primaryKey = 'MaCCD';
+    protected $primaryKey = 'ma_ccd';
 
     protected $fillable = [
         'ingredient',

@@ -30,22 +30,19 @@ class PharmacistQueueTest extends TestCase
     {
         parent::setUp();
 
-        DanhMuc::create([
-            'name' => 'Thuốc giảm đau - Hạ sốt',
-            'description' => 'Giảm đau, hạ sốt',
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt',
+            'mo_ta' => 'Giảm đau, hạ sốt',
         ]);
 
         $this->seed(TriThucYTeSeeder::class);
 
-        $this->pharmacist = NguoiDung::factory()->create([
-            'role' => 'Pharmacist',
-            'status' => 'active',
+        $this->pharmacist = NguoiDung::factory()->create(['vai_tro' => 'Pharmacist',
+            'trang_thai' => 'active',
         ]);
 
-        $this->customer = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(41)->toDateString(),
+        $this->customer = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(41)->toDateString(),
         ]);
     }
 
@@ -69,7 +66,7 @@ class PharmacistQueueTest extends TestCase
     public function test_administrator_is_also_forbidden(): void
     {
         // Running the shop is not the same job as answering clinical questions.
-        $admin = NguoiDung::factory()->create(['role' => 'Administrator', 'status' => 'active']);
+        $admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator', 'trang_thai' => 'active']);
 
         $this->actingAs($admin)
             ->get(route('pharmacist.triage.index'))
@@ -83,7 +80,7 @@ class PharmacistQueueTest extends TestCase
 
     public function test_inactive_pharmacist_is_blocked(): void
     {
-        $inactive = NguoiDung::factory()->create(['role' => 'Pharmacist', 'status' => 'inactive']);
+        $inactive = NguoiDung::factory()->create(['vai_tro' => 'Pharmacist', 'trang_thai' => 'inactive']);
 
         $this->actingAs($inactive)
             ->get(route('pharmacist.triage.index'))
@@ -102,9 +99,9 @@ class PharmacistQueueTest extends TestCase
             ->get(route('pharmacist.triage.index'))
             ->assertOk();
 
-        $response->assertSee(route('pharmacist.triage.show', $pending->MaSL), false);
-        $response->assertDontSee(route('pharmacist.triage.show', $completed->MaSL), false);
-        $response->assertDontSee(route('pharmacist.triage.show', $inProgress->MaSL), false);
+        $response->assertSee(route('pharmacist.triage.show', $pending->ma_sl), false);
+        $response->assertDontSee(route('pharmacist.triage.show', $completed->ma_sl), false);
+        $response->assertDontSee(route('pharmacist.triage.show', $inProgress->ma_sl), false);
     }
 
     public function test_oldest_case_appears_first(): void
@@ -117,8 +114,8 @@ class PharmacistQueueTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $olderPos = strpos($html, route('pharmacist.triage.show', $older->MaSL));
-        $newerPos = strpos($html, route('pharmacist.triage.show', $newer->MaSL));
+        $olderPos = strpos($html, route('pharmacist.triage.show', $older->ma_sl));
+        $newerPos = strpos($html, route('pharmacist.triage.show', $newer->ma_sl));
 
         $this->assertNotFalse($olderPos);
         $this->assertNotFalse($newerPos);
@@ -140,14 +137,14 @@ class PharmacistQueueTest extends TestCase
         $phien = $this->pendingSession();
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.reply', $phien->MaSL), [
+            ->post(route('pharmacist.triage.reply', $phien->ma_sl), [
                 'pharmacist_note' => 'Anh/chị có thể dùng paracetamol 500mg khi đau, tối đa 4 lần/ngày.',
             ])
             ->assertRedirect(route('pharmacist.triage.index'));
 
         $phien->refresh();
 
-        $this->assertSame($this->pharmacist->MaKH, $phien->pharmacist_id);
+        $this->assertSame($this->pharmacist->ma_nd, $phien->pharmacist_id);
         $this->assertStringContainsString('paracetamol', $phien->pharmacist_note);
         $this->assertNotNull($phien->reviewed_at);
         $this->assertSame('reviewed', $phien->status);
@@ -158,19 +155,19 @@ class PharmacistQueueTest extends TestCase
         $phien = $this->pendingSession();
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.reply', $phien->MaSL), [
+            ->post(route('pharmacist.triage.reply', $phien->ma_sl), [
                 'pharmacist_note' => 'Em đã xem, anh/chị theo dõi thêm 2 ngày nhé.',
             ]);
 
         $tinNhan = TinNhanChat::where('session_id', $phien->session_id)
             ->where('role', 'assistant')
-            ->latest('MaTN')
+            ->latest('ma_tn')
             ->first();
 
         $this->assertNotNull($tinNhan);
         $this->assertTrue($tinNhan->metadata['reviewed_by_pharmacist']);
-        $this->assertSame($this->pharmacist->MaKH, $tinNhan->metadata['pharmacist_id']);
-        $this->assertSame($phien->MaSL, $tinNhan->metadata['triage_session_id']);
+        $this->assertSame($this->pharmacist->ma_nd, $tinNhan->metadata['pharmacist_id']);
+        $this->assertSame($phien->ma_sl, $tinNhan->metadata['triage_session_id']);
     }
 
     public function test_reply_on_an_already_reviewed_case_is_refused(): void
@@ -179,12 +176,12 @@ class PharmacistQueueTest extends TestCase
         $phien->update([
             'status' => 'reviewed',
             'pharmacist_note' => 'Ghi chú gốc của dược sĩ trước.',
-            'pharmacist_id' => $this->pharmacist->MaKH,
+            'pharmacist_id' => $this->pharmacist->ma_nd,
             'reviewed_at' => now()->subHour(),
         ]);
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.reply', $phien->MaSL), [
+            ->post(route('pharmacist.triage.reply', $phien->ma_sl), [
                 'pharmacist_note' => 'Ghi chú mới không được phép ghi đè.',
             ])
             ->assertSessionHasErrors('pharmacist_note');
@@ -197,7 +194,7 @@ class PharmacistQueueTest extends TestCase
         $phien = $this->pendingSession();
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.reply', $phien->MaSL), ['pharmacist_note' => ''])
+            ->post(route('pharmacist.triage.reply', $phien->ma_sl), ['pharmacist_note' => ''])
             ->assertSessionHasErrors('pharmacist_note');
 
         $this->assertSame('pending_pharmacist', $phien->fresh()->status);
@@ -214,7 +211,7 @@ class PharmacistQueueTest extends TestCase
         ]);
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.escalate', $phien->MaSL), [
+            ->post(route('pharmacist.triage.escalate', $phien->ma_sl), [
                 'pharmacist_note' => 'Triệu chứng kéo dài kèm sụt cân, anh/chị cần bác sĩ khám trực tiếp.',
             ])
             ->assertRedirect(route('pharmacist.triage.index'));
@@ -230,8 +227,7 @@ class PharmacistQueueTest extends TestCase
 
     public function test_detail_hides_profile_data_without_consent(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->customer->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->customer->ma_nd,
             'allergies' => ['dị ứng penicillin'],
             'chronic_conditions' => ['loét dạ dày'],
             'consented_at' => null,
@@ -240,7 +236,7 @@ class PharmacistQueueTest extends TestCase
         $phien = $this->pendingSession();
 
         $this->actingAs($this->pharmacist)
-            ->get(route('pharmacist.triage.show', $phien->MaSL))
+            ->get(route('pharmacist.triage.show', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.pharmacist.profile_no_consent'))
             ->assertDontSee('dị ứng penicillin')
@@ -251,8 +247,7 @@ class PharmacistQueueTest extends TestCase
 
     public function test_detail_shows_consented_profile_and_audits_the_access(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->customer->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->customer->ma_nd,
             'allergies' => ['dị ứng penicillin'],
             'consented_at' => now(),
         ]);
@@ -260,13 +255,13 @@ class PharmacistQueueTest extends TestCase
         $phien = $this->pendingSession();
 
         $this->actingAs($this->pharmacist)
-            ->get(route('pharmacist.triage.show', $phien->MaSL))
+            ->get(route('pharmacist.triage.show', $phien->ma_sl))
             ->assertOk()
             ->assertSee('dị ứng penicillin');
 
-        $this->assertDatabaseHas('audit_logs', [
+        $this->assertDatabaseHas('nhat_ky_kiem_toans', [
             'action' => 'health_profile_accessed',
-            'MaKH' => $this->pharmacist->MaKH,
+            'ma_nd' => $this->pharmacist->ma_nd,
             'model_type' => HoSoSucKhoe::class,
         ]);
     }
@@ -275,17 +270,17 @@ class PharmacistQueueTest extends TestCase
 
     public function test_claim_blocks_a_second_pharmacist(): void
     {
-        $other = NguoiDung::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'Pharmacist', 'trang_thai' => 'active']);
         $phien = $this->pendingSession();
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.claim', $phien->MaSL))
+            ->post(route('pharmacist.triage.claim', $phien->ma_sl))
             ->assertRedirect(route('pharmacist.triage.index'));
 
-        $this->assertSame($this->pharmacist->MaKH, $phien->fresh()->pharmacist_id);
+        $this->assertSame($this->pharmacist->ma_nd, $phien->fresh()->pharmacist_id);
 
         $this->actingAs($other)
-            ->post(route('pharmacist.triage.reply', $phien->MaSL), [
+            ->post(route('pharmacist.triage.reply', $phien->ma_sl), [
                 'pharmacist_note' => 'Dược sĩ khác cố trả lời cùng ca.',
             ])
             ->assertSessionHasErrors('pharmacist_note');
@@ -301,16 +296,15 @@ class PharmacistQueueTest extends TestCase
         $current = $this->pendingSession(['raw_symptom_text' => 'Triệu chứng mới']);
 
         $this->actingAs($this->pharmacist)
-            ->get(route('pharmacist.triage.show', $current->MaSL))
+            ->get(route('pharmacist.triage.show', $current->ma_sl))
             ->assertOk()
-            ->assertViewHas('pastSessions', fn ($sessions) => $sessions->contains('MaSL', $past->MaSL));
+            ->assertViewHas('pastSessions', fn ($sessions) => $sessions->contains('ma_sl', $past->ma_sl));
     }
 
     public function test_show_excludes_other_customers_past_sessions(): void
     {
-        $stranger = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
-        $strangerSession = PhienSangLoc::create([
-            'MaKH' => $stranger->MaKH,
+        $stranger = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $strangerSession = PhienSangLoc::create(['ma_nd' => $stranger->ma_nd,
             'status' => 'reviewed',
             'collected_data' => ['raw_symptom_text' => 'Ca của người khác'],
         ]);
@@ -318,9 +312,9 @@ class PharmacistQueueTest extends TestCase
         $current = $this->pendingSession();
 
         $this->actingAs($this->pharmacist)
-            ->get(route('pharmacist.triage.show', $current->MaSL))
+            ->get(route('pharmacist.triage.show', $current->ma_sl))
             ->assertOk()
-            ->assertViewHas('pastSessions', fn ($sessions) => !$sessions->contains('MaSL', $strangerSession->MaSL));
+            ->assertViewHas('pastSessions', fn ($sessions) => !$sessions->contains('ma_sl', $strangerSession->ma_sl));
     }
 
     public function test_show_excludes_sessions_never_handed_to_a_pharmacist(): void
@@ -329,9 +323,9 @@ class PharmacistQueueTest extends TestCase
         $current = $this->pendingSession();
 
         $this->actingAs($this->pharmacist)
-            ->get(route('pharmacist.triage.show', $current->MaSL))
+            ->get(route('pharmacist.triage.show', $current->ma_sl))
             ->assertOk()
-            ->assertViewHas('pastSessions', fn ($sessions) => !$sessions->contains('MaSL', $inProgress->MaSL));
+            ->assertViewHas('pastSessions', fn ($sessions) => !$sessions->contains('ma_sl', $inProgress->ma_sl));
     }
 
     // Note: triage_sessions.MaKH is NOT NULL, so the empty-collection branch of
@@ -365,8 +359,7 @@ class PharmacistQueueTest extends TestCase
 
     protected function makeSession(string $status, array $collected = [], ?\DateTimeInterface $createdAt = null): PhienSangLoc
     {
-        $phien = PhienSangLoc::create([
-            'MaKH' => $this->customer->MaKH,
+        $phien = PhienSangLoc::create(['ma_nd' => $this->customer->ma_nd,
             'session_id' => (string) Str::uuid(),
             'collected_data' => array_merge([
                 'raw_symptom_text' => 'đau đầu kéo dài, chưa rõ nguyên nhân',

@@ -25,13 +25,13 @@ class TriagePharmacistRequestTest extends TestCase
     {
         parent::setUp();
 
-        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
     }
 
     protected function completedSession(array $attributes = []): PhienSangLoc
     {
         return PhienSangLoc::create(array_merge([
-            'MaKH' => $this->nguoiDung->MaKH,
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -43,7 +43,7 @@ class TriagePharmacistRequestTest extends TestCase
 
     public function test_the_queue_is_empty_until_a_customer_asks(): void
     {
-        $pharmacist = NguoiDung::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
+        $pharmacist = NguoiDung::factory()->create(['vai_tro' => 'Pharmacist', 'trang_thai' => 'active']);
         $this->completedSession();
 
         $this->actingAs($pharmacist)
@@ -54,12 +54,12 @@ class TriagePharmacistRequestTest extends TestCase
 
     public function test_a_requested_case_appears_in_the_queue(): void
     {
-        $pharmacist = NguoiDung::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
+        $pharmacist = NguoiDung::factory()->create(['vai_tro' => 'Pharmacist', 'trang_thai' => 'active']);
         $phien = $this->completedSession();
 
         $this->actingAs($this->nguoiDung)
-            ->post(route('health.requestPharmacist', $phien->MaSL))
-            ->assertRedirect(route('health.result', $phien->MaSL))
+            ->post(route('health.requestPharmacist', $phien->ma_sl))
+            ->assertRedirect(route('health.result', $phien->ma_sl))
             ->assertSessionHas('success', __('messages.health.pharmacist_requested'));
 
         $this->assertSame('pending_pharmacist', $phien->fresh()->status);
@@ -78,7 +78,7 @@ class TriagePharmacistRequestTest extends TestCase
             'follow_up_at' => now()->addDays(3),
         ]);
 
-        $this->actingAs($this->nguoiDung)->post(route('health.requestPharmacist', $phien->MaSL));
+        $this->actingAs($this->nguoiDung)->post(route('health.requestPharmacist', $phien->ma_sl));
 
         $phien = $phien->fresh();
 
@@ -95,7 +95,7 @@ class TriagePharmacistRequestTest extends TestCase
         ]);
 
         $this->actingAs($this->nguoiDung)
-            ->post(route('health.requestPharmacist', $phien->MaSL))
+            ->post(route('health.requestPharmacist', $phien->ma_sl))
             ->assertSessionHas('success', __('messages.health.pharmacist_request_unavailable'));
 
         $this->assertSame('completed', $phien->fresh()->status);
@@ -105,9 +105,9 @@ class TriagePharmacistRequestTest extends TestCase
     {
         $phien = $this->completedSession();
 
-        $this->actingAs($this->nguoiDung)->post(route('health.requestPharmacist', $phien->MaSL));
+        $this->actingAs($this->nguoiDung)->post(route('health.requestPharmacist', $phien->ma_sl));
         $this->actingAs($this->nguoiDung)
-            ->post(route('health.requestPharmacist', $phien->MaSL))
+            ->post(route('health.requestPharmacist', $phien->ma_sl))
             ->assertSessionHas('success', __('messages.health.pharmacist_request_unavailable'));
 
         $this->assertSame('pending_pharmacist', $phien->fresh()->status);
@@ -118,7 +118,7 @@ class TriagePharmacistRequestTest extends TestCase
     {
         $phien = $this->completedSession(['status' => 'in_progress', 'outcome' => null]);
 
-        $this->actingAs($this->nguoiDung)->post(route('health.requestPharmacist', $phien->MaSL));
+        $this->actingAs($this->nguoiDung)->post(route('health.requestPharmacist', $phien->ma_sl));
 
         $this->assertSame('in_progress', $phien->fresh()->status);
     }
@@ -127,7 +127,7 @@ class TriagePharmacistRequestTest extends TestCase
     {
         $phien = $this->completedSession(['matched_symptoms' => ['headache']]);
 
-        $this->actingAs($this->nguoiDung)->post(route('health.requestPharmacist', $phien->MaSL));
+        $this->actingAs($this->nguoiDung)->post(route('health.requestPharmacist', $phien->ma_sl));
 
         $log = NhatKyKiemToan::where('action', 'triage_pharmacist_requested')->firstOrFail();
         $encoded = json_encode($log->new_values, JSON_UNESCAPED_UNICODE);
@@ -139,10 +139,10 @@ class TriagePharmacistRequestTest extends TestCase
     public function test_another_user_cannot_queue_someone_elses_session(): void
     {
         $phien = $this->completedSession();
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
 
         $this->actingAs($other)
-            ->post(route('health.requestPharmacist', $phien->MaSL))
+            ->post(route('health.requestPharmacist', $phien->ma_sl))
             ->assertNotFound();
 
         $this->assertSame('completed', $phien->fresh()->status);
@@ -152,7 +152,7 @@ class TriagePharmacistRequestTest extends TestCase
     {
         $phien = $this->completedSession();
 
-        $this->post(route('health.requestPharmacist', $phien->MaSL))
+        $this->post(route('health.requestPharmacist', $phien->ma_sl))
             ->assertRedirect(route('login'));
     }
 }

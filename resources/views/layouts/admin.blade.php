@@ -107,8 +107,8 @@
 
                 <div class="dropdown flex-shrink-0">
                     <button class="btn btn-light d-flex align-items-center gap-2 px-2 px-md-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=0f766e&color=fff&rounded=true&size=32" alt="Avatar {{ Auth::user()->name }}" class="rounded-circle" width="32" height="32">
-                        <span class="fw-semibold d-none d-md-inline">{{ Auth::user()->name }}</span>
+                        <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->ho_ten) }}&background=0f766e&color=fff&rounded=true&size=32" alt="Avatar {{ Auth::user()->ho_ten }}" class="rounded-circle" width="32" height="32">
+                        <span class="fw-semibold d-none d-md-inline">{{ Auth::user()->ho_ten }}</span>
                         <i class="bi bi-chevron-down small text-secondary" aria-hidden="true"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0">

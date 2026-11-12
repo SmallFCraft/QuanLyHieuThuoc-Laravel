@@ -38,7 +38,7 @@
                         </thead>
                         <tbody>
                             @foreach ($reminders as $reminder)
-                                @php $productName = $reminder->sanPham->name ?? $reminder->dosage_text; @endphp
+                                @php $productName = $reminder->sanPham->ten ?? $reminder->dosage_text; @endphp
                                 <tr>
                                     <td class="fw-semibold text-gray-900">{{ $productName }}</td>
                                     <td class="small text-gray-600">{{ $reminder->dosage_text }}</td>
@@ -50,7 +50,7 @@
                                         {{ $reminder->next_remind_at ? $reminder->next_remind_at->format('d/m/Y H:i') : __('messages.reminder.no_next') }}
                                     </td>
                                     <td class="text-end">
-                                        <form method="POST" action="{{ route('reminders.cancel', $reminder->MaNN) }}" class="d-inline">
+                                        <form method="POST" action="{{ route('reminders.cancel', $reminder->ma_nn) }}" class="d-inline">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill"
                                                     aria-label="{{ __('messages.reminder.btn_cancel_aria', ['name' => $productName]) }}">

@@ -33,8 +33,8 @@ class TriageAiDraftTest extends TestCase
 
         config()->set('chatbot.ai.triage.pharmacist_draft', true);
 
-        $this->pharmacist = NguoiDung::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
-        $this->customer = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->pharmacist = NguoiDung::factory()->create(['vai_tro' => 'Pharmacist', 'trang_thai' => 'active']);
+        $this->customer = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
     }
 
     protected function fakeProviderReply(string $content): void
@@ -47,7 +47,7 @@ class TriageAiDraftTest extends TestCase
     protected function pendingSession(array $attributes = []): PhienSangLoc
     {
         return PhienSangLoc::create(array_merge([
-            'MaKH' => $this->customer->MaKH,
+            'ma_nd' => $this->customer->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'pending_pharmacist',
@@ -57,7 +57,7 @@ class TriageAiDraftTest extends TestCase
             'matched_symptoms' => ['fever'],
             'triggered_red_flags' => [],
             'collected_data' => ['raw_symptom_text' => 'toi bi sot va dau dau'],
-            'pharmacist_id' => $this->pharmacist->MaKH,
+            'pharmacist_id' => $this->pharmacist->ma_nd,
         ], $attributes));
     }
 
@@ -68,12 +68,12 @@ class TriageAiDraftTest extends TestCase
         $phien = $this->pendingSession();
 
         $this->actingAs($this->pharmacist)
-            ->get(route('pharmacist.triage.show', $phien->MaSL))
+            ->get(route('pharmacist.triage.show', $phien->ma_sl))
             ->assertOk()
             ->assertDontSee(__('messages.pharmacist.btn_ai_draft'));
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.draft', $phien->MaSL))
+            ->post(route('pharmacist.triage.draft', $phien->ma_sl))
             ->assertSessionHasErrors('pharmacist_note');
 
         Http::assertNothingSent();
@@ -86,8 +86,8 @@ class TriageAiDraftTest extends TestCase
         $phien = $this->pendingSession();
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.draft', $phien->MaSL))
-            ->assertRedirect(route('pharmacist.triage.show', $phien->MaSL))
+            ->post(route('pharmacist.triage.draft', $phien->ma_sl))
+            ->assertRedirect(route('pharmacist.triage.show', $phien->ma_sl))
             ->assertSessionHas('success', __('messages.pharmacist.ai_draft_success'));
 
         $phien->refresh();
@@ -98,7 +98,7 @@ class TriageAiDraftTest extends TestCase
 
         // The draft comes back through withInput(), so old() fills the existing form.
         $this->actingAs($this->pharmacist)
-            ->get(route('pharmacist.triage.show', $phien->MaSL))
+            ->get(route('pharmacist.triage.show', $phien->ma_sl))
             ->assertOk()
             ->assertSee('em khuyên nên nghỉ ngơi', false);
     }
@@ -107,8 +107,7 @@ class TriageAiDraftTest extends TestCase
     {
         $this->fakeProviderReply('Dạ, em xin phép trả lời anh/chị như sau.');
 
-        \App\Models\HoSoSucKhoe::create([
-            'MaKH' => $this->customer->MaKH,
+        \App\Models\HoSoSucKhoe::create(['ma_nd' => $this->customer->ma_nd,
             'allergies' => ['penicillin'],
             'chronic_conditions' => ['loét dạ dày'],
             'current_medications' => ['omeprazole'],
@@ -117,7 +116,7 @@ class TriageAiDraftTest extends TestCase
 
         $phien = $this->pendingSession();
 
-        $this->actingAs($this->pharmacist)->post(route('pharmacist.triage.draft', $phien->MaSL));
+        $this->actingAs($this->pharmacist)->post(route('pharmacist.triage.draft', $phien->ma_sl));
 
         Http::assertSent(function ($request) {
             $body = json_encode($request->data(), JSON_UNESCAPED_UNICODE);
@@ -138,7 +137,7 @@ class TriageAiDraftTest extends TestCase
         $phien = $this->pendingSession(['pharmacist_id' => null]);
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.draft', $phien->MaSL))
+            ->post(route('pharmacist.triage.draft', $phien->ma_sl))
             ->assertSessionHasErrors('pharmacist_note');
 
         Http::assertNothingSent();
@@ -146,11 +145,11 @@ class TriageAiDraftTest extends TestCase
 
     public function test_a_case_claimed_by_another_pharmacist_is_refused(): void
     {
-        $other = NguoiDung::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
-        $phien = $this->pendingSession(['pharmacist_id' => $other->MaKH]);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'Pharmacist', 'trang_thai' => 'active']);
+        $phien = $this->pendingSession(['pharmacist_id' => $other->ma_nd]);
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.draft', $phien->MaSL))
+            ->post(route('pharmacist.triage.draft', $phien->ma_sl))
             ->assertSessionHasErrors('pharmacist_note');
 
         Http::assertNothingSent();
@@ -165,7 +164,7 @@ class TriageAiDraftTest extends TestCase
         ]);
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.draft', $phien->MaSL))
+            ->post(route('pharmacist.triage.draft', $phien->ma_sl))
             ->assertSessionHasErrors('pharmacist_note');
 
         Http::assertNothingSent();
@@ -176,7 +175,7 @@ class TriageAiDraftTest extends TestCase
         $phien = $this->pendingSession(['status' => 'in_progress', 'outcome' => null]);
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.draft', $phien->MaSL))
+            ->post(route('pharmacist.triage.draft', $phien->ma_sl))
             ->assertNotFound();
 
         Http::assertNothingSent();
@@ -189,7 +188,7 @@ class TriageAiDraftTest extends TestCase
         $phien = $this->pendingSession();
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.draft', $phien->MaSL))
+            ->post(route('pharmacist.triage.draft', $phien->ma_sl))
             ->assertSessionHasErrors('pharmacist_note');
 
         $this->assertNull($phien->fresh()->pharmacist_note);
@@ -202,7 +201,7 @@ class TriageAiDraftTest extends TestCase
         $phien = $this->pendingSession();
 
         $this->actingAs($this->pharmacist)
-            ->post(route('pharmacist.triage.draft', $phien->MaSL))
+            ->post(route('pharmacist.triage.draft', $phien->ma_sl))
             ->assertSessionHasErrors('pharmacist_note');
     }
 
@@ -212,7 +211,7 @@ class TriageAiDraftTest extends TestCase
 
         $phien = $this->pendingSession();
 
-        $this->actingAs($this->pharmacist)->post(route('pharmacist.triage.draft', $phien->MaSL));
+        $this->actingAs($this->pharmacist)->post(route('pharmacist.triage.draft', $phien->ma_sl));
 
         $draft = session('_old_input.pharmacist_note');
 
@@ -229,7 +228,7 @@ class TriageAiDraftTest extends TestCase
 
         $phien = $this->pendingSession();
 
-        $this->actingAs($this->pharmacist)->post(route('pharmacist.triage.draft', $phien->MaSL));
+        $this->actingAs($this->pharmacist)->post(route('pharmacist.triage.draft', $phien->ma_sl));
 
         $log = NhatKyKiemToan::where('action', 'triage_ai_draft')->firstOrFail();
         $values = $log->new_values;
@@ -249,7 +248,7 @@ class TriageAiDraftTest extends TestCase
         $phien = $this->pendingSession();
 
         $this->actingAs($this->customer)
-            ->post(route('pharmacist.triage.draft', $phien->MaSL))
+            ->post(route('pharmacist.triage.draft', $phien->ma_sl))
             ->assertForbidden();
 
         Http::assertNothingSent();

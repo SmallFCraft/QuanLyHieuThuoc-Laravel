@@ -33,7 +33,7 @@ class TriageAiAdviceTest extends TestCase
 
         config()->set('chatbot.ai.triage.advice_rewrite', true);
 
-        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
     }
 
     protected function fakeProviderReply(string $content): void
@@ -46,7 +46,7 @@ class TriageAiAdviceTest extends TestCase
     protected function selfCareSession(array $attributes = []): PhienSangLoc
     {
         return PhienSangLoc::create(array_merge([
-            'MaKH' => $this->nguoiDung->MaKH,
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -225,7 +225,7 @@ class TriageAiAdviceTest extends TestCase
         // no longer printed beside it — two versions of one instruction on one page
         // read as two different instructions.
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee('dược sĩ Hạnh', false)
             ->assertDontSee('đo nhiệt độ mỗi 4–6 giờ nhé', false);
@@ -244,8 +244,7 @@ class TriageAiAdviceTest extends TestCase
 
     public function test_the_prompt_carries_neither_free_text_nor_profile_data(): void
     {
-        \App\Models\HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        \App\Models\HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'allergies' => ['penicillin'],
             'consented_at' => now(),
         ]);
@@ -291,7 +290,7 @@ class TriageAiAdviceTest extends TestCase
         $this->assertStringContainsString('đo nhiệt độ', (string) $phien->ai_advice);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee('Đo lại nhiệt độ mỗi 4–6 giờ.', false)
             ->assertDontSee('đo nhiệt độ mỗi 4–6 giờ nhé', false);

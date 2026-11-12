@@ -148,18 +148,18 @@
                         @endphp
                         <tr>
                             <td><span class="fw-semibold">{{ $product->display_code }}</span></td>
-                            <td>{{ $product->name }}</td>
-                            <td>{{ $product->danhMuc->name ?? 'Chưa phân loại' }}</td>
-                            <td>{{ $product->batch_number }}</td>
-                            <td><span class="badge {{ $product->isLowStock() ? 'text-bg-danger' : 'text-bg-success' }}">{{ $product->stock_quantity }}</span></td>
-                            <td>{{ $product->reorder_point }}</td>
-                            <td>{{ $product->expiration_date->format('d/m/Y') }}</td>
+                            <td>{{ $product->ten }}</td>
+                            <td>{{ $product->danhMuc->ten ?? 'Chưa phân loại' }}</td>
+                            <td>{{ $product->so_lo }}</td>
+                            <td><span class="badge {{ $product->isLowStock() ? 'text-bg-danger' : 'text-bg-success' }}">{{ $product->so_luong_ton }}</span></td>
+                            <td>{{ $product->muc_canh_bao }}</td>
+                            <td>{{ $product->ngay_het_han->format('d/m/Y') }}</td>
                             <td><span class="badge {{ $statusClass }}">{{ $statusText }}</span></td>
                             <td>
                                 <button class="btn btn-sm btn-outline-primary" type="button"
-                                    data-product-id="{{ $product->MaSP }}"
-                                    data-product-name="{{ $product->name }}"
-                                    data-product-stock="{{ $product->stock_quantity }}"
+                                    data-product-id="{{ $product->ma_sp }}"
+                                    data-product-name="{{ $product->ten }}"
+                                    data-product-stock="{{ $product->so_luong_ton }}"
                                     onclick="adjustInventory(this)">
                                     <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>{{ __('messages.admin.inventory.adjust') }}
                                 </button>
@@ -175,16 +175,16 @@
                 <article class="admin-mobile-item">
                     <div class="d-flex justify-content-between gap-3">
                         <div>
-                            <strong>{{ $product->name }}</strong>
-                            <div class="small text-secondary">{{ $product->display_code }} · {{ $product->danhMuc->name ?? 'Chưa phân loại' }}</div>
-                            <div class="small text-secondary">Lô {{ $product->batch_number }} · HSD {{ $product->expiration_date->format('d/m/Y') }}</div>
+                            <strong>{{ $product->ten }}</strong>
+                            <div class="small text-secondary">{{ $product->display_code }} · {{ $product->danhMuc->ten ?? 'Chưa phân loại' }}</div>
+                            <div class="small text-secondary">Lô {{ $product->so_lo }} · HSD {{ $product->ngay_het_han->format('d/m/Y') }}</div>
                         </div>
-                        <span class="badge {{ $product->isLowStock() ? 'text-bg-danger' : 'text-bg-success' }} align-self-start">{{ $product->stock_quantity }}</span>
+                        <span class="badge {{ $product->isLowStock() ? 'text-bg-danger' : 'text-bg-success' }} align-self-start">{{ $product->so_luong_ton }}</span>
                     </div>
                     <button class="btn btn-sm btn-outline-primary w-100 mt-3" type="button"
-                        data-product-id="{{ $product->MaSP }}"
-                        data-product-name="{{ $product->name }}"
-                        data-product-stock="{{ $product->stock_quantity }}"
+                        data-product-id="{{ $product->ma_sp }}"
+                        data-product-name="{{ $product->ten }}"
+                        data-product-stock="{{ $product->so_luong_ton }}"
                         onclick="adjustInventory(this)">
                         <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>{{ __('messages.admin.inventory.adjust') }}
                     </button>

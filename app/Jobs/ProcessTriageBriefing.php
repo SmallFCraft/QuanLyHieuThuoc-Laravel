@@ -42,7 +42,7 @@ class ProcessTriageBriefing implements ShouldQueue
 
         $jobs->markRunning($job);
 
-        $phien = PhienSangLoc::find($job->payload['MaSL'] ?? null);
+        $phien = PhienSangLoc::find($job->payload['ma_sl'] ?? null);
 
         if ($phien === null) {
             $jobs->markFailed($job, 'triage session no longer exists');
@@ -58,7 +58,7 @@ class ProcessTriageBriefing implements ShouldQueue
             $jobs->markDone($job, ['ai_briefing_status' => $phien->refresh()->ai_briefing_status]);
         } catch (\Throwable $exception) {
             Log::warning('Triage briefing job failed', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
 

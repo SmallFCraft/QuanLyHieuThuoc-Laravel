@@ -32,7 +32,7 @@ class FavoriteController extends Controller
     {
         $validated = $request->validate([
             'product_ids' => ['nullable', 'array'],
-            'product_ids.*' => ['integer', 'distinct', 'exists:products,MaSP'],
+            'product_ids.*' => ['integer', 'distinct', 'exists:san_phams,ma_sp'],
         ]);
 
         $productIds = collect($validated['product_ids'] ?? [])
@@ -45,8 +45,8 @@ class FavoriteController extends Controller
 
         foreach ($productIds as $productId) {
             $yeuThich = YeuThich::firstOrCreate([
-                'MaKH' => $request->user()->MaKH,
-                'MaSP' => $productId,
+                'ma_nd' => $request->user()->ma_nd,
+                'ma_sp' => $productId,
             ]);
 
             if ($yeuThich->wasRecentlyCreated) {
@@ -62,8 +62,8 @@ class FavoriteController extends Controller
 
     public function toggle(Request $request, SanPham $product): JsonResponse
     {
-        $yeuThich = YeuThich::where('MaKH', $request->user()->MaKH)
-            ->where('MaSP', $product->MaSP)
+        $yeuThich = YeuThich::where('ma_nd', $request->user()->ma_nd)
+            ->where('ma_sp', $product->ma_sp)
             ->first();
 
         if ($yeuThich) {
@@ -71,14 +71,14 @@ class FavoriteController extends Controller
             $saved = false;
         } else {
             YeuThich::create([
-                'MaKH' => $request->user()->MaKH,
-                'MaSP' => $product->MaSP,
+                'ma_nd' => $request->user()->ma_nd,
+                'ma_sp' => $product->ma_sp,
             ]);
             $saved = true;
         }
 
         return response()->json([
-            'product_id' => (string) $product->MaSP,
+            'product_id' => (string) $product->ma_sp,
             'saved' => $saved,
             'favorites' => $this->favoriteIdsFor($request),
         ]);
@@ -86,12 +86,12 @@ class FavoriteController extends Controller
 
     public function destroy(Request $request, SanPham $product): JsonResponse
     {
-        YeuThich::where('MaKH', $request->user()->MaKH)
-            ->where('MaSP', $product->MaSP)
+        YeuThich::where('ma_nd', $request->user()->ma_nd)
+            ->where('ma_sp', $product->ma_sp)
             ->delete();
 
         return response()->json([
-            'product_id' => (string) $product->MaSP,
+            'product_id' => (string) $product->ma_sp,
             'saved' => false,
             'favorites' => $this->favoriteIdsFor($request),
         ]);

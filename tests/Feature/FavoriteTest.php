@@ -33,14 +33,14 @@ class FavoriteTest extends TestCase
         $saveResponse
             ->assertOk()
             ->assertJson([
-                'product_id' => (string) $sanPham->MaSP,
+                'product_id' => (string) $sanPham->ma_sp,
                 'saved' => true,
-                'favorites' => [(string) $sanPham->MaSP],
+                'favorites' => [(string) $sanPham->ma_sp],
             ]);
 
-        $this->assertDatabaseHas('favorites', [
-            'MaKH' => $nguoiDung->MaKH,
-            'MaSP' => $sanPham->MaSP,
+        $this->assertDatabaseHas('yeu_thiches', [
+            'ma_nd' => $nguoiDung->ma_nd,
+            'ma_sp' => $sanPham->ma_sp,
         ]);
 
         $removeResponse = $this
@@ -50,14 +50,14 @@ class FavoriteTest extends TestCase
         $removeResponse
             ->assertOk()
             ->assertJson([
-                'product_id' => (string) $sanPham->MaSP,
+                'product_id' => (string) $sanPham->ma_sp,
                 'saved' => false,
                 'favorites' => [],
             ]);
 
-        $this->assertDatabaseMissing('favorites', [
-            'MaKH' => $nguoiDung->MaKH,
-            'MaSP' => $sanPham->MaSP,
+        $this->assertDatabaseMissing('yeu_thiches', [
+            'ma_nd' => $nguoiDung->ma_nd,
+            'ma_sp' => $sanPham->ma_sp,
         ]);
     }
 
@@ -69,29 +69,28 @@ class FavoriteTest extends TestCase
         $response = $this
             ->actingAs($nguoiDung)
             ->postJson(route('favorites.sync'), [
-                'product_ids' => $sanPhams->pluck('MaSP')->all(),
+                'product_ids' => $sanPhams->pluck('ma_sp')->all(),
             ]);
 
         $response
             ->assertOk()
             ->assertJson([
                 'synced_count' => 2,
-                'favorites' => $sanPhams->pluck('MaSP')->map(fn ($id) => (string) $id)->values()->all(),
+                'favorites' => $sanPhams->pluck('ma_sp')->map(fn ($id) => (string) $id)->values()->all(),
             ]);
 
-        $this->assertSame(2, YeuThich::where('MaKH', $nguoiDung->MaKH)->count());
+        $this->assertSame(2, YeuThich::where('ma_nd', $nguoiDung->ma_nd)->count());
     }
 
     public function test_profile_shows_favorite_products(): void
     {
         $nguoiDung = NguoiDung::factory()->create();
-        $sanPham = SanPham::factory()->create([
-            'name' => 'Vitamin Sync 500mg',
+        $sanPham = SanPham::factory()->create(['ten' => 'Vitamin Sync 500mg',
         ]);
 
         YeuThich::create([
-            'MaKH' => $nguoiDung->MaKH,
-            'MaSP' => $sanPham->MaSP,
+            'ma_nd' => $nguoiDung->ma_nd,
+            'ma_sp' => $sanPham->ma_sp,
         ]);
 
         $response = $this
@@ -107,13 +106,12 @@ class FavoriteTest extends TestCase
     public function test_user_can_refresh_favorite_section_without_full_page_reload(): void
     {
         $nguoiDung = NguoiDung::factory()->create();
-        $sanPham = SanPham::factory()->create([
-            'name' => 'Ajax Favorite 250mg',
+        $sanPham = SanPham::factory()->create(['ten' => 'Ajax Favorite 250mg',
         ]);
 
         YeuThich::create([
-            'MaKH' => $nguoiDung->MaKH,
-            'MaSP' => $sanPham->MaSP,
+            'ma_nd' => $nguoiDung->ma_nd,
+            'ma_sp' => $sanPham->ma_sp,
         ]);
 
         $response = $this
@@ -123,7 +121,7 @@ class FavoriteTest extends TestCase
         $response
             ->assertOk()
             ->assertJson([
-                'favorites' => [(string) $sanPham->MaSP],
+                'favorites' => [(string) $sanPham->ma_sp],
             ]);
 
         $this->assertStringContainsString('data-profile-favorites', $response->json('html'));

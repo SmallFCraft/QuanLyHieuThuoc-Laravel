@@ -22,14 +22,14 @@ class StorefrontStockDisclosureTest extends TestCase
     private function product(array $overrides = []): SanPham
     {
         return SanPham::create(array_merge([
-            'MaDM' => DanhMuc::create(['name' => 'Thuốc giảm đau'])->MaDM,
-            'name' => 'Thuốc Silymax-F Hưng Việt',
-            'price' => 132000,
-            'shelf_life_months' => 36,
-            'expiration_date' => now()->addMonths(36),
-            'stock_quantity' => 87,
-            'reorder_point' => 20,
-            'batch_number' => 'LC-00053294',
+            'ma_dm' => DanhMuc::create(['ten' => 'Thuốc giảm đau'])->ma_dm,
+            'ten' => 'Thuốc Silymax-F Hưng Việt',
+            'gia' => 132000,
+            'han_dung_thang' => 36,
+            'ngay_het_han' => now()->addMonths(36),
+            'so_luong_ton' => 87,
+            'muc_canh_bao' => 20,
+            'so_lo' => 'LC-00053294',
         ], $overrides));
     }
 
@@ -37,7 +37,7 @@ class StorefrontStockDisclosureTest extends TestCase
     {
         $sanPham = $this->product();
 
-        $response = $this->get(route('products.show', $sanPham->MaSP));
+        $response = $this->get(route('products.show', $sanPham->ma_sp));
 
         $response->assertOk()
             ->assertSee('Còn hàng')
@@ -49,18 +49,18 @@ class StorefrontStockDisclosureTest extends TestCase
     {
         $sanPham = $this->product();
 
-        $response = $this->get(route('products.show', $sanPham->MaSP));
+        $response = $this->get(route('products.show', $sanPham->ma_sp));
 
         $response->assertOk()
             ->assertSee('36 tháng')
-            ->assertDontSee($sanPham->expiration_date->format('d/m/Y'));
+            ->assertDontSee($sanPham->ngay_het_han->format('d/m/Y'));
     }
 
     public function test_a_product_without_a_published_shelf_life_shows_no_shelf_life_row(): void
     {
-        $sanPham = $this->product(['shelf_life_months' => null]);
+        $sanPham = $this->product(['han_dung_thang' => null]);
 
-        $this->get(route('products.show', $sanPham->MaSP))
+        $this->get(route('products.show', $sanPham->ma_sp))
             ->assertOk()
             ->assertDontSee('Hạn sử dụng');
     }
@@ -69,16 +69,16 @@ class StorefrontStockDisclosureTest extends TestCase
     {
         $sanPham = $this->product();
 
-        $this->get(route('products.show', $sanPham->MaSP))
+        $this->get(route('products.show', $sanPham->ma_sp))
             ->assertOk()
             ->assertDontSee('LC-00053294');
     }
 
     public function test_an_out_of_stock_product_says_so_and_hides_the_buy_form(): void
     {
-        $sanPham = $this->product(['stock_quantity' => 0, 'batch_number' => 'LC-EMPTY']);
+        $sanPham = $this->product(['so_luong_ton' => 0, 'so_lo' => 'LC-EMPTY']);
 
-        $this->get(route('products.show', $sanPham->MaSP))
+        $this->get(route('products.show', $sanPham->ma_sp))
             ->assertOk()
             ->assertSee('Hết hàng')
             ->assertDontSee('id="buy-panel"', false);
@@ -97,9 +97,9 @@ class StorefrontStockDisclosureTest extends TestCase
     public function test_the_quantity_input_is_still_bounded_by_real_stock(): void
     {
         // Hiding the number must not hand the cart an unfillable quantity.
-        $sanPham = $this->product(['stock_quantity' => 3]);
+        $sanPham = $this->product(['so_luong_ton' => 3]);
 
-        $this->get(route('products.show', $sanPham->MaSP))
+        $this->get(route('products.show', $sanPham->ma_sp))
             ->assertOk()
             ->assertSee('max="3"', false);
     }
@@ -107,13 +107,13 @@ class StorefrontStockDisclosureTest extends TestCase
     public function test_admin_screens_still_show_the_exact_figures(): void
     {
         $sanPham = $this->product();
-        $admin = NguoiDung::factory()->create(['role' => 'Administrator', 'status' => 'active']);
+        $admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator', 'trang_thai' => 'active']);
 
         // Staff run the inventory; only the customer-facing pages are reticent.
         $this->actingAs($admin)
             ->get(route('admin.inventory.index'))
             ->assertOk()
             ->assertSee('LC-00053294')
-            ->assertSee((string) $sanPham->stock_quantity);
+            ->assertSee((string) $sanPham->so_luong_ton);
     }
 }

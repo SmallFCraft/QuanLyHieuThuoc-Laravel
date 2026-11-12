@@ -40,17 +40,17 @@
                             <!-- Category -->
                             <div class="mb-3">
                                 <label for="MaDM" class="form-label fw-medium">Danh Mục <span class="text-danger">*</span></label>
-                                <select class="form-select select2-basic @error('MaDM') is-invalid @enderror"
+                                <select class="form-select select2-basic @error('ma_dm') is-invalid @enderror"
                                     id="MaDM" name="MaDM" required>
                                     <option value="">-- Chọn danh mục --</option>
                                     @foreach($categories as $category)
-                                        <option value="{{ $category->MaDM }}" data-code="{{ $category->code }}" {{ old('MaDM') == $category->MaDM ? 'selected' : '' }}>
-                                            {{ $category->name }}
+                                        <option value="{{ $category->ma_dm }}" data-code="{{ $category->code }}" {{ old('ma_dm') == $category->ma_dm ? 'selected' : '' }}>
+                                            {{ $category->ten }}
                                         </option>
                                     @endforeach
                                 </select>
                                 <div class="form-text" id="productCodeHint">Mã sản phẩm sẽ tự sinh sau khi chọn danh mục.</div>
-                                @error('MaDM')
+                                @error('ma_dm')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -198,7 +198,7 @@
 @push('scripts')
 <script type="module">
     function updateProductCodeHint() {
-        const select = document.getElementById('MaDM');
+        const select = document.getElementById('ma_dm');
         const hint = document.getElementById('productCodeHint');
         const code = select.selectedOptions[0]?.dataset.code;
         hint.textContent = code
@@ -206,7 +206,7 @@
             : 'Mã sản phẩm sẽ tự sinh sau khi chọn danh mục.';
     }
 
-    document.getElementById('MaDM')?.addEventListener('change', updateProductCodeHint);
+    document.getElementById('ma_dm')?.addEventListener('change', updateProductCodeHint);
     updateProductCodeHint();
 
     function previewImage(input) {

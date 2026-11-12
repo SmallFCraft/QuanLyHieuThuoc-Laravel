@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class TuongTacThuoc extends Model
 {
-    protected $table = 'drug_interactions';
+    protected $table = 'tuong_tac_thuocs';
 
-    protected $primaryKey = 'MaTT';
+    protected $primaryKey = 'ma_tt';
 
     protected $fillable = [
         'ingredient_a',

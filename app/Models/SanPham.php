@@ -16,9 +16,9 @@ class SanPham extends Model
 {
     use HasFactory, SoftDeletes, Auditable;
 
-    protected $table = 'products';
+    protected $table = 'san_phams';
 
-    protected $primaryKey = 'MaSP';
+    protected $primaryKey = 'ma_sp';
 
     /**
      * The attributes that are mass assignable.
@@ -26,21 +26,21 @@ class SanPham extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'MaDM',
-        'product_code',
-        'name',
-        'name_folded',
-        'ingredients',
-        'ingredients_folded',
-        'usage',
-        'shelf_life_months',
-        'price',
-        'expiration_date',
-        'stock_quantity',
-        'reorder_point',
-        'batch_number',
-        'image',
-        'views_count',
+        'ma_dm',
+        'ma_san_pham',
+        'ten',
+        'ten_khong_dau',
+        'thanh_phan',
+        'thanh_phan_khong_dau',
+        'cach_dung',
+        'han_dung_thang',
+        'gia',
+        'ngay_het_han',
+        'so_luong_ton',
+        'muc_canh_bao',
+        'so_lo',
+        'hinh_anh',
+        'luot_xem',
     ];
 
     /**
@@ -49,24 +49,24 @@ class SanPham extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'price' => 'decimal:2',
-        'expiration_date' => 'date',
-        'stock_quantity' => 'integer',
-        'reorder_point' => 'integer',
-        'shelf_life_months' => 'integer',
+        'gia' => 'decimal:2',
+        'ngay_het_han' => 'date',
+        'so_luong_ton' => 'integer',
+        'muc_canh_bao' => 'integer',
+        'han_dung_thang' => 'integer',
     ];
 
     protected static function booted(): void
     {
         static::creating(function (SanPham $sanPham): void {
-            if (filled($sanPham->product_code) || blank($sanPham->MaDM)) {
+            if (filled($sanPham->ma_san_pham) || blank($sanPham->ma_dm)) {
                 return;
             }
 
-            $danhMuc = DanhMuc::find($sanPham->MaDM);
+            $danhMuc = DanhMuc::find($sanPham->ma_dm);
 
             if ($danhMuc instanceof DanhMuc) {
-                $sanPham->product_code = ProductCodeGenerator::productCodeForCategory($danhMuc);
+                $sanPham->ma_san_pham = ProductCodeGenerator::productCodeForCategory($danhMuc);
             }
         });
 
@@ -74,12 +74,12 @@ class SanPham extends Model
         // created by the crawler, the admin form or a factory is searchable the
         // same way.
         static::saving(function (SanPham $sanPham): void {
-            if ($sanPham->isDirty('name')) {
-                $sanPham->name_folded = VietnameseText::fold((string) $sanPham->name);
+            if ($sanPham->isDirty('ten')) {
+                $sanPham->ten_khong_dau = VietnameseText::fold((string) $sanPham->ten);
             }
 
-            if ($sanPham->isDirty('ingredients')) {
-                $sanPham->ingredients_folded = VietnameseText::fold((string) $sanPham->ingredients);
+            if ($sanPham->isDirty('thanh_phan')) {
+                $sanPham->thanh_phan_khong_dau = VietnameseText::fold((string) $sanPham->thanh_phan);
             }
         });
     }
@@ -89,7 +89,7 @@ class SanPham extends Model
      */
     public function danhMuc()
     {
-        return $this->belongsTo(DanhMuc::class, 'MaDM', 'MaDM');
+        return $this->belongsTo(DanhMuc::class, 'ma_dm', 'ma_dm');
     }
 
     /**
@@ -97,7 +97,7 @@ class SanPham extends Model
      */
     public function chiTietDonHangs()
     {
-        return $this->hasMany(ChiTietDonHang::class, 'MaSP', 'MaSP');
+        return $this->hasMany(ChiTietDonHang::class, 'ma_sp', 'ma_sp');
     }
 
     /**
@@ -105,7 +105,7 @@ class SanPham extends Model
      */
     public function cacLo()
     {
-        return $this->hasMany(LoSanPham::class, 'MaSP', 'MaSP');
+        return $this->hasMany(LoSanPham::class, 'ma_sp', 'ma_sp');
     }
 
     /**
@@ -131,7 +131,7 @@ class SanPham extends Model
      */
     public function isExpired(): bool
     {
-        return $this->expiration_date->isPast();
+        return $this->ngay_het_han->isPast();
     }
 
     /**
@@ -148,7 +148,7 @@ class SanPham extends Model
 
         // Carbon 3 returns a signed difference, so calling diffInDays() on the later
         // date yields a negative number and `<= $days` matched every future date.
-        return Carbon::now()->diffInDays($this->expiration_date, true) <= $days;
+        return Carbon::now()->diffInDays($this->ngay_het_han, true) <= $days;
     }
 
     /**
@@ -158,7 +158,7 @@ class SanPham extends Model
      */
     public function isLowStock(): bool
     {
-        return $this->stock_quantity <= $this->reorder_point;
+        return $this->so_luong_ton <= $this->muc_canh_bao;
     }
 
     /**
@@ -166,7 +166,7 @@ class SanPham extends Model
      */
     public function getPriceVndAttribute(): int
     {
-        return (int) round((float) ($this->price ?? 0));
+        return (int) round((float) ($this->gia ?? 0));
     }
 
     /**
@@ -174,7 +174,7 @@ class SanPham extends Model
      */
     public function setPriceAttribute($value): void
     {
-        $this->attributes['price'] = (int) round((float) ($value ?? 0));
+        $this->attributes['gia'] = (int) round((float) ($value ?? 0));
     }
 
     /**
@@ -194,12 +194,12 @@ class SanPham extends Model
      */
     public function getFormattedExpirationDateAttribute(): string
     {
-        return $this->expiration_date->format('d/m/Y');
+        return $this->ngay_het_han->format('d/m/Y');
     }
 
     public function getDisplayCodeAttribute(): string
     {
-        return $this->product_code ?: '#' . $this->MaSP;
+        return $this->ma_san_pham ?: '#' . $this->ma_sp;
     }
 
     /**
@@ -210,7 +210,7 @@ class SanPham extends Model
      */
     public function getShelfLifeTextAttribute(): ?string
     {
-        $months = (int) ($this->shelf_life_months ?? 0);
+        $months = (int) ($this->han_dung_thang ?? 0);
 
         return $months > 0 ? $months . ' tháng' : null;
     }
@@ -222,17 +222,17 @@ class SanPham extends Model
      */
     public function getImageUrlAttribute(): ?string
     {
-        if (blank($this->image)) {
+        if (blank($this->hinh_anh)) {
             return null;
         }
 
-        if (preg_match('/^https?:\/\//', $this->image)) {
-            return $this->image;
+        if (preg_match('/^https?:\/\//', $this->hinh_anh)) {
+            return $this->hinh_anh;
         }
 
-        $path = str_contains($this->image, '/')
-            ? ltrim($this->image, '/')
-            : 'products/' . $this->image;
+        $path = str_contains($this->hinh_anh, '/')
+            ? ltrim($this->hinh_anh, '/')
+            : 'products/' . $this->hinh_anh;
 
         return is_file(Storage::disk('public')->path($path))
             ? asset('storage/' . $path)
@@ -247,7 +247,7 @@ class SanPham extends Model
      */
     public function scopeNotExpired($query)
     {
-        return $query->where('expiration_date', '>', Carbon::now());
+        return $query->where('ngay_het_han', '>', Carbon::now());
     }
 
     /**
@@ -259,7 +259,7 @@ class SanPham extends Model
      */
     public function scopeExpiringSoon($query, int $days = 180)
     {
-        return $query->whereBetween('expiration_date', [
+        return $query->whereBetween('ngay_het_han', [
             Carbon::now(),
             Carbon::now()->addDays($days)
         ]);
@@ -273,7 +273,7 @@ class SanPham extends Model
      */
     public function scopeLowStock($query)
     {
-        return $query->whereColumn('stock_quantity', '<=', 'reorder_point');
+        return $query->whereColumn('so_luong_ton', '<=', 'muc_canh_bao');
     }
 
     /**
@@ -284,7 +284,7 @@ class SanPham extends Model
      */
     public function scopeFEFO($query)
     {
-        return $query->orderBy('expiration_date', 'asc');
+        return $query->orderBy('ngay_het_han', 'asc');
     }
 
     /**
@@ -318,8 +318,8 @@ class SanPham extends Model
             $like = '%' . self::escapeLike($word) . '%';
 
             $query->where(function ($inner) use ($like) {
-                $inner->where('name_folded', 'like', $like)
-                    ->orWhere('ingredients_folded', 'like', $like);
+                $inner->where('ten_khong_dau', 'like', $like)
+                    ->orWhere('thanh_phan_khong_dau', 'like', $like);
             });
         }
 
@@ -350,12 +350,12 @@ class SanPham extends Model
         // Starting with the phrase beats merely containing it: a search for
         // "panadol" should open with "Panadol Extra", not a combination product
         // that mentions it mid-name.
-        $sql = 'CASE WHEN name_folded LIKE ? THEN 3 WHEN name_folded LIKE ? THEN 2 ';
+        $sql = 'CASE WHEN ten_khong_dau LIKE ? THEN 3 WHEN ten_khong_dau LIKE ? THEN 2 ';
         $bindings = [$phrase . '%', '%' . $phrase . '%'];
 
         $nameHits = [];
         foreach ($words as $word) {
-            $nameHits[] = 'name_folded LIKE ?';
+            $nameHits[] = 'ten_khong_dau LIKE ?';
             $bindings[] = '%' . self::escapeLike($word) . '%';
         }
 
@@ -363,8 +363,8 @@ class SanPham extends Model
 
         return $query
             ->orderByRaw($sql, $bindings)
-            ->orderByDesc('views_count')
-            ->orderBy('MaSP');
+            ->orderByDesc('luot_xem')
+            ->orderBy('ma_sp');
     }
 
     /**
@@ -418,9 +418,9 @@ class SanPham extends Model
         $like = '%' . self::escapeLike($term) . '%';
 
         return $query->where(function ($inner) use ($like) {
-            $inner->where('name', 'like', $like)
-                ->orWhere('batch_number', 'like', $like)
-                ->orWhere('product_code', 'like', $like)
+            $inner->where('ten', 'like', $like)
+                ->orWhere('so_lo', 'like', $like)
+                ->orWhere('ma_san_pham', 'like', $like)
                 ->orWhereHas('danhMuc', fn ($danhMucQuery) => $danhMucQuery->where('name', 'like', $like));
         });
     }
@@ -436,8 +436,8 @@ class SanPham extends Model
         return match ($status) {
             'low_stock' => $query->lowStock(),
             'expiring' => $query->expiringSoon($days),
-            'expired' => $query->where('expiration_date', '<', now()),
-            'out_of_stock' => $query->where('stock_quantity', 0),
+            'expired' => $query->where('ngay_het_han', '<', now()),
+            'out_of_stock' => $query->where('so_luong_ton', 0),
             default => $query,
         };
     }

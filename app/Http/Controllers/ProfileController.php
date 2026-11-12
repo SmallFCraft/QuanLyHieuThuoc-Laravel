@@ -30,11 +30,11 @@ class ProfileController extends Controller
             'favoriteItems' => YeuThich::profileItemsFor($nguoiDung),
             'recentOrders' => $nguoiDung->donHangs()->with('chiTietDonHangs')->latest()->limit(3)->get(),
             'orderCounts' => $nguoiDung->donHangs()
-                ->selectRaw('status, COUNT(*) as total')
-                ->groupBy('status')
-                ->pluck('total', 'status'),
+                ->selectRaw('trang_thai, COUNT(*) as total')
+                ->groupBy('trang_thai')
+                ->pluck('total', 'trang_thai'),
             'upcomingReminders' => NhacUongThuoc::with('sanPham')
-                ->where('MaKH', (int) $nguoiDung->MaKH)
+                ->where('ma_nd', (int) $nguoiDung->ma_nd)
                 ->active()
                 ->orderBy('next_remind_at')
                 ->limit(3)
@@ -47,10 +47,15 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        // Key form (name, birth_date, ...) giữ nguyên là hợp đồng form; map sang cột VN của model.
+        $capNhat = collect($request->validated())
+            ->mapWithKeys(fn ($giaTri, $khoa) => [ProfileUpdateRequest::COLUMN_MAP[$khoa] ?? $khoa => $giaTri])
+            ->all();
+
+        $request->user()->fill($capNhat);
 
         if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+            $request->user()->thoi_diem_xac_thuc_email = null;
         }
 
         $request->user()->save();
@@ -79,7 +84,7 @@ class ProfileController extends Controller
         ]);
 
         $nguoiDung = $request->user();
-        $previous = $nguoiDung->avatar;
+        $previous = $nguoiDung->anh_dai_dien;
         $disk = Storage::disk(config('uploads.avatars.disk', 'public'));
         $path = trim((string) config('uploads.avatars.path', 'avatars'), '/');
         $maxDimension = (int) config('uploads.avatars.max_dimension', 512);
@@ -104,7 +109,7 @@ class ProfileController extends Controller
         $filename = $path . '/' . Str::uuid() . '.jpg';
         $disk->put($filename, (string) $encoded);
 
-        $nguoiDung->avatar = $filename;
+        $nguoiDung->anh_dai_dien = $filename;
         $nguoiDung->save();
 
         // Xoá ảnh cũ sau khi bản ghi đã trỏ sang ảnh mới: nếu save() lỗi thì người
@@ -123,9 +128,9 @@ class ProfileController extends Controller
     {
         $nguoiDung = $request->user();
 
-        if ($nguoiDung->avatar) {
-            Storage::disk(config('uploads.avatars.disk', 'public'))->delete($nguoiDung->avatar);
-            $nguoiDung->avatar = null;
+        if ($nguoiDung->anh_dai_dien) {
+            Storage::disk(config('uploads.avatars.disk', 'public'))->delete($nguoiDung->anh_dai_dien);
+            $nguoiDung->anh_dai_dien = null;
             $nguoiDung->save();
         }
 

@@ -52,7 +52,7 @@
                 <div class="col-sm-6">
                     <div class="rounded-3 p-3" style="background: rgba(16,185,129,0.06);">
                         <small class="text-gray-500 d-block mb-1">{{ __('messages.checkout.order_id') }}</small>
-                        <span class="fw-bold text-gray-800">#{{ $order->MaDH }}</span>
+                        <span class="fw-bold text-gray-800">#{{ $order->ma_dh }}</span>
                     </div>
                 </div>
                 <div class="col-sm-6">
@@ -65,7 +65,7 @@
                     <div class="rounded-3 p-3" style="background: rgba(245,158,11,0.06);">
                         <small class="text-gray-500 d-block mb-1">{{ __('messages.checkout.status') }}</small>
                         <span class="badge bg-warning bg-opacity-10 text-warning-emphasis rounded-pill px-3 py-2">
-                            <i class="bi bi-clock-history me-1"></i>{{ order_status_text($order->status) }}
+                            <i class="bi bi-clock-history me-1"></i>{{ order_status_text($order->trang_thai) }}
                         </span>
                     </div>
                 </div>
@@ -79,18 +79,18 @@
 
             <div class="mb-3">
                 <small class="text-gray-500 d-block mb-1"><i class="bi bi-geo-alt me-1"></i>{{ __('messages.checkout.shipping_address') }}</small>
-                <p class="fw-medium text-gray-800 mb-0">{{ $order->shipping_address }}</p>
+                <p class="fw-medium text-gray-800 mb-0">{{ $order->dia_chi_giao_hang }}</p>
             </div>
             <div class="mb-3">
                 <small class="text-gray-500 d-block mb-1"><i class="bi bi-telephone me-1"></i>{{ __('messages.checkout.phone') }}</small>
-                <p class="fw-medium text-gray-800 mb-0">{{ $order->shipping_phone }}</p>
+                <p class="fw-medium text-gray-800 mb-0">{{ $order->sdt_giao_hang }}</p>
             </div>
             
-            @if($order->delivery_time)
+            @if($order->thoi_gian_giao)
             <div class="mb-3">
                 <small class="text-gray-500 d-block mb-1"><i class="bi bi-clock me-1"></i>{{ __('messages.checkout.delivery_time') }}</small>
                 <p class="fw-medium text-gray-800 mb-0">
-                    @switch($order->delivery_time)
+                    @switch($order->thoi_gian_giao)
                         @case('morning') {{ __('messages.checkout.delivery_time_morning') }} @break
                         @case('afternoon') {{ __('messages.checkout.delivery_time_afternoon') }} @break
                         @case('evening') {{ __('messages.checkout.delivery_time_evening') }} @break
@@ -100,10 +100,10 @@
             </div>
             @endif
 
-            @if($order->order_notes)
+            @if($order->ghi_chu)
             <div>
                 <small class="text-gray-500 d-block mb-1"><i class="bi bi-journal-text me-1"></i>{{ __('messages.checkout.order_notes') }}</small>
-                <p class="fw-medium text-gray-800 mb-0">{{ $order->order_notes }}</p>
+                <p class="fw-medium text-gray-800 mb-0">{{ $order->ghi_chu }}</p>
             </div>
             @endif
         </div>
@@ -117,8 +117,8 @@
             @foreach($order->chiTietDonHangs as $item)
                 <div class="d-flex justify-content-between align-items-center py-3 border-bottom" style="border-color: rgba(0,0,0,0.06) !important;">
                     <div>
-                        <p class="fw-medium text-gray-800 mb-0">{{ $item->sanPham->name }}</p>
-                        <small class="text-gray-400">{{ number_format($item->unit_price, 0, ',', '.') }}₫ × {{ $item->quantity }}</small>
+                        <p class="fw-medium text-gray-800 mb-0">{{ $item->sanPham->ten }}</p>
+                        <small class="text-gray-400">{{ number_format($item->don_gia, 0, ',', '.') }}₫ × {{ $item->so_luong }}</small>
                     </div>
                     <span class="fw-bold text-gray-700">{{ $item->formatted_subtotal }}</span>
                 </div>

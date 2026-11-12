@@ -23,17 +23,17 @@ class CheckoutService
     public function processCheckout(array $cartItems, int $userId, array $shippingInfo): DonHang
     {
         // OPTIMIZED: Load all products in 1 query instead of N+1
-        $productIds = array_column($cartItems, 'MaSP');
-        $sanPhams = SanPham::whereIn('MaSP', $productIds)
+        $productIds = array_column($cartItems, 'ma_sp');
+        $sanPhams = SanPham::whereIn('ma_sp', $productIds)
             ->get()
-            ->keyBy('MaSP');
+            ->keyBy('ma_sp');
         
         // Quick validation BEFORE transaction (fail fast)
         $errors = [];
         $totalAmount = 0;
         
         foreach ($cartItems as $item) {
-            $sanPham = $sanPhams[$item['MaSP']] ?? null;
+            $sanPham = $sanPhams[$item['ma_sp']] ?? null;
             
             if (!$sanPham) {
                 $errors[] = "Sản phẩm không tồn tại.";
@@ -41,13 +41,13 @@ class CheckoutService
             }
             
             // Check total stock across all batches
-            $totalStock = LoSanPham::where('MaSP', $sanPham->MaSP)
+            $totalStock = LoSanPham::where('ma_sp', $sanPham->ma_sp)
                 ->inStock()
                 ->notExpired()
-                ->sum('stock_quantity');
+                ->sum('so_luong_ton');
             
             if ($totalStock < $item['quantity']) {
-                $errors[] = "Sản phẩm {$sanPham->name} không đủ số lượng. Còn lại: {$totalStock}.";
+                $errors[] = "Sản phẩm {$sanPham->ten} không đủ số lượng. Còn lại: {$totalStock}.";
             }
             
             $totalAmount += $sanPham->price_vnd * $item['quantity'];
@@ -62,51 +62,51 @@ class CheckoutService
         try {
             // Create order
             $donHang = DonHang::create([
-                'MaKH' => $userId,
-                'total_amount' => $totalAmount,
-                'status' => 'Pending',
-                'shipping_address' => $shippingInfo['address'],
-                'shipping_phone' => $shippingInfo['phone'],
-                'delivery_time' => $shippingInfo['delivery_time'] ?? null,
-                'order_notes' => $shippingInfo['notes'] ?? null,
+                'ma_nd' => $userId,
+                'tong_tien' => $totalAmount,
+                'trang_thai' => 'Pending',
+                'dia_chi_giao_hang' => $shippingInfo['address'],
+                'sdt_giao_hang' => $shippingInfo['phone'],
+                'thoi_gian_giao' => $shippingInfo['delivery_time'] ?? null,
+                'ghi_chu' => $shippingInfo['notes'] ?? null,
             ]);
 
             // Create order items and update inventory with FEFO strategy
             foreach ($cartItems as $item) {
                 $remainingQty = $item['quantity'];
-                $productId = $item['MaSP'];
+                $productId = $item['ma_sp'];
                 
                 // Get batches using FEFO (First Expired, First Out)
-                $cacLo = LoSanPham::where('MaSP', $productId)
+                $cacLo = LoSanPham::where('ma_sp', $productId)
                     ->inStock()
                     ->notExpired()
                     ->FEFO()
                     ->lockForUpdate()
                     ->get();
                 
-                if ($cacLo->sum('stock_quantity') < $remainingQty) {
+                if ($cacLo->sum('so_luong_ton') < $remainingQty) {
                     $sanPham = SanPham::find($productId);
-                    throw new \Exception("Sản phẩm {$sanPham->name} không đủ số lượng trong kho.");
+                    throw new \Exception("Sản phẩm {$sanPham->ten} không đủ số lượng trong kho.");
                 }
                 
                 // Deduct from batches following FEFO
                 foreach ($cacLo as $lo) {
                     if ($remainingQty <= 0) break;
                     
-                    $deductQty = min($remainingQty, $lo->stock_quantity);
+                    $deductQty = min($remainingQty, $lo->so_luong_ton);
                     
                     // Create order item for this batch
                     ChiTietDonHang::create([
-                        'MaDH' => $donHang->MaDH,
-                        'MaSP' => $productId,
-                        'MaLo' => $lo->MaLo,
-                        'quantity' => $deductQty,
-                        'unit_price' => $sanPhams[$productId]->price_vnd,
-                        'batch_number' => $lo->batch_number,
+                        'ma_dh' => $donHang->ma_dh,
+                        'ma_sp' => $productId,
+                        'ma_lo' => $lo->ma_lo,
+                        'so_luong' => $deductQty,
+                        'don_gia' => $sanPhams[$productId]->price_vnd,
+                        'so_lo' => $lo->so_lo,
                     ]);
                     
                     // Deduct stock from batch
-                    $lo->stock_quantity -= $deductQty;
+                    $lo->so_luong_ton -= $deductQty;
                     $lo->save();
                     
                     $remainingQty -= $deductQty;
@@ -116,16 +116,16 @@ class CheckoutService
                     throw new \Exception("Không thể phân bổ đủ hàng cho sản phẩm.");
                 }
 
-                $updatedStock = (int) $cacLo->sum('stock_quantity');
-                DB::table('products')
-                    ->where('MaSP', $productId)
+                $updatedStock = (int) $cacLo->sum('so_luong_ton');
+                DB::table('san_phams')
+                    ->where('ma_sp', $productId)
                     ->update([
-                        'stock_quantity' => $updatedStock,
+                        'so_luong_ton' => $updatedStock,
                         'updated_at' => now(),
                     ]);
 
                 if (isset($sanPhams[$productId])) {
-                    $sanPhams[$productId]->setAttribute('stock_quantity', $updatedStock);
+                    $sanPhams[$productId]->setAttribute('so_luong_ton', $updatedStock);
                 }
             }
 
@@ -137,7 +137,7 @@ class CheckoutService
             DB::rollBack();
             
             Log::error('Checkout transaction failed', [
-                'MaKH' => $userId,
+                'ma_nd' => $userId,
                 'cart_items' => $cartItems,
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()

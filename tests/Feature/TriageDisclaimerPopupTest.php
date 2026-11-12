@@ -30,13 +30,13 @@ class TriageDisclaimerPopupTest extends TestCase
     {
         parent::setUp();
 
-        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
     }
 
     protected function completedSession(array $attributes = []): PhienSangLoc
     {
         return PhienSangLoc::create(array_merge([
-            'MaKH' => $this->nguoiDung->MaKH,
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -78,7 +78,7 @@ class TriageDisclaimerPopupTest extends TestCase
             ->assertSee('role="dialog"', false);
 
         $this->assertFalse(Cache::has(
-            "triage:disclaimer_ack:{$this->nguoiDung->MaKH}:" . today()->toDateString()
+            "triage:disclaimer_ack:{$this->nguoiDung->ma_nd}:" . today()->toDateString()
         ));
     }
 
@@ -106,7 +106,7 @@ class TriageDisclaimerPopupTest extends TestCase
         // printout — with the suite green.
         $phien = $this->completedSession();
 
-        foreach ([route('health.check'), route('health.result', $phien->MaSL)] as $url) {
+        foreach ([route('health.check'), route('health.result', $phien->ma_sl)] as $url) {
             $this->actingAs($this->nguoiDung)
                 ->get($url)
                 ->assertOk()
@@ -140,7 +140,7 @@ class TriageDisclaimerPopupTest extends TestCase
 
         $this->actingAs($this->nguoiDung)->post(route('health.disclaimer.ack'));
 
-        foreach ([route('health.check'), route('health.result', $phien->MaSL)] as $url) {
+        foreach ([route('health.check'), route('health.result', $phien->ma_sl)] as $url) {
             $this->actingAs($this->nguoiDung)
                 ->get($url)
                 ->assertOk()
@@ -179,7 +179,7 @@ class TriageDisclaimerPopupTest extends TestCase
         $this->actingAs($this->nguoiDung)->post(route('health.disclaimer.ack'));
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', ['MaSL' => $phien->MaSL, 'disclaimer' => 1]))
+            ->get(route('health.result', ['MaSL' => $phien->ma_sl, 'disclaimer' => 1]))
             ->assertOk()
             ->assertSee('data-disclaimer-popup', false);
     }
@@ -194,7 +194,7 @@ class TriageDisclaimerPopupTest extends TestCase
         ]);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', ['MaSL' => $phien->MaSL, 'disclaimer' => 1]))
+            ->get(route('health.result', ['MaSL' => $phien->ma_sl, 'disclaimer' => 1]))
             ->assertOk()
             ->assertDontSee('data-disclaimer-popup', false);
     }
@@ -223,9 +223,9 @@ class TriageDisclaimerPopupTest extends TestCase
         $phien = $this->completedSession();
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
-            ->assertSee('name="MaSL" value="' . $phien->MaSL . '"', false);
+            ->assertSee('name="MaSL" value="' . $phien->ma_sl . '"', false);
 
         // And the check page has no session id to wire, so it must not invent one.
         $this->actingAs($this->nguoiDung)
@@ -239,8 +239,8 @@ class TriageDisclaimerPopupTest extends TestCase
         $phien = $this->completedSession();
 
         $this->actingAs($this->nguoiDung)
-            ->post(route('health.disclaimer.ack'), ['MaSL' => $phien->MaSL])
-            ->assertRedirect(route('health.result', $phien->MaSL));
+            ->post(route('health.disclaimer.ack'), ['ma_sl' => $phien->ma_sl])
+            ->assertRedirect(route('health.result', $phien->ma_sl));
     }
 
     public function test_a_junk_session_id_is_rejected_rather_than_producing_a_broken_url(): void
@@ -249,8 +249,8 @@ class TriageDisclaimerPopupTest extends TestCase
         // arrival, so min:1 rejects them at the door instead.
         foreach ([0, -5] as $junk) {
             $this->actingAs($this->nguoiDung)
-                ->post(route('health.disclaimer.ack'), ['MaSL' => $junk])
-                ->assertSessionHasErrors('MaSL');
+                ->post(route('health.disclaimer.ack'), ['ma_sl' => $junk])
+                ->assertSessionHasErrors('ma_sl');
         }
 
         // Rejected input must not have silenced the popup either.
@@ -266,7 +266,7 @@ class TriageDisclaimerPopupTest extends TestCase
         // empty hidden input takes the "no MaSL" branch rather than reaching route(),
         // which would throw UrlGenerationException and 500.
         $this->actingAs($this->nguoiDung)
-            ->post(route('health.disclaimer.ack'), ['MaSL' => ''])
+            ->post(route('health.disclaimer.ack'), ['ma_sl' => ''])
             ->assertRedirect(route('health.check'));
     }
 
@@ -274,9 +274,8 @@ class TriageDisclaimerPopupTest extends TestCase
     {
         // The redirect is built from a named route and an integer, so there is no
         // open-redirect surface; result() then 404s because it scopes by MaKH.
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
-        $theirs = PhienSangLoc::create([
-            'MaKH' => $other->MaKH,
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $theirs = PhienSangLoc::create(['ma_nd' => $other->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -286,11 +285,11 @@ class TriageDisclaimerPopupTest extends TestCase
         ]);
 
         $this->actingAs($this->nguoiDung)
-            ->post(route('health.disclaimer.ack'), ['MaSL' => $theirs->MaSL])
-            ->assertRedirect(route('health.result', $theirs->MaSL));
+            ->post(route('health.disclaimer.ack'), ['ma_sl' => $theirs->ma_sl])
+            ->assertRedirect(route('health.result', $theirs->ma_sl));
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $theirs->MaSL))
+            ->get(route('health.result', $theirs->ma_sl))
             ->assertNotFound();
     }
 
@@ -306,7 +305,7 @@ class TriageDisclaimerPopupTest extends TestCase
         ]);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertDontSee('data-disclaimer-popup', false)
             ->assertSee(__('messages.health.disclaimer_body'))
@@ -318,7 +317,7 @@ class TriageDisclaimerPopupTest extends TestCase
     {
         // The shared in-store tablet case, and the assertion a cookie or localStorage
         // design cannot pass.
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
 
         $this->actingAs($this->nguoiDung)->post(route('health.disclaimer.ack'));
 
@@ -333,7 +332,7 @@ class TriageDisclaimerPopupTest extends TestCase
         $this->actingAs($this->nguoiDung)->post(route('health.disclaimer.ack'));
 
         $this->assertTrue(Cache::has(
-            "triage:disclaimer_ack:{$this->nguoiDung->MaKH}:" . today()->toDateString()
+            "triage:disclaimer_ack:{$this->nguoiDung->ma_nd}:" . today()->toDateString()
         ));
     }
 
@@ -343,11 +342,11 @@ class TriageDisclaimerPopupTest extends TestCase
         // built only in index()'s terminal return, so no AJAX step swap can re-render it
         // mid-wizard and re-steal focus. The swapped payload is HTML for [data-triage-stage].
         $this->actingAs($this->nguoiDung)->get(route('health.check'));
-        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->firstOrFail();
+        $phien = PhienSangLoc::where('ma_nd', $this->nguoiDung->ma_nd)->inProgress()->firstOrFail();
 
         $response = $this->actingAs($this->nguoiDung)
             ->postJson(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => 1,
                 'answer' => 'đau đầu',
             ])

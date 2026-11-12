@@ -40,13 +40,12 @@ class ChatbotServiceAgePromptTest extends TestCase
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
-        $nguoiDung = NguoiDung::factory()->create([
-            'birth_date' => now()->subYears(25)->toDateString(),
+        $nguoiDung = NguoiDung::factory()->create(['ngay_sinh' => now()->subYears(25)->toDateString(),
         ]);
 
         $reply = $this->chatbotService->processMessage(
             'Tôi bị tiêu chảy và đau bụng do đâu?',
-            (int) $nguoiDung->MaKH,
+            (int) $nguoiDung->ma_nd,
             []
         );
 
@@ -61,13 +60,12 @@ class ChatbotServiceAgePromptTest extends TestCase
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
-        $nguoiDung = NguoiDung::factory()->create([
-            'birth_date' => null,
+        $nguoiDung = NguoiDung::factory()->create(['ngay_sinh' => null,
         ]);
 
         $reply = $this->chatbotService->processMessage(
             'Tôi bị tiêu chảy và đau bụng do đâu?',
-            (int) $nguoiDung->MaKH,
+            (int) $nguoiDung->ma_nd,
             []
         );
 
@@ -93,10 +91,9 @@ class ChatbotServiceAgePromptTest extends TestCase
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
-        $nguoiDung = NguoiDung::factory()->create([
-            'birth_date' => now()->subYears(30)->toDateString(),
+        $nguoiDung = NguoiDung::factory()->create(['ngay_sinh' => now()->subYears(30)->toDateString(),
         ]);
-        $userId = (int) $nguoiDung->MaKH;
+        $userId = (int) $nguoiDung->ma_nd;
 
         // 1. Cause question with diarrhea / abdominal pain
         $res1 = $this->chatbotService->processMessage('Tôi bị tiêu chảy và đau bụng do đâu?', $userId, []);

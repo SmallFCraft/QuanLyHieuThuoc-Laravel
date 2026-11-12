@@ -33,7 +33,7 @@
 
         <form method="POST" action="{{ route('health.clarify') }}" data-triage-form>
             @csrf
-            <input type="hidden" name="triage_session_id" value="{{ $session->MaSL }}">
+            <input type="hidden" name="triage_session_id" value="{{ $session->ma_sl }}">
 
             {{-- Unnamed default button first, same reason as the step form: Enter must
                  not activate the Skip button and throw the answers away. --}}
@@ -95,7 +95,7 @@
              Plain form POST, so the wizard works with JavaScript off. --}}
         <form method="POST" action="{{ route('health.answer') }}" id="triage-form" data-triage-form>
             @csrf
-            <input type="hidden" name="triage_session_id" value="{{ $session->MaSL }}">
+            <input type="hidden" name="triage_session_id" value="{{ $session->ma_sl }}">
             <input type="hidden" name="step" value="{{ $question['step'] }}">
 
             {{-- The form's default button, and deliberately the FIRST submit button in
@@ -232,7 +232,7 @@
     {{-- Separate form: nesting forms is invalid HTML, so Back lives outside --}}
     <form method="POST" action="{{ route('health.back') }}" id="triage-back-form" class="d-none" data-triage-form data-triage-direction="back">
         @csrf
-        <input type="hidden" name="triage_session_id" value="{{ $session->MaSL }}">
+        <input type="hidden" name="triage_session_id" value="{{ $session->ma_sl }}">
     </form>
 @else
     {{-- Reachable when the profile answered everything: send them straight to evaluation --}}
@@ -243,7 +243,7 @@
         <p class="text-gray-700 mb-4">{{ __('messages.health.page_subtitle') }}</p>
         <form method="POST" action="{{ route('health.answer') }}" data-triage-form>
             @csrf
-            <input type="hidden" name="triage_session_id" value="{{ $session->MaSL }}">
+            <input type="hidden" name="triage_session_id" value="{{ $session->ma_sl }}">
             <input type="hidden" name="step" value="{{ \App\Models\PhienSangLoc::TOTAL_STEPS }}">
             <input type="hidden" name="skipped" value="1">
             <button type="submit"

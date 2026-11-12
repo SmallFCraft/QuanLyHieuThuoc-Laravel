@@ -38,7 +38,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:nguoi_dungs'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => ['required', 'in:Administrator,Pharmacist,User'],
         ], [
@@ -52,11 +52,11 @@ class UserController extends Controller
         ]);
 
         NguoiDung::create([
-            'name' => $validated['name'],
+            'ho_ten' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => $validated['role'],
-            'status' => 'active',
+            'vai_tro' => $validated['role'],
+            'trang_thai' => 'active',
         ]);
 
         return redirect()->route('admin.users.index')
@@ -72,7 +72,7 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $MaKH . ',MaKH'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:nguoi_dungs,email,' . $MaKH . ',ma_nd'],
             'role' => ['required', 'in:Administrator,Pharmacist,User'],
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
         ], [
@@ -84,9 +84,9 @@ class UserController extends Controller
             'password.confirmed' => 'Xác nhận mật khẩu không khớp',
         ]);
 
-        $nguoiDung->name = $validated['name'];
+        $nguoiDung->ho_ten = $validated['name'];
         $nguoiDung->email = $validated['email'];
-        $nguoiDung->role = $validated['role'];
+        $nguoiDung->vai_tro = $validated['role'];
 
         if (!empty($validated['password'])) {
             $nguoiDung->password = Hash::make($validated['password']);
@@ -109,7 +109,7 @@ class UserController extends Controller
             'status' => ['required', 'in:active,inactive'],
         ]);
 
-        $nguoiDung->status = $validated['status'];
+        $nguoiDung->trang_thai = $validated['status'];
         $nguoiDung->save();
 
         $message = $validated['status'] === 'active' 

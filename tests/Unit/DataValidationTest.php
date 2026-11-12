@@ -46,13 +46,12 @@ class DataValidationTest extends TestCase
 
     public function test_email_uniqueness_validation(): void
     {
-        NguoiDung::factory()->create([
-            'email' => 'existing@example.com'
+        NguoiDung::factory()->create(['email' => 'existing@example.com'
         ]);
 
         $validator = Validator::make(
             ['email' => 'existing@example.com'],
-            ['email' => 'required|email|unique:users,email']
+            ['email' => 'required|email|unique:nguoi_dungs,email']
         );
 
         $this->assertTrue($validator->fails());
@@ -195,13 +194,12 @@ class DataValidationTest extends TestCase
 
     public function test_product_validation_rules(): void
     {
-        $danhMuc = DanhMuc::create([
-            'name' => 'Test Category',
-            'description' => 'Test Description'
+        $danhMuc = DanhMuc::create(['ten' => 'Test Category',
+            'mo_ta' => 'Test Description'
         ]);
 
         $validData = [
-            'MaDM' => $danhMuc->MaDM,
+            'ma_dm' => $danhMuc->ma_dm,
             'name' => 'Test Medicine',
             'price' => 50000,
             'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -211,7 +209,7 @@ class DataValidationTest extends TestCase
         ];
 
         $validator = Validator::make($validData, [
-            'MaDM' => 'required|exists:categories,MaDM',
+            'ma_dm' => 'required|exists:danh_mucs,ma_dm',
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'expiration_date' => 'required|date|after:today',
@@ -228,7 +226,7 @@ class DataValidationTest extends TestCase
         $nguoiDung = NguoiDung::factory()->create();
 
         $validData = [
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'total_amount' => 100000,
             'status' => 'Pending',
             'shipping_address' => '123 Test Street, Test City',
@@ -236,7 +234,7 @@ class DataValidationTest extends TestCase
         ];
 
         $validator = Validator::make($validData, [
-            'MaKH' => 'required|exists:users,MaKH',
+            'ma_nd' => 'required|exists:nguoi_dungs,ma_nd',
             'total_amount' => 'required|numeric|min:0',
             'status' => 'required|in:Pending,Delivering,Completed,Cancelled',
             'shipping_address' => 'required|string',

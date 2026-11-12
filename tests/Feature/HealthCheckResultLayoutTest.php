@@ -30,20 +30,19 @@ class HealthCheckResultLayoutTest extends TestCase
     {
         parent::setUp();
 
-        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt', 'mo_ta' => 'Giảm đau, hạ sốt']);
         $this->seed(TriThucYTeSeeder::class);
 
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(34)->toDateString(),
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(34)->toDateString(),
         ]);
     }
 
     protected function completedSession(array $attributes = []): PhienSangLoc
     {
         return PhienSangLoc::create(array_merge([
-            'MaKH' => $this->nguoiDung->MaKH,
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -65,7 +64,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $response = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk();
 
         $response->assertSee('health-journey', false);
@@ -84,7 +83,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -104,7 +103,7 @@ class HealthCheckResultLayoutTest extends TestCase
         ]);
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -116,7 +115,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -137,7 +136,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -163,7 +162,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -183,7 +182,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -224,7 +223,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -282,7 +281,7 @@ class HealthCheckResultLayoutTest extends TestCase
         ]);
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -322,7 +321,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -352,7 +351,7 @@ class HealthCheckResultLayoutTest extends TestCase
         ]);
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -374,7 +373,7 @@ class HealthCheckResultLayoutTest extends TestCase
         ]);
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -389,7 +388,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $response = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk();
 
         $response->assertSee('role="tablist"', false);
@@ -411,7 +410,7 @@ class HealthCheckResultLayoutTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk();
 
         // A red-flag page shows everything at once: the 115 action, the red flags
@@ -436,7 +435,7 @@ class HealthCheckResultLayoutTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk();
 
         $response->assertSee('class="tab-pane fade show active" id="hub-care"', false);
@@ -448,7 +447,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $response = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk();
 
         $response->assertSee('hub-briefing', false);
@@ -466,7 +465,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -484,22 +483,21 @@ class HealthCheckResultLayoutTest extends TestCase
     public function test_the_products_appear_once(): void
     {
         $danhMuc = DanhMuc::first();
-        $sanPham = SanPham::create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'ingredients' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau đầu, hạ sốt',
-            'price' => 25000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 50,
-            'reorder_point' => 5,
-            'batch_number' => 'B-ONCE',
+        $sanPham = SanPham::create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'thanh_phan' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau đầu, hạ sốt',
+            'gia' => 25000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 50,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'B-ONCE',
         ]);
 
         $phien = $this->completedSession([
             'matched_symptoms' => ['dau_dau'],
             'suggested_products' => [[
-                'id' => $sanPham->MaSP,
+                'id' => $sanPham->ma_sp,
                 'name' => 'Paracetamol 500mg',
                 'price' => 25000,
                 'stock_quantity' => 50,
@@ -508,7 +506,7 @@ class HealthCheckResultLayoutTest extends TestCase
         ]);
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -520,7 +518,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -542,7 +540,7 @@ class HealthCheckResultLayoutTest extends TestCase
         ]);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee('class="health-no-products health-no-products--emergency"', false)
             ->assertSee(__('messages.health.no_products_title'))
@@ -566,7 +564,7 @@ class HealthCheckResultLayoutTest extends TestCase
         ]);
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -587,7 +585,7 @@ class HealthCheckResultLayoutTest extends TestCase
         // Anchored on the element: the selector for the rule is inline CSS in <head>,
         // and a bare substring check would find it on every page.
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $this->completedSession()->MaSL))
+            ->get(route('health.result', $this->completedSession()->ma_sl))
             ->assertOk()
             ->assertDontSee('class="health-hub mt-4 health-hub--flat"', false);
     }
@@ -609,7 +607,7 @@ class HealthCheckResultLayoutTest extends TestCase
         ]);
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -628,7 +626,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -656,7 +654,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $this->queuedBriefing($phien);
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -685,7 +683,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $this->queuedBriefing($phien);
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -709,7 +707,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $phien = $this->completedSession();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -726,7 +724,7 @@ class HealthCheckResultLayoutTest extends TestCase
         $this->queuedBriefing($phien);
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -740,7 +738,7 @@ class HealthCheckResultLayoutTest extends TestCase
 
         $this->assertNotNull($briefing, 'The briefing job must be among the poll jobs.');
         $this->assertSame(
-            route('health.result.briefing-pane', $phien->MaSL),
+            route('health.result.briefing-pane', $phien->ma_sl),
             $briefing['paneUrl'] ?? null
         );
     }
@@ -750,12 +748,11 @@ class HealthCheckResultLayoutTest extends TestCase
      */
     protected function queuedBriefing(PhienSangLoc $phien): AiJob
     {
-        return AiJob::create([
-            'uuid' => (string) Str::uuid(),
-            'MaKH' => $this->nguoiDung->MaKH,
+        return AiJob::create(['uuid' => (string) Str::uuid(),
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'queued',
-            'payload' => ['MaSL' => $phien->MaSL],
+            'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
     }
 }

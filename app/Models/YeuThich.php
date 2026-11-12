@@ -10,29 +10,29 @@ class YeuThich extends Model
 {
     use HasFactory;
 
-    protected $table = 'favorites';
+    protected $table = 'yeu_thiches';
 
-    protected $primaryKey = 'MaYT';
+    protected $primaryKey = 'ma_yt';
 
     protected $fillable = [
-        'MaKH',
-        'MaSP',
+        'ma_nd',
+        'ma_sp',
     ];
 
     public function nguoiDung()
     {
-        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'ma_nd', 'ma_nd');
     }
 
     public function sanPham()
     {
-        return $this->belongsTo(SanPham::class, 'MaSP', 'MaSP');
+        return $this->belongsTo(SanPham::class, 'ma_sp', 'ma_sp');
     }
 
     public static function idsForUser(NguoiDung $nguoiDung): array
     {
-        return static::where('MaKH', $nguoiDung->MaKH)
-            ->pluck('MaSP')
+        return static::where('ma_nd', $nguoiDung->ma_nd)
+            ->pluck('ma_sp')
             ->map(fn ($id) => (string) $id)
             ->values()
             ->all();
@@ -41,7 +41,7 @@ class YeuThich extends Model
     public static function profileItemsFor(NguoiDung $nguoiDung, int $perPage = 6): LengthAwarePaginator
     {
         return static::with(['sanPham.danhMuc'])
-            ->where('MaKH', $nguoiDung->MaKH)
+            ->where('ma_nd', $nguoiDung->ma_nd)
             ->whereHas('sanPham')
             ->latest()
             ->paginate($perPage, ['*'], 'favorites_page');

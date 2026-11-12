@@ -10,9 +10,9 @@ class ChiTietDonHang extends Model
 {
     use HasFactory;
 
-    protected $table = 'order_items';
+    protected $table = 'chi_tiet_don_hangs';
 
-    protected $primaryKey = 'MaCTDH';
+    protected $primaryKey = 'ma_ctdh';
 
     /**
      * The attributes that are mass assignable.
@@ -20,12 +20,12 @@ class ChiTietDonHang extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'MaDH',
-        'MaSP',
-        'MaLo',
-        'quantity',
-        'unit_price',
-        'batch_number',
+        'ma_dh',
+        'ma_sp',
+        'ma_lo',
+        'so_luong',
+        'don_gia',
+        'so_lo',
     ];
 
     /**
@@ -34,8 +34,8 @@ class ChiTietDonHang extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'quantity' => 'integer',
-        'unit_price' => 'decimal:2',
+        'so_luong' => 'integer',
+        'don_gia' => 'decimal:2',
     ];
 
     /**
@@ -43,7 +43,7 @@ class ChiTietDonHang extends Model
      */
     public function donHang()
     {
-        return $this->belongsTo(DonHang::class, 'MaDH', 'MaDH');
+        return $this->belongsTo(DonHang::class, 'ma_dh', 'ma_dh');
     }
 
     /**
@@ -51,7 +51,7 @@ class ChiTietDonHang extends Model
      */
     public function sanPham()
     {
-        return $this->belongsTo(SanPham::class, 'MaSP', 'MaSP');
+        return $this->belongsTo(SanPham::class, 'ma_sp', 'ma_sp');
     }
 
     /**
@@ -59,7 +59,7 @@ class ChiTietDonHang extends Model
      */
     public function loSanPham()
     {
-        return $this->belongsTo(LoSanPham::class, 'MaLo', 'MaLo');
+        return $this->belongsTo(LoSanPham::class, 'ma_lo', 'ma_lo');
     }
 
     /**
@@ -69,7 +69,7 @@ class ChiTietDonHang extends Model
      */
     public function getSubtotalAttribute(): float
     {
-        return $this->quantity * (int) round((float) $this->unit_price);
+        return $this->so_luong * (int) round((float) $this->don_gia);
     }
 
     /**

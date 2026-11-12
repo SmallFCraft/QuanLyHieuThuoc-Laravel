@@ -26,7 +26,7 @@ class ProfileAvatarTest extends TestCase
 
         Storage::fake('public');
 
-        $this->nguoiDung = NguoiDung::factory()->create(['name' => 'Nguyễn Văn An']);
+        $this->nguoiDung = NguoiDung::factory()->create(['ho_ten' => 'Nguyễn Văn An']);
     }
 
     public function test_a_user_can_upload_an_avatar(): void
@@ -40,12 +40,12 @@ class ProfileAvatarTest extends TestCase
 
         $this->nguoiDung->refresh();
 
-        $this->assertNotNull($this->nguoiDung->avatar);
-        Storage::disk('public')->assertExists($this->nguoiDung->avatar);
+        $this->assertNotNull($this->nguoiDung->anh_dai_dien);
+        Storage::disk('public')->assertExists($this->nguoiDung->anh_dai_dien);
 
         // Chuẩn hoá về JPEG dù người dùng gửi PNG: đường dẫn luôn kết thúc bằng .jpg.
-        $this->assertStringEndsWith('.jpg', $this->nguoiDung->avatar);
-        $this->assertStringStartsWith('avatars/', $this->nguoiDung->avatar);
+        $this->assertStringEndsWith('.jpg', $this->nguoiDung->anh_dai_dien);
+        $this->assertStringStartsWith('avatars/', $this->nguoiDung->anh_dai_dien);
     }
 
     public function test_the_stored_avatar_is_scaled_down(): void
@@ -56,7 +56,7 @@ class ProfileAvatarTest extends TestCase
 
         $this->nguoiDung->refresh();
 
-        $bytes = Storage::disk('public')->get($this->nguoiDung->avatar);
+        $bytes = Storage::disk('public')->get($this->nguoiDung->anh_dai_dien);
         [$width, $height] = getimagesizefromstring($bytes);
 
         $max = (int) config('uploads.avatars.max_dimension');
@@ -74,7 +74,7 @@ class ProfileAvatarTest extends TestCase
         ]);
 
         $this->nguoiDung->refresh();
-        $first = $this->nguoiDung->avatar;
+        $first = $this->nguoiDung->anh_dai_dien;
 
         $this->actingAs($this->nguoiDung)->post(route('profile.avatar.update'), [
             'avatar' => UploadedFile::fake()->image('second.jpg'),
@@ -82,9 +82,9 @@ class ProfileAvatarTest extends TestCase
 
         $this->nguoiDung->refresh();
 
-        $this->assertNotSame($first, $this->nguoiDung->avatar);
+        $this->assertNotSame($first, $this->nguoiDung->anh_dai_dien);
         Storage::disk('public')->assertMissing($first);
-        Storage::disk('public')->assertExists($this->nguoiDung->avatar);
+        Storage::disk('public')->assertExists($this->nguoiDung->anh_dai_dien);
     }
 
     public function test_an_oversized_image_is_rejected(): void
@@ -97,7 +97,7 @@ class ProfileAvatarTest extends TestCase
             ])
             ->assertSessionHasErrors('avatar');
 
-        $this->assertNull($this->nguoiDung->fresh()->avatar);
+        $this->assertNull($this->nguoiDung->fresh()->anh_dai_dien);
     }
 
     public function test_a_non_image_file_is_rejected(): void
@@ -108,7 +108,7 @@ class ProfileAvatarTest extends TestCase
             ])
             ->assertSessionHasErrors('avatar');
 
-        $this->assertNull($this->nguoiDung->fresh()->avatar);
+        $this->assertNull($this->nguoiDung->fresh()->anh_dai_dien);
     }
 
     public function test_the_chatbot_and_the_avatar_share_one_size_limit(): void
@@ -127,7 +127,7 @@ class ProfileAvatarTest extends TestCase
         ]);
 
         $this->nguoiDung->refresh();
-        $path = $this->nguoiDung->avatar;
+        $path = $this->nguoiDung->anh_dai_dien;
 
         $this->actingAs($this->nguoiDung)
             ->delete(route('profile.avatar.destroy'))
@@ -135,7 +135,7 @@ class ProfileAvatarTest extends TestCase
             ->assertSessionHas('status', 'avatar-removed');
 
         Storage::disk('public')->assertMissing($path);
-        $this->assertNull($this->nguoiDung->fresh()->avatar);
+        $this->assertNull($this->nguoiDung->fresh()->anh_dai_dien);
     }
 
     public function test_a_guest_cannot_touch_avatars(): void
@@ -159,7 +159,7 @@ class ProfileAvatarTest extends TestCase
     public function test_a_missing_file_falls_back_instead_of_a_broken_image(): void
     {
         // Bản ghi còn trỏ tới ảnh đã bị xoá khỏi disk: một <img> hỏng xấu hơn chữ cái đầu.
-        $this->nguoiDung->update(['avatar' => 'avatars/deleted.jpg']);
+        $this->nguoiDung->update(['anh_dai_dien' => 'avatars/deleted.jpg']);
 
         $this->assertNull($this->nguoiDung->fresh()->avatarUrl());
 

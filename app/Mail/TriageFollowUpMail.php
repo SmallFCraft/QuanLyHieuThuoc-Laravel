@@ -36,7 +36,7 @@ class TriageFollowUpMail extends Mailable implements ShouldQueue
             view: 'emails.triage-follow-up',
             with: [
                 'session' => $this->phien,
-                'userName' => $this->phien->nguoiDung->name ?? '',
+                'userName' => $this->phien->nguoiDung->ho_ten ?? '',
                 'improvedUrl' => $this->responseUrl(true),
                 'notImprovedUrl' => $this->responseUrl(false),
             ],
@@ -54,7 +54,7 @@ class TriageFollowUpMail extends Mailable implements ShouldQueue
             'health.followup.confirm',
             now()->addDays(self::LINK_VALID_DAYS),
             [
-                'MaSL' => $this->phien->MaSL,
+                'ma_sl' => $this->phien->ma_sl,
                 'improved' => $improved ? 1 : 0,
             ]
         );

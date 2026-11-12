@@ -19,7 +19,7 @@ class AuditLogService
     public function logAuthAttempt(string $email, bool $success, ?string $reason = null)
     {
         NhatKyKiemToan::create([
-            'MaKH' => $success ? Auth::id() : null,
+            'ma_nd' => $success ? Auth::id() : null,
             'action' => $success ? 'login_success' : 'login_failed',
             'model_type' => 'Auth',
             'MaDoiTuong' => null,
@@ -40,7 +40,7 @@ class AuditLogService
     public function logLogout()
     {
         NhatKyKiemToan::create([
-            'MaKH' => Auth::id(),
+            'ma_nd' => Auth::id(),
             'action' => 'logout',
             'model_type' => 'Auth',
             'MaDoiTuong' => null,
@@ -68,7 +68,7 @@ class AuditLogService
         ?int $userId = null
     ) {
         NhatKyKiemToan::create([
-            'MaKH' => $userId ?? Auth::id(),
+            'ma_nd' => $userId ?? Auth::id(),
             'action' => $action,
             'model_type' => $modelType ?? 'System',
             'MaDoiTuong' => $modelId,

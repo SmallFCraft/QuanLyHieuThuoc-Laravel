@@ -18,7 +18,7 @@
                     : __('messages.reminder.response_confirm_not_improved') }}
             </p>
 
-            <form method="POST" action="{{ route('health.followup', $session->MaSL) }}"
+            <form method="POST" action="{{ route('health.followup', $session->ma_sl) }}"
                   class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
                 @csrf
                 <input type="hidden" name="improved" value="{{ $improved ? 1 : 0 }}">
@@ -28,7 +28,7 @@
                     <i class="bi bi-check2-circle me-2" aria-hidden="true"></i>{{ __('messages.reminder.response_confirm_button') }}
                 </button>
 
-                <a href="{{ route('health.result', $session->MaSL) }}"
+                <a href="{{ route('health.result', $session->ma_sl) }}"
                    class="btn btn-outline-secondary fw-semibold rounded-pill px-4 d-inline-flex align-items-center justify-content-center"
                    style="min-height:44px;">
                     {{ __('messages.health.btn_back') }}

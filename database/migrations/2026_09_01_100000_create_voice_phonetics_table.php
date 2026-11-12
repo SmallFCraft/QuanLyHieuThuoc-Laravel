@@ -18,7 +18,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('voice_phonetics', function (Blueprint $table) {
+        Schema::create('phien_am_giong_nois', function (Blueprint $table) {
             $table->id();
 
             // Khoá phiên âm giữ dấu cách giữa các âm tiết: luật so của
@@ -49,7 +49,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('voice_phonetics');
+        Schema::dropIfExists('phien_am_giong_nois');
     }
 
     /**

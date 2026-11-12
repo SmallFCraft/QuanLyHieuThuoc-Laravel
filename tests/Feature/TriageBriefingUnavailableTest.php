@@ -30,12 +30,12 @@ class TriageBriefingUnavailableTest extends TestCase
     {
         parent::setUp();
 
-        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt', 'mo_ta' => 'Giảm đau, hạ sốt']);
         $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.briefing', true);
 
-        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
     }
 
     public function test_a_pending_briefing_ships_the_unavailable_notice_hidden(): void
@@ -44,7 +44,7 @@ class TriageBriefingUnavailableTest extends TestCase
         $this->queuedBriefing($phien);
 
         $html = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee('triage-briefing-pending', false)
             ->assertSee('triage-briefing-unavailable', false)
@@ -63,16 +63,15 @@ class TriageBriefingUnavailableTest extends TestCase
     {
         $phien = $this->completedSession();
         $this->queuedBriefing($phien);
-        AiJob::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $phien->MaKH,
+        AiJob::create(['uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'ma_nd' => $phien->ma_nd,
             'kind' => AiJob::KIND_TRIAGE_ADVICE,
             'status' => 'queued',
-            'payload' => ['MaSL' => $phien->MaSL],
+            'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
 
         $html = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -87,7 +86,7 @@ class TriageBriefingUnavailableTest extends TestCase
         $phien = $this->completedSession(['ai_briefing_status' => 'failed']);
 
         $html = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.briefing_unavailable'), false)
             ->getContent();
@@ -109,7 +108,7 @@ class TriageBriefingUnavailableTest extends TestCase
         ]);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertDontSee(__('messages.health.briefing_unavailable'), false)
             ->assertDontSee('triage-briefing-pending', false);
@@ -121,7 +120,7 @@ class TriageBriefingUnavailableTest extends TestCase
     protected function completedSession(array $attributes = []): PhienSangLoc
     {
         return PhienSangLoc::create(array_merge([
-            'MaKH' => $this->nguoiDung->MaKH,
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -138,12 +137,11 @@ class TriageBriefingUnavailableTest extends TestCase
      */
     protected function queuedBriefing(PhienSangLoc $phien): AiJob
     {
-        return AiJob::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $phien->MaKH,
+        return AiJob::create(['uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'ma_nd' => $phien->ma_nd,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'queued',
-            'payload' => ['MaSL' => $phien->MaSL],
+            'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
     }
 }

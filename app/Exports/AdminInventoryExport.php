@@ -46,12 +46,12 @@ class AdminInventoryExport implements FromCollection, WithHeadings, WithMapping,
     {
         return [
             $product->display_code,
-            $product->name,
-            $product->danhMuc->name ?? 'Chưa phân loại',
-            $product->batch_number,
-            $product->stock_quantity,
-            $product->reorder_point,
-            optional($product->expiration_date)->format('d/m/Y'),
+            $product->ten,
+            $product->danhMuc->ten ?? 'Chưa phân loại',
+            $product->so_lo,
+            $product->so_luong_ton,
+            $product->muc_canh_bao,
+            optional($product->ngay_het_han)->format('d/m/Y'),
             $this->statusLabel($product),
         ];
     }

@@ -21,7 +21,7 @@ class TruyVanTimKiem extends Model
     /** Bảng chỉ có last_searched_at; created_at/updated_at không nói thêm điều gì. */
     public $timestamps = false;
 
-    protected $table = 'search_queries';
+    protected $table = 'truy_van_tim_kiems';
 
     protected $fillable = ['term_folded', 'term', 'hits', 'last_searched_at'];
 

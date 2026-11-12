@@ -8,9 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('user_health_profiles', function (Blueprint $table) {
-            $table->id('MaHS');
-            $table->foreignId('MaKH')->unique()->constrained('users', 'MaKH')->cascadeOnDelete();
+        Schema::create('ho_so_suc_khoes', function (Blueprint $table) {
+            $table->id('ma_hs');
+            $table->foreignId('ma_nd')->unique()->constrained('nguoi_dungs', 'ma_nd')->cascadeOnDelete();
             // Encrypted at the model layer (encrypted:array cast) — health data is sensitive.
             $table->text('allergies')->nullable();
             $table->text('chronic_conditions')->nullable();
@@ -27,6 +27,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('user_health_profiles');
+        Schema::dropIfExists('ho_so_suc_khoes');
     }
 };

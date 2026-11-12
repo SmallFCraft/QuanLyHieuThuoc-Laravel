@@ -136,7 +136,7 @@
                                     <i class="bi bi-person"></i>
                                 </span>
                                 <input type="text" name="customer_name" id="customer_name" required
-                                       value="{{ old('customer_name', auth()->user()->name) }}"
+                                       value="{{ old('customer_name', auth()->user()->ho_ten) }}"
                                        class="form-control bg-gray-50 border-start-0 shadow-none @error('customer_name') is-invalid @enderror"
                                        placeholder="{{ __('messages.checkout.customer_name_placeholder') }}">
                                 @error('customer_name')
@@ -155,7 +155,7 @@
                                     <i class="bi bi-telephone"></i>
                                 </span>
                                 <input type="tel" name="shipping_phone" id="shipping_phone" required
-                                       value="{{ old('shipping_phone', auth()->check() ? auth()->user()->phone : '') }}"
+                                       value="{{ old('shipping_phone', auth()->check() ? auth()->user()->so_dien_thoai : '') }}"
                                        class="form-control bg-gray-50 border-start-0 shadow-none @error('shipping_phone') is-invalid @enderror"
                                        placeholder="0901234567">
                                 @error('shipping_phone')
@@ -192,7 +192,7 @@
                                 </span>
                                 <textarea name="shipping_address" id="shipping_address" rows="3" required
                                           class="form-control bg-gray-50 border-start-0 shadow-none @error('shipping_address') is-invalid @enderror"
-                                          placeholder="{{ __('messages.checkout.shipping_address_placeholder') }}">{{ old('shipping_address', auth()->check() ? auth()->user()->address : '') }}</textarea>
+                                          placeholder="{{ __('messages.checkout.shipping_address_placeholder') }}">{{ old('shipping_address', auth()->check() ? auth()->user()->dia_chi : '') }}</textarea>
                                 @error('shipping_address')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -305,13 +305,13 @@
                                 <div class="bg-gray-50 rounded-3 overflow-hidden flex-shrink-0 position-relative" style="width: 56px; height: 56px;" data-product-image-container>
                                     <x-product-image
                                         :src="$item['sanPham']->image_url"
-                                        :alt="$item['sanPham']->name"
+                                        :alt="$item['sanPham']->ten"
                                         class="w-100 h-100 object-fit-contain p-1"
                                         icon-size="1.5rem"
                                     />
                                 </div>
                                 <div class="flex-grow-1 min-w-0">
-                                    <p class="fw-medium text-gray-800 mb-0 small text-truncate">{{ $item['sanPham']->name }}</p>
+                                    <p class="fw-medium text-gray-800 mb-0 small text-truncate">{{ $item['sanPham']->ten }}</p>
                                     <small class="text-gray-400">{{ $item['sanPham']->formatted_price }} × {{ $item['quantity'] }}</small>
                                 </div>
                                 <span class="fw-bold text-gray-700 flex-shrink-0 small">

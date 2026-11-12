@@ -12,9 +12,9 @@ class DanhMuc extends Model
 {
     use HasFactory;
 
-    protected $table = 'categories';
+    protected $table = 'danh_mucs';
 
-    protected $primaryKey = 'MaDM';
+    protected $primaryKey = 'ma_dm';
 
     public const NAV_CACHE_KEY = 'layout.nav_categories';
     public const FOOTER_CACHE_KEY = 'layout.footer_categories';
@@ -33,23 +33,23 @@ class DanhMuc extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
-        'name_folded',
-        'code',
-        'icon',
-        'description',
+        'ten',
+        'ten_khong_dau',
+        'ma_danh_muc',
+        'bieu_tuong',
+        'mo_ta',
     ];
 
     protected static function booted(): void
     {
         static::saving(function (DanhMuc $danhMuc): void {
-            $danhMuc->code = ProductCodeGenerator::normalizeCategoryCode($danhMuc->code)
-                ?: ProductCodeGenerator::uniqueCategoryCode($danhMuc->name, $danhMuc->exists ? $danhMuc->getKey() : null);
+            $danhMuc->ma_danh_muc = ProductCodeGenerator::normalizeCategoryCode($danhMuc->ma_danh_muc)
+                ?: ProductCodeGenerator::uniqueCategoryCode($danhMuc->ten, $danhMuc->exists ? $danhMuc->getKey() : null);
 
             // Kept in sync here rather than at the call sites so a category created by
             // the crawler, the admin form or a factory folds the same way.
-            if ($danhMuc->isDirty('name')) {
-                $danhMuc->name_folded = VietnameseText::fold((string) $danhMuc->name);
+            if ($danhMuc->isDirty('ten')) {
+                $danhMuc->ten_khong_dau = VietnameseText::fold((string) $danhMuc->ten);
             }
         });
 
@@ -76,7 +76,7 @@ class DanhMuc extends Model
      */
     public function scopeBrowsable($query)
     {
-        $inStock = fn ($productQuery) => $productQuery->notExpired()->where('stock_quantity', '>', 0);
+        $inStock = fn ($productQuery) => $productQuery->notExpired()->where('so_luong_ton', '>', 0);
 
         return $query
             ->whereHas('sanPhams', $inStock)
@@ -84,7 +84,7 @@ class DanhMuc extends Model
             // vẫn đọc products_count cho tới Task 7 nên giữ alias cũ qua as().
             ->withCount(['sanPhams as products_count' => $inStock])
             ->orderByDesc('products_count')
-            ->orderBy('name');
+            ->orderBy('ten');
     }
 
     /**
@@ -92,7 +92,7 @@ class DanhMuc extends Model
      */
     public function sanPhams()
     {
-        return $this->hasMany(SanPham::class, 'MaDM', 'MaDM');
+        return $this->hasMany(SanPham::class, 'ma_dm', 'ma_dm');
     }
 
     /**

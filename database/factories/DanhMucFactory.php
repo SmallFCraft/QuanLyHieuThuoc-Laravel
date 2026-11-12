@@ -25,19 +25,19 @@ class DanhMucFactory extends Factory
     public function definition(): array
     {
         $categories = [
-            ['name' => 'Thuốc giảm đau', 'icon' => 'fa-pills', 'description' => 'Các loại thuốc giảm đau, hạ sốt'],
-            ['name' => 'Vitamin & Khoáng chất', 'icon' => 'fa-capsules', 'description' => 'Thực phẩm chức năng, vitamin'],
-            ['name' => 'Thuốc kháng sinh', 'icon' => 'fa-syringe', 'description' => 'Các loại thuốc kháng sinh'],
-            ['name' => 'Thuốc tiêu hóa', 'icon' => 'fa-stomach', 'description' => 'Thuốc hỗ trợ tiêu hóa'],
-            ['name' => 'Thuốc cảm cúm', 'icon' => 'fa-head-side-cough', 'description' => 'Thuốc điều trị cảm cúm'],
+            ['ten' => 'Thuốc giảm đau', 'bieu_tuong' => 'fa-pills', 'mo_ta' => 'Các loại thuốc giảm đau, hạ sốt'],
+            ['ten' => 'Vitamin & Khoáng chất', 'bieu_tuong' => 'fa-capsules', 'mo_ta' => 'Thực phẩm chức năng, vitamin'],
+            ['ten' => 'Thuốc kháng sinh', 'bieu_tuong' => 'fa-syringe', 'mo_ta' => 'Các loại thuốc kháng sinh'],
+            ['ten' => 'Thuốc tiêu hóa', 'bieu_tuong' => 'fa-stomach', 'mo_ta' => 'Thuốc hỗ trợ tiêu hóa'],
+            ['ten' => 'Thuốc cảm cúm', 'bieu_tuong' => 'fa-head-side-cough', 'mo_ta' => 'Thuốc điều trị cảm cúm'],
         ];
 
         $category = $this->faker->randomElement($categories);
 
         return [
-            'name' => $category['name'] . ' ' . $this->faker->unique()->numerify('###'),
-            'icon' => $category['icon'],
-            'description' => $category['description'],
+            'ten' => $category['ten'] . ' ' . $this->faker->unique()->numerify('###'),
+            'bieu_tuong' => $category['bieu_tuong'],
+            'mo_ta' => $category['mo_ta'],
         ];
     }
 }

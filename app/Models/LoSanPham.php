@@ -11,9 +11,9 @@ class LoSanPham extends Model
 {
     use HasFactory, Auditable;
 
-    protected $table = 'product_batches';
+    protected $table = 'lo_san_phams';
 
-    protected $primaryKey = 'MaLo';
+    protected $primaryKey = 'ma_lo';
 
     /**
      * The attributes that are mass assignable.
@@ -21,11 +21,11 @@ class LoSanPham extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'MaSP',
-        'batch_number',
-        'expiration_date',
-        'stock_quantity',
-        'reorder_point',
+        'ma_sp',
+        'so_lo',
+        'ngay_het_han',
+        'so_luong_ton',
+        'muc_canh_bao',
     ];
 
     /**
@@ -34,9 +34,9 @@ class LoSanPham extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'expiration_date' => 'date',
-        'stock_quantity' => 'integer',
-        'reorder_point' => 'integer',
+        'ngay_het_han' => 'date',
+        'so_luong_ton' => 'integer',
+        'muc_canh_bao' => 'integer',
     ];
 
     /**
@@ -44,7 +44,7 @@ class LoSanPham extends Model
      */
     public function sanPham()
     {
-        return $this->belongsTo(SanPham::class, 'MaSP', 'MaSP');
+        return $this->belongsTo(SanPham::class, 'ma_sp', 'ma_sp');
     }
 
     /**
@@ -52,7 +52,7 @@ class LoSanPham extends Model
      */
     public function chiTietDonHangs()
     {
-        return $this->hasMany(ChiTietDonHang::class, 'MaLo', 'MaLo');
+        return $this->hasMany(ChiTietDonHang::class, 'ma_lo', 'ma_lo');
     }
 
     /**
@@ -62,7 +62,7 @@ class LoSanPham extends Model
      */
     public function isExpired(): bool
     {
-        return $this->expiration_date->isPast();
+        return $this->ngay_het_han->isPast();
     }
 
     /**
@@ -79,7 +79,7 @@ class LoSanPham extends Model
 
         // Carbon 3 returns a signed difference, so calling diffInDays() on the later
         // date yields a negative number and `<= $days` matched every future date.
-        return Carbon::now()->diffInDays($this->expiration_date, true) <= $days;
+        return Carbon::now()->diffInDays($this->ngay_het_han, true) <= $days;
     }
 
     /**
@@ -89,7 +89,7 @@ class LoSanPham extends Model
      */
     public function isLowStock(): bool
     {
-        return $this->stock_quantity <= $this->reorder_point;
+        return $this->so_luong_ton <= $this->muc_canh_bao;
     }
 
     /**
@@ -100,7 +100,7 @@ class LoSanPham extends Model
      */
     public function scopeNotExpired($query)
     {
-        return $query->where('expiration_date', '>', Carbon::now());
+        return $query->where('ngay_het_han', '>', Carbon::now());
     }
 
     /**
@@ -111,7 +111,7 @@ class LoSanPham extends Model
      */
     public function scopeInStock($query)
     {
-        return $query->where('stock_quantity', '>', 0);
+        return $query->where('so_luong_ton', '>', 0);
     }
 
     /**
@@ -122,6 +122,6 @@ class LoSanPham extends Model
      */
     public function scopeFEFO($query)
     {
-        return $query->orderBy('expiration_date', 'asc');
+        return $query->orderBy('ngay_het_han', 'asc');
     }
 }

@@ -41,7 +41,7 @@
                             $symptomText = $item->collected_data['raw_symptom_text']
                                 ?? implode(', ', (array) ($item->collected_data['symptoms'] ?? []));
                         @endphp
-                        <a href="{{ route('health.result', $item->MaSL) }}"
+                        <a href="{{ route('health.result', $item->ma_sl) }}"
                            class="health-card p-4 text-decoration-none d-block">
                             <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                                 <div class="flex-grow-1" style="min-width: 200px;">

@@ -338,11 +338,11 @@
     <div class="container">
         @php
             $activeCategoryId = request('category');
-            $activeCategoryRoute = request()->route('MaDM');
+            $activeCategoryRoute = request()->route('ma_dm');
 
             if ($activeCategoryId === null && $activeCategoryRoute !== null) {
                 $activeCategoryId = is_object($activeCategoryRoute)
-                    ? ($activeCategoryRoute->MaDM ?? null)
+                    ? ($activeCategoryRoute->ma_dm ?? null)
                     : $activeCategoryRoute;
             }
         @endphp
@@ -351,7 +351,7 @@
             <div class="col-lg-3">
                 @php
                     $activeCategory = $categories->firstWhere(
-                        fn ($cat) => $activeCategoryId !== null && (string) $activeCategoryId === (string) $cat->MaDM
+                        fn ($cat) => $activeCategoryId !== null && (string) $activeCategoryId === (string) $cat->ma_dm
                     );
                     $maxCategoryCount = max(1, (int) $categories->max('products_count'));
                     // Summed from the counts already loaded, not $products->total(): that
@@ -363,7 +363,7 @@
                     <summary class="catalog-filter__toggle">
                         <i class="bi bi-funnel text-emerald-600" aria-hidden="true"></i>
                         <span>{{ __('messages.categories') }}</span>
-                        <span class="catalog-filter__toggle-current">{{ $activeCategory->name ?? __('messages.all') }}</span>
+                        <span class="catalog-filter__toggle-current">{{ $activeCategory->ten ?? __('messages.all') }}</span>
                         <i class="bi bi-chevron-down catalog-filter__toggle-chevron" aria-hidden="true"></i>
                     </summary>
 
@@ -392,15 +392,15 @@
                             </a>
                             @foreach($categories as $cat)
                                 @php
-                                    $isActiveCategory = $activeCategoryId !== null && (string) $activeCategoryId === (string) $cat->MaDM;
+                                    $isActiveCategory = $activeCategoryId !== null && (string) $activeCategoryId === (string) $cat->ma_dm;
                                     $depth = round($cat->products_count / $maxCategoryCount * 100);
                                 @endphp
-                                <a href="{{ route('products.index', ['category' => $cat->MaDM]) }}"
+                                <a href="{{ route('products.index', ['category' => $cat->ma_dm]) }}"
                                    class="catalog-filter-link {{ $isActiveCategory ? 'is-active' : '' }}"
                                    style="--depth: {{ $depth }}%"
-                                   data-folded="{{ \App\Support\VietnameseText::fold($cat->name) }}"
+                                   data-folded="{{ \App\Support\VietnameseText::fold($cat->ten) }}"
                                    @if($isActiveCategory) aria-current="page" @endif>
-                                    <span class="catalog-filter-label">{{ $cat->name }}@if($loop->index < 3)<i class="bi bi-fire category-flame" aria-hidden="true"></i>@endif</span>
+                                    <span class="catalog-filter-label">{{ $cat->ten }}@if($loop->index < 3)<i class="bi bi-fire category-flame" aria-hidden="true"></i>@endif</span>
                                     <span class="catalog-filter-count">{{ $cat->products_count }}</span>
                                 </a>
                             @endforeach

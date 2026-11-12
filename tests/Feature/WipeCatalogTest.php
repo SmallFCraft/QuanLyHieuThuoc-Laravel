@@ -41,29 +41,26 @@ class WipeCatalogTest extends TestCase
      */
     private function seedCatalogWithAnOrder(): SanPham
     {
-        $sanPham = SanPham::factory()->create(['MaDM' => DanhMuc::factory()]);
-        LoSanPham::create([
-            'MaSP' => $sanPham->MaSP,
-            'batch_number' => 'B-1',
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 10,
-            'reorder_point' => 5,
+        $sanPham = SanPham::factory()->create(['ma_dm' => DanhMuc::factory()]);
+        LoSanPham::create(['ma_sp' => $sanPham->ma_sp,
+            'so_lo' => 'B-1',
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 10,
+            'muc_canh_bao' => 5,
         ]);
 
-        $donHang = DonHang::create([
-            'MaKH' => NguoiDung::factory()->create()->MaKH,
-            'total_amount' => 1000,
-            'status' => 'Pending',
-            'shipping_address' => '1 Test',
-            'shipping_phone' => '0901234567',
+        $donHang = DonHang::create(['ma_nd' => NguoiDung::factory()->create()->ma_nd,
+            'tong_tien' => 1000,
+            'trang_thai' => 'Pending',
+            'dia_chi_giao_hang' => '1 Test',
+            'sdt_giao_hang' => '0901234567',
         ]);
 
-        ChiTietDonHang::create([
-            'MaDH' => $donHang->MaDH,
-            'MaSP' => $sanPham->MaSP,
-            'quantity' => 1,
-            'unit_price' => 1000,
-            'batch_number' => 'B-1',
+        ChiTietDonHang::create(['ma_dh' => $donHang->ma_dh,
+            'ma_sp' => $sanPham->ma_sp,
+            'so_luong' => 1,
+            'don_gia' => 1000,
+            'so_lo' => 'B-1',
         ]);
 
         return $sanPham;
@@ -108,7 +105,7 @@ class WipeCatalogTest extends TestCase
         ]);
 
         QuyTacPhanTangYTe::create([
-            'MaTC' => $trieuChung->MaTC,
+            'ma_tc' => $trieuChung->ma_tc,
             'conditions' => [],
             'outcome' => 'self_care',
             'advice_vi' => 'Nghỉ ngơi, uống nhiều nước.',
@@ -185,11 +182,11 @@ class WipeCatalogTest extends TestCase
         $sanPham = $this->seedCatalogWithAnOrder();
 
         $tinNhan = TinNhanChat::create([
-            'MaKH' => NguoiDung::factory()->create()->MaKH,
+            'ma_nd' => NguoiDung::factory()->create()->ma_nd,
             'session_id' => (string) \Illuminate\Support\Str::uuid(),
             'role' => 'assistant',
             'content' => 'Sản phẩm gợi ý',
-            'products' => [['id' => $sanPham->MaSP, 'name' => $sanPham->name]],
+            'products' => [['id' => $sanPham->ma_sp, 'name' => $sanPham->ten]],
         ]);
 
         $this->artisan('db:wipe-catalog --force')->assertSuccessful();
@@ -205,9 +202,9 @@ class WipeCatalogTest extends TestCase
 
         $this->artisan('db:wipe-catalog --force')->assertSuccessful();
 
-        $fresh = SanPham::factory()->create(['MaDM' => DanhMuc::factory()]);
+        $fresh = SanPham::factory()->create(['ma_dm' => DanhMuc::factory()]);
 
-        $this->assertSame(1, $fresh->MaSP);
+        $this->assertSame(1, $fresh->ma_sp);
     }
 
     public function test_it_runs_on_an_already_empty_database(): void

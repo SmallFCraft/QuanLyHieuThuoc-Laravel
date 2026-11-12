@@ -21,32 +21,28 @@ class SecurityAuditTest extends TestCase
     {
         parent::setUp();
         
-        $this->admin = NguoiDung::factory()->create([
-            'role' => 'Administrator',
-            'status' => 'active'
+        $this->admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator',
+            'trang_thai' => 'active'
         ]);
         
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active'
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active'
         ]);
         
-        $this->danhMuc = DanhMuc::create([
-            'name' => 'Test Category',
-            'description' => 'Test Description'
+        $this->danhMuc = DanhMuc::create(['ten' => 'Test Category',
+            'mo_ta' => 'Test Description'
         ]);
     }
 
     public function test_sql_injection_prevention_in_product_search(): void
     {
-        SanPham::create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'name' => 'Test Product',
-            'price' => 10000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 10,
-            'reorder_point' => 5,
-            'batch_number' => 'BATCH-001'
+        SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+            'ten' => 'Test Product',
+            'gia' => 10000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 10,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'BATCH-001'
         ]);
 
         // Attempt SQL injection
@@ -63,8 +59,8 @@ class SecurityAuditTest extends TestCase
             $response->assertStatus(200);
             
             // Verify products table still exists
-            $this->assertDatabaseHas('products', [
-                'name' => 'Test Product'
+            $this->assertDatabaseHas('san_phams', [
+                'ten' => 'Test Product'
             ]);
         }
     }
@@ -73,17 +69,16 @@ class SecurityAuditTest extends TestCase
     {
         $xssPayload = '<script>alert("XSS")</script>';
         
-        $sanPham = SanPham::create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'name' => $xssPayload,
-            'price' => 10000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 10,
-            'reorder_point' => 5,
-            'batch_number' => 'BATCH-002'
+        $sanPham = SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+            'ten' => $xssPayload,
+            'gia' => 10000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 10,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'BATCH-002'
         ]);
 
-        $response = $this->get(route('products.show', $sanPham->MaSP));
+        $response = $this->get(route('products.show', $sanPham->ma_sp));
 
         $response->assertStatus(200);
         
@@ -101,21 +96,20 @@ class SecurityAuditTest extends TestCase
 
     public function test_csrf_protection_on_state_changing_requests(): void
     {
-        $sanPham = SanPham::create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'name' => 'Test Product',
-            'price' => 10000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 10,
-            'reorder_point' => 5,
-            'batch_number' => 'BATCH-003'
+        $sanPham = SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+            'ten' => 'Test Product',
+            'gia' => 10000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 10,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'BATCH-003'
         ]);
 
         // Attempt POST without CSRF token
         $response = $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class)
             ->actingAs($this->admin)
             ->post(route('admin.products.store'), [
-                'MaDM' => $this->danhMuc->MaDM,
+                'ma_dm' => $this->danhMuc->ma_dm,
                 'name' => 'New Product',
                 'price' => 20000,
                 'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -154,7 +148,7 @@ class SecurityAuditTest extends TestCase
         $fakeImage = \Illuminate\Http\UploadedFile::fake()->create('malicious.php', 100);
 
         $response = $this->post(route('admin.products.store'), [
-            'MaDM' => $this->danhMuc->MaDM,
+            'ma_dm' => $this->danhMuc->ma_dm,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -175,7 +169,7 @@ class SecurityAuditTest extends TestCase
         $largeFile = \Illuminate\Http\UploadedFile::fake()->create('large.jpg', 6000);
 
         $response = $this->post(route('admin.products.store'), [
-            'MaDM' => $this->danhMuc->MaDM,
+            'ma_dm' => $this->danhMuc->ma_dm,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -201,25 +195,24 @@ class SecurityAuditTest extends TestCase
 
     public function test_authorization_bypass_prevention(): void
     {
-        $sanPham = SanPham::create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'name' => 'Test Product',
-            'price' => 10000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 10,
-            'reorder_point' => 5,
-            'batch_number' => 'BATCH-007'
+        $sanPham = SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+            'ten' => 'Test Product',
+            'gia' => 10000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 10,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'BATCH-007'
         ]);
 
         // Regular user should not be able to delete products
         $response = $this->actingAs($this->nguoiDung)
-            ->delete(route('admin.products.destroy', $sanPham->MaSP));
+            ->delete(route('admin.products.destroy', $sanPham->ma_sp));
 
         $response->assertStatus(403);
 
         // Verify product was not deleted
-        $this->assertDatabaseHas('products', [
-            'MaSP' => $sanPham->MaSP
+        $this->assertDatabaseHas('san_phams', [
+            'ma_sp' => $sanPham->ma_sp
         ]);
     }
 
@@ -241,7 +234,7 @@ class SecurityAuditTest extends TestCase
 
         // Attempt to set role through mass assignment
         $response = $this->post(route('admin.products.store'), [
-            'MaDM' => $this->danhMuc->MaDM,
+            'ma_dm' => $this->danhMuc->ma_dm,
             'name' => 'Test Product',
             'price' => 10000,
             'expiration_date' => now()->addYear()->format('Y-m-d'),
@@ -252,7 +245,7 @@ class SecurityAuditTest extends TestCase
         ]);
 
         // Product should be created but created_by should not be set to 999
-        $sanPham = SanPham::where('batch_number', 'BATCH-008')->first();
+        $sanPham = SanPham::where('so_lo', 'BATCH-008')->first();
         
         if ($sanPham) {
             $this->assertNotEquals(999, $sanPham->created_by ?? null);
@@ -262,21 +255,20 @@ class SecurityAuditTest extends TestCase
     public function test_parameterized_queries_prevent_sql_injection(): void
     {
         // Create test product
-        SanPham::create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'name' => 'Test Product',
-            'price' => 10000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 10,
-            'reorder_point' => 5,
-            'batch_number' => 'BATCH-009'
+        SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+            'ten' => 'Test Product',
+            'gia' => 10000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 10,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'BATCH-009'
         ]);
 
         // Attempt SQL injection through where clause
         $maliciousId = "1 OR 1=1";
 
         try {
-            $sanPhams = SanPham::where('MaSP', $maliciousId)->get();
+            $sanPhams = SanPham::where('ma_sp', $maliciousId)->get();
 
             // Should return empty or single result, not all products
             $this->assertLessThanOrEqual(1, $sanPhams->count());
@@ -307,7 +299,7 @@ class SecurityAuditTest extends TestCase
 
         $this->assertNotNull($logged, 'No HTTP audit row was written for an admin POST.');
         $this->assertSame('HTTP:admin.categories.store', $logged->model_type);
-        $this->assertSame($this->admin->MaKH, $logged->MaKH);
+        $this->assertSame($this->admin->ma_nd, $logged->ma_nd);
     }
 
     public function test_admin_reads_are_not_audit_logged(): void

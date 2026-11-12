@@ -31,7 +31,7 @@
             </h3>
             <div class="search-panel-pills">
                 @foreach($navCategories->take(4) as $category)
-                    <a class="search-panel-pill search-panel-pill--muted" href="{{ route('products.index', ['category' => $category->MaDM]) }}">{{ $category->name }}</a>
+                    <a class="search-panel-pill search-panel-pill--muted" href="{{ route('products.index', ['category' => $category->ma_dm]) }}">{{ $category->ten }}</a>
                 @endforeach
             </div>
         </section>
@@ -45,12 +45,12 @@
             @foreach($searchPanelProducts as $product)
                 {{-- suggestion-item: dùng lại class mà điều hướng bàn phím của panel
                      đã bắt, nên mũi tên lên/xuống đi qua cả ba sản phẩm này. --}}
-                <a class="suggestion-item product-item" href="{{ route('products.show', $product->MaSP) }}">
+                <a class="suggestion-item product-item" href="{{ route('products.show', $product->ma_sp) }}">
                     <div class="product-image" data-product-image-container style="position: relative;">
-                        <x-product-image :src="$product->image_url" :alt="$product->name" icon-size="1.5rem" />
+                        <x-product-image :src="$product->image_url" :alt="$product->ten" icon-size="1.5rem" />
                     </div>
                     <div class="product-info">
-                        <div class="product-name">{{ $product->name }}</div>
+                        <div class="product-name">{{ $product->ten }}</div>
                         <div class="product-meta">
                             <span class="product-price">{{ $product->formatted_price }}</span>
                         </div>

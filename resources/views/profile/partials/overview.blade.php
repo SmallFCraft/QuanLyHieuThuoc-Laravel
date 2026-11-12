@@ -2,13 +2,13 @@
     // Mức hoàn thiện hồ sơ tính trên các trường người dùng thực sự điền được.
     // role/status do hệ thống đặt nên không tính vào đây.
     $profileFields = [
-        __('messages.profile.name') => filled($user->name),
+        __('messages.profile.name') => filled($user->ho_ten),
         __('messages.profile.email') => filled($user->email),
-        __('messages.profile.phone') => filled($user->phone),
-        __('messages.profile.address') => filled($user->address),
-        __('messages.profile.birth_date') => filled($user->birth_date),
-        __('messages.profile.gender') => filled($user->gender),
-        __('messages.profile.avatar_title') => filled($user->avatar),
+        __('messages.profile.phone') => filled($user->so_dien_thoai),
+        __('messages.profile.address') => filled($user->dia_chi),
+        __('messages.profile.birth_date') => filled($user->ngay_sinh),
+        __('messages.profile.gender') => filled($user->gioi_tinh),
+        __('messages.profile.avatar_title') => filled($user->anh_dai_dien),
     ];
     $filledCount = count(array_filter($profileFields));
     $profilePercent = (int) round($filledCount / max(1, count($profileFields)) * 100);
@@ -92,15 +92,15 @@
             <ul class="profile-overview-list">
                 @foreach($recentOrders as $order)
                     <li>
-                        <a class="profile-overview-item" href="#order-{{ $order->MaDH }}" data-profile-goto-order="{{ $order->MaDH }}">
+                        <a class="profile-overview-item" href="#order-{{ $order->ma_dh }}" data-profile-goto-order="{{ $order->ma_dh }}">
                             <span class="profile-overview-item__icon"><i class="bi bi-box-seam"></i></span>
                             <span class="profile-overview-item__body">
-                                <span class="profile-overview-item__title">{{ __('messages.profile.order_prefix') }}{{ $order->MaDH }}</span>
+                                <span class="profile-overview-item__title">{{ __('messages.profile.order_prefix') }}{{ $order->ma_dh }}</span>
                                 <span class="profile-overview-item__meta">
-                                    {{ $order->created_at->format('d/m/Y') }} · {{ order_status_text($order->status) }}
+                                    {{ $order->created_at->format('d/m/Y') }} · {{ order_status_text($order->trang_thai) }}
                                 </span>
                             </span>
-                            <span class="profile-overview-item__value">{{ format_currency_vi($order->total_amount) }}</span>
+                            <span class="profile-overview-item__value">{{ format_currency_vi($order->tong_tien) }}</span>
                         </a>
                     </li>
                 @endforeach
@@ -124,7 +124,7 @@
                     <li class="profile-overview-item">
                         <span class="profile-overview-item__icon"><i class="bi bi-capsule"></i></span>
                         <span class="profile-overview-item__body">
-                            <span class="profile-overview-item__title">{{ $reminder->sanPham?->name ?? __('messages.profile.product_not_exist') }}</span>
+                            <span class="profile-overview-item__title">{{ $reminder->sanPham?->ten ?? __('messages.profile.product_not_exist') }}</span>
                             <span class="profile-overview-item__meta">
                                 {{ __('messages.profile.overview_reminder_next') }}:
                                 {{ $reminder->next_remind_at?->format('d/m/Y H:i') ?? '—' }}
@@ -195,21 +195,21 @@
             <ul class="profile-overview-list">
                 @foreach($previewFavorites as $product)
                     <li>
-                        <a class="profile-overview-item" href="{{ route('products.show', $product->MaSP) }}">
+                        <a class="profile-overview-item" href="{{ route('products.show', $product->ma_sp) }}">
                             <span class="profile-overview-thumb" data-product-image-container>
                                 <x-product-image
                                     :src="$product->image_url"
-                                    :alt="$product->name"
+                                    :alt="$product->ten"
                                     class="w-100 h-100 object-fit-cover"
                                     icon-class="text-secondary opacity-25"
                                     icon-size="1.25rem"
                                 />
                             </span>
                             <span class="profile-overview-item__body">
-                                <span class="profile-overview-item__title">{{ $product->name }}</span>
+                                <span class="profile-overview-item__title">{{ $product->ten }}</span>
                                 <span class="profile-overview-item__meta">
-                                    {{ $product->danhMuc?->name ?? __('messages.product_category') }}
-                                    @if($product->stock_quantity < 1)
+                                    {{ $product->danhMuc?->ten ?? __('messages.product_category') }}
+                                    @if($product->so_luong_ton < 1)
                                         · <span class="text-danger">{{ __('messages.out_of_stock') }}</span>
                                     @endif
                                 </span>

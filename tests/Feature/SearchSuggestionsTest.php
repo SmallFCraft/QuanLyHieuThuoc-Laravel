@@ -19,8 +19,8 @@ class SearchSuggestionsTest extends TestCase
     {
         parent::setUp();
 
-        $painRelief = DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt']);
-        $skincare = DanhMuc::create(['name' => 'Chăm sóc da mặt']);
+        $painRelief = DanhMuc::create(['ten' => 'Thuốc giảm đau, hạ sốt']);
+        $skincare = DanhMuc::create(['ten' => 'Chăm sóc da mặt']);
 
         $this->make($painRelief, 'Viên nén Paracetamol Stada 500mg', 'Paracetamol 500mg');
         $this->make($painRelief, 'Viên nén Panadol Extra đỏ GSK', 'Caffeine 65mg, Paracetamol 500mg');
@@ -29,15 +29,14 @@ class SearchSuggestionsTest extends TestCase
 
     private function make(DanhMuc $danhMuc, string $name, string $ingredients): SanPham
     {
-        return SanPham::create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => $name,
-            'ingredients' => $ingredients,
-            'price' => 50000,
-            'expiration_date' => now()->addYears(2),
-            'stock_quantity' => 30,
-            'reorder_point' => 10,
-            'batch_number' => 'LC-' . md5($name),
+        return SanPham::create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => $name,
+            'thanh_phan' => $ingredients,
+            'gia' => 50000,
+            'ngay_het_han' => now()->addYears(2),
+            'so_luong_ton' => 30,
+            'muc_canh_bao' => 10,
+            'so_lo' => 'LC-' . md5($name),
         ]);
     }
 
@@ -104,7 +103,7 @@ class SearchSuggestionsTest extends TestCase
 
     public function test_a_category_without_stock_is_not_suggested(): void
     {
-        DanhMuc::create(['name' => 'Danh mục rỗng']);
+        DanhMuc::create(['ten' => 'Danh mục rỗng']);
 
         $data = $this->suggest('danh muc rong');
 
@@ -113,7 +112,7 @@ class SearchSuggestionsTest extends TestCase
 
     public function test_out_of_stock_products_are_not_suggested(): void
     {
-        SanPham::where('name', 'like', 'Viên nén Panadol%')->update(['stock_quantity' => 0]);
+        SanPham::where('ten', 'like', 'Viên nén Panadol%')->update(['so_luong_ton' => 0]);
 
         $this->assertSame([], $this->suggest('panadol')['products']);
     }

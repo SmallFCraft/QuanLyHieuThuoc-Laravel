@@ -38,25 +38,23 @@ class TriageDecisionQueueTest extends TestCase
 
         Http::preventStrayRequests();
 
-        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt', 'mo_ta' => 'Giảm đau, hạ sốt']);
         $this->seed(TriThucYTeSeeder::class);
 
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(34)->toDateString(),
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(34)->toDateString(),
         ]);
 
-        SanPham::create([
-            'MaDM' => DanhMuc::first()->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'ingredients' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau, hạ sốt. Uống 1-2 viên mỗi 4-6 giờ',
-            'price' => 5000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 100,
-            'reorder_point' => 5,
-            'batch_number' => 'B-' . uniqid(),
+        SanPham::create(['ma_dm' => DanhMuc::first()->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'thanh_phan' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau, hạ sốt. Uống 1-2 viên mỗi 4-6 giờ',
+            'gia' => 5000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 100,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'B-' . uniqid(),
         ]);
     }
 
@@ -83,7 +81,7 @@ class TriageDecisionQueueTest extends TestCase
     {
         $this->actingAs($this->nguoiDung)->get(route('health.check'));
 
-        return PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        return PhienSangLoc::where('ma_nd', $this->nguoiDung->ma_nd)->inProgress()->latest('ma_sl')->firstOrFail();
     }
 
     /**
@@ -97,14 +95,14 @@ class TriageDecisionQueueTest extends TestCase
         $response = null;
 
         foreach ($answers as $step => $answer) {
-            $current = PhienSangLoc::find($phien->MaSL);
+            $current = PhienSangLoc::find($phien->ma_sl);
 
             if ($current === null || $current->status !== 'in_progress') {
                 break;
             }
 
             $response = $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => $step,
                 'answer' => $answer,
             ]);
@@ -126,7 +124,7 @@ class TriageDecisionQueueTest extends TestCase
 
         $job = AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->firstOrFail();
         $this->assertSame('queued', $job->status);
-        $this->assertSame($phien->MaSL, $job->payload['MaSL']);
+        $this->assertSame($phien->ma_sl, $job->payload['ma_sl']);
 
         // Undecided, not half-decided: no outcome is shown before the job runs.
         $phien->refresh();
@@ -194,7 +192,7 @@ class TriageDecisionQueueTest extends TestCase
             ->assertJsonPath('next', 'result')
             // Built by the controller, not the worker: route() inside a job resolves the
             // host from APP_URL, which sent the browser to a 404 on a non-default port.
-            ->assertJsonPath('redirect_url', route('health.result', $phien->MaSL));
+            ->assertJsonPath('redirect_url', route('health.result', $phien->ma_sl));
 
         $this->assertArrayNotHasKey('result_url', (array) $job->refresh()->result);
     }
@@ -253,7 +251,7 @@ class TriageDecisionQueueTest extends TestCase
         ])->save();
 
         $this->actingAs($this->nguoiDung)->post(route('health.clarify'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'clarify' => ['đau nửa đầu bên phải'],
         ]);
 
@@ -303,7 +301,7 @@ class TriageDecisionQueueTest extends TestCase
         // With no worker at all, reloading the wizard has to finish the job itself.
         $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
-            ->assertRedirect(route('health.result', $phien->MaSL));
+            ->assertRedirect(route('health.result', $phien->ma_sl));
 
         $this->assertSame('completed', $phien->fresh()->status);
     }
@@ -328,7 +326,7 @@ class TriageDecisionQueueTest extends TestCase
         // one dead attempt is enough evidence that nothing is consuming the queue.
         $this->actingAs($this->nguoiDung)
             ->get(route('health.check'))
-            ->assertRedirect(route('health.result', $phien->MaSL));
+            ->assertRedirect(route('health.result', $phien->ma_sl));
 
         $this->assertSame('completed', $phien->fresh()->status);
         $this->assertSame(
@@ -346,7 +344,7 @@ class TriageDecisionQueueTest extends TestCase
         $this->answerAllSteps($phien);
 
         $job = AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->firstOrFail();
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
 
         $this->actingAs($other)
             ->getJson(route('health.decision', $job->uuid))
@@ -365,7 +363,7 @@ class TriageDecisionQueueTest extends TestCase
         $phien = $this->startSession();
 
         $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => 1,
             'answer' => 'đau ngực dữ dội, khó thở',
         ]);
@@ -390,7 +388,7 @@ class TriageDecisionQueueTest extends TestCase
 
         $this->assertSame('completed', $phien->status);
         $this->assertSame('self_care', $phien->outcome);
-        $response->assertRedirect(route('health.result', $phien->MaSL));
+        $response->assertRedirect(route('health.result', $phien->ma_sl));
     }
 
     public function test_the_ajax_answer_returns_the_next_stage_without_a_reload(): void
@@ -398,7 +396,7 @@ class TriageDecisionQueueTest extends TestCase
         $phien = $this->startSession();
 
         $response = $this->actingAs($this->nguoiDung)->postJson(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => 1,
             'answer' => 'tôi bị đau đầu',
         ]);
@@ -423,14 +421,14 @@ class TriageDecisionQueueTest extends TestCase
 
         foreach ([1 => 'tôi bị đau đầu', 2 => 'hôm nay', 3 => 'chưa dùng gì', 4 => 'không có'] as $step => $answer) {
             $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => $step,
                 'answer' => $answer,
             ]);
         }
 
         $response = $this->actingAs($this->nguoiDung)->postJson(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => 5,
             'answer' => 'không có thêm',
         ]);
@@ -448,7 +446,7 @@ class TriageDecisionQueueTest extends TestCase
 
         $this->actingAs($this->nguoiDung)
             ->postJson(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => 1,
                 'answer' => '',
             ])
@@ -462,7 +460,7 @@ class TriageDecisionQueueTest extends TestCase
 
         $this->actingAs($this->nguoiDung)
             ->postJson(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => 4,
                 'answer' => 'gì đó',
             ])

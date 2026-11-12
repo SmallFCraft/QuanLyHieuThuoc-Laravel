@@ -31,12 +31,12 @@ class TriageBriefingAnalysisTest extends TestCase
 
         Http::preventStrayRequests();
 
-        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt', 'mo_ta' => 'Giảm đau, hạ sốt']);
         $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.briefing', true);
 
-        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
     }
 
     protected function fakeToolCall(array $arguments): void
@@ -62,7 +62,7 @@ class TriageBriefingAnalysisTest extends TestCase
     protected function triageSession(array $attributes = []): PhienSangLoc
     {
         return PhienSangLoc::create(array_merge([
-            'MaKH' => $this->nguoiDung->MaKH,
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -92,7 +92,7 @@ class TriageBriefingAnalysisTest extends TestCase
         $phien = $this->triageSession();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -120,7 +120,7 @@ class TriageBriefingAnalysisTest extends TestCase
         ]);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $flagged->MaSL))
+            ->get(route('health.result', $flagged->ma_sl))
             ->assertOk();
 
         // self_care band is 0-24; even with 3 caution flags (9) + 6 duration days
@@ -142,7 +142,7 @@ class TriageBriefingAnalysisTest extends TestCase
         ]);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $emergency->MaSL))
+            ->get(route('health.result', $emergency->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.analysis_score_level', ['level' => __('messages.health.outcome_emergency')]), false);
     }
@@ -164,7 +164,7 @@ class TriageBriefingAnalysisTest extends TestCase
         $this->assertCount(2, $phien->ai_briefing['data_analysis']);
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -213,7 +213,7 @@ class TriageBriefingAnalysisTest extends TestCase
         $phien = $phien->refresh();
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result.briefing-pane', $phien->MaSL))
+            ->get(route('health.result.briefing-pane', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.analysis_title'), false);
     }

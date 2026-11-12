@@ -38,16 +38,16 @@ class CleanupOrphanedImages extends Command
 
         SanPham::onlyTrashed()
             ->where('deleted_at', '<', $cutoffDate)
-            ->whereNotNull('image')
+            ->whereNotNull('hinh_anh')
             ->chunkById(100, function ($deletedProducts) use ($disk, &$deletedCount) {
                 foreach ($deletedProducts as $product) {
-                    $imagePath = str_contains($product->image, '/')
-                        ? $product->image
-                        : 'products/' . $product->image;
+                    $imagePath = str_contains($product->hinh_anh, '/')
+                        ? $product->hinh_anh
+                        : 'products/' . $product->hinh_anh;
 
                     if ($disk->exists($imagePath)) {
                         $disk->delete($imagePath);
-                        $this->info("Deleted image: {$product->image}");
+                        $this->info("Deleted image: {$product->hinh_anh}");
                         $deletedCount++;
                     }
                 }

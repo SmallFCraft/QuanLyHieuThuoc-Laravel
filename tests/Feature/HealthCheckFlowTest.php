@@ -27,17 +27,15 @@ class HealthCheckFlowTest extends TestCase
     {
         parent::setUp();
 
-        $this->danhMuc = DanhMuc::create([
-            'name' => 'Thuốc giảm đau - Hạ sốt',
-            'description' => 'Giảm đau, hạ sốt',
+        $this->danhMuc = DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt',
+            'mo_ta' => 'Giảm đau, hạ sốt',
         ]);
 
         $this->seed(TriThucYTeSeeder::class);
 
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(34)->toDateString(),
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(34)->toDateString(),
         ]);
     }
 
@@ -173,7 +171,7 @@ class HealthCheckFlowTest extends TestCase
 
         $this->actingAs($this->nguoiDung)
             ->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => 1,
                 'answer' => 'đau đầu',
             ])
@@ -188,7 +186,7 @@ class HealthCheckFlowTest extends TestCase
 
         $this->actingAs($this->nguoiDung)
             ->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => 1,
                 'answer' => '',
             ])
@@ -204,7 +202,7 @@ class HealthCheckFlowTest extends TestCase
         $this->answer($phien, 1, 'tiêu chảy');
 
         $this->actingAs($this->nguoiDung)
-            ->post(route('health.back'), ['triage_session_id' => $phien->MaSL])
+            ->post(route('health.back'), ['triage_session_id' => $phien->ma_sl])
             ->assertRedirect(route('health.check'));
 
         $phien = $phien->fresh();
@@ -222,7 +220,7 @@ class HealthCheckFlowTest extends TestCase
         $this->answer($phien, 1, 'ho');
 
         $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-            'triage_session_id' => $phien->fresh()->MaSL,
+            'triage_session_id' => $phien->fresh()->ma_sl,
             'step' => 2,
             'answer' => '',
             'skipped' => 1,
@@ -249,7 +247,7 @@ class HealthCheckFlowTest extends TestCase
         $this->assertSame('self_care', $phien->outcome);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.outcome_self_care'));
     }
@@ -275,7 +273,7 @@ class HealthCheckFlowTest extends TestCase
         ])->fresh();
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -314,7 +312,7 @@ class HealthCheckFlowTest extends TestCase
             ->post(route('health.restart'))
             ->assertRedirect(route('health.check'));
 
-        $this->assertNull(PhienSangLoc::find($phien->MaSL));
+        $this->assertNull(PhienSangLoc::find($phien->ma_sl));
     }
 
     public function test_answering_a_stale_session_reports_it_as_expired(): void
@@ -324,7 +322,7 @@ class HealthCheckFlowTest extends TestCase
 
         $this->actingAs($this->nguoiDung)
             ->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => 1,
                 'answer' => 'đau đầu',
             ])
@@ -342,18 +340,18 @@ class HealthCheckFlowTest extends TestCase
         // instead of asking step 2.
         $this->actingAs($this->nguoiDung)
             ->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => 1,
                 'answer' => 'đau ngực dữ dội, khó thở',
             ])
-            ->assertRedirect(route('health.result', $phien->MaSL));
+            ->assertRedirect(route('health.result', $phien->ma_sl));
 
         $phien = $phien->fresh();
         $this->assertSame('emergency', $phien->outcome);
         $this->assertSame([], $phien->suggested_products);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee('tel:115', false)
             ->assertSee(__('messages.health.outcome_emergency'))
@@ -376,7 +374,7 @@ class HealthCheckFlowTest extends TestCase
         $this->assertSame([], $phien->suggested_products);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.no_products'))
             ->assertDontSee(__('messages.health.products_title'));
@@ -401,7 +399,7 @@ class HealthCheckFlowTest extends TestCase
         ])->fresh();
 
         $html = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -432,7 +430,7 @@ class HealthCheckFlowTest extends TestCase
         $this->assertSame('completed', $phien->status);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.pharmacist_request_btn'))
             ->assertDontSee(__('messages.health.pharmacist_waiting'));
@@ -449,13 +447,13 @@ class HealthCheckFlowTest extends TestCase
         ])->fresh();
 
         $this->actingAs($this->nguoiDung)
-            ->post(route('health.requestPharmacist', $phien->MaSL))
-            ->assertRedirect(route('health.result', $phien->MaSL));
+            ->post(route('health.requestPharmacist', $phien->ma_sl))
+            ->assertRedirect(route('health.result', $phien->ma_sl));
 
         $this->assertSame('pending_pharmacist', $phien->fresh()->status);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.pharmacist_waiting'))
             ->assertDontSee(__('messages.health.pharmacist_request_btn'));
@@ -468,7 +466,7 @@ class HealthCheckFlowTest extends TestCase
         $this->assertSame('emergency', $phien->outcome);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertDontSee(__('messages.health.pharmacist_request_btn'));
     }
@@ -483,10 +481,10 @@ class HealthCheckFlowTest extends TestCase
             5 => 'không có thêm',
         ])->fresh();
 
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
 
         $this->actingAs($other)
-            ->post(route('health.requestPharmacist', $phien->MaSL))
+            ->post(route('health.requestPharmacist', $phien->ma_sl))
             ->assertNotFound();
 
         $this->assertSame('completed', $phien->fresh()->status);
@@ -504,10 +502,10 @@ class HealthCheckFlowTest extends TestCase
             5 => 'không có thêm',
         ]);
 
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
 
         $this->actingAs($other)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertNotFound();
     }
 
@@ -517,7 +515,7 @@ class HealthCheckFlowTest extends TestCase
         $this->answer($phien, 1, 'ho');
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertNotFound();
     }
 
@@ -546,8 +544,8 @@ class HealthCheckFlowTest extends TestCase
 
         $response = $this->actingAs($this->nguoiDung)->get(route('health.history'))->assertOk();
 
-        $response->assertSee(route('health.result', $finished->MaSL), false);
-        $response->assertDontSee(route('health.result', $inProgress->MaSL), false);
+        $response->assertSee(route('health.result', $finished->ma_sl), false);
+        $response->assertDontSee(route('health.result', $inProgress->ma_sl), false);
     }
 
     public function test_history_only_shows_the_users_own_checks(): void
@@ -560,20 +558,19 @@ class HealthCheckFlowTest extends TestCase
             5 => 'không có thêm',
         ]);
 
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
 
         $this->actingAs($other)
             ->get(route('health.history'))
             ->assertOk()
-            ->assertDontSee(route('health.result', $mine->MaSL), false);
+            ->assertDontSee(route('health.result', $mine->ma_sl), false);
     }
 
     // --- Health profile integration ---
 
     public function test_consented_profile_lets_the_wizard_skip_the_history_question(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'chronic_conditions' => ['loét dạ dày'],
             'consented_at' => now(),
         ]);
@@ -607,7 +604,7 @@ class HealthCheckFlowTest extends TestCase
         // The route allows 20 requests per minute.
         for ($i = 0; $i < 20; $i++) {
             $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => 1,
                 'answer' => 'đau đầu',
             ]);
@@ -615,7 +612,7 @@ class HealthCheckFlowTest extends TestCase
 
         $this->actingAs($this->nguoiDung)
             ->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => 1,
                 'answer' => 'đau đầu',
             ])
@@ -628,13 +625,13 @@ class HealthCheckFlowTest extends TestCase
     {
         $this->actingAs($this->nguoiDung)->get(route('health.check'));
 
-        return PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        return PhienSangLoc::where('ma_nd', $this->nguoiDung->ma_nd)->inProgress()->latest('ma_sl')->firstOrFail();
     }
 
     protected function answer(PhienSangLoc $phien, int $step, string $answer): void
     {
         $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => $step,
             'answer' => $answer,
         ]);
@@ -650,7 +647,7 @@ class HealthCheckFlowTest extends TestCase
     protected function runWizard(array $answers): PhienSangLoc
     {
         $phien = $this->startSession();
-        $id = $phien->MaSL;
+        $id = $phien->ma_sl;
 
         foreach ($answers as $step => $answer) {
             $current = PhienSangLoc::find($id);
@@ -667,16 +664,15 @@ class HealthCheckFlowTest extends TestCase
 
     protected function stockProduct(string $name, string $ingredients, string $usage): SanPham
     {
-        return SanPham::create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'name' => $name,
-            'ingredients' => $ingredients,
-            'usage' => $usage,
-            'price' => 5000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 50,
-            'reorder_point' => 5,
-            'batch_number' => 'B-' . uniqid(),
+        return SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+            'ten' => $name,
+            'thanh_phan' => $ingredients,
+            'cach_dung' => $usage,
+            'gia' => 5000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 50,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'B-' . uniqid(),
         ]);
     }
 }

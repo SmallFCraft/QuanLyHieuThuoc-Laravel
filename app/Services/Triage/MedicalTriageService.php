@@ -57,14 +57,14 @@ class MedicalTriageService
      */
     public function startOrResume(int $userId, ?string $chatSessionId = null, string $entryPoint = 'page'): PhienSangLoc
     {
-        $phien = PhienSangLoc::where('MaKH', $userId)->inProgress()->latest('MaSL')->first();
+        $phien = PhienSangLoc::where('ma_nd', $userId)->inProgress()->latest('ma_sl')->first();
 
         if ($phien) {
             return $phien;
         }
 
         return PhienSangLoc::create([
-            'MaKH' => $userId,
+            'ma_nd' => $userId,
             'session_id' => $chatSessionId,
             'collected_data' => [],
             'current_step' => self::STEP_SYMPTOM,
@@ -234,16 +234,16 @@ class MedicalTriageService
 
     protected function mergeRedFlags(Collection ...$sets): Collection
     {
-        $ids = collect($sets)->flatMap(fn (Collection $set) => $set->pluck('MaCB'))->unique();
+        $ids = collect($sets)->flatMap(fn (Collection $set) => $set->pluck('ma_cb'))->unique();
 
         return $ids->isEmpty()
             ? collect()
-            : $this->redFlagDictionary()->whereIn('MaCB', $ids)->values();
+            : $this->redFlagDictionary()->whereIn('ma_cb', $ids)->values();
     }
 
     protected function derivableRedFlags(): Collection
     {
-        $cacTen = $this->symptomDictionary()->pluck('name_vi', 'MaTC');
+        $cacTen = $this->symptomDictionary()->pluck('name_vi', 'ma_tc');
 
         return $this->redFlagDictionary()->filter(function (CoDoYTe $coDo) use ($cacTen): bool {
             $ten = $cacTen->get($coDo->applies_to_symptom);
@@ -262,7 +262,7 @@ class MedicalTriageService
             return collect();
         }
 
-        $cacTrieuChung = $this->symptomDictionary()->keyBy('MaTC');
+        $cacTrieuChung = $this->symptomDictionary()->keyBy('ma_tc');
 
         return $this->derivableRedFlags()
             ->filter(function (CoDoYTe $coDo) use ($cacCapDoi, $cacTrieuChung): bool {
@@ -322,10 +322,10 @@ class MedicalTriageService
             return collect();
         }
 
-        $daKhop = $cacTrieuChung->pluck('MaTC')->all();
+        $daKhop = $cacTrieuChung->pluck('ma_tc')->all();
         $transcript = $this->normalize($this->transcriptText($phien));
         $ownWords = $this->normalize($this->collectedText($phien));
-        $trieuChungTheoTc = $this->symptomDictionary()->keyBy('MaTC');
+        $trieuChungTheoTc = $this->symptomDictionary()->keyBy('ma_tc');
 
         return $this->derivableRedFlags()
             ->filter(function (CoDoYTe $coDo) use ($daKhop, $transcript, $ownWords, $phien, $trieuChungTheoTc): bool {
@@ -511,7 +511,7 @@ class MedicalTriageService
      */
     public function evaluate(PhienSangLoc $phien, ?HoSoSucKhoe $hoSo = null): array
     {
-        $nguoiDung = $phien->nguoiDung ?? NguoiDung::find($phien->MaKH);
+        $nguoiDung = $phien->nguoiDung ?? NguoiDung::find($phien->ma_nd);
         $text = $this->collectedText($phien);
 
         $cacCoDo = $this->sessionRedFlags($phien, $hoSo);
@@ -573,7 +573,7 @@ class MedicalTriageService
             'suggested_products' => $ketQua === 'self_care'
                 ? $this->suggestProducts($quyTac, $cacTrieuChung)
                 : [],
-            'rule_id' => $quyTac->MaQT,
+            'rule_id' => $quyTac->ma_qt,
             'ai' => $ai,
         ];
     }
@@ -620,7 +620,7 @@ class MedicalTriageService
         // introduce a symptom that does not exist.
         $trieuChungAi = $cacTrieuChung
             ->concat($this->symptomDictionary()->whereIn('code', $aiFacts['symptom_codes']))
-            ->unique('MaTC')
+            ->unique('ma_tc')
             ->values();
 
         $quyTacAi = $this->resolveRule(
@@ -748,18 +748,18 @@ class MedicalTriageService
             $this->auditLogService->log(
                 action: 'triage_pharmacist_requested',
                 modelType: PhienSangLoc::class,
-                modelId: $phien->MaSL,
+                modelId: $phien->ma_sl,
                 oldValues: null,
                 newValues: [
-                    'MaKH' => $phien->MaKH,
+                    'ma_nd' => $phien->ma_nd,
                     'outcome' => $phien->outcome,
                     'matched_symptoms' => $phien->matched_symptoms ?? [],
                 ],
-                userId: $phien->MaKH
+                userId: $phien->ma_nd
             );
         } catch (\Throwable $exception) {
             Log::warning('Triage pharmacist request audit failed', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
         }
@@ -777,10 +777,10 @@ class MedicalTriageService
             $this->auditLogService->log(
                 action: 'triage_completed',
                 modelType: PhienSangLoc::class,
-                modelId: $phien->MaSL,
+                modelId: $phien->ma_sl,
                 oldValues: null,
                 newValues: [
-                    'MaKH' => $phien->MaKH,
+                    'ma_nd' => $phien->ma_nd,
                     'outcome' => $phien->outcome,
                     'matched_symptoms' => $result['matched_symptoms'] ?? [],
                     'red_flag_codes' => collect($result['triggered_red_flags'] ?? [])->pluck('code')->all(),
@@ -793,11 +793,11 @@ class MedicalTriageService
                     'ai_regex_outcome' => $result['ai']['regex_outcome'] ?? null,
                     'ai_proposed_outcome' => $result['ai']['ai_outcome'] ?? null,
                 ],
-                userId: $phien->MaKH
+                userId: $phien->ma_nd
             );
         } catch (\Throwable $exception) {
             Log::warning('Triage audit logging failed', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
         }
@@ -939,7 +939,7 @@ class MedicalTriageService
             'skip_warning' => $cauHoi['allow_skip']
                 ? 'Thiếu thông tin này, em sẽ khuyên anh/chị gặp dược sĩ hoặc bác sĩ cho chắc.'
                 : null,
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
         ];
     }
 
@@ -1272,7 +1272,7 @@ class MedicalTriageService
         }
 
         return QuyTacPhanTangYTe::active()
-            ->whereIn('MaTC', $cacTrieuChung->pluck('MaTC'))
+            ->whereIn('ma_tc', $cacTrieuChung->pluck('ma_tc'))
             ->mostSpecificFirst()
             ->get()
             ->first(fn (QuyTacPhanTangYTe $quyTac) => $this->matchesConditions($quyTac->conditions, $facts));
@@ -1457,8 +1457,8 @@ class MedicalTriageService
 
         $ungVien = SanPham::with('danhMuc')
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
-            ->when(! empty($categoryIds), fn ($q) => $q->whereIn('MaDM', $categoryIds))
+            ->where('so_luong_ton', '>', 0)
+            ->when(! empty($categoryIds), fn ($q) => $q->whereIn('ma_dm', $categoryIds))
             ->get();
 
         return $ungVien
@@ -1469,7 +1469,7 @@ class MedicalTriageService
             ->filter(fn (array $hang) => $hang['score'] >= $required)
             // Relevance first, then stock, so a well-matched item that is running low
             // still beats a barely-related one sitting on a full shelf.
-            ->sortByDesc(fn (array $hang) => [$hang['score'], $hang['sanPham']->stock_quantity])
+            ->sortByDesc(fn (array $hang) => [$hang['score'], $hang['sanPham']->so_luong_ton])
             ->take(4)
             ->map(fn (array $hang) => $this->presentProduct($hang['sanPham']))
             ->values()
@@ -1511,7 +1511,7 @@ class MedicalTriageService
             return 0;
         }
 
-        $chuoiSoSanh = $sanPham->name.' '.$sanPham->usage.' '.$sanPham->ingredients;
+        $chuoiSoSanh = $sanPham->ten.' '.$sanPham->cach_dung.' '.$sanPham->thanh_phan;
         $folded = VietnameseText::fold($chuoiSoSanh);
         $accented = mb_strtolower($chuoiSoSanh);
         $score = 0;
@@ -1531,14 +1531,14 @@ class MedicalTriageService
     protected function presentProduct(SanPham $sanPham): array
     {
         return [
-            'id' => $sanPham->MaSP,
-            'name' => $sanPham->name,
+            'id' => $sanPham->ma_sp,
+            'name' => $sanPham->ten,
             'price' => $sanPham->price_vnd,
-            'stock_quantity' => $sanPham->stock_quantity,
-            'category' => $sanPham->danhMuc?->name,
-            'usage' => $sanPham->usage,
-            'image_url' => $sanPham->image,
-            'url' => route('products.show', $sanPham->MaSP),
+            'stock_quantity' => $sanPham->so_luong_ton,
+            'category' => $sanPham->danhMuc?->ten,
+            'usage' => $sanPham->cach_dung,
+            'image_url' => $sanPham->hinh_anh,
+            'url' => route('products.show', $sanPham->ma_sp),
         ];
     }
 }

@@ -22,7 +22,7 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $categories = DanhMuc::orderBy('name')->get();
+        $categories = DanhMuc::orderBy('ten')->get();
         return view('admin.products.index', compact('categories'));
     }
 
@@ -31,7 +31,7 @@ class ProductController extends Controller
      */
     public function create()
     {
-        $categories = DanhMuc::orderBy('name')->get();
+        $categories = DanhMuc::orderBy('ten')->get();
         
         return view('admin.products.create', compact('categories'));
     }
@@ -41,15 +41,15 @@ class ProductController extends Controller
      */
     public function store(ProductRequest $request)
     {
-        $data = $request->validated();
-        $danhMuc = DanhMuc::findOrFail($data['MaDM']);
-        $data['product_code'] = ProductCodeGenerator::productCodeForCategory($danhMuc);
+        $data = $this->productPayload($request->validated());
+        $danhMuc = DanhMuc::findOrFail($data['ma_dm']);
+        $data['ma_san_pham'] = ProductCodeGenerator::productCodeForCategory($danhMuc);
         $uploadedImage = null;
-        
+
         // Handle image upload
         if ($request->hasFile('image')) {
             $uploadedImage = $this->handleImageUpload($request->file('image'));
-            $data['image'] = $uploadedImage;
+            $data['hinh_anh'] = $uploadedImage;
         }
 
         try {
@@ -86,7 +86,7 @@ class ProductController extends Controller
      */
     public function edit(SanPham $product)
     {
-        $categories = DanhMuc::orderBy('name')->get();
+        $categories = DanhMuc::orderBy('ten')->get();
         
         return view('admin.products.edit', compact('product', 'categories'));
     }
@@ -96,14 +96,14 @@ class ProductController extends Controller
      */
     public function update(ProductRequest $request, SanPham $product)
     {
-        $data = $request->validated();
-        $oldImage = $product->image;
+        $data = $this->productPayload($request->validated());
+        $oldImage = $product->hinh_anh;
         $newImage = null;
-        
+
         // Handle image upload
         if ($request->hasFile('image')) {
             $newImage = $this->handleImageUpload($request->file('image'));
-            $data['image'] = $newImage;
+            $data['hinh_anh'] = $newImage;
         }
 
         try {
@@ -156,8 +156,8 @@ class ProductController extends Controller
         $query = SanPham::query();
         
         // Filter by DanhMuc
-        if ($request->has('MaDM') && $request->MaDM != '') {
-            $query->where('MaDM', $request->MaDM);
+        if ($request->has('ma_dm') && $request->ma_dm != '') {
+            $query->where('ma_dm', $request->ma_dm);
         }
 
         // Search
@@ -168,30 +168,29 @@ class ProductController extends Controller
         // Filtered records count
         $filteredRecords = $query->count();
         
+        // DataTables sort keys sent by the client (kept) mapped to the renamed columns.
         $allowedOrderColumns = [
-            'MaSP',
-            'product_code',
-            'name',
-            'price',
-            'stock_quantity',
-            'expiration_date',
-            'batch_number',
-            'category.name',
+            'ma_sp' => 'ma_sp',
+            'product_code' => 'ma_san_pham',
+            'name' => 'ten',
+            'price' => 'gia',
+            'stock_quantity' => 'so_luong_ton',
+            'expiration_date' => 'ngay_het_han',
+            'batch_number' => 'so_lo',
+            'category.name' => 'category.name',
         ];
 
         // Sorting
         if ($request->has('order')) {
             $columnIndex = (int) $request->input('order.0.column', 0);
-            $requestedColumn = (string) $request->input("columns.$columnIndex.name", 'MaSP');
-            $orderColumn = in_array($requestedColumn, $allowedOrderColumns, true)
-                ? $requestedColumn
-                : 'MaSP';
+            $requestedColumn = (string) $request->input("columns.$columnIndex.name", 'ma_sp');
+            $orderColumn = $allowedOrderColumns[$requestedColumn] ?? 'ma_sp';
             $orderDir = $request->input('order.0.dir') === 'desc' ? 'desc' : 'asc';
 
             if ($orderColumn === 'category.name') {
-                $query->join('categories', 'products.MaDM', '=', 'categories.MaDM')
-                      ->orderBy('categories.name', $orderDir)
-                      ->select('products.*');
+                $query->join('danh_mucs', 'san_phams.ma_dm', '=', 'danh_mucs.ma_dm')
+                      ->orderBy('danh_mucs.ten', $orderDir)
+                      ->select('san_phams.*');
             } else {
                 $query->orderBy($orderColumn, $orderDir);
             }
@@ -205,20 +204,20 @@ class ProductController extends Controller
         // Format data - return raw data instead of HTML
         $data = $sanPhams->map(function($product) {
             return [
-                'MaSP' => $product->MaSP,
-                'product_code' => $product->product_code,
+                'ma_sp' => $product->ma_sp,
+                'product_code' => $product->ma_san_pham,
                 'display_code' => $product->display_code,
-                'name' => $product->name,
-                'category' => $product->danhMuc->name,
+                'name' => $product->ten,
+                'category' => $product->danhMuc->ten,
                 'price' => $product->price_vnd,
                 'formatted_price' => $product->formatted_price,
-                'stock_quantity' => $product->stock_quantity,
+                'stock_quantity' => $product->so_luong_ton,
                 'is_low_stock' => $product->isLowStock(),
-                'expiration_date' => $product->expiration_date->format('Y-m-d'),
-                'formatted_expiration_date' => $product->expiration_date->format('d/m/Y'),
+                'expiration_date' => $product->ngay_het_han->format('Y-m-d'),
+                'formatted_expiration_date' => $product->ngay_het_han->format('d/m/Y'),
                 'is_expired' => $product->isExpired(),
                 'is_expiring_soon' => $product->isExpiringSoon(),
-                'batch_number' => $product->batch_number,
+                'batch_number' => $product->so_lo,
                 'image_url' => $product->image_url,
             ];
         });
@@ -235,7 +234,7 @@ class ProductController extends Controller
     {
         return Excel::download(
             new AdminProductsExport(
-                categoryId: $request->filled('MaDM') ? $request->string('MaDM')->toString() : null,
+                categoryId: $request->filled('ma_dm') ? $request->string('ma_dm')->toString() : null,
                 search: $request->filled('q') ? $request->string('q')->trim()->toString() : null,
             ),
             'san-pham.xlsx'
@@ -261,21 +260,40 @@ class ProductController extends Controller
     }
 
     /**
+     * Map the validated form keys to the Vietnamese column names of san_phams.
+     * The form contract (name/price/...) stays unchanged; only the storage keys move.
+     */
+    private function productPayload(array $validated): array
+    {
+        return [
+            'ma_dm' => $validated['ma_dm'],
+            'ten' => $validated['name'],
+            'thanh_phan' => $validated['ingredients'] ?? null,
+            'cach_dung' => $validated['usage'] ?? null,
+            'gia' => $validated['price'],
+            'so_lo' => $validated['batch_number'],
+            'ngay_het_han' => $validated['expiration_date'],
+            'so_luong_ton' => (int) $validated['stock_quantity'],
+            'muc_canh_bao' => (int) $validated['reorder_point'],
+        ];
+    }
+
+    /**
      * Keep the editable primary product batch aligned with product fields.
      */
     private function syncPrimaryBatch(SanPham $product, array $data): void
     {
         $payloadLo = [
-            'batch_number' => $data['batch_number'],
-            'expiration_date' => $data['expiration_date'],
-            'stock_quantity' => (int) $data['stock_quantity'],
-            'reorder_point' => (int) $data['reorder_point'],
+            'so_lo' => $data['so_lo'],
+            'ngay_het_han' => $data['ngay_het_han'],
+            'so_luong_ton' => (int) $data['so_luong_ton'],
+            'muc_canh_bao' => (int) $data['muc_canh_bao'],
         ];
 
         $lo = $product->cacLo()
             ->lockForUpdate()
-            ->orderBy('expiration_date')
-            ->orderBy('MaLo')
+            ->orderBy('ngay_het_han')
+            ->orderBy('ma_lo')
             ->first();
 
         if ($lo instanceof LoSanPham) {

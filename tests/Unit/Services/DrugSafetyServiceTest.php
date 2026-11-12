@@ -24,19 +24,17 @@ class DrugSafetyServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->danhMuc = DanhMuc::create([
-            'name' => 'Thuốc giảm đau - Hạ sốt',
-            'description' => 'Giảm đau, hạ sốt',
+        $this->danhMuc = DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt',
+            'mo_ta' => 'Giảm đau, hạ sốt',
         ]);
 
         $this->seed(TriThucYTeSeeder::class);
 
         $this->service = app(DrugSafetyService::class);
 
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(34)->toDateString(),
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(34)->toDateString(),
         ]);
     }
 
@@ -90,7 +88,7 @@ class DrugSafetyServiceTest extends TestCase
         $reverse = $this->service->checkPair('Diclofenac sodium 50mg', 'Ibuprofen 400mg');
 
         $this->assertCount(1, $forward);
-        $this->assertSame($forward->first()->MaTT, $reverse->first()->MaTT);
+        $this->assertSame($forward->first()->ma_tt, $reverse->first()->ma_tt);
     }
 
     public function test_unrelated_products_report_no_interaction(): void
@@ -167,10 +165,9 @@ class DrugSafetyServiceTest extends TestCase
 
     public function test_age_guard_fires_for_a_child(): void
     {
-        $child = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(10)->toDateString(),
+        $child = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(10)->toDateString(),
         ]);
         $sanPham = $this->product('Aspirin', 'Acid acetylsalicylic 100mg');
 
@@ -195,10 +192,9 @@ class DrugSafetyServiceTest extends TestCase
 
     public function test_unknown_age_does_not_silently_pass_an_age_guard(): void
     {
-        $noBirthDate = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => null,
+        $noBirthDate = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => null,
         ]);
         $sanPham = $this->product('Aspirin', 'Acid acetylsalicylic 100mg');
 
@@ -231,9 +227,9 @@ class DrugSafetyServiceTest extends TestCase
         $ibuprofen = $this->product('Ibuprofen', 'Ibuprofen 400mg');
 
         $result = $this->service->checkCart([
-            ['MaSP' => $aspirin->MaSP, 'quantity' => 1],
-            ['MaSP' => $ibuprofen->MaSP, 'quantity' => 1],
-        ], $this->nguoiDung->MaKH);
+            ['ma_sp' => $aspirin->ma_sp, 'quantity' => 1],
+            ['ma_sp' => $ibuprofen->ma_sp, 'quantity' => 1],
+        ], $this->nguoiDung->ma_nd);
 
         $this->assertTrue($result['blocking']);
         $this->assertTrue(collect($result['warnings'])->contains(fn ($w) => $w['type'] === 'interaction'));
@@ -246,17 +242,17 @@ class DrugSafetyServiceTest extends TestCase
         $ibuprofen = $this->product('Ibuprofen', 'Ibuprofen 400mg');
 
         $result = $this->service->checkCart([
-            ['MaSP' => $aspirin->MaSP, 'quantity' => 1],
-            ['MaSP' => $vitamin->MaSP, 'quantity' => 1],
-            ['MaSP' => $ibuprofen->MaSP, 'quantity' => 1],
-        ], $this->nguoiDung->MaKH);
+            ['ma_sp' => $aspirin->ma_sp, 'quantity' => 1],
+            ['ma_sp' => $vitamin->ma_sp, 'quantity' => 1],
+            ['ma_sp' => $ibuprofen->ma_sp, 'quantity' => 1],
+        ], $this->nguoiDung->ma_nd);
 
         $this->assertTrue(collect($result['warnings'])->contains(fn ($w) => $w['type'] === 'interaction'));
     }
 
     public function test_empty_cart_produces_no_warnings(): void
     {
-        $result = $this->service->checkCart([], $this->nguoiDung->MaKH);
+        $result = $this->service->checkCart([], $this->nguoiDung->ma_nd);
 
         $this->assertFalse($result['blocking']);
         $this->assertSame([], $result['warnings']);
@@ -267,8 +263,8 @@ class DrugSafetyServiceTest extends TestCase
         $vitamin = $this->product('Vitamin E', 'Vitamin E 400IU');
 
         $result = $this->service->checkCart(
-            [['MaSP' => $vitamin->MaSP, 'quantity' => 1]],
-            $this->nguoiDung->MaKH
+            [['ma_sp' => $vitamin->ma_sp, 'quantity' => 1]],
+            $this->nguoiDung->ma_nd
         );
 
         $this->assertFalse($result['blocking']);
@@ -282,8 +278,8 @@ class DrugSafetyServiceTest extends TestCase
 
         $result = $this->service->checkAddition(
             $ibuprofen,
-            [['MaSP' => $aspirin->MaSP, 'quantity' => 1]],
-            $this->nguoiDung->MaKH
+            [['ma_sp' => $aspirin->ma_sp, 'quantity' => 1]],
+            $this->nguoiDung->ma_nd
         );
 
         $this->assertTrue($result['blocking']);
@@ -295,8 +291,8 @@ class DrugSafetyServiceTest extends TestCase
 
         $result = $this->service->checkAddition(
             $aspirin,
-            [['MaSP' => $aspirin->MaSP, 'quantity' => 1]],
-            $this->nguoiDung->MaKH
+            [['ma_sp' => $aspirin->ma_sp, 'quantity' => 1]],
+            $this->nguoiDung->ma_nd
         );
 
         $this->assertFalse($result['blocking']);
@@ -311,8 +307,8 @@ class DrugSafetyServiceTest extends TestCase
         $paracetamol = $this->product('Panadol', 'Paracetamol 500mg');
 
         $result = $this->service->checkCart(
-            [['MaSP' => $paracetamol->MaSP, 'quantity' => 1]],
-            $this->nguoiDung->MaKH
+            [['ma_sp' => $paracetamol->ma_sp, 'quantity' => 1]],
+            $this->nguoiDung->ma_nd
         );
 
         $this->assertSame('major', $result['warnings'][0]['severity']);
@@ -322,14 +318,14 @@ class DrugSafetyServiceTest extends TestCase
     {
         $sanPham = $this->product('Ibuprofen', 'Ibuprofen 400mg');
 
-        $this->service->logOverride($this->nguoiDung->MaKH, $sanPham, [
+        $this->service->logOverride($this->nguoiDung->ma_nd, $sanPham, [
             ['type' => 'interaction', 'severity' => 'major'],
         ]);
 
-        $log = \App\Models\NhatKyKiemToan::where('action', 'drug_warning_overridden')->latest('MaNK')->first();
+        $log = \App\Models\NhatKyKiemToan::where('action', 'drug_warning_overridden')->latest('ma_nk')->first();
 
         $this->assertNotNull($log);
-        $this->assertSame($sanPham->MaSP, $log->MaDoiTuong);
+        $this->assertSame($sanPham->ma_sp, $log->MaDoiTuong);
     }
 
     // --- Helpers ---
@@ -337,28 +333,27 @@ class DrugSafetyServiceTest extends TestCase
     protected function profile(array $attributes = []): HoSoSucKhoe
     {
         return HoSoSucKhoe::updateOrCreate(
-            ['MaKH' => $this->nguoiDung->MaKH],
+            ['ma_nd' => $this->nguoiDung->ma_nd],
             array_merge(['consented_at' => now()], $attributes)
         );
     }
 
     protected function consentedProfile(): ?HoSoSucKhoe
     {
-        return HoSoSucKhoe::where('MaKH', $this->nguoiDung->MaKH)->consented()->first();
+        return HoSoSucKhoe::where('ma_nd', $this->nguoiDung->ma_nd)->consented()->first();
     }
 
     protected function product(string $name, string $ingredients): SanPham
     {
-        return SanPham::create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'name' => $name,
-            'ingredients' => $ingredients,
-            'usage' => 'Theo hướng dẫn',
-            'price' => 5000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 50,
-            'reorder_point' => 5,
-            'batch_number' => 'B-' . uniqid(),
+        return SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+            'ten' => $name,
+            'thanh_phan' => $ingredients,
+            'cach_dung' => 'Theo hướng dẫn',
+            'gia' => 5000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 50,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'B-' . uniqid(),
         ]);
     }
 }

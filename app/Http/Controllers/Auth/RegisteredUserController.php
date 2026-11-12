@@ -37,7 +37,7 @@ class RegisteredUserController extends Controller
         ]);
 
         $nguoiDung = NguoiDung::create([
-            'name' => $request->name,
+            'ho_ten' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);

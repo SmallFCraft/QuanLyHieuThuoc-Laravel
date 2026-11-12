@@ -155,7 +155,7 @@ class TriageAiFactService extends TriageAiService
             return $facts;
         } catch (\Throwable $exception) {
             Log::warning('Triage AI fact extraction failed', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -626,11 +626,11 @@ class TriageAiFactService extends TriageAiService
      */
     protected function consentedAiProfile(PhienSangLoc $phien): ?HoSoSucKhoe
     {
-        if (! $phien->MaKH) {
+        if (! $phien->ma_nd) {
             return null;
         }
 
-        $profile = HoSoSucKhoe::consentedFor((int) $phien->MaKH);
+        $profile = HoSoSucKhoe::consentedFor((int) $phien->ma_nd);
 
         return $profile?->hasAiConsent() ? $profile : null;
     }

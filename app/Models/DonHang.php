@@ -11,9 +11,9 @@ class DonHang extends Model
 {
     use HasFactory, Auditable;
 
-    protected $table = 'orders';
+    protected $table = 'don_hangs';
 
-    protected $primaryKey = 'MaDH';
+    protected $primaryKey = 'ma_dh';
 
     /**
      * The attributes that are mass assignable.
@@ -21,13 +21,13 @@ class DonHang extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'MaKH',
-        'total_amount',
-        'status',
-        'shipping_address',
-        'shipping_phone',
-        'delivery_time',
-        'order_notes',
+        'ma_nd',
+        'tong_tien',
+        'trang_thai',
+        'dia_chi_giao_hang',
+        'sdt_giao_hang',
+        'thoi_gian_giao',
+        'ghi_chu',
     ];
 
     /**
@@ -36,7 +36,7 @@ class DonHang extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'total_amount' => 'decimal:2',
+        'tong_tien' => 'decimal:2',
     ];
 
     /**
@@ -44,7 +44,7 @@ class DonHang extends Model
      */
     public function nguoiDung()
     {
-        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'ma_nd', 'ma_nd');
     }
 
     /**
@@ -52,7 +52,7 @@ class DonHang extends Model
      */
     public function chiTietDonHangs()
     {
-        return $this->hasMany(ChiTietDonHang::class, 'MaDH', 'MaDH');
+        return $this->hasMany(ChiTietDonHang::class, 'ma_dh', 'ma_dh');
     }
 
     /**
@@ -62,7 +62,7 @@ class DonHang extends Model
      */
     public function getFormattedTotalAttribute(): string
     {
-        return VietnameseHelper::formatCurrency($this->total_amount);
+        return VietnameseHelper::formatCurrency($this->tong_tien);
     }
 
     /**

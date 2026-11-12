@@ -44,7 +44,7 @@ class TriThucYTeSeeder extends Seeder
                 $dinhNghia
             );
 
-            $maSo[$dinhNghia['code']] = $trieuChung->MaTC;
+            $maSo[$dinhNghia['code']] = $trieuChung->ma_tc;
         }
 
         return $maSo;
@@ -309,7 +309,7 @@ class TriThucYTeSeeder extends Seeder
      */
     protected function napQuyTacSangLoc(array $cacTrieuChung): void
     {
-        $maDanhMucs = DanhMuc::pluck('MaDM', 'name');
+        $maDanhMucs = DanhMuc::pluck('ma_dm', 'ten');
 
         foreach ($this->danhSachQuyTac() as $dinhNghia) {
             $maTrieuChung = $dinhNghia['symptom'];
@@ -319,7 +319,7 @@ class TriThucYTeSeeder extends Seeder
                 continue;
             }
 
-            $dinhNghia['MaTC'] = $cacTrieuChung[$maTrieuChung];
+            $dinhNghia['ma_tc'] = $cacTrieuChung[$maTrieuChung];
             $dinhNghia['suggest_categories'] = collect($dinhNghia['categories'] ?? [])
                 ->map(fn (string $name) => $maDanhMucs[$name] ?? null)
                 ->filter()
@@ -330,7 +330,7 @@ class TriThucYTeSeeder extends Seeder
             // reviewed_by stays null on purpose: no licensed pharmacist has signed
             // off on this seed data. See the class docblock.
             QuyTacPhanTangYTe::updateOrCreate(
-                ['MaTC' => $dinhNghia['MaTC'], 'priority' => $dinhNghia['priority']],
+                ['ma_tc' => $dinhNghia['ma_tc'], 'priority' => $dinhNghia['priority']],
                 $dinhNghia
             );
         }

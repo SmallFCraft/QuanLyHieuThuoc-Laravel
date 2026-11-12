@@ -64,7 +64,7 @@ trait Auditable
     protected function createAuditLog(string $action, ?array $oldValues, ?array $newValues)
     {
         NhatKyKiemToan::create([
-            'MaKH' => Auth::id(),
+            'ma_nd' => Auth::id(),
             'action' => $action,
             'model_type' => get_class($this),
             'MaDoiTuong' => $this->getKey(),

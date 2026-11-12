@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Chi tiết đơn hàng #' . $order->MaDH)
-@section('page-title', 'Chi tiết đơn hàng #' . $order->MaDH)
+@section('title', 'Chi tiết đơn hàng #' . $order->ma_dh)
+@section('page-title', 'Chi tiết đơn hàng #' . $order->ma_dh)
 @section('page-subtitle', 'Quản lý và cập nhật trạng thái đơn hàng')
 
 @section('content')
@@ -14,7 +14,7 @@
                 <table class="table table-borderless mb-0">
                     <tr>
                         <td class="text-gray-500 ps-0" style="width: 140px;">{{ __('messages.admin.orders.info_id') }}</td>
-                        <td class="fw-bold">#{{ $order->MaDH }}</td>
+                        <td class="fw-bold">#{{ $order->ma_dh }}</td>
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">{{ __('messages.admin.orders.info_date') }}</td>
@@ -49,7 +49,7 @@
                 <table class="table table-borderless mb-0">
                     <tr>
                         <td class="text-gray-500 ps-0" style="width: 140px;">Khách hàng</td>
-                        <td class="fw-medium">{{ $order->nguoiDung->name }}</td>
+                        <td class="fw-medium">{{ $order->nguoiDung->ho_ten }}</td>
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">Email</td>
@@ -57,17 +57,17 @@
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">Điện thoại</td>
-                        <td class="fw-medium">{{ $order->shipping_phone ?? 'Chưa cung cấp' }}</td>
+                        <td class="fw-medium">{{ $order->sdt_giao_hang ?? 'Chưa cung cấp' }}</td>
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">Địa chỉ</td>
-                        <td class="fw-medium">{{ $order->shipping_address }}</td>
+                        <td class="fw-medium">{{ $order->dia_chi_giao_hang }}</td>
                     </tr>
-                    @if($order->delivery_time)
+                    @if($order->thoi_gian_giao)
                     <tr>
                         <td class="text-gray-500 ps-0">Thời gian giao</td>
                         <td class="fw-medium">
-                            @switch($order->delivery_time)
+                            @switch($order->thoi_gian_giao)
                                 @case('morning')
                                     <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3 py-2">
                                         <i class="bi bi-sunrise me-1"></i>Buổi sáng (8h - 12h)
@@ -91,10 +91,10 @@
                         </td>
                     </tr>
                     @endif
-                    @if($order->order_notes)
+                    @if($order->ghi_chu)
                     <tr>
                         <td class="text-gray-500 ps-0">Ghi chú</td>
-                        <td class="fw-medium fst-italic text-gray-700">"{{ $order->order_notes }}"</td>
+                        <td class="fw-medium fst-italic text-gray-700">"{{ $order->ghi_chu }}"</td>
                     </tr>
                     @endif
                 </table>
@@ -119,10 +119,10 @@
                 <tbody>
                     @foreach($order->chiTietDonHangs as $item)
                         <tr>
-                            <td class="fw-medium">{{ $item->sanPham->name }}</td>
-                            <td class="text-gray-500 small">{{ $item->batch_number }}</td>
-                            <td>{{ number_format($item->unit_price, 0, ',', '.') }} ₫</td>
-                            <td>{{ $item->quantity }}</td>
+                            <td class="fw-medium">{{ $item->sanPham->ten }}</td>
+                            <td class="text-gray-500 small">{{ $item->so_lo }}</td>
+                            <td>{{ number_format($item->don_gia, 0, ',', '.') }} ₫</td>
+                            <td>{{ $item->so_luong }}</td>
                             <td class="fw-bold">{{ $item->formatted_subtotal }}</td>
                         </tr>
                     @endforeach
@@ -140,7 +140,7 @@
     <!-- Actions -->
     <div class="d-flex flex-wrap gap-3 align-items-center">
         @if($order->status != 'Completed' && $order->status != 'Cancelled')
-            <form action="{{ route('admin.orders.updateStatus', $order->MaDH) }}" method="POST" class="d-flex gap-2 align-items-center">
+            <form action="{{ route('admin.orders.updateStatus', $order->ma_dh) }}" method="POST" class="d-flex gap-2 align-items-center">
                 @csrf
                 @method('PATCH')
                 <select name="status" class="form-select rounded-3 shadow-none" style="width: auto;">
@@ -158,7 +158,7 @@
         @endif
 
         @if($order->status == 'Pending')
-            <form action="{{ route('admin.orders.cancel', $order->MaDH) }}" method="POST" class="d-inline">
+            <form action="{{ route('admin.orders.cancel', $order->ma_dh) }}" method="POST" class="d-inline">
                 @csrf
                 <button type="submit" class="btn btn-outline-danger rounded-pill px-4 fw-medium" onclick="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')">
                     <i class="bi bi-x-lg me-1"></i>Hủy đơn hàng

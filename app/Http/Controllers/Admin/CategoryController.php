@@ -17,7 +17,7 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        $categories = DanhMuc::withCount('sanPhams')->orderBy('name')->get();
+        $categories = DanhMuc::withCount('sanPhams')->orderBy('ten')->get();
         
         return view('admin.categories.index', compact('categories'));
     }
@@ -28,8 +28,8 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:255', 'unique:categories,name', $this->uniqueFoldedName()],
-            'code' => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z0-9]+$/', Rule::unique('categories', 'code')],
+            'name' => ['required', 'string', 'max:255', 'unique:danh_mucs,ten', $this->uniqueFoldedName()],
+            'code' => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z0-9]+$/', Rule::unique('danh_mucs', 'ma_danh_muc')],
             'icon' => 'nullable|string|max:50',
             'description' => 'nullable|string',
         ], [
@@ -66,10 +66,10 @@ class CategoryController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => [
                 'required', 'string', 'max:255',
-                'unique:categories,name,' . $category->MaDM . ',MaDM',
+                'unique:danh_mucs,ten,' . $category->ma_dm . ',ma_dm',
                 $this->uniqueFoldedName($category),
             ],
-            'code' => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z0-9]+$/', Rule::unique('categories', 'code')->ignore($category->MaDM, 'MaDM')],
+            'code' => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z0-9]+$/', Rule::unique('danh_mucs', 'ma_danh_muc')->ignore($category->ma_dm, 'ma_dm')],
             'icon' => 'nullable|string|max:50',
             'description' => 'nullable|string',
         ], [
@@ -124,10 +124,10 @@ class CategoryController extends Controller
         $code = ProductCodeGenerator::normalizeCategoryCode($request->input('code'));
 
         return [
-            'name' => $request->input('name'),
-            'code' => $code ?: ProductCodeGenerator::uniqueCategoryCode($request->input('name'), $category?->MaDM),
-            'icon' => $request->input('icon'),
-            'description' => $request->input('description'),
+            'ten' => $request->input('name'),
+            'ma_danh_muc' => $code ?: ProductCodeGenerator::uniqueCategoryCode($request->input('name'), $category?->ma_dm),
+            'bieu_tuong' => $request->input('icon'),
+            'mo_ta' => $request->input('description'),
         ];
     }
 
@@ -144,8 +144,8 @@ class CategoryController extends Controller
     {
         return function (string $attribute, mixed $value, callable $fail) use ($category): void {
             $exists = DanhMuc::query()
-                ->where('name_folded', VietnameseText::fold((string) $value))
-                ->when($category, fn ($query) => $query->whereKeyNot($category->MaDM))
+                ->where('ten_khong_dau', VietnameseText::fold((string) $value))
+                ->when($category, fn ($query) => $query->whereKeyNot($category->ma_dm))
                 ->exists();
 
             if ($exists) {

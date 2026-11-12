@@ -24,19 +24,18 @@ class InventorySummaryCardsTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = NguoiDung::factory()->create(['role' => 'Administrator', 'status' => 'active']);
+        $this->admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator', 'trang_thai' => 'active']);
 
-        $danhMuc = DanhMuc::create(['name' => 'Thuốc giảm đau']);
+        $danhMuc = DanhMuc::create(['ten' => 'Thuốc giảm đau']);
 
         $make = function (string $name, string $batch, int $stock, int $reorder, string $expiry) use ($danhMuc) {
-            return SanPham::create([
-                'MaDM' => $danhMuc->MaDM,
-                'name' => $name,
-                'price' => 20000,
-                'expiration_date' => $expiry,
-                'stock_quantity' => $stock,
-                'reorder_point' => $reorder,
-                'batch_number' => $batch,
+            return SanPham::create(['ma_dm' => $danhMuc->ma_dm,
+                'ten' => $name,
+                'gia' => 20000,
+                'ngay_het_han' => $expiry,
+                'so_luong_ton' => $stock,
+                'muc_canh_bao' => $reorder,
+                'so_lo' => $batch,
             ]);
         };
 

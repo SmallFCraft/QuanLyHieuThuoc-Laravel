@@ -34,7 +34,7 @@ class HealthProfileAiConsentTest extends TestCase
             ->put(route('profile.health.update'), $this->payload(['ai_consent' => '1']))
             ->assertSessionHasNoErrors();
 
-        $hoSo = HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail();
+        $hoSo = HoSoSucKhoe::where('ma_nd', $nguoiDung->ma_nd)->firstOrFail();
 
         $this->assertNotNull($hoSo->ai_consent_at);
         $this->assertTrue($hoSo->hasAiConsent());
@@ -50,7 +50,7 @@ class HealthProfileAiConsentTest extends TestCase
 
         $this->actingAs($nguoiDung)->put(route('profile.health.update'), $payload);
 
-        $hoSo = HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail();
+        $hoSo = HoSoSucKhoe::where('ma_nd', $nguoiDung->ma_nd)->firstOrFail();
 
         $this->assertFalse($hoSo->hasConsented());
         $this->assertTrue($hoSo->hasAiConsent());
@@ -61,12 +61,12 @@ class HealthProfileAiConsentTest extends TestCase
         $nguoiDung = NguoiDung::factory()->create();
 
         $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload(['ai_consent' => '1']));
-        $this->assertTrue(HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail()->hasAiConsent());
+        $this->assertTrue(HoSoSucKhoe::where('ma_nd', $nguoiDung->ma_nd)->firstOrFail()->hasAiConsent());
 
         $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload());
 
-        $hoSo = HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail();
-        $log = NhatKyKiemToan::where('action', 'health_profile_updated')->latest('MaNK')->firstOrFail();
+        $hoSo = HoSoSucKhoe::where('ma_nd', $nguoiDung->ma_nd)->firstOrFail();
+        $log = NhatKyKiemToan::where('action', 'health_profile_updated')->latest('ma_nk')->firstOrFail();
         $serialized = json_encode($log->getAttributes(), JSON_UNESCAPED_UNICODE);
 
         $this->assertNull($hoSo->ai_consent_at);
@@ -102,8 +102,7 @@ class HealthProfileAiConsentTest extends TestCase
         // may influence the health checkboxes — otherwise a mistyped phone number
         // silently revokes medical consent on the next save.
         $nguoiDung = NguoiDung::factory()->create();
-        HoSoSucKhoe::create([
-            'MaKH' => $nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $nguoiDung->ma_nd,
             'consented_at' => now(),
             'ai_consent_at' => now(),
         ]);
@@ -111,7 +110,7 @@ class HealthProfileAiConsentTest extends TestCase
         $this->actingAs($nguoiDung)
             ->from(route('profile.edit'))
             ->patch(route('profile.update'), [
-                'name' => $nguoiDung->name,
+                'name' => $nguoiDung->ho_ten,
                 'email' => $nguoiDung->email,
                 'phone' => 'not-a-phone',
             ])
@@ -126,8 +125,7 @@ class HealthProfileAiConsentTest extends TestCase
     public function test_validation_redirect_keeps_both_consent_checkboxes_unticked(): void
     {
         $nguoiDung = NguoiDung::factory()->create();
-        HoSoSucKhoe::create([
-            'MaKH' => $nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $nguoiDung->ma_nd,
             'consented_at' => now(),
             'ai_consent_at' => now(),
         ]);
@@ -150,14 +148,14 @@ class HealthProfileAiConsentTest extends TestCase
         $nguoiDung = NguoiDung::factory()->create();
 
         $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload(['ai_consent' => '1']));
-        $grantedAt = HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail()->ai_consent_at;
+        $grantedAt = HoSoSucKhoe::where('ma_nd', $nguoiDung->ma_nd)->firstOrFail()->ai_consent_at;
 
         $this->travel(5)->minutes();
 
         $this->actingAs($nguoiDung)->put(route('profile.health.update'), $this->payload(['ai_consent' => '1']));
 
         $this->assertTrue($grantedAt->equalTo(
-            HoSoSucKhoe::where('MaKH', $nguoiDung->MaKH)->firstOrFail()->ai_consent_at
+            HoSoSucKhoe::where('ma_nd', $nguoiDung->ma_nd)->firstOrFail()->ai_consent_at
         ));
     }
 
@@ -179,8 +177,7 @@ class HealthProfileAiConsentTest extends TestCase
     public function test_health_profile_tracks_ai_consent_correctly(): void
     {
         $nguoiDung = NguoiDung::factory()->create();
-        $hoSo = HoSoSucKhoe::create([
-            'MaKH' => $nguoiDung->MaKH,
+        $hoSo = HoSoSucKhoe::create(['ma_nd' => $nguoiDung->ma_nd,
             'consented_at' => now(),
             'ai_consent_at' => null,
         ]);

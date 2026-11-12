@@ -31,24 +31,22 @@ class TriageGoldenEvaluationTest extends TestCase
     {
         parent::setUp();
 
-        DanhMuc::create([
-            'name' => 'Thuốc giảm đau - Hạ sốt',
-            'description' => 'Giảm đau, hạ sốt',
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt',
+            'mo_ta' => 'Giảm đau, hạ sốt',
         ]);
 
         $this->seed(TriThucYTeSeeder::class);
         $this->service = app(MedicalTriageService::class);
 
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(30)->toDateString(),
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(30)->toDateString(),
         ]);
     }
 
     protected function runGoldenCase(array $answers): array
     {
-        $phien = $this->service->startOrResume($this->nguoiDung->MaKH);
+        $phien = $this->service->startOrResume($this->nguoiDung->ma_nd);
 
         foreach ($answers as $step => $answer) {
             $phien = $this->service->recordAnswer($phien->fresh(), $step, $answer);

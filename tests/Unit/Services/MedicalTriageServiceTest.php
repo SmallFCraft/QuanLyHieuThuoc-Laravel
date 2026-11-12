@@ -26,9 +26,8 @@ class MedicalTriageServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->danhMuc = DanhMuc::create([
-            'name' => 'Thuốc giảm đau - Hạ sốt',
-            'description' => 'Giảm đau, hạ sốt',
+        $this->danhMuc = DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt',
+            'mo_ta' => 'Giảm đau, hạ sốt',
         ]);
 
         $this->seed(TriThucYTeSeeder::class);
@@ -36,16 +35,15 @@ class MedicalTriageServiceTest extends TestCase
         $this->service = app(MedicalTriageService::class);
 
         // 34 years old: old enough that no age guard fires.
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(34)->toDateString(),
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(34)->toDateString(),
         ]);
     }
 
     protected function sessionWith(array $answers): PhienSangLoc
     {
-        $phien = $this->service->startOrResume($this->nguoiDung->MaKH);
+        $phien = $this->service->startOrResume($this->nguoiDung->ma_nd);
 
         foreach ($answers as $step => $answer) {
             $phien = $this->service->recordAnswer($phien->fresh(), $step, $answer);
@@ -176,7 +174,7 @@ class MedicalTriageServiceTest extends TestCase
         $trieuChung = TrieuChungYTe::where('code', 'headache')->firstOrFail();
 
         QuyTacPhanTangYTe::create([
-            'MaTC' => $trieuChung->MaTC,
+            'ma_tc' => $trieuChung->ma_tc,
             'conditions' => null,
             'outcome' => 'refer_doctor',
             'advice_vi' => 'Quy tắc ưu tiên cao nhất.',
@@ -243,7 +241,7 @@ class MedicalTriageServiceTest extends TestCase
 
     public function test_skipping_duration_prevents_a_numeric_rule_from_matching(): void
     {
-        $phien = $this->service->startOrResume($this->nguoiDung->MaKH);
+        $phien = $this->service->startOrResume($this->nguoiDung->ma_nd);
         $phien = $this->service->recordAnswer($phien, 1, 'sốt');
         $phien = $this->service->recordAnswer($phien->fresh(), 2, '', true);
         $phien = $this->service->recordAnswer($phien->fresh(), 3, 'chưa dùng gì');
@@ -274,13 +272,12 @@ class MedicalTriageServiceTest extends TestCase
 
     public function test_consented_profile_pregnancy_triggers_a_red_flag(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'is_pregnant' => true,
             'consented_at' => now(),
         ]);
 
-        $hoSo = HoSoSucKhoe::where('MaKH', $this->nguoiDung->MaKH)->first();
+        $hoSo = HoSoSucKhoe::where('ma_nd', $this->nguoiDung->ma_nd)->first();
         $flags = $this->service->detectRedFlags('đau đầu', $hoSo);
 
         $this->assertTrue($flags->contains('code', 'pregnancy_symptom'));
@@ -288,13 +285,12 @@ class MedicalTriageServiceTest extends TestCase
 
     public function test_profile_without_consent_is_not_read(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'is_pregnant' => true,
             'consented_at' => null,
         ]);
 
-        $hoSo = HoSoSucKhoe::where('MaKH', $this->nguoiDung->MaKH)->first();
+        $hoSo = HoSoSucKhoe::where('ma_nd', $this->nguoiDung->ma_nd)->first();
         $flags = $this->service->detectRedFlags('đau đầu', $hoSo);
 
         $this->assertFalse($flags->contains('code', 'pregnancy_symptom'));
@@ -302,15 +298,14 @@ class MedicalTriageServiceTest extends TestCase
 
     public function test_consented_history_lets_the_wizard_skip_the_history_step(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'chronic_conditions' => ['loét dạ dày'],
             'consented_at' => now(),
         ]);
 
-        $hoSo = HoSoSucKhoe::where('MaKH', $this->nguoiDung->MaKH)->first();
+        $hoSo = HoSoSucKhoe::where('ma_nd', $this->nguoiDung->ma_nd)->first();
 
-        $phien = $this->service->startOrResume($this->nguoiDung->MaKH);
+        $phien = $this->service->startOrResume($this->nguoiDung->ma_nd);
         $phien = $this->service->recordAnswer($phien, 1, 'đau đầu');
         $phien = $this->service->recordAnswer($phien->fresh(), 2, 'hôm nay');
         $phien = $this->service->recordAnswer($phien->fresh(), 3, 'chưa dùng gì');
@@ -400,7 +395,7 @@ class MedicalTriageServiceTest extends TestCase
         $phien = $this->sessionWith([1 => 'tôi bị đau đầu kinh khủng lắm']);
         $this->service->finalize($phien, $this->service->evaluate($phien));
 
-        $log = \App\Models\NhatKyKiemToan::where('action', 'triage_completed')->latest('MaNK')->firstOrFail();
+        $log = \App\Models\NhatKyKiemToan::where('action', 'triage_completed')->latest('ma_nk')->firstOrFail();
         $payload = json_encode($log->new_values, JSON_UNESCAPED_UNICODE);
 
         $this->assertStringContainsString('headache', $payload);
@@ -409,10 +404,10 @@ class MedicalTriageServiceTest extends TestCase
 
     public function test_resume_returns_the_same_open_session(): void
     {
-        $first = $this->service->startOrResume($this->nguoiDung->MaKH);
-        $second = $this->service->startOrResume($this->nguoiDung->MaKH);
+        $first = $this->service->startOrResume($this->nguoiDung->ma_nd);
+        $second = $this->service->startOrResume($this->nguoiDung->ma_nd);
 
-        $this->assertSame($first->MaSL, $second->MaSL);
+        $this->assertSame($first->ma_sl, $second->ma_sl);
     }
 
     public function test_expired_products_are_never_suggested(): void
@@ -420,7 +415,7 @@ class MedicalTriageServiceTest extends TestCase
         $fresh = $this->createStockedProduct('Paracetamol Fresh', 'Paracetamol 500mg', 'Giảm đau đầu');
         $expired = $this->createStockedProduct('Paracetamol Expired', 'Paracetamol 500mg', 'Giảm đau đầu');
         // Bypass the "expiration must be in the future" form rule; this is a DB-level state.
-        $expired->forceFill(['expiration_date' => now()->subDay()])->save();
+        $expired->forceFill(['ngay_het_han' => now()->subDay()])->save();
 
         $phien = $this->sessionWith([
             1 => 'đau đầu',
@@ -433,8 +428,8 @@ class MedicalTriageServiceTest extends TestCase
         $result = $this->service->evaluate($phien);
         $ids = collect($result['suggested_products'])->pluck('id');
 
-        $this->assertTrue($ids->contains($fresh->MaSP));
-        $this->assertFalse($ids->contains($expired->MaSP));
+        $this->assertTrue($ids->contains($fresh->ma_sp));
+        $this->assertFalse($ids->contains($expired->ma_sp));
     }
 
     public function test_out_of_stock_products_are_never_suggested(): void
@@ -452,8 +447,8 @@ class MedicalTriageServiceTest extends TestCase
 
         $ids = collect($this->service->evaluate($phien)['suggested_products'])->pluck('id');
 
-        $this->assertTrue($ids->contains($inStock->MaSP));
-        $this->assertFalse($ids->contains($outOfStock->MaSP));
+        $this->assertTrue($ids->contains($inStock->ma_sp));
+        $this->assertFalse($ids->contains($outOfStock->ma_sp));
     }
 
     /**
@@ -493,8 +488,7 @@ class MedicalTriageServiceTest extends TestCase
      */
     public function test_clarify_question_text_never_reaches_the_red_flag_matcher(): void
     {
-        $phien = PhienSangLoc::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        $phien = PhienSangLoc::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'in_progress',
@@ -524,16 +518,15 @@ class MedicalTriageServiceTest extends TestCase
         string $usage,
         int $stock = 50
     ): SanPham {
-        return SanPham::create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'name' => $name,
-            'ingredients' => $ingredients,
-            'usage' => $usage,
-            'price' => 5000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => $stock,
-            'reorder_point' => 5,
-            'batch_number' => 'B-' . uniqid(),
+        return SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+            'ten' => $name,
+            'thanh_phan' => $ingredients,
+            'cach_dung' => $usage,
+            'gia' => 5000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => $stock,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'B-' . uniqid(),
         ]);
     }
 }

@@ -62,7 +62,7 @@ class HealthCheckController extends Controller
         // Emergency never queues. The red flag is found in plain PHP with no AI, and
         // somebody describing chest pain must see the 115 number in this response —
         // not after a worker picks the job up.
-        if ($this->triageService->hasEmergencyRedFlag($phien, $this->profileFor((int) $phien->MaKH))) {
+        if ($this->triageService->hasEmergencyRedFlag($phien, $this->profileFor((int) $phien->ma_nd))) {
             return $this->decideOutcomeInline($request, $phien);
         }
 
@@ -78,7 +78,7 @@ class HealthCheckController extends Controller
         } catch (\Throwable $exception) {
             // An unavailable queue must never strand a finished questionnaire.
             Log::warning('Triage evaluation queue unavailable, deciding inline', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -101,7 +101,7 @@ class HealthCheckController extends Controller
      */
     protected function decideOutcomeInline(Request $request, PhienSangLoc $phien): RedirectResponse|JsonResponse
     {
-        $result = $this->triageService->evaluate($phien, $this->profileFor((int) $phien->MaKH));
+        $result = $this->triageService->evaluate($phien, $this->profileFor((int) $phien->ma_nd));
 
         if ($this->triageService->shouldAskClarify($phien, $result)) {
             return $this->respondClarify(
@@ -183,7 +183,7 @@ class HealthCheckController extends Controller
     protected function renderStage(PhienSangLoc $phien): string
     {
         $phien = $phien->fresh();
-        $hoSo = $this->profileFor((int) $phien->MaKH);
+        $hoSo = $this->profileFor((int) $phien->ma_nd);
 
         return view('health.partials.stage', $this->stageData(
             $phien,
@@ -263,11 +263,11 @@ class HealthCheckController extends Controller
             return null;
         }
 
-        $job = AiJob::where('MaKH', $phien->MaKH)
+        $job = AiJob::where('ma_nd', $phien->ma_nd)
             ->where('kind', AiJob::KIND_TRIAGE_EVALUATION)
             ->whereIn('status', ['queued', 'running'])
-            ->where('payload->MaSL', $phien->MaSL)
-            ->latest('MaAJ')
+            ->where('payload->ma_sl', $phien->ma_sl)
+            ->latest('ma_aj')
             ->first();
 
         if ($job !== null && $job->isStranded()) {
@@ -284,10 +284,10 @@ class HealthCheckController extends Controller
      */
     protected function hasAbandonedEvaluation(PhienSangLoc $phien): bool
     {
-        return AiJob::where('MaKH', $phien->MaKH)
+        return AiJob::where('ma_nd', $phien->ma_nd)
             ->where('kind', AiJob::KIND_TRIAGE_EVALUATION)
             ->where('status', 'failed')
-            ->where('payload->MaSL', $phien->MaSL)
+            ->where('payload->ma_sl', $phien->ma_sl)
             ->exists();
     }
 
@@ -369,8 +369,8 @@ class HealthCheckController extends Controller
         ]);
 
         $userId = (int) auth()->id();
-        $phien = PhienSangLoc::where('MaKH', $userId)
-            ->where('MaSL', $validated['triage_session_id'])
+        $phien = PhienSangLoc::where('ma_nd', $userId)
+            ->where('ma_sl', $validated['triage_session_id'])
             ->inProgress()
             ->first();
 
@@ -436,7 +436,7 @@ class HealthCheckController extends Controller
             return $this->decideOutcome($request, $phien);
         } catch (\Throwable $exception) {
             Log::error('Triage answer processing failed', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'step' => $validated['step'],
                 'error' => $exception->getMessage(),
             ]);
@@ -465,8 +465,8 @@ class HealthCheckController extends Controller
         ]);
 
         $userId = (int) auth()->id();
-        $phien = PhienSangLoc::where('MaKH', $userId)
-            ->where('MaSL', $validated['triage_session_id'])
+        $phien = PhienSangLoc::where('ma_nd', $userId)
+            ->where('ma_sl', $validated['triage_session_id'])
             ->inProgress()
             ->first();
 
@@ -499,7 +499,7 @@ class HealthCheckController extends Controller
             return $this->decideOutcome($request, $phien);
         } catch (\Throwable $exception) {
             Log::error('Triage clarify processing failed', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -518,8 +518,8 @@ class HealthCheckController extends Controller
      */
     public function requestPharmacist(Request $request, int $MaSL): RedirectResponse
     {
-        $phien = PhienSangLoc::where('MaKH', (int) auth()->id())
-            ->where('MaSL', $MaSL)
+        $phien = PhienSangLoc::where('ma_nd', (int) auth()->id())
+            ->where('ma_sl', $MaSL)
             ->firstOrFail();
 
         $moved = $this->triageService->requestPharmacistReview($phien);
@@ -542,8 +542,8 @@ class HealthCheckController extends Controller
             'triage_session_id' => ['required', 'integer'],
         ]);
 
-        $phien = PhienSangLoc::where('MaKH', (int) auth()->id())
-            ->where('MaSL', $validated['triage_session_id'])
+        $phien = PhienSangLoc::where('ma_nd', (int) auth()->id())
+            ->where('ma_sl', $validated['triage_session_id'])
             ->inProgress()
             ->first();
 
@@ -561,8 +561,8 @@ class HealthCheckController extends Controller
     public function result(Request $request, int $MaSL): View
     {
         $userId = (int) auth()->id();
-        $phien = PhienSangLoc::where('MaKH', $userId)
-            ->where('MaSL', $MaSL)
+        $phien = PhienSangLoc::where('ma_nd', $userId)
+            ->where('ma_sl', $MaSL)
             ->firstOrFail();
 
         abort_if($phien->status === 'in_progress', 404);
@@ -692,8 +692,8 @@ class HealthCheckController extends Controller
     public function briefingPane(int $MaSL): Response
     {
         $userId = (int) auth()->id();
-        $phien = PhienSangLoc::where('MaKH', $userId)
-            ->where('MaSL', $MaSL)
+        $phien = PhienSangLoc::where('ma_nd', $userId)
+            ->where('ma_sl', $MaSL)
             ->firstOrFail();
 
         abort_if($phien->isEmergency(), 404);
@@ -705,9 +705,9 @@ class HealthCheckController extends Controller
         // before recording its status leaves both null while the job is `done`; reading
         // pending off the columns alone answered 202 to every poll tick from then on,
         // and the poller looped to its 90-attempt cap before showing the notice.
-        $jobFinished = AiJob::where('MaKH', $userId)
+        $jobFinished = AiJob::where('ma_nd', $userId)
             ->where('kind', AiJob::KIND_TRIAGE_BRIEFING)
-            ->where('payload->MaSL', $MaSL)
+            ->where('payload->ma_sl', $MaSL)
             ->whereIn('status', ['done', 'failed', 'cancelled'])
             ->exists();
 
@@ -751,9 +751,9 @@ class HealthCheckController extends Controller
             return [];
         }
 
-        $live = SanPham::whereIn('MaSP', $sanPhams->pluck('id')->filter()->all())
+        $live = SanPham::whereIn('ma_sp', $sanPhams->pluck('id')->filter()->all())
             ->get()
-            ->keyBy('MaSP');
+            ->keyBy('ma_sp');
 
         return $sanPhams
             ->map(fn (array $row) => array_merge($row, [
@@ -780,19 +780,19 @@ class HealthCheckController extends Controller
             return null;
         }
 
-        $briefingAttempts = AiJob::where('MaKH', $phien->MaKH)
+        $briefingAttempts = AiJob::where('ma_nd', $phien->ma_nd)
             ->where('kind', AiJob::KIND_TRIAGE_BRIEFING)
-            ->where('payload->MaSL', $phien->MaSL)
+            ->where('payload->ma_sl', $phien->ma_sl)
             ->count();
 
         if ($phien->ai_briefing_status !== null && $briefingAttempts >= 2) {
             return null;
         }
 
-        $job = AiJob::where('MaKH', $phien->MaKH)
+        $job = AiJob::where('ma_nd', $phien->ma_nd)
             ->where('kind', AiJob::KIND_TRIAGE_BRIEFING)
-            ->where('payload->MaSL', $phien->MaSL)
-            ->latest('MaAJ')
+            ->where('payload->ma_sl', $phien->ma_sl)
+            ->latest('ma_aj')
             ->first();
 
         // Previous job finished with failure and we have not exhausted retries.
@@ -856,11 +856,11 @@ class HealthCheckController extends Controller
             return $briefing;
         }
 
-        $live = SanPham::whereIn('MaSP', $sanPhams->pluck('id')->filter()->all())
+        $live = SanPham::whereIn('ma_sp', $sanPhams->pluck('id')->filter()->all())
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
+            ->where('so_luong_ton', '>', 0)
             ->get()
-            ->keyBy('MaSP');
+            ->keyBy('ma_sp');
 
         $briefing['products'] = $sanPhams
             ->filter(fn (array $row) => $live->has((int) ($row['id'] ?? 0)))
@@ -868,9 +868,9 @@ class HealthCheckController extends Controller
                 $sanPham = $live[(int) $row['id']];
 
                 return array_merge($row, [
-                    'stock_quantity' => (int) $sanPham->stock_quantity,
+                    'stock_quantity' => (int) $sanPham->so_luong_ton,
                     'price' => $sanPham->price_vnd,
-                    'url' => route('products.show', $sanPham->MaSP),
+                    'url' => route('products.show', $sanPham->ma_sp),
                     'image_url' => $sanPham->image_url,
                 ]);
             })
@@ -899,19 +899,19 @@ class HealthCheckController extends Controller
             return null;
         }
 
-        $adviceAttempts = AiJob::where('MaKH', $phien->MaKH)
+        $adviceAttempts = AiJob::where('ma_nd', $phien->ma_nd)
             ->where('kind', AiJob::KIND_TRIAGE_ADVICE)
-            ->where('payload->MaSL', $phien->MaSL)
+            ->where('payload->ma_sl', $phien->ma_sl)
             ->count();
 
         if ($phien->ai_status !== null && $adviceAttempts >= 2) {
             return null;
         }
 
-        $job = AiJob::where('MaKH', $phien->MaKH)
+        $job = AiJob::where('ma_nd', $phien->ma_nd)
             ->where('kind', AiJob::KIND_TRIAGE_ADVICE)
-            ->where('payload->MaSL', $phien->MaSL)
-            ->latest('MaAJ')
+            ->where('payload->ma_sl', $phien->ma_sl)
+            ->latest('ma_aj')
             ->first();
 
         if ($job !== null && $job->isFinished() && $phien->ai_status === 'failed' && $adviceAttempts < 2) {
@@ -987,14 +987,14 @@ class HealthCheckController extends Controller
 
         // One query for the set, then an in-memory check per product: DrugSafetyService
         // indexes the contraindication and interaction tables once per request.
-        foreach (SanPham::whereIn('MaSP', $productIds)->get() as $sanPham) {
+        foreach (SanPham::whereIn('ma_sp', $productIds)->get() as $sanPham) {
             $result = $this->anToanThuoc->checkProduct($sanPham, $hoSo, $phien->nguoiDung);
 
             if ($result['warnings'] === []) {
                 continue;
             }
 
-            $flagged[] = (int) $sanPham->MaSP;
+            $flagged[] = (int) $sanPham->ma_sp;
             $warnings = [...$warnings, ...$result['warnings']];
         }
 
@@ -1008,9 +1008,9 @@ class HealthCheckController extends Controller
     public function history(Request $request): View
     {
         $cacPhien = $this->paginateOr404(
-            PhienSangLoc::where('MaKH', (int) auth()->id())
+            PhienSangLoc::where('ma_nd', (int) auth()->id())
                 ->where('status', '!=', 'in_progress')
-                ->latest('MaSL'),
+                ->latest('ma_sl'),
             10
         );
 
@@ -1022,7 +1022,7 @@ class HealthCheckController extends Controller
      */
     public function restart(Request $request): RedirectResponse
     {
-        PhienSangLoc::where('MaKH', (int) auth()->id())->inProgress()->delete();
+        PhienSangLoc::where('ma_nd', (int) auth()->id())->inProgress()->delete();
 
         return redirect()->route('health.check');
     }
@@ -1047,15 +1047,15 @@ class HealthCheckController extends Controller
         // string never reaches here — the global ConvertEmptyStringsToNull middleware makes
         // it null, so a stray hidden input takes the "no MaSL" branch.
         $validated = $request->validate([
-            'MaSL' => ['nullable', 'integer', 'min:1'],
+            'ma_sl' => ['nullable', 'integer', 'min:1'],
         ]);
 
         Cache::put($this->disclaimerAckKey((int) auth()->id()), true, now()->addHours(25));
 
         // A named route plus an integer, never a submitted URL: no open-redirect surface,
         // and result() re-checks ownership with firstOrFail() so a forged id 404s.
-        return isset($validated['MaSL'])
-            ? redirect()->route('health.result', (int) $validated['MaSL'])
+        return isset($validated['ma_sl'])
+            ? redirect()->route('health.result', (int) $validated['ma_sl'])
             : redirect()->route('health.check');
     }
 
@@ -1111,7 +1111,7 @@ class HealthCheckController extends Controller
                 'mode' => 'deciding',
                 'stage' => $this->renderStage($phien),
                 'triage_pending' => [
-                    'triage_session_id' => $phien->MaSL,
+                    'triage_session_id' => $phien->ma_sl,
                     'job_id' => $job->uuid,
                     'poll_url' => route('health.decision', $job->uuid),
                 ],
@@ -1133,7 +1133,7 @@ class HealthCheckController extends Controller
     {
         $userId = (int) auth()->id();
         $job = AiJob::where('uuid', $uuid)
-            ->where('MaKH', $userId)
+            ->where('ma_nd', $userId)
             ->where('kind', AiJob::KIND_TRIAGE_EVALUATION)
             ->first();
 
@@ -1142,11 +1142,11 @@ class HealthCheckController extends Controller
         }
 
         if ($job->status === 'done') {
-            $target = ($job->result['next'] ?? null) === 'clarify' || empty($job->result['MaSL'])
+            $target = ($job->result['next'] ?? null) === 'clarify' || empty($job->result['ma_sl'])
                 ? route('health.check')
                 // Built here, not in the worker: route() inside a job has no incoming
                 // request and would resolve the host from APP_URL.
-                : route('health.result', $job->result['MaSL']);
+                : route('health.result', $job->result['ma_sl']);
 
             return response()->json([
                 'success' => true,
@@ -1208,7 +1208,7 @@ class HealthCheckController extends Controller
 
     protected function respondResult(Request $request, PhienSangLoc $phien): RedirectResponse|JsonResponse
     {
-        $url = route('health.result', $phien->MaSL);
+        $url = route('health.result', $phien->ma_sl);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -1217,7 +1217,7 @@ class HealthCheckController extends Controller
                 // client-side would move the outcome map, the drug-safety check and the
                 // product cards into JavaScript.
                 'mode' => 'result',
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'triage_result' => [
                     'outcome' => $phien->outcome,
                     'advice_given' => $phien->advice_given,
@@ -1247,7 +1247,7 @@ class HealthCheckController extends Controller
                 'mode' => 'clarify',
                 'stage' => $this->renderStage($phien),
                 'triage_clarify' => [
-                    'triage_session_id' => $phien->MaSL,
+                    'triage_session_id' => $phien->ma_sl,
                     'questions' => $phien->pendingClarifyQuestions(),
                     'round' => (int) $phien->ai_clarify_rounds,
                     'max_rounds' => PhienSangLoc::MAX_CLARIFY_ROUNDS,

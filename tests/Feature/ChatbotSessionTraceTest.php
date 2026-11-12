@@ -34,9 +34,8 @@ class ChatbotSessionTraceTest extends TestCase
 
     public function test_chatbot_message_response_includes_session_id(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
 
         $this->mock(ChatbotService::class, function (MockInterface $mock) {
@@ -67,8 +66,8 @@ class ChatbotSessionTraceTest extends TestCase
         $sessionId = $response->json('session_id');
 
         $this->assertTrue(Str::isUuid($sessionId));
-        $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $nguoiDung->MaKH,
+        $this->assertDatabaseHas('tin_nhan_chats', [
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'user',
             'content' => 'Tôi cần tư vấn thuốc cảm',
@@ -90,9 +89,8 @@ class ChatbotSessionTraceTest extends TestCase
 
     public function test_chatbot_message_passes_current_session_id_to_service_context(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
         $capturedSessionId = null;
 
@@ -143,15 +141,14 @@ class ChatbotSessionTraceTest extends TestCase
 
     public function test_chatbot_message_passes_declared_name_memory_beyond_recent_context(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
         $sessionId = (string) Str::uuid();
         $baseTime = now()->subHour();
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'user',
             'content' => 'minh la Huy',
@@ -161,7 +158,7 @@ class ChatbotSessionTraceTest extends TestCase
 
         for ($index = 1; $index <= 12; $index++) {
             TinNhanChat::create([
-                'MaKH' => $nguoiDung->MaKH,
+                'ma_nd' => $nguoiDung->ma_nd,
                 'session_id' => $sessionId,
                 'role' => 'user',
                 'content' => 'tin nhan ngan ' . $index,
@@ -201,14 +198,13 @@ class ChatbotSessionTraceTest extends TestCase
 
     public function test_chatbot_message_passes_recent_image_products_for_follow_up(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
         $sessionId = (string) Str::uuid();
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'assistant',
             'content' => 'Đã nhận dạng được 1 sản phẩm từ hình ảnh.',
@@ -257,9 +253,8 @@ class ChatbotSessionTraceTest extends TestCase
 
     public function test_chatbot_message_passes_history_in_chronological_order(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
         $sessionId = (string) Str::uuid();
         $baseTime = now()->subMinutes(10);
@@ -273,7 +268,7 @@ class ChatbotSessionTraceTest extends TestCase
 
         foreach ($turns as $index => $turn) {
             TinNhanChat::create([
-                'MaKH' => $nguoiDung->MaKH,
+                'ma_nd' => $nguoiDung->ma_nd,
                 'session_id' => $sessionId,
                 'role' => $turn['role'],
                 'content' => $turn['content'],
@@ -328,14 +323,13 @@ class ChatbotSessionTraceTest extends TestCase
 
     public function test_chatbot_history_returns_current_session_id(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
         $sessionId = (string) Str::uuid();
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'user',
             'content' => 'Đau đầu nên dùng gì?',
@@ -359,16 +353,14 @@ class ChatbotSessionTraceTest extends TestCase
         config()->set('chatbot.ai.api_key', 'agt_codex_test');
         config()->set('chatbot.ai.model', 'vision-model');
 
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Vitamin']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Vitamin C 1000mg',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin C 1000mg',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         Http::fake([
@@ -398,8 +390,8 @@ class ChatbotSessionTraceTest extends TestCase
             ->assertJsonPath('recognized_products.0.product.name', 'Vitamin C 1000mg')
             ->assertJsonStructure(['session_id', 'ocr_text', 'processing_time_ms']);
 
-        $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $nguoiDung->MaKH,
+        $this->assertDatabaseHas('tin_nhan_chats', [
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $response->json('session_id'),
             'role' => 'user',
             'content' => 'Thuốc trong ảnh này dùng thế nào?',
@@ -423,18 +415,16 @@ class ChatbotSessionTraceTest extends TestCase
         config()->set('chatbot.ai.api_key', 'agt_codex_test');
         config()->set('chatbot.ai.model', 'vision-model');
 
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Vitamin']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Vitamin C 1000mg',
-            'ingredients' => 'Acid ascorbic 1000mg',
-            'usage' => 'Bổ sung vitamin C, tăng sức đề kháng.',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin C 1000mg',
+            'thanh_phan' => 'Acid ascorbic 1000mg',
+            'cach_dung' => 'Bổ sung vitamin C, tăng sức đề kháng.',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         Http::fake([
@@ -463,9 +453,9 @@ class ChatbotSessionTraceTest extends TestCase
             ->assertJsonPath('recognized_products.0.parsed_name', 'Blackmores Bio C')
             ->assertJsonPath('recognized_products.0.product.name', 'Vitamin C 1000mg');
 
-        $tinNhan = TinNhanChat::where('MaKH', $nguoiDung->MaKH)
+        $tinNhan = TinNhanChat::where('ma_nd', $nguoiDung->ma_nd)
             ->where('role', 'assistant')
-            ->latest('MaTN')
+            ->latest('ma_tn')
             ->first();
 
         $this->assertNotNull($tinNhan);
@@ -479,18 +469,16 @@ class ChatbotSessionTraceTest extends TestCase
         config()->set('chatbot.ai.api_key', 'agt_codex_test');
         config()->set('chatbot.ai.model', 'vision-model');
 
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Vitamin và khoáng chất']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Zinc 50mg',
-            'ingredients' => 'Zinc sulfate 50mg',
-            'usage' => 'Bổ sung kẽm, tăng cường miễn dịch. Uống 1 viên/ngày',
-            'stock_quantity' => 320,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin và khoáng chất']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Zinc 50mg',
+            'thanh_phan' => 'Zinc sulfate 50mg',
+            'cach_dung' => 'Bổ sung kẽm, tăng cường miễn dịch. Uống 1 viên/ngày',
+            'so_luong_ton' => 320,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         Http::fake([
@@ -519,9 +507,9 @@ class ChatbotSessionTraceTest extends TestCase
             ->assertJsonPath('recognized_products.0.parsed_name', 'Vitamin A 5000 IU')
             ->assertJsonPath('recognized_products.0.product', null);
 
-        $tinNhan = TinNhanChat::where('MaKH', $nguoiDung->MaKH)
+        $tinNhan = TinNhanChat::where('ma_nd', $nguoiDung->ma_nd)
             ->where('role', 'assistant')
-            ->latest('MaTN')
+            ->latest('ma_tn')
             ->first();
 
         $this->assertNotNull($tinNhan);
@@ -538,18 +526,16 @@ class ChatbotSessionTraceTest extends TestCase
         config()->set('chatbot.ai.model', 'vision-model');
         config()->set('chatbot.ai.image_answer', true);
 
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Vitamin và khoáng chất']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Zinc 50mg',
-            'ingredients' => 'Zinc sulfate 50mg',
-            'usage' => 'Bổ sung kẽm',
-            'stock_quantity' => 320,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin và khoáng chất']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Zinc 50mg',
+            'thanh_phan' => 'Zinc sulfate 50mg',
+            'cach_dung' => 'Bổ sung kẽm',
+            'so_luong_ton' => 320,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         Http::fake([
@@ -586,9 +572,9 @@ class ChatbotSessionTraceTest extends TestCase
 
         $this->assertStringContainsString('Vitamin A 5000 IU của Mekophar', $response->json('response'));
 
-        $tinNhan = TinNhanChat::where('MaKH', $nguoiDung->MaKH)
+        $tinNhan = TinNhanChat::where('ma_nd', $nguoiDung->ma_nd)
             ->where('role', 'assistant')
-            ->latest('MaTN')
+            ->latest('ma_tn')
             ->first();
 
         $this->assertNotNull($tinNhan);
@@ -605,9 +591,8 @@ class ChatbotSessionTraceTest extends TestCase
         config()->set('chatbot.ai.model', 'vision-model');
         config()->set('chatbot.ai.image_answer', true);
 
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
 
         Http::fake([
@@ -646,9 +631,8 @@ class ChatbotSessionTraceTest extends TestCase
         config()->set('chatbot.ai.api_key', 'agt_codex_test');
         config()->set('chatbot.ai.model', 'text-only-model');
 
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
 
         Http::fake([
@@ -673,7 +657,7 @@ class ChatbotSessionTraceTest extends TestCase
 
         $this->assertStringContainsString('chưa hỗ trợ đọc ảnh', $response->json('error'));
 
-        $anhChatbot = AnhChatbot::where('MaKH', $nguoiDung->MaKH)->latest('MaAnh')->first();
+        $anhChatbot = AnhChatbot::where('ma_nd', $nguoiDung->ma_nd)->latest('ma_anh')->first();
         $this->assertNotNull($anhChatbot);
         $this->assertStringContainsString('vision_not_supported', (string) $anhChatbot->analysis_result);
     }
@@ -685,16 +669,14 @@ class ChatbotSessionTraceTest extends TestCase
         config()->set('chatbot.ai.api_key', 'agt_codex_test');
         config()->set('chatbot.ai.model', 'vision-model');
 
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Giảm đau']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'stock_quantity' => 20,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Giảm đau']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'so_luong_ton' => 20,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         Http::fake([
@@ -727,9 +709,8 @@ class ChatbotSessionTraceTest extends TestCase
 
     public function test_chatbot_history_does_not_expose_empty_session_id(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
 
         $response = $this
@@ -745,9 +726,8 @@ class ChatbotSessionTraceTest extends TestCase
 
     public function test_failed_chatbot_message_is_traceable_by_session_id(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
 
         $this->mock(ChatbotService::class, function (MockInterface $mock) {
@@ -766,14 +746,14 @@ class ChatbotSessionTraceTest extends TestCase
         $sessionId = $response->json('session_id');
 
         $this->assertTrue(Str::isUuid($sessionId));
-        $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $nguoiDung->MaKH,
+        $this->assertDatabaseHas('tin_nhan_chats', [
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'user',
             'content' => 'Chatbot đang lỗi à?',
         ]);
-        $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $nguoiDung->MaKH,
+        $this->assertDatabaseHas('tin_nhan_chats', [
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'system',
             'content' => 'Không thể xử lý tin nhắn do lỗi hệ thống.',
@@ -784,28 +764,26 @@ class ChatbotSessionTraceTest extends TestCase
     {
         config()->set('chatbot.ai.model', 'vision-model');
 
-        $admin = NguoiDung::factory()->create([
-            'role' => 'Administrator',
-            'status' => 'active',
+        $admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator',
+            'trang_thai' => 'active',
         ]);
-        $nguoiDung = NguoiDung::factory()->create([
-            'name' => 'Nguyễn Văn An',
+        $nguoiDung = NguoiDung::factory()->create(['ho_ten' => 'Nguyễn Văn An',
             'email' => 'nguyenvanan@example.com',
-            'role' => 'User',
-            'status' => 'active',
+            'vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
         $sessionId = (string) Str::uuid();
         $displayId = 'CHAT-' . strtoupper(substr($sessionId, 0, 8));
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'user',
             'content' => 'Tôi bị ho',
         ]);
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'user',
             'content' => 'Thuốc trong ảnh này là gì?',
@@ -821,7 +799,7 @@ class ChatbotSessionTraceTest extends TestCase
         Storage::disk('local')->put($imagePath, 'fake image bytes');
 
         $anhChatbot = AnhChatbot::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'filename' => 'admin-session-test.jpg',
             'original_name' => 'blackmores-bio-c.jpg',
@@ -848,7 +826,7 @@ class ChatbotSessionTraceTest extends TestCase
         ]);
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'assistant',
             'content' => 'Anh/chị nên mô tả thêm triệu chứng.',
@@ -878,7 +856,7 @@ class ChatbotSessionTraceTest extends TestCase
         ]);
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'user',
             'content' => 'Thuốc này uống sau ăn được không?',
@@ -897,7 +875,7 @@ class ChatbotSessionTraceTest extends TestCase
             ->assertSee('Tôi bị ho')
             ->assertSee('Anh/chị nên mô tả thêm triệu chứng.')
             ->assertSee('Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.')
-            ->assertSee(route('admin.chatSessions.images.show', ['sessionId' => $sessionId, 'image' => $anhChatbot->MaAnh]), false)
+            ->assertSee(route('admin.chatSessions.images.show', ['sessionId' => $sessionId, 'image' => $anhChatbot->ma_anh]), false)
             ->assertSee('Thuốc trong ảnh này là gì?')
             ->assertSee('Thuốc này uống sau ăn được không?')
             ->assertSee('Vitamin C 1000mg')
@@ -912,36 +890,34 @@ class ChatbotSessionTraceTest extends TestCase
 
         $this->assertGreaterThanOrEqual(
             4,
-            substr_count($detailHtml, route('admin.chatSessions.images.show', ['sessionId' => $sessionId, 'image' => $anhChatbot->MaAnh]))
+            substr_count($detailHtml, route('admin.chatSessions.images.show', ['sessionId' => $sessionId, 'image' => $anhChatbot->ma_anh]))
         );
 
         $this->actingAs($admin)
-            ->get(route('admin.chatSessions.images.show', ['sessionId' => $sessionId, 'image' => $anhChatbot->MaAnh]))
+            ->get(route('admin.chatSessions.images.show', ['sessionId' => $sessionId, 'image' => $anhChatbot->ma_anh]))
             ->assertOk()
             ->assertHeader('content-type', 'image/jpeg');
     }
 
     public function test_admin_chat_session_uses_shared_markdown_renderer_for_assistant_transcript(): void
     {
-        $admin = NguoiDung::factory()->create([
-            'role' => 'Administrator',
-            'status' => 'active',
+        $admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator',
+            'trang_thai' => 'active',
         ]);
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
         $sessionId = (string) Str::uuid();
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'user',
             'content' => 'format test',
         ]);
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'assistant',
             'content' => "### Kết quả\n\n1. **Vitamin C**\n2. [Mở sản phẩm](/products/1)\n\nCông thức: \\(1 + \\frac{1}{999} \\approx 1.001\\ldots\\)",
@@ -964,19 +940,17 @@ class ChatbotSessionTraceTest extends TestCase
 
     public function test_admin_chat_session_shows_disclaimer_once_like_chatbot_widget(): void
     {
-        $admin = NguoiDung::factory()->create([
-            'role' => 'Administrator',
-            'status' => 'active',
+        $admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator',
+            'trang_thai' => 'active',
         ]);
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
         $sessionId = (string) Str::uuid();
         $disclaimer = 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.';
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'assistant',
             'content' => 'Tin tư vấn cũ.',
@@ -987,7 +961,7 @@ class ChatbotSessionTraceTest extends TestCase
         ]);
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'assistant',
             'content' => 'Tin tư vấn mới nhất.',
@@ -998,7 +972,7 @@ class ChatbotSessionTraceTest extends TestCase
         ]);
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'assistant',
             'content' => 'Tin không cần disclaimer.',
@@ -1028,9 +1002,8 @@ class ChatbotSessionTraceTest extends TestCase
 
     public function test_non_admin_and_guest_cannot_access_chat_sessions_admin_pages(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
 
         $this->actingAs($nguoiDung)
@@ -1056,14 +1029,13 @@ class ChatbotSessionTraceTest extends TestCase
         config()->set('chatbot.ai.api_key', 'agt_codex_test');
         config()->set('chatbot.ai.model', 'vision-model');
 
-        $nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Tiêu hóa']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Smecta',
-            'price' => 8000,
-            'stock_quantity' => 300,
-            'expiration_date' => now()->addYear(),
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'gia' => 8000,
+            'so_luong_ton' => 300,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         Http::fake([
@@ -1118,13 +1090,12 @@ class ChatbotSessionTraceTest extends TestCase
         config()->set('chatbot.ai.api_key', 'agt_codex_test');
         config()->set('chatbot.ai.model', 'vision-model');
 
-        $nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Tiêu hóa']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Smecta',
-            'stock_quantity' => 300,
-            'expiration_date' => now()->addYear(),
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'so_luong_ton' => 300,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         Http::fake([
@@ -1155,19 +1126,19 @@ class ChatbotSessionTraceTest extends TestCase
         $this->assertTrue($userTurn['hasImage'] ?? false, 'User turn lost its image after reload.');
         $this->assertNotEmpty($userTurn['imageUrl'] ?? null);
 
-        $stored = AnhChatbot::where('MaKH', $nguoiDung->MaKH)->latest('MaAnh')->firstOrFail();
+        $stored = AnhChatbot::where('ma_nd', $nguoiDung->ma_nd)->latest('ma_anh')->firstOrFail();
 
         $this->actingAs($nguoiDung)->get($userTurn['imageUrl'])->assertOk();
 
-        $intruder = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $intruder = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
 
         $this->actingAs($intruder)
-            ->get(route('chatbot.images.show', ['image' => $stored->MaAnh]))
+            ->get(route('chatbot.images.show', ['image' => $stored->ma_anh]))
             ->assertNotFound();
 
         auth()->logout();
 
-        $this->get(route('chatbot.images.show', ['image' => $stored->MaAnh]))
+        $this->get(route('chatbot.images.show', ['image' => $stored->ma_anh]))
             ->assertRedirect(route('login'));
     }
 
@@ -1177,11 +1148,11 @@ class ChatbotSessionTraceTest extends TestCase
      */
     public function test_history_omits_the_image_url_once_the_stored_image_is_gone(): void
     {
-        $nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
         $sessionId = (string) Str::uuid();
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'user',
             'content' => 'Thuốc này là gì?',
@@ -1214,11 +1185,11 @@ class ChatbotSessionTraceTest extends TestCase
      */
     public function test_history_normalises_legacy_wrapped_products_from_older_sessions(): void
     {
-        $nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
         $sessionId = (string) Str::uuid();
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'assistant',
             'content' => 'Kho em có sẵn: Smecta.',
@@ -1265,11 +1236,11 @@ class ChatbotSessionTraceTest extends TestCase
      */
     public function test_history_leaves_text_path_products_untouched(): void
     {
-        $nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
         $sessionId = (string) Str::uuid();
 
         TinNhanChat::create([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'session_id' => $sessionId,
             'role' => 'assistant',
             'content' => 'Danh mục tiêu hóa có các sản phẩm sau.',
@@ -1314,14 +1285,13 @@ class ChatbotSessionTraceTest extends TestCase
         config()->set('chatbot.ai.model', 'vision-model');
         config()->set('chatbot.ai.image_answer', true);
 
-        $nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Thuốc tiêu hóa']);
-        $sanPham = SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Smecta',
-            'usage' => 'Điều trị tiêu chảy.',
-            'stock_quantity' => 300,
-            'expiration_date' => now()->addYear(),
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
+        $sanPham = SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'cach_dung' => 'Điều trị tiêu chảy.',
+            'so_luong_ton' => 300,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         Http::fake([
@@ -1338,7 +1308,7 @@ class ChatbotSessionTraceTest extends TestCase
                     'message' => [
                         'role' => 'assistant',
                         'content' => 'Kho em hiện có: Smecta – 8.000đ, còn 300 (http://localhost/products/'
-                            . $sanPham->MaSP . ').',
+                            . $sanPham->ma_sp . ').',
                     ],
                 ]]]),
         ]);
@@ -1352,7 +1322,7 @@ class ChatbotSessionTraceTest extends TestCase
         $response->assertOk()->assertJsonPath('success', true);
 
         $reply = $response->json('response');
-        $url = route('products.show', $sanPham->MaSP);
+        $url = route('products.show', $sanPham->ma_sp);
 
         // Exactly the label the renderer promotes to a button.
         $this->assertStringContainsString('[Mở sản phẩm](' . $url . ')', $reply);
@@ -1379,13 +1349,12 @@ class ChatbotSessionTraceTest extends TestCase
         config()->set('chatbot.ai.model', 'vision-model');
         config()->set('chatbot.ai.image_answer', true);
 
-        $nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Thuốc tiêu hóa']);
-        $sanPham = SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Smecta',
-            'stock_quantity' => 300,
-            'expiration_date' => now()->addYear(),
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
+        $sanPham = SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'so_luong_ton' => 300,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         Http::fake([
@@ -1407,7 +1376,7 @@ class ChatbotSessionTraceTest extends TestCase
             'image' => UploadedFile::fake()->image('don-thuoc.jpg', 600, 600),
         ])->assertOk();
 
-        $sanPhamPath = '/products/' . $sanPham->MaSP;
+        $sanPhamPath = '/products/' . $sanPham->ma_sp;
 
         // Read decoded data, not the raw body: the JSON payload escapes Vietnamese text
         // as \uXXXX, so a literal substring search over the body never matches.

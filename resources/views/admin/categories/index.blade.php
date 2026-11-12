@@ -25,18 +25,18 @@
                     <div class="card-body text-center p-4">
                         <!-- Icon -->
                         <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px; background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.08) 100%);">
-                            <i class="bi bi-{{ $category->icon ?? 'grid-fill' }} text-success" style="font-size: 2.5rem;"></i>
+                            <i class="bi bi-{{ $category->bieu_tuong ?? 'grid-fill' }} text-success" style="font-size: 2.5rem;"></i>
                         </div>
                         
                         <!-- Name -->
-                        <h5 class="fw-bold text-dark mb-2">{{ $category->name }}</h5>
+                        <h5 class="fw-bold text-dark mb-2">{{ $category->ten }}</h5>
                         <div class="mb-3">
-                            <span class="badge text-bg-success">Mã: {{ $category->code }}</span>
+                            <span class="badge text-bg-success">Mã: {{ $category->ma_danh_muc }}</span>
                         </div>
                         
                         <!-- Description -->
-                        @if($category->description)
-                            <p class="text-muted small mb-3">{{ Str::limit($category->description, 80) }}</p>
+                        @if($category->mo_ta)
+                            <p class="text-muted small mb-3">{{ Str::limit($category->mo_ta, 80) }}</p>
                         @endif
                         
                         <!-- Stats -->
@@ -49,10 +49,10 @@
                         
                         <!-- Actions -->
                         <div class="d-flex gap-2 justify-content-center">
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditModal({{ $category->MaDM }}, {{ Illuminate\Support\Js::from($category->name) }}, {{ Illuminate\Support\Js::from($category->code) }}, {{ Illuminate\Support\Js::from($category->icon) }}, {{ Illuminate\Support\Js::from($category->description) }})" title="{{ __('messages.admin.categories.edit') }}">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditModal({{ $category->ma_dm }}, {{ Illuminate\Support\Js::from($category->ten) }}, {{ Illuminate\Support\Js::from($category->ma_danh_muc) }}, {{ Illuminate\Support\Js::from($category->bieu_tuong) }}, {{ Illuminate\Support\Js::from($category->mo_ta) }})" title="{{ __('messages.admin.categories.edit') }}">
                                 <i class="bi bi-pencil"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCategory({{ $category->MaDM }})" title="{{ __('messages.admin.categories.delete') }}">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCategory({{ $category->ma_dm }})" title="{{ __('messages.admin.categories.delete') }}">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>

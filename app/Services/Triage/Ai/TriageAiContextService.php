@@ -41,7 +41,7 @@ class TriageAiContextService
 
         // Gender decides the honorific. Stated only when known (male/female) so a
         // user with no profile or unknown gender gets the neutral fallback without noise.
-        $gender = $nguoiDung?->gender;
+        $gender = $nguoiDung?->gioi_tinh;
         if ($gender === 'male' || $gender === 'female') {
             $honorific = self::honorificFor($gender);
             $lines[] = "- Cách xưng hô với người bệnh: gọi là \"{$honorific}\".";
@@ -49,7 +49,7 @@ class TriageAiContextService
 
         // Gate on explicit AI consent only: general profile consent is purpose-limited to
         // contraindication checks, not 3rd-party model prompts.
-        $hoSo = $nguoiDung ? HoSoSucKhoe::consentedFor((int) $nguoiDung->MaKH) : null;
+        $hoSo = $nguoiDung ? HoSoSucKhoe::consentedFor((int) $nguoiDung->ma_nd) : null;
         if ($hoSo && $hoSo->hasAiConsent()) {
             $allergies = implode(', ', (array) ($hoSo->allergies ?? []));
             $chronic = implode(', ', (array) ($hoSo->chronic_conditions ?? []));
@@ -79,17 +79,17 @@ class TriageAiContextService
                 $this->auditLogService->log(
                     action: 'ai_context_sent',
                     modelType: HoSoSucKhoe::class,
-                    modelId: $hoSo->MaHS,
+                    modelId: $hoSo->ma_hs,
                     oldValues: null,
-                    newValues: ['MaSL' => $phien->MaSL, 'MaKH' => $phien->MaKH],
-                    userId: $phien->MaKH
+                    newValues: ['ma_sl' => $phien->ma_sl, 'ma_nd' => $phien->ma_nd],
+                    userId: $phien->ma_nd
                 );
             }
         }
 
-        if ($phien->MaKH) {
-            $cacPhienTruoc = PhienSangLoc::where('MaKH', $phien->MaKH)
-                ->where('MaSL', '!=', $phien->MaSL)
+        if ($phien->ma_nd) {
+            $cacPhienTruoc = PhienSangLoc::where('ma_nd', $phien->ma_nd)
+                ->where('ma_sl', '!=', $phien->ma_sl)
                 ->whereIn('status', ['reviewed', 'pending_pharmacist'])
                 ->latest('created_at')
                 ->limit(3)

@@ -17,21 +17,21 @@
                 @php($product = $favorite->sanPham)
                 @continue(!$product)
 
-                <div class="col-md-6 col-xl-4" data-favorite-item data-product-id="{{ $product->MaSP }}">
+                <div class="col-md-6 col-xl-4" data-favorite-item data-product-id="{{ $product->ma_sp }}">
                     <x-product-card
                         :product="$product"
                         card-class="profile-favorite-card"
                         media-class="profile-favorite-card__media"
                         body-class="profile-favorite-card__body"
                         icon-size="2.5rem"
-                        :show-cart="$product->stock_quantity > 0"
+                        :show-cart="$product->so_luong_ton > 0"
                     >
                         <x-slot:topAction>
                             <button type="button"
                                     class="profile-favorite-card__remove store-product-card__icon-action"
                                     data-profile-favorite-remove
-                                    data-product-id="{{ $product->MaSP }}"
-                                    aria-label="{{ __('messages.profile.remove_favorite') }}: {{ $product->name }}"
+                                    data-product-id="{{ $product->ma_sp }}"
+                                    aria-label="{{ __('messages.profile.remove_favorite') }}: {{ $product->ten }}"
                                     title="{{ __('messages.profile.remove_favorite') }}">
                                 <i class="bi bi-heart-fill"></i>
                             </button>

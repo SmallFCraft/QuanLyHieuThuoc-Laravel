@@ -25,29 +25,27 @@ class InventorySearchExportParityTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = NguoiDung::factory()->create(['role' => 'Administrator', 'status' => 'active']);
+        $this->admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator', 'trang_thai' => 'active']);
 
-        $paracetamol = DanhMuc::create(['name' => 'Thuốc giảm đau', 'description' => 'Giảm đau']);
-        $vitamin = DanhMuc::create(['name' => 'Vitamin', 'description' => 'Bổ sung']);
+        $paracetamol = DanhMuc::create(['ten' => 'Thuốc giảm đau', 'mo_ta' => 'Giảm đau']);
+        $vitamin = DanhMuc::create(['ten' => 'Vitamin', 'mo_ta' => 'Bổ sung']);
 
-        SanPham::create([
-            'MaDM' => $paracetamol->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'price' => 20000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 100,
-            'reorder_point' => 10,
-            'batch_number' => 'LOT-AAA',
+        SanPham::create(['ma_dm' => $paracetamol->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'gia' => 20000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 100,
+            'muc_canh_bao' => 10,
+            'so_lo' => 'LOT-AAA',
         ]);
 
-        SanPham::create([
-            'MaDM' => $vitamin->MaDM,
-            'name' => 'Vitamin C 1000mg',
-            'price' => 50000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 5,
-            'reorder_point' => 20,
-            'batch_number' => 'LOT-BBB',
+        SanPham::create(['ma_dm' => $vitamin->ma_dm,
+            'ten' => 'Vitamin C 1000mg',
+            'gia' => 50000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 5,
+            'muc_canh_bao' => 20,
+            'so_lo' => 'LOT-BBB',
         ]);
     }
 
@@ -57,14 +55,14 @@ class InventorySearchExportParityTest extends TestCase
             ->get(route('admin.inventory.index', ['q' => 'Paracetamol']))
             ->assertOk()
             ->viewData('products')
-            ->pluck('name')
+            ->pluck('ten')
             ->sort()
             ->values()
             ->all();
 
         $exported = (new AdminInventoryExport(search: 'Paracetamol'))
             ->collection()
-            ->pluck('name')
+            ->pluck('ten')
             ->sort()
             ->values()
             ->all();
@@ -80,7 +78,7 @@ class InventorySearchExportParityTest extends TestCase
                 ->get(route('admin.inventory.index', ['q' => $term]))
                 ->assertOk()
                 ->viewData('products')
-                ->pluck('name')
+                ->pluck('ten')
                 ->all();
 
             $this->assertSame(['Vitamin C 1000mg'], $names, "search term: {$term}");
@@ -93,12 +91,12 @@ class InventorySearchExportParityTest extends TestCase
             ->get(route('admin.inventory.index', ['status' => 'low_stock']))
             ->assertOk()
             ->viewData('products')
-            ->pluck('name')
+            ->pluck('ten')
             ->all();
 
         $exported = (new AdminInventoryExport(status: 'low_stock'))
             ->collection()
-            ->pluck('name')
+            ->pluck('ten')
             ->all();
 
         $this->assertSame(['Vitamin C 1000mg'], $onScreen);
@@ -111,7 +109,7 @@ class InventorySearchExportParityTest extends TestCase
             ->get(route('admin.inventory.index', ['status' => 'low_stock', 'q' => 'Paracetamol']))
             ->assertOk()
             ->viewData('products')
-            ->pluck('name')
+            ->pluck('ten')
             ->all();
 
         // Paracetamol is well stocked, so the two filters together match nothing.

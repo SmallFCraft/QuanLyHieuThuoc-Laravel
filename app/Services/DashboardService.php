@@ -18,8 +18,8 @@ class DashboardService
         $endOfMonth = Carbon::now()->endOfMonth();
 
         return DonHang::whereBetween('created_at', [$startOfMonth, $endOfMonth])
-            ->whereIn('status', ['Delivering', 'Completed'])
-            ->sum('total_amount');
+            ->whereIn('trang_thai', ['Delivering', 'Completed'])
+            ->sum('tong_tien');
     }
 
     /**
@@ -27,9 +27,9 @@ class DashboardService
      */
     public function getOrderCountsByStatus(): array
     {
-        $counts = DonHang::select('status', DB::raw('count(*) as count'))
-            ->groupBy('status')
-            ->pluck('count', 'status')
+        $counts = DonHang::select('trang_thai', DB::raw('count(*) as count'))
+            ->groupBy('trang_thai')
+            ->pluck('count', 'trang_thai')
             ->toArray();
 
         // Ensure all statuses are present
@@ -50,8 +50,8 @@ class DashboardService
         $today = Carbon::today();
         $futureDate = Carbon::today()->addDays($days);
 
-        return SanPham::whereBetween('expiration_date', [$today, $futureDate])
-            ->where('stock_quantity', '>', 0)
+        return SanPham::whereBetween('ngay_het_han', [$today, $futureDate])
+            ->where('so_luong_ton', '>', 0)
             ->count();
     }
 
@@ -60,7 +60,7 @@ class DashboardService
      */
     public function getLowStockCount(): int
     {
-        return SanPham::whereColumn('stock_quantity', '<=', 'reorder_point')
+        return SanPham::whereColumn('so_luong_ton', '<=', 'muc_canh_bao')
             ->count();
     }
 
@@ -74,10 +74,10 @@ class DashboardService
 
         $revenues = DonHang::select(
                 DB::raw('DATE(created_at) as date'),
-                DB::raw('SUM(total_amount) as revenue')
+                DB::raw('SUM(tong_tien) as revenue')
             )
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->whereIn('status', ['Delivering', 'Completed'])
+            ->whereIn('trang_thai', ['Delivering', 'Completed'])
             ->groupBy('date')
             ->orderBy('date')
             ->get()
@@ -117,21 +117,21 @@ class DashboardService
      */
     public function getTopSellingProducts(int $limit = 10): array
     {
-        $topProducts = DB::table('order_items')
-            ->join('orders', 'order_items.MaDH', '=', 'orders.MaDH')
-            ->join('products', 'order_items.MaSP', '=', 'products.MaSP')
-            ->whereIn('orders.status', ['Delivering', 'Completed'])
+        $topProducts = DB::table('chi_tiet_don_hangs')
+            ->join('don_hangs', 'chi_tiet_don_hangs.ma_dh', '=', 'don_hangs.ma_dh')
+            ->join('san_phams', 'chi_tiet_don_hangs.ma_sp', '=', 'san_phams.ma_sp')
+            ->whereIn('don_hangs.trang_thai', ['Delivering', 'Completed'])
             ->select(
-                'products.name',
-                DB::raw('SUM(order_items.quantity) as total_quantity')
+                'san_phams.ten',
+                DB::raw('SUM(chi_tiet_don_hangs.so_luong) as total_quantity')
             )
-            ->groupBy('products.MaSP', 'products.name')
+            ->groupBy('san_phams.ma_sp', 'san_phams.ten')
             ->orderByDesc('total_quantity')
             ->limit($limit)
             ->get();
 
         return [
-            'labels' => $topProducts->pluck('name')->toArray(),
+            'labels' => $topProducts->pluck('ten')->toArray(),
             'data' => $topProducts->pluck('total_quantity')->toArray()
         ];
     }

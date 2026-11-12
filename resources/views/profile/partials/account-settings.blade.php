@@ -45,7 +45,7 @@
         <div class="col-md-6">
             <div class="p-3 rounded-3 bg-emerald-50">
                 <small class="text-gray-500 d-block mb-1">{{ __('messages.profile.role') }}</small>
-                <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-3 py-1">{{ role_text($user->role) }}</span>
+                <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-3 py-1">{{ role_text($user->vai_tro) }}</span>
             </div>
         </div>
         <div class="col-md-6">

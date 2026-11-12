@@ -14,8 +14,8 @@ class ProductImageFallbackTest extends TestCase
         Storage::fake('public');
         Storage::disk('public')->put('products/medicine.jpg', 'image');
 
-        $legacyProduct = new SanPham(['image' => 'medicine.jpg']);
-        $prefixedProduct = new SanPham(['image' => 'products/medicine.jpg']);
+        $legacyProduct = new SanPham(['hinh_anh' => 'medicine.jpg']);
+        $prefixedProduct = new SanPham(['hinh_anh' => 'products/medicine.jpg']);
 
         $this->assertStringEndsWith('/storage/products/medicine.jpg', $legacyProduct->image_url);
         $this->assertSame($legacyProduct->image_url, $prefixedProduct->image_url);
@@ -25,14 +25,14 @@ class ProductImageFallbackTest extends TestCase
     {
         Storage::fake('public');
 
-        $sanPham = new SanPham(['image' => 'missing.jpg']);
+        $sanPham = new SanPham(['hinh_anh' => 'missing.jpg']);
 
         $this->assertNull($sanPham->image_url);
     }
 
     public function test_image_url_preserves_external_urls(): void
     {
-        $sanPham = new SanPham(['image' => 'https://example.com/medicine.jpg']);
+        $sanPham = new SanPham(['hinh_anh' => 'https://example.com/medicine.jpg']);
 
         $this->assertSame('https://example.com/medicine.jpg', $sanPham->image_url);
     }

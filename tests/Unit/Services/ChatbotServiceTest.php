@@ -52,10 +52,10 @@ class ChatbotServiceTest extends TestCase
         $danhMuc = DanhMuc::factory()->create();
 
         SanPham::factory()->count(10)->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'stock_quantity' => 100,
-            'expiration_date' => now()->addYear(),
+            'ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'so_luong_ton' => 100,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $results = $this->chatbotService->searchProducts('Paracetamol');
@@ -68,24 +68,24 @@ class ChatbotServiceTest extends TestCase
         $danhMuc = DanhMuc::factory()->create();
 
         SanPham::factory()->count(3)->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Aspirin',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+            'ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Aspirin',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         SanPham::factory()->count(2)->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Aspirin',
-            'stock_quantity' => 0,
-            'expiration_date' => now()->addYear(),
+            'ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Aspirin',
+            'so_luong_ton' => 0,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $results = $this->chatbotService->searchProducts('Aspirin');
 
         $this->assertEquals(3, $results->count());
         foreach ($results as $sanPham) {
-            $this->assertGreaterThan(0, $sanPham->stock_quantity);
+            $this->assertGreaterThan(0, $sanPham->so_luong_ton);
         }
     }
 
@@ -94,24 +94,24 @@ class ChatbotServiceTest extends TestCase
         $danhMuc = DanhMuc::factory()->create();
 
         SanPham::factory()->count(3)->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Ibuprofen',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+            'ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Ibuprofen',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         SanPham::factory()->count(2)->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Ibuprofen',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->subDay(),
+            'ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Ibuprofen',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->subDay(),
         ]);
 
         $results = $this->chatbotService->searchProducts('Ibuprofen');
 
         $this->assertEquals(3, $results->count());
         foreach ($results as $sanPham) {
-            $this->assertTrue($sanPham->expiration_date->isFuture());
+            $this->assertTrue($sanPham->ngay_het_han->isFuture());
         }
     }
 
@@ -119,89 +119,82 @@ class ChatbotServiceTest extends TestCase
     {
         $danhMuc = DanhMuc::factory()->create();
 
-        $product1 = SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Vitamin C',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addMonths(6),
+        $product1 = SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin C',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addMonths(6),
         ]);
 
-        $product2 = SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Vitamin C',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addMonths(3),
+        $product2 = SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin C',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addMonths(3),
         ]);
 
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Vitamin C',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addMonths(9),
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin C',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addMonths(9),
         ]);
 
         $results = $this->chatbotService->searchProducts('Vitamin C');
 
-        $this->assertEquals($product2->MaSP, $results->first()->MaSP);
-        $this->assertNotEquals($product1->MaSP, $results->first()->MaSP);
+        $this->assertEquals($product2->ma_sp, $results->first()->ma_sp);
+        $this->assertNotEquals($product1->ma_sp, $results->first()->ma_sp);
     }
 
     public function test_search_products_searches_multiple_fields(): void
     {
         $danhMuc = DanhMuc::factory()->create();
 
-        $productByName = SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'ingredients' => 'Other ingredients',
-            'usage' => 'Other usage',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+        $productByName = SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'thanh_phan' => 'Other ingredients',
+            'cach_dung' => 'Other usage',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
-        $productByIngredients = SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Pain Relief',
-            'ingredients' => 'Contains Paracetamol',
-            'usage' => 'Other usage',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+        $productByIngredients = SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Pain Relief',
+            'thanh_phan' => 'Contains Paracetamol',
+            'cach_dung' => 'Other usage',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
-        $productByUsage = SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Fever Medicine',
-            'ingredients' => 'Other ingredients',
-            'usage' => 'Use Paracetamol for fever',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+        $productByUsage = SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Fever Medicine',
+            'thanh_phan' => 'Other ingredients',
+            'cach_dung' => 'Use Paracetamol for fever',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $results = $this->chatbotService->searchProducts('Paracetamol');
 
         $this->assertEquals(3, $results->count());
         $this->assertEqualsCanonicalizing(
-            [$productByName->MaSP, $productByIngredients->MaSP, $productByUsage->MaSP],
-            $results->pluck('MaSP')->all()
+            [$productByName->ma_sp, $productByIngredients->ma_sp, $productByUsage->ma_sp],
+            $results->pluck('ma_sp')->all()
         );
     }
 
     public function test_search_products_loads_category_relationship(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Pain Relief']);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Pain Relief']);
 
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Aspirin',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Aspirin',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $results = $this->chatbotService->searchProducts('Aspirin');
 
         $this->assertNotEmpty($results);
         $this->assertTrue($results->first()->relationLoaded('danhMuc'));
-        $this->assertEquals('Pain Relief', $results->first()->danhMuc->name);
+        $this->assertEquals('Pain Relief', $results->first()->danhMuc->ten);
     }
 
     public function test_search_products_returns_empty_when_no_matches(): void
@@ -272,12 +265,12 @@ class ChatbotServiceTest extends TestCase
     public function test_competitor_pharmacy_question_is_answered_locally_without_nonsense_search(): void
     {
         SanPham::factory()->create([
-            'MaDM' => DanhMuc::factory()->create(['name' => 'Thuốc giảm đau'])->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'ingredients' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau, hạ sốt',
-            'stock_quantity' => 100,
-            'expiration_date' => now()->addYear(),
+            'ma_dm' => DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau'])->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'thanh_phan' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau, hạ sốt',
+            'so_luong_ton' => 100,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -301,12 +294,12 @@ class ChatbotServiceTest extends TestCase
     public function test_competitor_pharmacy_question_still_searches_the_named_medicine(): void
     {
         SanPham::factory()->create([
-            'MaDM' => DanhMuc::factory()->create(['name' => 'Thuốc giảm đau'])->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'ingredients' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau, hạ sốt',
-            'stock_quantity' => 100,
-            'expiration_date' => now()->addYear(),
+            'ma_dm' => DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau'])->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'thanh_phan' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau, hạ sốt',
+            'so_luong_ton' => 100,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $result = $this->chatbotService->processMessage(
@@ -447,13 +440,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_uses_local_product_lookup_without_ai_provider(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Giảm đau']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau, hạ sốt',
-            'stock_quantity' => 20,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Giảm đau']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau, hạ sốt',
+            'so_luong_ton' => 20,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -468,13 +460,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_uses_recent_image_product_for_demonstrative_follow_up(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Vitamin']);
-        $sanPham = SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Vitamin E 400IU',
-            'usage' => 'Bổ sung vitamin E, hỗ trợ chống oxy hóa.',
-            'stock_quantity' => 20,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin']);
+        $sanPham = SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin E 400IU',
+            'cach_dung' => 'Bổ sung vitamin E, hỗ trợ chống oxy hóa.',
+            'so_luong_ton' => 20,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -487,7 +478,7 @@ class ChatbotServiceTest extends TestCase
                     [
                         'matched' => true,
                         'product' => [
-                            'id' => $sanPham->MaSP,
+                            'id' => $sanPham->ma_sp,
                             'name' => 'Vitamin E 400IU',
                         ],
                     ],
@@ -683,13 +674,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_provider_failure_does_not_return_random_products(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Tiêu hóa']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Smecta',
-            'usage' => 'Điều trị tiêu chảy.',
-            'stock_quantity' => 20,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'cach_dung' => 'Điều trị tiêu chảy.',
+            'so_luong_ton' => 20,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->once())
@@ -708,16 +698,14 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_returns_website_intro_without_product_search(): void
     {
-        $danhMuc = DanhMuc::factory()->create([
-            'name' => 'Vitamin',
-            'description' => 'Nhóm sản phẩm bổ sung vitamin',
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin',
+            'mo_ta' => 'Nhóm sản phẩm bổ sung vitamin',
         ]);
 
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Vitamin C 1000mg',
-            'stock_quantity' => 10,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin C 1000mg',
+            'so_luong_ton' => 10,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -792,13 +780,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_handles_website_intro_with_product_lookup(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Tiêu hóa']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Smecta',
-            'usage' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
-            'stock_quantity' => 15,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'cach_dung' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
+            'so_luong_ton' => 15,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -815,13 +802,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_handles_website_intro_with_product_usage_question(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Tiêu hóa']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Smecta',
-            'usage' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
-            'stock_quantity' => 15,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'cach_dung' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
+            'so_luong_ton' => 15,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -836,16 +822,14 @@ class ChatbotServiceTest extends TestCase
 
     public function test_category_lookup_response_returns_categories_without_ai_provider(): void
     {
-        $danhMuc = DanhMuc::factory()->create([
-            'name' => 'Vitamin',
-            'description' => 'Nhóm sản phẩm hỗ trợ bổ sung vitamin',
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin',
+            'mo_ta' => 'Nhóm sản phẩm hỗ trợ bổ sung vitamin',
         ]);
 
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Vitamin C 1000mg',
-            'stock_quantity' => 10,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin C 1000mg',
+            'so_luong_ton' => 10,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -864,13 +848,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_uses_ai_provider_for_symptom_queries_and_returns_disclaimer(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Giảm đau']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau, hạ sốt',
-            'stock_quantity' => 20,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Giảm đau']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau, hạ sốt',
+            'so_luong_ton' => 20,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->once())
@@ -898,13 +881,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_falls_back_to_symptom_keywords_when_generic_query_has_no_direct_match(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Tiêu hóa']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Smecta',
-            'usage' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
-            'stock_quantity' => 30,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'cach_dung' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
+            'so_luong_ton' => 30,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->once())
@@ -934,20 +916,18 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_uses_previous_symptoms_for_generic_product_follow_up(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Tiêu hóa']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Smecta',
-            'usage' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
-            'stock_quantity' => 30,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'cach_dung' => 'Hỗ trợ giảm tiêu chảy cấp và rối loạn tiêu hóa.',
+            'so_luong_ton' => 30,
+            'ngay_het_han' => now()->addYear(),
         ]);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Lactulose Syrup',
-            'usage' => 'Hỗ trợ táo bón và làm mềm phân.',
-            'stock_quantity' => 20,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Lactulose Syrup',
+            'cach_dung' => 'Hỗ trợ táo bón và làm mềm phân.',
+            'so_luong_ton' => 20,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->once())
@@ -986,21 +966,19 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_extracts_multiple_health_goals_from_generic_question(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Thực phẩm chức năng']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Canxi Kid Plus',
-            'usage' => 'Hỗ trợ tăng chiều cao và phát triển xương cho trẻ.',
-            'stock_quantity' => 25,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Thực phẩm chức năng']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Canxi Kid Plus',
+            'cach_dung' => 'Hỗ trợ tăng chiều cao và phát triển xương cho trẻ.',
+            'so_luong_ton' => 25,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Vitamin C Immunity',
-            'usage' => 'Hỗ trợ tăng sức đề kháng và giảm mệt mỏi.',
-            'stock_quantity' => 40,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin C Immunity',
+            'cach_dung' => 'Hỗ trợ tăng sức đề kháng và giảm mệt mỏi.',
+            'so_luong_ton' => 40,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -1015,13 +993,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_does_not_misclassify_ho_tro_giam_dau_as_capability_question(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Thuốc giảm đau - Hạ sốt']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Efferalgan 500mg',
-            'usage' => 'Giảm đau, hạ sốt nhanh.',
-            'stock_quantity' => 200,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau - Hạ sốt']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Efferalgan 500mg',
+            'cach_dung' => 'Giảm đau, hạ sốt nhanh.',
+            'so_luong_ton' => 200,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->once())
@@ -1052,13 +1029,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_ignores_meaningless_catalog_query_and_does_not_return_random_products(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Thuốc tim mạch']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Isosorbide Dinitrate 5mg',
-            'usage' => 'Điều trị đau thắt ngực.',
-            'stock_quantity' => 200,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tim mạch']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Isosorbide Dinitrate 5mg',
+            'cach_dung' => 'Điều trị đau thắt ngực.',
+            'so_luong_ton' => 200,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->once())
@@ -1085,13 +1061,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_keeps_greeting_only_provider_response_without_catalog_miss(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Vitamin']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Xin Chao Ban 500mg',
-            'usage' => 'San pham test khong duoc goi y cho loi chao.',
-            'stock_quantity' => 200,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Xin Chao Ban 500mg',
+            'cach_dung' => 'San pham test khong duoc goi y cho loi chao.',
+            'so_luong_ton' => 200,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $providerAnswer = "D\u{1EA1} em ch\u{00E0}o anh/ch\u{1ECB} \u{1EA1}. Anh/ch\u{1ECB} c\u{1EA7}n em h\u{1ED7} tr\u{1EE3} g\u{00EC} h\u{00F4}m nay?";
@@ -1131,13 +1106,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_treats_general_non_catalog_questions_as_provider_only_without_catalog_miss(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'General noise']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Hello World 500mg',
-            'usage' => 'San pham test khong duoc goi y cho cau hoi chung.',
-            'stock_quantity' => 200,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'General noise']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Hello World 500mg',
+            'cach_dung' => 'San pham test khong duoc goi y cho cau hoi chung.',
+            'so_luong_ton' => 200,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $answer = 'Hello Huy! Em co the ho tro gi cho Huy hom nay a?';
@@ -1183,13 +1157,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_answers_simple_arithmetic_locally_without_provider_or_latex(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Math noise']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => '1 999 500mg',
-            'usage' => 'San pham test khong duoc goi y cho cau hoi tinh toan.',
-            'stock_quantity' => 200,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Math noise']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => '1 999 500mg',
+            'cach_dung' => 'San pham test khong duoc goi y cho cau hoi tinh toan.',
+            'so_luong_ton' => 200,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -1220,14 +1193,13 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_blocks_unsupported_image_and_file_generation_without_provider(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Creative noise']);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Creative noise']);
         foreach (['Tao Anh 500mg', 'Tao File Pdf 500mg'] as $name) {
-            SanPham::factory()->create([
-                'MaDM' => $danhMuc->MaDM,
-                'name' => $name,
-                'usage' => 'San pham test khong duoc goi y cho yeu cau tao artifact.',
-                'stock_quantity' => 200,
-                'expiration_date' => now()->addYear(),
+            SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+                'ten' => $name,
+                'cach_dung' => 'San pham test khong duoc goi y cho yeu cau tao artifact.',
+                'so_luong_ton' => 200,
+                'ngay_het_han' => now()->addYear(),
             ]);
         }
 
@@ -1293,13 +1265,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_answers_bot_name_question_locally_without_catalog_fallback(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Identity noise']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Ban Ten La Gi 500mg',
-            'usage' => 'San pham test khong duoc goi y cho cau hoi identity.',
-            'stock_quantity' => 200,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Identity noise']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Ban Ten La Gi 500mg',
+            'cach_dung' => 'San pham test khong duoc goi y cho cau hoi identity.',
+            'so_luong_ton' => 200,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -1328,13 +1299,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_answers_current_chat_session_id_locally_without_provider(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Session noise']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Phien Chat Ma Id 500mg',
-            'usage' => 'San pham test khong duoc goi y cho cau hoi session id.',
-            'stock_quantity' => 200,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Session noise']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Phien Chat Ma Id 500mg',
+            'cach_dung' => 'San pham test khong duoc goi y cho cau hoi session id.',
+            'so_luong_ton' => 200,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $sessionId = '701c1cdf-61b8-473a-9ecd-99ebd80b9e94';
@@ -1363,14 +1333,13 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_treats_social_chitchat_as_non_catalog_without_symptom_or_disclaimer(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Social noise']);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Social noise']);
         foreach (['Cam On Ban 500mg', 'Shop Oi 250mg', 'Test Thoi 100mg'] as $name) {
-            SanPham::factory()->create([
-                'MaDM' => $danhMuc->MaDM,
-                'name' => $name,
-                'usage' => 'San pham test khong duoc goi y cho social chitchat.',
-                'stock_quantity' => 200,
-                'expiration_date' => now()->addYear(),
+            SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+                'ten' => $name,
+                'cach_dung' => 'San pham test khong duoc goi y cho social chitchat.',
+                'so_luong_ton' => 200,
+                'ngay_het_han' => now()->addYear(),
             ]);
         }
 
@@ -1514,13 +1483,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_preserves_cold_medicine_product_lookup_for_real_product_intent(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => "C\u{1EA3}m c\u{00FA}m"]);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Coldcare',
-            'usage' => "H\u{1ED7} tr\u{1EE3} gi\u{1EA3}m tri\u{1EC7}u ch\u{1EE9}ng c\u{1EA3}m c\u{00FA}m.",
-            'stock_quantity' => 200,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => "C\u{1EA3}m c\u{00FA}m"]);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Coldcare',
+            'cach_dung' => "H\u{1ED7} tr\u{1EE3} gi\u{1EA3}m tri\u{1EC7}u ch\u{1EE9}ng c\u{1EA3}m c\u{00FA}m.",
+            'so_luong_ton' => 200,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->once())
@@ -1555,13 +1523,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_handles_self_introduction_without_catalog_fallback(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Thuốc tim mạch']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Isosorbide Dinitrate 5mg',
-            'usage' => 'Điều trị đau thắt ngực.',
-            'stock_quantity' => 200,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tim mạch']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Isosorbide Dinitrate 5mg',
+            'cach_dung' => 'Điều trị đau thắt ngực.',
+            'so_luong_ton' => 200,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -1672,13 +1639,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_treats_product_named_query_as_catalog_lookup_not_self_introduction(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Vitamin']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Vitamin C 1000mg',
-            'usage' => 'Bổ sung vitamin C.',
-            'stock_quantity' => 120,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin C 1000mg',
+            'cach_dung' => 'Bổ sung vitamin C.',
+            'so_luong_ton' => 120,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -1694,14 +1660,13 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_handles_name_intro_with_product_lookup_intent(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Vitamin']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Vitamin C 1000mg',
-            'ingredients' => 'Acid ascorbic 1000mg',
-            'usage' => 'Công dụng: Bổ sung vitamin C, tăng sức đề kháng. Liều lượng: uống 1 viên/ngày sau ăn.',
-            'stock_quantity' => 120,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin C 1000mg',
+            'thanh_phan' => 'Acid ascorbic 1000mg',
+            'cach_dung' => 'Công dụng: Bổ sung vitamin C, tăng sức đề kháng. Liều lượng: uống 1 viên/ngày sau ăn.',
+            'so_luong_ton' => 120,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -1972,13 +1937,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_process_message_with_nearby_pharmacy_location_request_does_not_return_categories(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Thuốc tiêu hóa']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Smecta',
-            'usage' => 'Điều trị tiêu chảy.',
-            'stock_quantity' => 15,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'cach_dung' => 'Điều trị tiêu chảy.',
+            'so_luong_ton' => 15,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -2017,12 +1981,11 @@ class ChatbotServiceTest extends TestCase
     public function test_recommend_by_symptoms_returns_products_and_explanations_from_function_call(): void
     {
         $danhMuc = DanhMuc::factory()->create();
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'stock_quantity' => 100,
-            'expiration_date' => now()->addYear(),
-            'usage' => 'Giảm đau và hạ sốt',
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'so_luong_ton' => 100,
+            'ngay_het_han' => now()->addYear(),
+            'cach_dung' => 'Giảm đau và hạ sốt',
         ]);
 
         $this->aiProviderService->method('chat')->willReturn([
@@ -2057,13 +2020,12 @@ class ChatbotServiceTest extends TestCase
     }
     public function test_process_message_strips_internal_tool_narration_from_assistant_response(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Cảm cúm']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Decolgen',
-            'usage' => 'Hỗ trợ giảm các triệu chứng cảm cúm, nghẹt mũi và đau đầu.',
-            'stock_quantity' => 20,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Cảm cúm']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Decolgen',
+            'cach_dung' => 'Hỗ trợ giảm các triệu chứng cảm cúm, nghẹt mũi và đau đầu.',
+            'so_luong_ton' => 20,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->once())
@@ -2091,24 +2053,22 @@ class ChatbotServiceTest extends TestCase
 
     public function test_catalog_lookup_falls_back_to_products_in_matched_category(): void
     {
-        $danhMuc = DanhMuc::factory()->create([
-            'name' => 'Thuốc tiêu hóa',
-            'description' => 'Thuốc điều trị các bệnh về đường tiêu hóa',
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa',
+            'mo_ta' => 'Thuốc điều trị các bệnh về đường tiêu hóa',
         ]);
 
         $catalog = [
-            ['name' => 'Omeprazole 20mg', 'usage' => 'Điều trị loét dạ dày, trào ngược.'],
-            ['name' => 'Probiotics', 'usage' => 'Bổ sung men vi sinh đường ruột.'],
-            ['name' => 'Simethicone 80mg', 'usage' => 'Giảm đầy hơi, chướng bụng.'],
+            ['ten' => 'Omeprazole 20mg', 'cach_dung' => 'Điều trị loét dạ dày, trào ngược.'],
+            ['ten' => 'Probiotics', 'cach_dung' => 'Bổ sung men vi sinh đường ruột.'],
+            ['ten' => 'Simethicone 80mg', 'cach_dung' => 'Giảm đầy hơi, chướng bụng.'],
         ];
 
         foreach ($catalog as $item) {
-            SanPham::factory()->create([
-                'MaDM' => $danhMuc->MaDM,
-                'name' => $item['name'],
-                'usage' => $item['usage'],
-                'stock_quantity' => 50,
-                'expiration_date' => now()->addYear(),
+            SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+                'ten' => $item['ten'],
+                'cach_dung' => $item['cach_dung'],
+                'so_luong_ton' => 50,
+                'ngay_het_han' => now()->addYear(),
             ]);
         }
 
@@ -2129,12 +2089,11 @@ class ChatbotServiceTest extends TestCase
 
     public function test_catalog_lookup_does_not_suggest_category_products_without_a_query(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Thuốc tiêu hóa']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Probiotics',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Probiotics',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $reflection = new \ReflectionClass($this->chatbotService);
@@ -2148,27 +2107,23 @@ class ChatbotServiceTest extends TestCase
 
     public function test_catalog_lookup_matches_category_from_multi_word_functional_query(): void
     {
-        $digestive = DanhMuc::factory()->create([
-            'name' => 'Thuốc tiêu hóa',
-            'description' => 'Thuốc điều trị các bệnh về đường tiêu hóa',
+        $digestive = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa',
+            'mo_ta' => 'Thuốc điều trị các bệnh về đường tiêu hóa',
         ]);
-        SanPham::factory()->create([
-            'MaDM' => $digestive->MaDM,
-            'name' => 'Simethicone 80mg',
-            'usage' => 'Giảm đầy hơi, chướng bụng.',
-            'stock_quantity' => 40,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => $digestive->ma_dm,
+            'ten' => 'Simethicone 80mg',
+            'cach_dung' => 'Giảm đầy hơi, chướng bụng.',
+            'so_luong_ton' => 40,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
-        $painkillers = DanhMuc::factory()->create([
-            'name' => 'Thuốc giảm đau - Hạ sốt',
-            'description' => 'Các loại thuốc giảm đau, hạ sốt',
+        $painkillers = DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau - Hạ sốt',
+            'mo_ta' => 'Các loại thuốc giảm đau, hạ sốt',
         ]);
-        SanPham::factory()->create([
-            'MaDM' => $painkillers->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'stock_quantity' => 90,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => $painkillers->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'so_luong_ton' => 90,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $reflection = new \ReflectionClass($this->chatbotService);
@@ -2193,12 +2148,11 @@ class ChatbotServiceTest extends TestCase
     public function test_catalog_lookup_ignores_generic_words_when_resolving_a_category(): void
     {
         foreach (['Thuốc tiêu hóa', 'Thuốc giảm đau - Hạ sốt', 'Thuốc tim mạch'] as $name) {
-            $danhMuc = DanhMuc::factory()->create(['name' => $name, 'description' => $name]);
-            SanPham::factory()->create([
-                'MaDM' => $danhMuc->MaDM,
-                'name' => 'San pham ' . $danhMuc->MaDM,
-                'stock_quantity' => 20,
-                'expiration_date' => now()->addYear(),
+            $danhMuc = DanhMuc::factory()->create(['ten' => $name, 'mo_ta' => $name]);
+            SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+                'ten' => 'San pham ' . $danhMuc->ma_dm,
+                'so_luong_ton' => 20,
+                'ngay_het_han' => now()->addYear(),
             ]);
         }
 
@@ -2326,12 +2280,11 @@ class ChatbotServiceTest extends TestCase
 
     public function test_illicit_substance_question_returns_safety_guidance_without_catalog_search(): void
     {
-        $danhMuc = DanhMuc::factory()->create(['name' => 'Thuốc giảm đau']);
-        SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->aiProviderService->expects($this->never())->method('chat');
@@ -2421,32 +2374,29 @@ class ChatbotServiceTest extends TestCase
 
     public function test_product_search_narrows_a_multi_word_symptom_query(): void
     {
-        $digestive = DanhMuc::factory()->create(['name' => 'Thuốc tiêu hóa']);
-        $painkillers = DanhMuc::factory()->create(['name' => 'Thuốc giảm đau - Hạ sốt']);
+        $digestive = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
+        $painkillers = DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau - Hạ sốt']);
 
-        SanPham::factory()->create([
-            'MaDM' => $digestive->MaDM,
-            'name' => 'Omeprazole 20mg',
-            'usage' => 'Điều trị loét dạ dày, trào ngược. Uống 1 viên/ngày trước ăn',
-            'stock_quantity' => 100,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => $digestive->ma_dm,
+            'ten' => 'Omeprazole 20mg',
+            'cach_dung' => 'Điều trị loét dạ dày, trào ngược. Uống 1 viên/ngày trước ăn',
+            'so_luong_ton' => 100,
+            'ngay_het_han' => now()->addYear(),
         ]);
-        SanPham::factory()->create([
-            'MaDM' => $digestive->MaDM,
-            'name' => 'Esomeprazole 40mg',
-            'usage' => 'Điều trị trào ngược dạ dày. Uống 1 viên/ngày',
-            'stock_quantity' => 80,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => $digestive->ma_dm,
+            'ten' => 'Esomeprazole 40mg',
+            'cach_dung' => 'Điều trị trào ngược dạ dày. Uống 1 viên/ngày',
+            'so_luong_ton' => 80,
+            'ngay_het_han' => now()->addYear(),
         ]);
-        SanPham::factory()->create([
-            'MaDM' => $painkillers->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau, hạ sốt',
-            'stock_quantity' => 90,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => $painkillers->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau, hạ sốt',
+            'so_luong_ton' => 90,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
-        $names = $this->chatbotService->searchProducts('đau dạ dày')->pluck('name')->all();
+        $names = $this->chatbotService->searchProducts('đau dạ dày')->pluck('ten')->all();
 
         $this->assertNotEmpty($names);
         $this->assertContains('Omeprazole 20mg', $names);
@@ -2456,26 +2406,24 @@ class ChatbotServiceTest extends TestCase
 
     public function test_product_search_resolves_a_stomach_query_before_a_painkiller_one(): void
     {
-        $digestive = DanhMuc::factory()->create(['name' => 'Thuốc tiêu hóa']);
-        $painkillers = DanhMuc::factory()->create(['name' => 'Thuốc giảm đau - Hạ sốt']);
+        $digestive = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
+        $painkillers = DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau - Hạ sốt']);
 
-        SanPham::factory()->create([
-            'MaDM' => $digestive->MaDM,
-            'name' => 'Omeprazole 20mg',
-            'usage' => 'Điều trị loét dạ dày, trào ngược',
-            'stock_quantity' => 100,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => $digestive->ma_dm,
+            'ten' => 'Omeprazole 20mg',
+            'cach_dung' => 'Điều trị loét dạ dày, trào ngược',
+            'so_luong_ton' => 100,
+            'ngay_het_han' => now()->addYear(),
         ]);
-        SanPham::factory()->create([
-            'MaDM' => $painkillers->MaDM,
-            'name' => 'Diclofenac 50mg',
-            'usage' => 'Giảm đau, kháng viêm',
-            'stock_quantity' => 100,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => $painkillers->ma_dm,
+            'ten' => 'Diclofenac 50mg',
+            'cach_dung' => 'Giảm đau, kháng viêm',
+            'so_luong_ton' => 100,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         // NSAIDs make a stomach complaint worse, so "dạ dày" has to win over "giảm đau".
-        $names = $this->chatbotService->searchProducts('giảm đau dạ dày')->pluck('name')->all();
+        $names = $this->chatbotService->searchProducts('giảm đau dạ dày')->pluck('ten')->all();
 
         $this->assertContains('Omeprazole 20mg', $names);
         $this->assertNotContains('Diclofenac 50mg', $names);
@@ -2483,13 +2431,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_product_search_does_not_answer_from_a_single_stray_token(): void
     {
-        $vitamins = DanhMuc::factory()->create(['name' => 'Vitamin và khoáng chất']);
-        SanPham::factory()->create([
-            'MaDM' => $vitamins->MaDM,
-            'name' => 'Vitamin E 400IU',
-            'usage' => 'Chống oxy hóa, bảo vệ tế bào',
-            'stock_quantity' => 100,
-            'expiration_date' => now()->addYear(),
+        $vitamins = DanhMuc::factory()->create(['ten' => 'Vitamin và khoáng chất']);
+        SanPham::factory()->create(['ma_dm' => $vitamins->ma_dm,
+            'ten' => 'Vitamin E 400IU',
+            'cach_dung' => 'Chống oxy hóa, bảo vệ tế bào',
+            'so_luong_ton' => 100,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         // "tiêu hóa" narrowed to "hóa" used to match "chống oxy hóa". A miss here is
@@ -2500,17 +2447,16 @@ class ChatbotServiceTest extends TestCase
 
     public function test_product_search_ignores_an_accent_blind_substring_hit(): void
     {
-        $vitamins = DanhMuc::factory()->create(['name' => 'Thuốc bổ & vitamin']);
-        SanPham::factory()->create([
-            'MaDM' => $vitamins->MaDM,
-            'name' => 'Siro A.T Ascorbic',
-            'ingredients' => 'Acid ascorbic 500mg',
+        $vitamins = DanhMuc::factory()->create(['ten' => 'Thuốc bổ & vitamin']);
+        SanPham::factory()->create(['ma_dm' => $vitamins->ma_dm,
+            'ten' => 'Siro A.T Ascorbic',
+            'thanh_phan' => 'Acid ascorbic 500mg',
             // MySQL's utf8mb4_unicode_ci ignores Vietnamese diacritics, so
             // `LIKE '%thử thai%'` matched this pharmacology text and answered a
             // pregnancy-test question with a vitamin C syrup.
-            'usage' => 'Có một ngưỡng đào thải acid ascorbic qua thận khoảng 14 microgam/ml',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+            'cach_dung' => 'Có một ngưỡng đào thải acid ascorbic qua thận khoảng 14 microgam/ml',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->assertEmpty($this->chatbotService->searchProducts('que thử thai')->all());
@@ -2519,25 +2465,23 @@ class ChatbotServiceTest extends TestCase
 
     public function test_product_search_drops_a_price_question_before_narrowing(): void
     {
-        $digestive = DanhMuc::factory()->create(['name' => 'Thuốc tiêu hóa']);
-        SanPham::factory()->create([
-            'MaDM' => $digestive->MaDM,
-            'name' => 'Biviantac',
-            'usage' => 'Không rõ cần trung hòa lượng acid dịch vị bao nhiêu là tối ưu',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+        $digestive = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
+        SanPham::factory()->create(['ma_dm' => $digestive->ma_dm,
+            'ten' => 'Biviantac',
+            'cach_dung' => 'Không rõ cần trung hòa lượng acid dịch vị bao nhiêu là tối ưu',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
-        $wanted = SanPham::factory()->create([
-            'MaDM' => $digestive->MaDM,
-            'name' => 'Men vi sinh Enterogermina',
-            'usage' => 'Bổ sung men vi sinh, hỗ trợ tiêu hóa',
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+        $wanted = SanPham::factory()->create(['ma_dm' => $digestive->ma_dm,
+            'ten' => 'Men vi sinh Enterogermina',
+            'cach_dung' => 'Bổ sung men vi sinh, hỗ trợ tiêu hóa',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
-        $names = $this->chatbotService->searchProducts('men vi sinh giá bao nhiêu')->pluck('name')->all();
+        $names = $this->chatbotService->searchProducts('men vi sinh giá bao nhiêu')->pluck('ten')->all();
 
-        $this->assertContains($wanted->name, $names);
+        $this->assertContains($wanted->ten, $names);
         $this->assertNotContains('Biviantac', $names);
     }
 
@@ -2561,13 +2505,12 @@ class ChatbotServiceTest extends TestCase
 
     public function test_product_search_ignores_the_verb_a_customer_wraps_the_query_in(): void
     {
-        $respiratory = DanhMuc::factory()->create(['name' => 'Thuốc ho - hô hấp']);
-        $wanted = SanPham::factory()->create([
-            'MaDM' => $respiratory->MaDM,
-            'name' => 'Siro Thuốc ho Bách Hộ',
-            'usage' => 'Điều trị ho dai dẳng lâu ngày, ho gà',
-            'stock_quantity' => 60,
-            'expiration_date' => now()->addYear(),
+        $respiratory = DanhMuc::factory()->create(['ten' => 'Thuốc ho - hô hấp']);
+        $wanted = SanPham::factory()->create(['ma_dm' => $respiratory->ma_dm,
+            'ten' => 'Siro Thuốc ho Bách Hộ',
+            'cach_dung' => 'Điều trị ho dai dẳng lâu ngày, ho gà',
+            'so_luong_ton' => 60,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         // Every keyword tier LIKE-matches the surviving text as one phrase, so
@@ -2578,10 +2521,10 @@ class ChatbotServiceTest extends TestCase
             $method->setAccessible(true);
             $names = $this->chatbotService
                 ->searchProducts($method->invoke($this->chatbotService, $phrasing))
-                ->pluck('name')
+                ->pluck('ten')
                 ->all();
 
-            $this->assertContains($wanted->name, $names, "\"{$phrasing}\" found nothing");
+            $this->assertContains($wanted->ten, $names, "\"{$phrasing}\" found nothing");
         }
     }
 

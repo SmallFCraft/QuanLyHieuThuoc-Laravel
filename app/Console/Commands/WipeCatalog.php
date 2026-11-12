@@ -13,9 +13,9 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Clears the product catalog and everything that points at it.
  *
- * Irreversible. order_items.MaSP is a restricting foreign key, so the tables have
- * to go in dependency order or the delete stops half-done. Order history goes with
- * the catalog because an order line cannot exist without its product row.
+ * Irreversible. chi_tiet_don_hangs.ma_sp is a restricting foreign key, so the tables
+ * have to go in dependency order or the delete stops half-done. Order history goes
+ * with the catalog because an order line cannot exist without its product row.
  */
 class WipeCatalog extends Command
 {
@@ -28,31 +28,33 @@ class WipeCatalog extends Command
     /**
      * Delete order matters: each table listed here is referenced by the ones above it.
      *
-     * search_queries has no foreign key to products, but it holds the terms the trending
-     * pills promote — left behind they point at a catalog that no longer exists, and a
-     * customer clicking one lands on an empty results page.
+     * truy_van_tim_kiems has no foreign key to san_phams, but it holds the terms the
+     * trending pills promote — left behind they point at a catalog that no longer
+     * exists, and a customer clicking one lands on an empty results page.
      */
     private const TABLES = [
-        'order_items',
-        'orders',
-        'favorites',
-        'medication_reminders',
-        'product_batches',
-        'products',
-        'categories',
-        'search_queries',
+        'chi_tiet_don_hangs',
+        'don_hangs',
+        'yeu_thiches',
+        'nhac_uong_thuocs',
+        'lo_san_phams',
+        'san_phams',
+        'danh_mucs',
+        'truy_van_tim_kiems',
     ];
 
     /**
      * JSON snapshots of products, kept on records that outlive the catalog. Left
      * populated they would render links to product ids that no longer exist.
+     * Column names are the JSON payload keys of these tables — unchanged by the
+     * schema rename.
      *
      * @var array<string, array{0: string, 1: string}> table => [column, empty value]
      */
     private const PRODUCT_SNAPSHOTS = [
-        'chat_messages' => ['products', '[]'],
-        'chatbot_images' => ['recognized_products', '[]'],
-        'triage_sessions' => ['suggested_products', '[]'],
+        'tin_nhan_chats' => ['products', '[]'],
+        'anh_chatbots' => ['recognized_products', '[]'],
+        'phien_sang_locs' => ['suggested_products', '[]'],
     ];
 
     public function handle(): int

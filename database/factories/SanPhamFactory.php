@@ -26,16 +26,16 @@ class SanPhamFactory extends Factory
     public function definition(): array
     {
         return [
-            'MaDM' => DanhMuc::factory(),
-            'name' => $this->faker->words(3, true),
-            'ingredients' => $this->faker->sentence(),
-            'usage' => $this->faker->sentence(),
-            'price' => $this->faker->randomFloat(2, 10000, 500000),
-            'expiration_date' => $this->faker->dateTimeBetween('now', '+2 years'),
-            'stock_quantity' => $this->faker->numberBetween(0, 200),
-            'reorder_point' => $this->faker->numberBetween(10, 50),
-            'batch_number' => $this->faker->unique()->numerify('BATCH-####'),
-            'image' => null,
+            'ma_dm' => DanhMuc::factory(),
+            'ten' => $this->faker->words(3, true),
+            'thanh_phan' => $this->faker->sentence(),
+            'cach_dung' => $this->faker->sentence(),
+            'gia' => $this->faker->randomFloat(2, 10000, 500000),
+            'ngay_het_han' => $this->faker->dateTimeBetween('now', '+2 years'),
+            'so_luong_ton' => $this->faker->numberBetween(0, 200),
+            'muc_canh_bao' => $this->faker->numberBetween(10, 50),
+            'so_lo' => $this->faker->unique()->numerify('BATCH-####'),
+            'hinh_anh' => null,
         ];
     }
 
@@ -45,7 +45,7 @@ class SanPhamFactory extends Factory
     public function outOfStock(): static
     {
         return $this->state(fn (array $attributes) => [
-            'stock_quantity' => 0,
+            'so_luong_ton' => 0,
         ]);
     }
 
@@ -55,7 +55,7 @@ class SanPhamFactory extends Factory
     public function expiringSoon(): static
     {
         return $this->state(fn (array $attributes) => [
-            'expiration_date' => $this->faker->dateTimeBetween('now', '+6 months'),
+            'ngay_het_han' => $this->faker->dateTimeBetween('now', '+6 months'),
         ]);
     }
 
@@ -65,7 +65,7 @@ class SanPhamFactory extends Factory
     public function expired(): static
     {
         return $this->state(fn (array $attributes) => [
-            'expiration_date' => $this->faker->dateTimeBetween('-1 year', '-1 day'),
+            'ngay_het_han' => $this->faker->dateTimeBetween('-1 year', '-1 day'),
         ]);
     }
 }

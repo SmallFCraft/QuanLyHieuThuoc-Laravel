@@ -9,9 +9,9 @@ class YeuCauLienHe extends Model
 {
     use HasFactory;
 
-    protected $table = 'contact_inquiries';
+    protected $table = 'yeu_cau_lien_hes';
 
-    protected $primaryKey = 'MaLH';
+    protected $primaryKey = 'ma_lh';
 
     /**
      * The attributes that are mass assignable.

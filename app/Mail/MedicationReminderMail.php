@@ -23,7 +23,7 @@ class MedicationReminderMail extends Mailable implements ShouldQueue
     {
         return new Envelope(
             subject: __('messages.reminder.mail_subject', [
-                'name' => $this->nhacUong->sanPham->name ?? $this->nhacUong->dosage_text,
+                'name' => $this->nhacUong->sanPham->ten ?? $this->nhacUong->dosage_text,
             ]),
         );
     }
@@ -34,8 +34,8 @@ class MedicationReminderMail extends Mailable implements ShouldQueue
             view: 'emails.medication-reminder',
             with: [
                 'reminder' => $this->nhacUong,
-                'productName' => $this->nhacUong->sanPham->name ?? $this->nhacUong->dosage_text,
-                'userName' => $this->nhacUong->nguoiDung->name ?? '',
+                'productName' => $this->nhacUong->sanPham->ten ?? $this->nhacUong->dosage_text,
+                'userName' => $this->nhacUong->nguoiDung->ho_ten ?? '',
                 'cancelUrl' => route('reminders.index'),
             ],
         );

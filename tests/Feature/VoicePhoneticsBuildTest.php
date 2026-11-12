@@ -19,21 +19,20 @@ class VoicePhoneticsBuildTest extends TestCase
 
     private function makeProduct(DanhMuc $danhMuc, string $name): SanPham
     {
-        return SanPham::create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => $name,
-            'ingredients' => 'Paracetamol 500mg',
-            'price' => 50000,
-            'expiration_date' => now()->addYears(2),
-            'stock_quantity' => 30,
-            'reorder_point' => 10,
-            'batch_number' => 'VP-' . md5($name),
+        return SanPham::create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => $name,
+            'thanh_phan' => 'Paracetamol 500mg',
+            'gia' => 50000,
+            'ngay_het_han' => now()->addYears(2),
+            'so_luong_ton' => 30,
+            'muc_canh_bao' => 10,
+            'so_lo' => 'VP-' . md5($name),
         ]);
     }
 
     public function test_it_indexes_product_names_categories_and_frequent_tokens(): void
     {
-        $danhMuc = DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt']);
+        $danhMuc = DanhMuc::create(['ten' => 'Thuốc giảm đau, hạ sốt']);
 
         // "thuốc" xuất hiện 3 lần -> đạt ngưỡng; "Ceradan" chỉ 1 lần -> không.
         $this->makeProduct($danhMuc, 'Thuốc hạ sốt Hapacol 500');
@@ -43,11 +42,11 @@ class VoicePhoneticsBuildTest extends TestCase
 
         $this->artisan('voice:build-phonetics')->assertSuccessful();
 
-        $this->assertDatabaseHas('voice_phonetics', [
+        $this->assertDatabaseHas('phien_am_giong_nois', [
             'term' => 'Thuốc hạ sốt Hapacol 500',
             'kind' => 'product',
         ]);
-        $this->assertDatabaseHas('voice_phonetics', [
+        $this->assertDatabaseHas('phien_am_giong_nois', [
             'term' => 'Thuốc giảm đau, hạ sốt',
             'kind' => 'category',
         ]);
@@ -63,7 +62,7 @@ class VoicePhoneticsBuildTest extends TestCase
 
     public function test_it_is_idempotent(): void
     {
-        $danhMuc = DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt']);
+        $danhMuc = DanhMuc::create(['ten' => 'Thuốc giảm đau, hạ sốt']);
         $this->makeProduct($danhMuc, 'Thuốc hạ sốt Hapacol 500');
 
         $this->artisan('voice:build-phonetics')->assertSuccessful();
@@ -76,7 +75,7 @@ class VoicePhoneticsBuildTest extends TestCase
 
     public function test_long_keys_get_no_block_key(): void
     {
-        $danhMuc = DanhMuc::create(['name' => 'Thuốc gan']);
+        $danhMuc = DanhMuc::create(['ten' => 'Thuốc gan']);
         $long = 'Thuốc Silymax-F Hưng Việt điều trị viêm gan do virus, xơ gan, gan nhiễm mỡ';
         $this->makeProduct($danhMuc, $long);
 
@@ -114,13 +113,13 @@ class VoicePhoneticsBuildTest extends TestCase
 
     public function test_new_product_appears_after_rebuild(): void
     {
-        $danhMuc = DanhMuc::create(['name' => 'Thuốc ho']);
+        $danhMuc = DanhMuc::create(['ten' => 'Thuốc ho']);
         $this->artisan('voice:build-phonetics')->assertSuccessful();
 
         $this->makeProduct($danhMuc, 'Siro ho Prospan');
         $this->artisan('voice:build-phonetics')->assertSuccessful();
 
-        $this->assertDatabaseHas('voice_phonetics', [
+        $this->assertDatabaseHas('phien_am_giong_nois', [
             'term' => 'Siro ho Prospan',
             'phonetic_key' => VoicePhonetics::key('Siro ho Prospan'),
         ]);

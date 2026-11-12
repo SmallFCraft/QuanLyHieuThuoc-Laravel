@@ -32,24 +32,22 @@ class TriageAiClarifyTest extends TestCase
 
         Http::preventStrayRequests();
 
-        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt', 'mo_ta' => 'Giảm đau, hạ sốt']);
         $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.fact_extraction', true);
         config()->set('chatbot.ai.triage.clarify_round', true);
 
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(34)->toDateString(),
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(34)->toDateString(),
         ]);
 
-        SanPham::factory()->create([
-            'name' => 'Paracetamol 500mg',
-            'ingredients' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau đầu, hạ sốt',
-            'stock_quantity' => 50,
-            'MaDM' => DanhMuc::first()->MaDM,
+        SanPham::factory()->create(['ten' => 'Paracetamol 500mg',
+            'thanh_phan' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau đầu, hạ sốt',
+            'so_luong_ton' => 50,
+            'ma_dm' => DanhMuc::first()->ma_dm,
         ]);
     }
 
@@ -104,17 +102,17 @@ class TriageAiClarifyTest extends TestCase
     protected function runWizard(array $answers): PhienSangLoc
     {
         $this->actingAs($this->nguoiDung)->get(route('health.check'));
-        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        $phien = PhienSangLoc::where('ma_nd', $this->nguoiDung->ma_nd)->inProgress()->latest('ma_sl')->firstOrFail();
 
         foreach ($answers as $step => $answer) {
-            $current = PhienSangLoc::find($phien->MaSL);
+            $current = PhienSangLoc::find($phien->ma_sl);
 
             if ($current === null || $current->status !== 'in_progress') {
                 break;
             }
 
             $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => $step,
                 'answer' => $answer,
             ]);
@@ -129,7 +127,7 @@ class TriageAiClarifyTest extends TestCase
     protected function answerClarify(PhienSangLoc $phien, array $answers): PhienSangLoc
     {
         $this->actingAs($this->nguoiDung)->post(route('health.clarify'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'clarify' => $answers,
         ]);
 
@@ -459,7 +457,7 @@ class TriageAiClarifyTest extends TestCase
         $phien = $this->runWizard($this->mildAdultAnswers());
 
         $this->actingAs($this->nguoiDung)->post(route('health.clarify'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'skipped' => 1,
         ]);
 
@@ -484,7 +482,7 @@ class TriageAiClarifyTest extends TestCase
 
         $this->actingAs($this->nguoiDung)
             ->post(route('health.clarify'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'clarify' => ['thêm nữa'],
             ])
             ->assertRedirect(route('health.check'));
@@ -609,7 +607,7 @@ class TriageAiClarifyTest extends TestCase
 
         $this->actingAs($this->nguoiDung)
             ->post(route('health.clarify'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'clarify' => ['một', 'hai', 'ba', 'bốn'],
             ])
             ->assertSessionHasErrors('clarify');
@@ -622,11 +620,11 @@ class TriageAiClarifyTest extends TestCase
         $this->fakeFacts(['symptom_codes' => ['headache'], 'missing_questions' => []]);
 
         $this->actingAs($this->nguoiDung)->get(route('health.check'));
-        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        $phien = PhienSangLoc::where('ma_nd', $this->nguoiDung->ma_nd)->inProgress()->latest('ma_sl')->firstOrFail();
 
         $this->actingAs($this->nguoiDung)
             ->post(route('health.clarify'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'clarify' => ['gì đó'],
             ])
             ->assertRedirect(route('health.check'))
@@ -644,10 +642,10 @@ class TriageAiClarifyTest extends TestCase
         ]);
 
         $phien = $this->runWizard($this->mildAdultAnswers());
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
 
         $this->actingAs($other)->post(route('health.clarify'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'clarify' => ['tôi chen ngang'],
         ]);
 

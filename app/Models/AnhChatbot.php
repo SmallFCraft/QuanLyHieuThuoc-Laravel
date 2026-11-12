@@ -10,9 +10,9 @@ class AnhChatbot extends Model
 {
     use Auditable, SoftDeletes;
 
-    protected $table = 'chatbot_images';
+    protected $table = 'anh_chatbots';
 
-    protected $primaryKey = 'MaAnh';
+    protected $primaryKey = 'ma_anh';
 
     /**
      * The attributes that are mass assignable.
@@ -20,7 +20,7 @@ class AnhChatbot extends Model
      * @var array<string>
      */
     protected $fillable = [
-        'MaKH',
+        'ma_nd',
         'session_id',
         'filename',
         'original_name',
@@ -56,6 +56,6 @@ class AnhChatbot extends Model
      */
     public function nguoiDung()
     {
-        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'ma_nd', 'ma_nd');
     }
 }

@@ -45,28 +45,26 @@ class TriageAffirmedClarifyTest extends TestCase
 
         Http::preventStrayRequests();
 
-        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt', 'mo_ta' => 'Giảm đau, hạ sốt']);
         $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.fact_extraction', true);
         config()->set('chatbot.ai.triage.clarify_round', true);
 
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(20)->toDateString(),
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(20)->toDateString(),
         ]);
 
-        SanPham::create([
-            'MaDM' => DanhMuc::first()->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'ingredients' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau, hạ sốt. Uống 1-2 viên mỗi 4-6 giờ',
-            'price' => 5000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 100,
-            'reorder_point' => 5,
-            'batch_number' => 'B-' . uniqid(),
+        SanPham::create(['ma_dm' => DanhMuc::first()->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'thanh_phan' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau, hạ sốt. Uống 1-2 viên mỗi 4-6 giờ',
+            'gia' => 5000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 100,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'B-' . uniqid(),
         ]);
     }
 
@@ -128,17 +126,17 @@ class TriageAffirmedClarifyTest extends TestCase
         ];
 
         $this->actingAs($this->nguoiDung)->get(route('health.check'));
-        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        $phien = PhienSangLoc::where('ma_nd', $this->nguoiDung->ma_nd)->inProgress()->latest('ma_sl')->firstOrFail();
 
         foreach ($answers as $step => $answer) {
-            $current = PhienSangLoc::find($phien->MaSL);
+            $current = PhienSangLoc::find($phien->ma_sl);
 
             if ($current === null || $current->status !== 'in_progress') {
                 break;
             }
 
             $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => $step,
                 'answer' => $answer,
             ]);
@@ -153,7 +151,7 @@ class TriageAffirmedClarifyTest extends TestCase
     protected function answerClarify(PhienSangLoc $phien, array $answers): PhienSangLoc
     {
         $this->actingAs($this->nguoiDung)->post(route('health.clarify'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'clarify' => $answers,
         ]);
 
@@ -194,7 +192,7 @@ class TriageAffirmedClarifyTest extends TestCase
             $this->assertNotSame('emergency', $phien->outcome, $denial);
             $this->assertSame([], $this->flagCodes($phien), $denial);
 
-            PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->delete();
+            PhienSangLoc::where('ma_nd', $this->nguoiDung->ma_nd)->delete();
         }
     }
 

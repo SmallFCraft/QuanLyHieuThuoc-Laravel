@@ -10,19 +10,19 @@
             $defaultDescription = __('messages.slogan');
 
             if (request()->routeIs('products.show') && isset($product)) {
-                $defaultDescription = $product->name;
+                $defaultDescription = $product->ten;
 
-                if (!empty($product->ingredients)) {
-                    $defaultDescription .= '. Thành phần: ' . $product->ingredients;
-                } elseif (!empty($product->usage)) {
-                    $defaultDescription .= '. Công dụng: ' . $product->usage;
+                if (!empty($product->thanh_phan)) {
+                    $defaultDescription .= '. Thành phần: ' . $product->thanh_phan;
+                } elseif (!empty($product->cach_dung)) {
+                    $defaultDescription .= '. Công dụng: ' . $product->cach_dung;
                 }
 
                 $defaultDescription .= '. Mua tại ' . $appName . '.';
             } elseif (request()->routeIs('products.search') && !empty($searchTerm)) {
                 $defaultDescription = 'Kết quả tìm kiếm cho "' . $searchTerm . '" tại ' . $appName . '. Khám phá dược phẩm và sản phẩm chăm sóc sức khỏe chính hãng.';
             } elseif (request()->routeIs('products.category') && isset($category)) {
-                $defaultDescription = 'Khám phá danh mục ' . $category->name . ' tại ' . $appName . ' với các sản phẩm chính hãng, thông tin rõ ràng và hỗ trợ tư vấn tận tâm.';
+                $defaultDescription = 'Khám phá danh mục ' . $category->ten . ' tại ' . $appName . ' với các sản phẩm chính hãng, thông tin rõ ràng và hỗ trợ tư vấn tận tâm.';
             } elseif (request()->routeIs('products.index')) {
                 $defaultDescription = 'Khám phá danh mục thuốc, dược phẩm và sản phẩm chăm sóc sức khỏe tại ' . $appName . '. Nguồn gốc minh bạch, hỗ trợ tư vấn nhanh chóng.';
             } elseif (request()->routeIs('contact')) {
@@ -94,7 +94,7 @@
             $metaImageAlt = trim($__env->yieldContent(
                 'meta_image_alt',
                 request()->routeIs('products.show') && isset($product)
-                    ? $product->name . ' - ' . $appName
+                    ? $product->ten . ' - ' . $appName
                     : $appName . ' logo'
             ));
 
@@ -140,13 +140,13 @@
                 $productSchema = [
                     '@context' => 'https://schema.org',
                     '@type' => 'Product',
-                    'name' => $product->name,
+                    'name' => $product->ten,
                     'description' => $metaDescription,
                     'image' => [$metaImage],
                     // product_code, not batch_number: the batch is an internal
                     // inventory record and search engines index this markup.
-                    'sku' => $product->product_code ?: (string) $product->MaSP,
-                    'category' => $product->danhMuc->name ?? null,
+                    'sku' => $product->ma_san_pham ?: (string) $product->ma_sp,
+                    'category' => $product->danhMuc->ten ?? null,
                     'brand' => [
                         '@type' => 'Brand',
                         'name' => $appName,
@@ -155,7 +155,7 @@
                         '@type' => 'Offer',
                         'priceCurrency' => 'VND',
                         'price' => $product->price_vnd,
-                        'availability' => $product->stock_quantity > 0
+                        'availability' => $product->so_luong_ton > 0
                             ? 'https://schema.org/InStock'
                             : 'https://schema.org/OutOfStock',
                         'url' => request()->url(),
@@ -856,11 +856,11 @@
                             </a>
                             @php
                                 $activeCategoryId = request('category');
-                                $activeCategoryRoute = request()->route('MaDM');
+                                $activeCategoryRoute = request()->route('ma_dm');
 
                                 if ($activeCategoryId === null && $activeCategoryRoute !== null) {
                                     $activeCategoryId = is_object($activeCategoryRoute)
-                                        ? ($activeCategoryRoute->MaDM ?? null)
+                                        ? ($activeCategoryRoute->ma_dm ?? null)
                                         : $activeCategoryRoute;
                                 }
                             @endphp
@@ -890,16 +890,16 @@
                                     <div class="nav-categories-list" data-catalog-filter-list>
                                         @forelse($navCategories as $cat)
                                             @php
-                                                $isActiveCategory = $activeCategoryId !== null && (string) $activeCategoryId === (string) $cat->MaDM;
+                                                $isActiveCategory = $activeCategoryId !== null && (string) $activeCategoryId === (string) $cat->ma_dm;
                                             @endphp
                                             <a
                                                 class="dropdown-item nav-category-link {{ $isActiveCategory ? 'is-active' : '' }}"
-                                                href="{{ route('products.index', ['category' => $cat->MaDM]) }}"
+                                                href="{{ route('products.index', ['category' => $cat->ma_dm]) }}"
                                                 style="--depth: {{ round($cat->products_count / $navMaxCount * 100) }}%"
-                                                data-folded="{{ \App\Support\VietnameseText::fold($cat->name) }}"
+                                                data-folded="{{ \App\Support\VietnameseText::fold($cat->ten) }}"
                                                 @if($isActiveCategory) aria-current="page" @endif
                                             >
-                                                <span class="nav-category-title">{{ $cat->name }}@if($loop->index < 3)<i class="bi bi-fire category-flame" aria-hidden="true"></i>@endif</span>
+                                                <span class="nav-category-title">{{ $cat->ten }}@if($loop->index < 3)<i class="bi bi-fire category-flame" aria-hidden="true"></i>@endif</span>
                                                 <span class="nav-category-count">{{ $cat->products_count }}</span>
                                             </a>
                                         @empty
@@ -960,16 +960,16 @@
                                         <div class="d-flex align-items-center gap-2 mb-2">
                                             <x-user-avatar :user="auth()->user()" :size="40" ring />
                                             <div class="flex-grow-1 overflow-hidden">
-                                                <p class="mb-0 fw-bold text-gray-900 text-truncate">{{ auth()->user()->name }}</p>
+                                                <p class="mb-0 fw-bold text-gray-900 text-truncate">{{ auth()->user()->ho_ten }}</p>
                                                 <p class="mb-0 small text-gray-600 text-truncate">{{ auth()->user()->email }}</p>
                                             </div>
                                         </div>
                                         <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-2 py-1 small">
-                                            <i class="bi bi-shield-check me-1"></i>{{ auth()->user()->role === 'Administrator' ? __('messages.role_administrator') : __('messages.role_user') }}
+                                            <i class="bi bi-shield-check me-1"></i>{{ auth()->user()->vai_tro === 'Administrator' ? __('messages.role_administrator') : __('messages.role_user') }}
                                         </span>
                                     </div>
                                     
-                                    @if(auth()->user()->role === 'Administrator')
+                                    @if(auth()->user()->vai_tro === 'Administrator')
                                         <li>
                                             <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('admin.dashboard') }}" style="transition: all 0.2s;">
                                                 <i class="bi bi-speedometer2 text-emerald-600"></i>
@@ -1114,9 +1114,9 @@
                                         <ul class="list-unstyled mb-0">
                                             @forelse($footerCategories as $fCat)
                                             <li class="{{ !$loop->last ? 'mb-2' : 'mb-0' }}">
-                                                <a href="{{ route('products.index', ['category' => $fCat->MaDM]) }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                <a href="{{ route('products.index', ['category' => $fCat->ma_dm]) }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
-                                                    {{ $fCat->name }}
+                                                    {{ $fCat->ten }}
                                                 </a>
                                             </li>
                                             @empty

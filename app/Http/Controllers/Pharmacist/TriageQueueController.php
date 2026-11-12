@@ -43,7 +43,7 @@ class TriageQueueController extends Controller
         $cacPhien = PhienSangLoc::with('nguoiDung')
             ->pendingPharmacist()
             ->oldest('created_at')
-            ->oldest('MaSL')
+            ->oldest('ma_sl')
             ->paginate(15)
             ->withQueryString();
 
@@ -71,27 +71,27 @@ class TriageQueueController extends Controller
         // customer, including sessions still being filled in.
         $phien = PhienSangLoc::with(['nguoiDung', 'pharmacist'])
             ->whereIn('status', self::REVIEWABLE_STATUSES)
-            ->where('MaSL', $MaSL)
+            ->where('ma_sl', $MaSL)
             ->firstOrFail();
 
-        $hoSo = HoSoSucKhoe::consentedFor((int) $phien->MaKH);
+        $hoSo = HoSoSucKhoe::consentedFor((int) $phien->ma_nd);
 
         // Reading someone's health data is auditable every single time, not once.
         if ($hoSo) {
             app(AuditLogService::class)->log(
                 action: 'health_profile_accessed',
                 modelType: HoSoSucKhoe::class,
-                modelId: $hoSo->MaHS,
+                modelId: $hoSo->ma_hs,
                 oldValues: null,
-                newValues: ['MaSL' => $phien->MaSL, 'MaKH' => $phien->MaKH]
+                newValues: ['ma_sl' => $phien->ma_sl, 'ma_nd' => $phien->ma_nd]
             );
         }
 
         // Same REVIEWABLE_STATUSES as the current case: a session still in progress
         // was never handed to the pharmacist team, so it is not ours to read here.
-        $pastSessions = $phien->MaKH
-            ? PhienSangLoc::where('MaKH', $phien->MaKH)
-                ->where('MaSL', '!=', $phien->MaSL)
+        $pastSessions = $phien->ma_nd
+            ? PhienSangLoc::where('ma_nd', $phien->ma_nd)
+                ->where('ma_sl', '!=', $phien->ma_sl)
                 ->whereIn('status', self::REVIEWABLE_STATUSES)
                 ->latest('created_at')
                 ->limit(5)
@@ -137,14 +137,14 @@ class TriageQueueController extends Controller
             // Mirror the answer into the chat thread so the customer sees a human replied.
             if ($phien->session_id) {
                 TinNhanChat::create([
-                    'MaKH' => $phien->MaKH,
+                    'ma_nd' => $phien->ma_nd,
                     'session_id' => $phien->session_id,
                     'role' => 'assistant',
                     'content' => $note,
                     'metadata' => [
                         'reviewed_by_pharmacist' => true,
                         'pharmacist_id' => $pharmacistId,
-                        'triage_session_id' => $phien->MaSL,
+                        'triage_session_id' => $phien->ma_sl,
                     ],
                     'show_disclaimer' => false,
                 ]);
@@ -153,7 +153,7 @@ class TriageQueueController extends Controller
             app(AuditLogService::class)->log(
                 action: 'triage_pharmacist_replied',
                 modelType: PhienSangLoc::class,
-                modelId: $phien->MaSL,
+                modelId: $phien->ma_sl,
                 oldValues: null,
                 newValues: ['pharmacist_id' => $pharmacistId]
             );
@@ -194,14 +194,14 @@ class TriageQueueController extends Controller
 
             if ($phien->session_id) {
                 TinNhanChat::create([
-                    'MaKH' => $phien->MaKH,
+                    'ma_nd' => $phien->ma_nd,
                     'session_id' => $phien->session_id,
                     'role' => 'assistant',
                     'content' => $note,
                     'metadata' => [
                         'reviewed_by_pharmacist' => true,
                         'pharmacist_id' => $pharmacistId,
-                        'triage_session_id' => $phien->MaSL,
+                        'triage_session_id' => $phien->ma_sl,
                         'escalated' => true,
                     ],
                     'show_disclaimer' => false,
@@ -211,7 +211,7 @@ class TriageQueueController extends Controller
             app(AuditLogService::class)->log(
                 action: 'triage_escalated',
                 modelType: PhienSangLoc::class,
-                modelId: $phien->MaSL,
+                modelId: $phien->ma_sl,
                 oldValues: ['outcome' => $previousOutcome],
                 newValues: ['outcome' => 'refer_doctor', 'pharmacist_id' => $pharmacistId]
             );
@@ -247,7 +247,7 @@ class TriageQueueController extends Controller
             app(AuditLogService::class)->log(
                 action: 'triage_claimed',
                 modelType: PhienSangLoc::class,
-                modelId: $phien->MaSL,
+                modelId: $phien->ma_sl,
                 oldValues: null,
                 newValues: ['pharmacist_id' => $pharmacistId]
             );
@@ -275,7 +275,7 @@ class TriageQueueController extends Controller
         $pharmacistId = (int) auth()->id();
 
         $phien = PhienSangLoc::whereIn('status', self::REVIEWABLE_STATUSES)
-            ->where('MaSL', $MaSL)
+            ->where('ma_sl', $MaSL)
             ->firstOrFail();
 
         // Same gates as reply(): an already-answered or someone else's case must not

@@ -29,7 +29,7 @@ class ProductCatalogController extends Controller
 
         $searchTerm = trim((string) $request->input('q', ''));
 
-        // where('MaDM', ...) im lặng trả một danh sách rỗng 200 cho id không tồn tại,
+        // where('ma_dm', ...) im lặng trả một danh sách rỗng 200 cho id không tồn tại,
         // nên mỗi số tự đặt là một URL indexable. byCategory() dùng findOrFail nên
         // chỉ cần chặn ở đây. ?category= có tác dụng, không phải junk query.
         if ($request->filled('category')) {
@@ -41,12 +41,12 @@ class ProductCatalogController extends Controller
 
         $query = SanPham::with('danhMuc')
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
+            ->where('so_luong_ton', '>', 0)
             ->storefrontSearch($searchTerm)
             ->orderBySearchRelevance($searchTerm);
 
         if ($request->filled('category')) {
-            $query->where('MaDM', $request->input('category'));
+            $query->where('ma_dm', $request->input('category'));
         }
 
         // Trang vượt quá trang cuối là 404, không phải một trang rỗng 200. Trả về
@@ -74,14 +74,14 @@ class ProductCatalogController extends Controller
             ->findOrFail($MaSP);
 
         // Increment views count
-        $product->increment('views_count');
+        $product->increment('luot_xem');
 
         $relatedProducts = SanPham::with('danhMuc')
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
-            ->where('MaDM', $product->MaDM)
-            ->where('MaSP', '!=', $product->MaSP)
-            ->orderByDesc('views_count')
+            ->where('so_luong_ton', '>', 0)
+            ->where('ma_dm', $product->ma_dm)
+            ->where('ma_sp', '!=', $product->ma_sp)
+            ->orderByDesc('luot_xem')
             ->limit(4)
             ->get();
 
@@ -98,8 +98,8 @@ class ProductCatalogController extends Controller
         $products = $this->paginateOr404(
             SanPham::with('danhMuc')
                 ->notExpired()
-                ->where('MaDM', $MaDM)
-                ->where('stock_quantity', '>', 0),
+                ->where('ma_dm', $MaDM)
+                ->where('so_luong_ton', '>', 0),
             self::PER_PAGE
         );
 
@@ -124,7 +124,7 @@ class ProductCatalogController extends Controller
         $products = $this->paginateOr404(
             SanPham::with('danhMuc')
                 ->notExpired()
-                ->where('stock_quantity', '>', 0)
+                ->where('so_luong_ton', '>', 0)
                 ->storefrontSearch($searchTerm)
                 ->orderBySearchRelevance($searchTerm),
             self::PER_PAGE
@@ -189,11 +189,11 @@ class ProductCatalogController extends Controller
         }
 
         $sanPhams = SanPham::notExpired()
-            ->where('stock_quantity', '>', 0)
+            ->where('so_luong_ton', '>', 0)
             ->storefrontSearch($term)
             ->orderBySearchRelevance($term)
-            ->select('MaSP', 'name', 'MaDM', 'price', 'image')
-            ->with('danhMuc:MaDM,name')
+            ->select('ma_sp', 'ten', 'ma_dm', 'gia', 'hinh_anh')
+            ->with('danhMuc:ma_dm,ten')
             ->limit(8)
             ->get();
 
@@ -203,26 +203,26 @@ class ProductCatalogController extends Controller
         // there are only a few dozen of them behind a cache, so a query per
         // keystroke buys nothing.
         $categories = $this->getFilterCategories()
-            ->filter(fn ($danhMuc) => str_contains(VietnameseText::fold($danhMuc->name), $folded))
+            ->filter(fn ($danhMuc) => str_contains(VietnameseText::fold($danhMuc->ten), $folded))
             ->take(3)
             ->values();
 
         return response()->json([
             'products' => $sanPhams->map(function (SanPham $sanPham) {
                 return [
-                    'MaSP' => $sanPham->MaSP,
-                    'name' => $sanPham->name,
-                    'category' => $sanPham->danhMuc?->name,
+                    'ma_sp' => $sanPham->ma_sp,
+                    'name' => $sanPham->ten,
+                    'category' => $sanPham->danhMuc?->ten,
                     'price' => $sanPham->formatted_price,
                     'image_url' => $sanPham->image_url,
-                    'url' => route('products.show', $sanPham->MaSP),
+                    'url' => route('products.show', $sanPham->ma_sp),
                 ];
             }),
             'categories' => $categories->map(function ($danhMuc) {
                 return [
-                    'id' => $danhMuc->MaDM,
-                    'name' => $danhMuc->name,
-                    'url' => route('products.index', ['category' => $danhMuc->MaDM]),
+                    'id' => $danhMuc->ma_dm,
+                    'name' => $danhMuc->ten,
+                    'url' => route('products.index', ['category' => $danhMuc->ma_dm]),
                 ];
             }),
         ]);
@@ -240,7 +240,7 @@ class ProductCatalogController extends Controller
             DanhMuc::FILTER_CACHE_KEY,
             now()->addMinutes(10),
             fn () => DanhMuc::query()
-                ->select('MaDM', 'name')
+                ->select('ma_dm', 'ten')
                 ->browsable()
                 ->get()
         );

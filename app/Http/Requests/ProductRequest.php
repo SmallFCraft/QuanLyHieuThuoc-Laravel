@@ -12,7 +12,7 @@ class ProductRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return auth()->check() && auth()->user()->role === 'Administrator';
+        return auth()->check() && auth()->user()->vai_tro === 'Administrator';
     }
 
     /**
@@ -23,9 +23,9 @@ class ProductRequest extends FormRequest
     public function rules(): array
     {
         $product = $this->route('product');
-        $productId = $product ? $product->MaSP : null;
+        $productId = $product ? $product->ma_sp : null;
         $batchId = $product
-            ? $product->cacLo()->orderBy('expiration_date')->orderBy('MaLo')->value('MaLo')
+            ? $product->cacLo()->orderBy('ngay_het_han')->orderBy('ma_lo')->value('ma_lo')
             : null;
         
         return [
@@ -40,12 +40,12 @@ class ProductRequest extends FormRequest
                 'required',
                 'string',
                 'max:100',
-                Rule::unique('products', 'batch_number')
-                    ->where(fn ($query) => $query->where('name', $this->input('name')))
-                    ->ignore($productId, 'MaSP'),
-                Rule::unique('product_batches', 'batch_number')->ignore($batchId, 'MaLo'),
+                Rule::unique('san_phams', 'so_lo')
+                    ->where(fn ($query) => $query->where('ten', $this->input('name')))
+                    ->ignore($productId, 'ma_sp'),
+                Rule::unique('lo_san_phams', 'so_lo')->ignore($batchId, 'ma_lo'),
             ],
-            'MaDM' => 'required|exists:categories,MaDM',
+            'ma_dm' => 'required|exists:danh_mucs,ma_dm',
             'image' => $productId ? 'nullable|image|mimes:jpeg,png|max:5120' : 'nullable|image|mimes:jpeg,png|max:5120',
         ];
     }

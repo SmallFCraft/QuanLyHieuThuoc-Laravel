@@ -35,16 +35,15 @@ class TriageAiFactTest extends TestCase
         // than be swallowed by the degrade path.
         Http::preventStrayRequests();
 
-        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt', 'mo_ta' => 'Giảm đau, hạ sốt']);
         $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.fact_extraction', true);
 
         // 34: old enough that no age guard fires from the account itself.
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(34)->toDateString(),
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(34)->toDateString(),
         ]);
     }
 
@@ -65,12 +64,11 @@ class TriageAiFactTest extends TestCase
 
     protected function stockProduct(): void
     {
-        SanPham::factory()->create([
-            'name' => 'Paracetamol 500mg',
-            'ingredients' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau đầu, hạ sốt',
-            'stock_quantity' => 50,
-            'MaDM' => DanhMuc::first()->MaDM,
+        SanPham::factory()->create(['ten' => 'Paracetamol 500mg',
+            'thanh_phan' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau đầu, hạ sốt',
+            'so_luong_ton' => 50,
+            'ma_dm' => DanhMuc::first()->ma_dm,
         ]);
     }
 
@@ -80,17 +78,17 @@ class TriageAiFactTest extends TestCase
     protected function runWizard(array $answers): PhienSangLoc
     {
         $this->actingAs($this->nguoiDung)->get(route('health.check'));
-        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        $phien = PhienSangLoc::where('ma_nd', $this->nguoiDung->ma_nd)->inProgress()->latest('ma_sl')->firstOrFail();
 
         foreach ($answers as $step => $answer) {
-            $current = PhienSangLoc::find($phien->MaSL);
+            $current = PhienSangLoc::find($phien->ma_sl);
 
             if ($current === null || $current->status !== 'in_progress') {
                 break;
             }
 
             $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => $step,
                 'answer' => $answer,
             ]);
@@ -280,8 +278,7 @@ class TriageAiFactTest extends TestCase
 
     public function test_the_prompt_carries_no_health_profile_data(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'allergies' => ['penicillin'],
             'chronic_conditions' => ['loét dạ dày'],
             'current_medications' => ['omeprazole'],
@@ -367,22 +364,22 @@ class TriageAiFactTest extends TestCase
         $this->stockProduct();
 
         $this->actingAs($this->nguoiDung)->get(route('health.check'));
-        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        $phien = PhienSangLoc::where('ma_nd', $this->nguoiDung->ma_nd)->inProgress()->latest('ma_sl')->firstOrFail();
 
         $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => 1,
             'answer' => 'đau đầu',
         ]);
         $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => 2,
             'skipped' => '1',
         ]);
 
         foreach ([3 => 'chưa dùng gì', 4 => 'không có', 5 => 'không có thêm'] as $step => $answer) {
             $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => $step,
                 'answer' => $answer,
             ]);
@@ -401,8 +398,7 @@ class TriageAiFactTest extends TestCase
     {
         // A consented profile with real chronic conditions suppresses wizard step 4, so
         // its question was never asked and must not appear as answered.
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'chronic_conditions' => ['tiểu đường'],
             'consented_at' => now(),
         ]);
@@ -455,7 +451,7 @@ class TriageAiFactTest extends TestCase
     }
 
     /**
-     * A stated patient age outranks the account owner's birth_date
+     * A stated patient age outranks the account owner's ngay_sinh
      * (MedicalTriageService::resolveAge), so when the complaint is about a child the
      * account age is not a known fact and the question must survive.
      */
@@ -500,7 +496,7 @@ class TriageAiFactTest extends TestCase
 
         // Anti-vacuity: the same call for a customer whose birth_date IS known must
         // produce a different string, or the assertion above proves nothing.
-        $phien->MaKH = $this->nguoiDung->MaKH;
+        $phien->ma_nd = $this->nguoiDung->ma_nd;
         $known = $method->invoke(
             $service,
             $phien,
@@ -539,8 +535,7 @@ class TriageAiFactTest extends TestCase
         config()->set('chatbot.ai.triage.clarify_round', true);
         $this->stockProduct();
 
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'allergies' => ['penicillin'],
             'consented_at' => now(),
             'ai_consent_at' => now(),
@@ -579,8 +574,7 @@ class TriageAiFactTest extends TestCase
 
         // consented_at only: that consent is purpose-limited to contraindication
         // checks, not to steering a third-party model prompt.
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'allergies' => ['penicillin'],
             'chronic_conditions' => ['loét dạ dày'],
             'consented_at' => now(),
@@ -619,8 +613,8 @@ class TriageAiFactTest extends TestCase
         config()->set('chatbot.ai.triage.clarify_round', true);
         $this->stockProduct();
 
-        // No birth_date, no health profile: the suppression feature must be invisible.
-        $this->nguoiDung->forceFill(['birth_date' => null])->save();
+        // No ngay_sinh, no health profile: the suppression feature must be invisible.
+        $this->nguoiDung->forceFill(['ngay_sinh' => null])->save();
 
         $questions = [
             'Anh/chị năm nay bao nhiêu tuổi ạ?',

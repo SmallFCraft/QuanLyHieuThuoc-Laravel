@@ -90,7 +90,7 @@ class TriageAiDraftService extends TriageAiService
             return $draft;
         } catch (\Throwable $exception) {
             Log::warning('Triage AI draft failed', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
 

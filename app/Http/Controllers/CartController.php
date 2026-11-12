@@ -22,11 +22,11 @@ class CartController extends Controller
         
         // OPTIMIZED: Load all products in 1 query instead of N+1
         $productIds = array_keys($cart);
-        $sanPhams = SanPham::whereIn('MaSP', $productIds)
+        $sanPhams = SanPham::whereIn('ma_sp', $productIds)
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
+            ->where('so_luong_ton', '>', 0)
             ->get()
-            ->keyBy('MaSP'); // Index by MaSP for O(1) lookup
+            ->keyBy('ma_sp'); // Index by MaSP for O(1) lookup
         
         $cartItems = [];
         $total = 0;
@@ -52,7 +52,7 @@ class CartController extends Controller
     public function add(Request $request, DrugSafetyService $anToanThuoc)
     {
         $request->validate([
-            'MaSP' => 'required|exists:products,MaSP',
+            'ma_sp' => 'required|exists:san_phams,ma_sp',
             'quantity' => 'required|integer|min:1|max:999',
             'confirm_warning' => 'nullable|boolean',
         ]);
@@ -61,7 +61,7 @@ class CartController extends Controller
         $wantsJson = $request->expectsJson();
 
         // SECURITY: Limit number of unique items in cart
-        if (count($cart) >= 100 && ! isset($cart[$request->MaSP])) {
+        if (count($cart) >= 100 && ! isset($cart[$request->ma_sp])) {
             $tinNhan = 'Giỏ hàng đã đạt giới hạn 100 sản phẩm khác nhau.';
             if ($wantsJson) {
                 return response()->json(['success' => false, 'message' => $tinNhan], 422);
@@ -81,7 +81,7 @@ class CartController extends Controller
             return back()->with('error', $tinNhan);
         }
 
-        $sanPham = SanPham::findOrFail($request->MaSP);
+        $sanPham = SanPham::findOrFail($request->ma_sp);
 
         // Validate product is not expired
         if ($sanPham->isExpired()) {
@@ -94,7 +94,7 @@ class CartController extends Controller
         }
 
         // Validate stock availability
-        if ($sanPham->stock_quantity < $request->quantity) {
+        if ($sanPham->so_luong_ton < $request->quantity) {
             $tinNhan = __('messages.cart.stock_insufficient');
             if ($wantsJson) {
                 return response()->json(['success' => false, 'message' => $tinNhan], 422);
@@ -127,16 +127,16 @@ class CartController extends Controller
             return redirect()->route('cart.index')
                 ->with('error', $tinNhan)
                 ->with('drug_warnings', $warnings)
-                ->with('drug_warning_product', $sanPham->MaSP)
+                ->with('drug_warning_product', $sanPham->ma_sp)
                 ->with('drug_warning_quantity', (int) $request->quantity);
         }
 
         // If product already in cart, update quantity
-        if (isset($cart[$request->MaSP])) {
-            $newQuantity = $cart[$request->MaSP] + $request->quantity;
+        if (isset($cart[$request->ma_sp])) {
+            $newQuantity = $cart[$request->ma_sp] + $request->quantity;
 
             // Check if new quantity exceeds stock
-            if ($newQuantity > $sanPham->stock_quantity) {
+            if ($newQuantity > $sanPham->so_luong_ton) {
                 $tinNhan = __('messages.cart.stock_exceeded');
                 if ($wantsJson) {
                     return response()->json(['success' => false, 'message' => $tinNhan], 422);
@@ -145,9 +145,9 @@ class CartController extends Controller
                 return back()->with('error', $tinNhan);
             }
 
-            $cart[$request->MaSP] = $newQuantity;
+            $cart[$request->ma_sp] = $newQuantity;
         } else {
-            $cart[$request->MaSP] = $request->quantity;
+            $cart[$request->ma_sp] = $request->quantity;
         }
 
         session()->put('cart', $cart);
@@ -189,7 +189,7 @@ class CartController extends Controller
         $sanPham = SanPham::findOrFail($productId);
 
         // Validate stock availability
-        if ($sanPham->stock_quantity < $request->quantity) {
+        if ($sanPham->so_luong_ton < $request->quantity) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,

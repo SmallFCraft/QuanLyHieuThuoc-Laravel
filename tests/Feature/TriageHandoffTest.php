@@ -20,15 +20,14 @@ class TriageHandoffTest extends TestCase
         parent::setUp();
 
         // TriThucYTeSeeder maps contraindications onto existing categories.
-        DanhMuc::factory()->create(['name' => 'Thuốc giảm đau - Hạ sốt']);
+        DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau - Hạ sốt']);
         $this->seed(\Database\Seeders\TriThucYTeSeeder::class);
     }
 
     protected function activeUser(): NguoiDung
     {
-        return NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
+        return NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
         ]);
     }
 
@@ -96,13 +95,12 @@ class TriageHandoffTest extends TestCase
 
     public function test_explicit_product_question_falls_through_to_catalog(): void
     {
-        SanPham::factory()->create([
-            'MaDM' => DanhMuc::where('name', 'Thuốc giảm đau - Hạ sốt')->value('MaDM'),
-            'name' => 'Paracetamol 500mg',
-            'ingredients' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau, hạ sốt',
-            'stock_quantity' => 100,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => DanhMuc::where('ten', 'Thuốc giảm đau - Hạ sốt')->value('ma_dm'),
+            'ten' => 'Paracetamol 500mg',
+            'thanh_phan' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau, hạ sốt',
+            'so_luong_ton' => 100,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $response = $this->actingAs($this->activeUser())->postJson('/api/chatbot/message', [
@@ -146,9 +144,9 @@ class TriageHandoffTest extends TestCase
             ->postJson('/api/chatbot/message', ['message' => 'tôi bị đau đầu 2 ngày'])
             ->assertOk();
 
-        $assistantMessage = TinNhanChat::where('MaKH', $nguoiDung->MaKH)
+        $assistantMessage = TinNhanChat::where('ma_nd', $nguoiDung->ma_nd)
             ->where('role', 'assistant')
-            ->latest('MaTN')
+            ->latest('ma_tn')
             ->firstOrFail();
 
         $this->assertSame('triage_handoff', $assistantMessage->metadata['response_type'] ?? null);
@@ -210,13 +208,12 @@ class TriageHandoffTest extends TestCase
 
     public function test_check_drug_safety_tool_call_checks_a_real_product(): void
     {
-        SanPham::factory()->create([
-            'MaDM' => DanhMuc::where('name', 'Thuốc giảm đau - Hạ sốt')->value('MaDM'),
-            'name' => 'Paracetamol 500mg',
-            'ingredients' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau, hạ sốt',
-            'stock_quantity' => 100,
-            'expiration_date' => now()->addYear(),
+        SanPham::factory()->create(['ma_dm' => DanhMuc::where('ten', 'Thuốc giảm đau - Hạ sốt')->value('ma_dm'),
+            'ten' => 'Paracetamol 500mg',
+            'thanh_phan' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau, hạ sốt',
+            'so_luong_ton' => 100,
+            'ngay_het_han' => now()->addYear(),
         ]);
 
         $this->fakeProviderFunctionCall('check_drug_safety', [

@@ -277,7 +277,7 @@ class VoiceSearchNormalizer
     /**
      * Thêm điều kiện "từ này là một TỪ TRỌN trong name_folded" vào một query.
      *
-     * Bốn mẫu LIKE thay cho một `%tu%`, vì `%la%` khớp cả "Salonpas". `name_folded`
+     * Bốn mẫu LIKE thay cho một `%tu%`, vì `%la%` khớp cả "Salonpas". `ten_khong_dau`
      * đã fold nên các từ cách nhau đúng một khoảng trắng.
      *
      * Bốn LIKE chứ không phải RLIKE hay concat(): bộ test chạy trên sqlite :memory:
@@ -293,10 +293,10 @@ class VoiceSearchNormalizer
         $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $word);
 
         $query->where(function ($inner) use ($escaped): void {
-            $inner->where('name_folded', $escaped)
-                ->orWhere('name_folded', 'like', $escaped . ' %')
-                ->orWhere('name_folded', 'like', '% ' . $escaped)
-                ->orWhere('name_folded', 'like', '% ' . $escaped . ' %');
+            $inner->where('ten_khong_dau', $escaped)
+                ->orWhere('ten_khong_dau', 'like', $escaped . ' %')
+                ->orWhere('ten_khong_dau', 'like', '% ' . $escaped)
+                ->orWhere('ten_khong_dau', 'like', '% ' . $escaped . ' %');
         });
     }
 

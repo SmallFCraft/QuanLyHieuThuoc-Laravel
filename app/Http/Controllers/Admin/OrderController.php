@@ -27,7 +27,7 @@ class OrderController extends Controller
 
         // Filter by status if provided
         if ($request->has('status') && $request->status) {
-            $query->where('status', $request->status);
+            $query->where('trang_thai', $request->status);
         }
 
         $orders = $query->orderBy('created_at', 'desc')->paginate(20);

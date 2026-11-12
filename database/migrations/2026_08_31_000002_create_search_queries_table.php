@@ -15,7 +15,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('search_queries', function (Blueprint $table) {
+        Schema::create('truy_van_tim_kiems', function (Blueprint $table) {
             $table->id();
 
             // Khoá gộp là dạng đã fold: "Vitamin C", "vitamin c" và "vitamin  C"
@@ -37,6 +37,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('search_queries');
+        Schema::dropIfExists('truy_van_tim_kiems');
     }
 };

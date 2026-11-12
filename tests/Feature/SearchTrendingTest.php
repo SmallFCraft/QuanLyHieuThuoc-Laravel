@@ -24,17 +24,16 @@ class SearchTrendingTest extends TestCase
 
         Cache::flush();
 
-        $danhMuc = DanhMuc::create(['name' => 'Vitamin & Khoáng chất']);
+        $danhMuc = DanhMuc::create(['ten' => 'Vitamin & Khoáng chất']);
 
-        SanPham::create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Viên uống Vitamin C 1000mg DHC',
-            'ingredients' => 'Vitamin C 1000mg',
-            'price' => 120000,
-            'expiration_date' => now()->addYears(2),
-            'stock_quantity' => 40,
-            'reorder_point' => 10,
-            'batch_number' => 'LC-vitc',
+        SanPham::create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Viên uống Vitamin C 1000mg DHC',
+            'thanh_phan' => 'Vitamin C 1000mg',
+            'gia' => 120000,
+            'ngay_het_han' => now()->addYears(2),
+            'so_luong_ton' => 40,
+            'muc_canh_bao' => 10,
+            'so_lo' => 'LC-vitc',
         ]);
     }
 
@@ -76,7 +75,7 @@ class SearchTrendingTest extends TestCase
     {
         // Pill xu hướng là chữ khách gõ hiện trên trang chủ, nên nó đi qua đúng
         // blacklist mà chatbot dùng.
-        SanPham::where('MaSP', '>', 0)->update(['name' => 'Thuốc ngu người', 'name_folded' => 'thuoc ngu nguoi']);
+        SanPham::where('ma_sp', '>', 0)->update(['ten' => 'Thuốc ngu người', 'ten_khong_dau' => 'thuoc ngu nguoi']);
 
         $this->search('ngu');
 

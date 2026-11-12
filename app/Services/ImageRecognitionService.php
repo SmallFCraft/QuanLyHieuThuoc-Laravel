@@ -89,7 +89,7 @@ class ImageRecognitionService
             
             if (empty($analysisResult['products'])) {
                 Log::warning('No products recognized from prescription image', [
-                    'MaKH' => $userId,
+                    'ma_nd' => $userId,
                     'description' => $analysisResult['description'] ?? 'N/A'
                 ]);
                 
@@ -112,7 +112,7 @@ class ImageRecognitionService
                 modelId: null,
                 oldValues: null,
                 newValues: [
-                    'MaKH' => $userId,
+                    'ma_nd' => $userId,
                     'image_type' => 'prescription',
                     'products_recognized' => count($matched),
                     'processing_time_ms' => $processingTime
@@ -130,7 +130,7 @@ class ImageRecognitionService
             ];
         } catch (\Exception $e) {
             Log::error('Prescription processing failed', [
-                'MaKH' => $userId,
+                'ma_nd' => $userId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -182,7 +182,7 @@ class ImageRecognitionService
             
             if (empty($analysisResult['products'])) {
                 Log::warning('No products recognized from receipt image', [
-                    'MaKH' => $userId,
+                    'ma_nd' => $userId,
                     'description' => $analysisResult['description'] ?? 'N/A'
                 ]);
                 
@@ -205,7 +205,7 @@ class ImageRecognitionService
                 modelId: null,
                 oldValues: null,
                 newValues: [
-                    'MaKH' => $userId,
+                    'ma_nd' => $userId,
                     'image_type' => 'receipt',
                     'products_recognized' => count($matched),
                     'processing_time_ms' => $processingTime
@@ -223,7 +223,7 @@ class ImageRecognitionService
             ];
         } catch (\Exception $e) {
             Log::error('Receipt processing failed', [
-                'MaKH' => $userId,
+                'ma_nd' => $userId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -504,7 +504,7 @@ PROMPT;
         $this->lastStoredImageId = null;
 
         $stored = AnhChatbot::create([
-            'MaKH' => $userId,
+            'ma_nd' => $userId,
             'session_id' => $sessionId,
             'filename' => $filename,
             'original_name' => $anh->getClientOriginalName(),
@@ -515,7 +515,7 @@ PROMPT;
             'image_type' => $type
         ]);
 
-        $this->lastStoredImageId = (int) $stored->MaAnh;
+        $this->lastStoredImageId = (int) $stored->ma_anh;
 
         // Resolve through the disk rather than storage_path(): the hardcoded root
         // duplicated filesystems.local and made Storage::fake() unusable, so every
@@ -530,10 +530,10 @@ PROMPT;
             return;
         }
 
-        $anh = AnhChatbot::where('MaKH', $userId)
+        $anh = AnhChatbot::where('ma_nd', $userId)
             ->where('session_id', $sessionId)
             ->where('image_type', $type)
-            ->latest('MaAnh')
+            ->latest('ma_anh')
             ->first();
 
         if (!$anh) {
@@ -553,10 +553,10 @@ PROMPT;
             return;
         }
 
-        $anh = AnhChatbot::where('MaKH', $userId)
+        $anh = AnhChatbot::where('ma_nd', $userId)
             ->where('session_id', $sessionId)
             ->where('image_type', $type)
-            ->latest('MaAnh')
+            ->latest('ma_anh')
             ->first();
 
         if (!$anh) {
@@ -607,12 +607,12 @@ PROMPT;
                     'parsed_name' => $productName,
                     'matched' => true,
                     'product' => [
-                        'id' => $sanPham->MaSP,
-                        'name' => $sanPham->name,
+                        'id' => $sanPham->ma_sp,
+                        'name' => $sanPham->ten,
                         'price' => $sanPham->price_vnd,
-                        'stock_quantity' => $sanPham->stock_quantity,
+                        'stock_quantity' => $sanPham->so_luong_ton,
                         'image_url' => $sanPham->image_url,
-                        'expiration_date' => $sanPham->expiration_date,
+                        'expiration_date' => $sanPham->ngay_het_han,
                         'is_expired' => $sanPham->isExpired(),
                     ],
                     'quantity' => $parsedProduct['quantity'] ?? 1,
@@ -655,8 +655,8 @@ PROMPT;
         
         // Try exact match first
         $sanPham = SanPham::notExpired()
-            ->where('stock_quantity', '>', 0)
-            ->where('name', 'LIKE', $name)
+            ->where('so_luong_ton', '>', 0)
+            ->where('ten', 'LIKE', $name)
             ->FEFO()
             ->first();
             
@@ -666,11 +666,11 @@ PROMPT;
         
         // Try partial match with cleaned name
         $sanPham = SanPham::notExpired()
-            ->where('stock_quantity', '>', 0)
+            ->where('so_luong_ton', '>', 0)
             ->where(function($query) use ($name, $cleanName) {
-                $query->where('name', 'LIKE', "%{$name}%")
-                      ->orWhere('name', 'LIKE', "%{$cleanName}%")
-                      ->orWhere('ingredients', 'LIKE', "%{$cleanName}%");
+                $query->where('ten', 'LIKE', "%{$name}%")
+                      ->orWhere('ten', 'LIKE', "%{$cleanName}%")
+                      ->orWhere('thanh_phan', 'LIKE', "%{$cleanName}%");
             })
             ->FEFO()
             ->first();
@@ -702,12 +702,12 @@ PROMPT;
         }
 
         $query = SanPham::notExpired()
-            ->where('stock_quantity', '>', 0);
+            ->where('so_luong_ton', '>', 0);
 
         foreach ($meaningfulWords as $word) {
             $query->where(function($q) use ($word) {
-                $q->where('name', 'LIKE', "%{$word}%")
-                  ->orWhere('ingredients', 'LIKE', "%{$word}%");
+                $q->where('ten', 'LIKE', "%{$word}%")
+                  ->orWhere('thanh_phan', 'LIKE', "%{$word}%");
             });
         }
 
@@ -723,7 +723,7 @@ PROMPT;
     {
         return $this->hasVitaminLetterConflict(
             $this->normalizeProductText($this->buildProviderIdentityText($parsedProduct)),
-            $this->normalizeProductText(implode(' ', array_filter([$sanPham->name, $sanPham->ingredients])))
+            $this->normalizeProductText(implode(' ', array_filter([$sanPham->ten, $sanPham->thanh_phan])))
         );
     }
 
@@ -739,7 +739,7 @@ PROMPT;
 
         $candidates = SanPham::with('danhMuc')
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
+            ->where('so_luong_ton', '>', 0)
             ->FEFO()
             ->get()
             ->map(function (SanPham $sanPham) use ($parsedProduct, $identityTokens) {
@@ -761,16 +761,16 @@ PROMPT;
         // identify either of them. Reporting one as "found in stock" would be a
         // guess, so leave it unmatched and let the caller offer suggestions.
         // Same-name rows (different batches) are not rivals - FEFO already picked one.
-        $bestName = $this->normalizeProductText($best['product']->name);
+        $bestName = $this->normalizeProductText($best['product']->ten);
         $rival = $candidates
-            ->first(fn (array $candidate): bool => $this->normalizeProductText($candidate['product']->name) !== $bestName);
+            ->first(fn (array $candidate): bool => $this->normalizeProductText($candidate['product']->ten) !== $bestName);
 
         if ($rival !== null && ($best['score'] - $rival['score']) < self::IDENTITY_MATCH_MIN_MARGIN) {
             Log::info('Vision product match rejected as ambiguous', [
                 'parsed_name' => $parsedProduct['name'] ?? null,
-                'best' => $best['product']->name,
+                'best' => $best['product']->ten,
                 'best_score' => $best['score'],
-                'rival' => $rival['product']->name,
+                'rival' => $rival['product']->ten,
                 'rival_score' => $rival['score'],
             ]);
 
@@ -851,10 +851,10 @@ PROMPT;
         $parsedName = trim((string) ($parsedProduct['name'] ?? ''));
         $normalizedParsedName = $this->normalizeProductText($parsedName);
         $normalizedCleanParsedName = $this->normalizeProductText($this->cleanProductName($parsedName));
-        $normalizedProductName = $this->normalizeProductText($sanPham->name);
+        $normalizedProductName = $this->normalizeProductText($sanPham->ten);
         $normalizedProductText = $this->normalizeProductText(implode(' ', array_filter([
-            $sanPham->name,
-            $sanPham->ingredients,
+            $sanPham->ten,
+            $sanPham->thanh_phan,
         ])));
 
         $identityText = $this->normalizeProductText($this->buildProviderIdentityText($parsedProduct));
@@ -938,18 +938,18 @@ PROMPT;
         $identityScore = $this->scoreProductIdentity($parsedProduct, $identityTokens, $sanPham);
 
         $productText = $this->normalizeProductText(implode(' ', array_filter([
-            $sanPham->name,
-            $sanPham->ingredients,
-            $sanPham->usage,
-            $sanPham->danhMuc?->name,
+            $sanPham->ten,
+            $sanPham->thanh_phan,
+            $sanPham->cach_dung,
+            $sanPham->danhMuc?->ten,
         ])));
 
         // Family affinity is judged on name/ingredients only: every supplement in
         // the catalog shares the category name "Vitamin va khoang chat", so using
         // the category here would give the bonus to all of them equally.
         $productIdentityText = $this->normalizeProductText(implode(' ', array_filter([
-            $sanPham->name,
-            $sanPham->ingredients,
+            $sanPham->ten,
+            $sanPham->thanh_phan,
         ])));
 
         $contextTokens = array_values(array_diff(
@@ -1063,7 +1063,7 @@ PROMPT;
     protected function calculateMatchConfidenceFromParsedData(array $parsedProduct, SanPham $sanPham): float
     {
         $parsedName = trim((string) ($parsedProduct['name'] ?? ''));
-        $baseConfidence = $this->calculateMatchConfidence($parsedName, $sanPham->name);
+        $baseConfidence = $this->calculateMatchConfidence($parsedName, $sanPham->ten);
         $identityTokens = $this->extractMeaningfulProductTokens(
             $this->buildProviderIdentityText($parsedProduct)
         );
@@ -1116,7 +1116,7 @@ PROMPT;
 
         $sanPhams = SanPham::with('danhMuc')
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
+            ->where('so_luong_ton', '>', 0)
             ->FEFO()
             ->get()
             ->map(function (SanPham $sanPham) use ($parsedProduct, $queryText, $words) {
@@ -1132,10 +1132,10 @@ PROMPT;
 
         return $sanPhams->map(function(SanPham $sanPham) {
             return [
-                'id' => $sanPham->MaSP,
-                'name' => $sanPham->name,
+                'id' => $sanPham->ma_sp,
+                'name' => $sanPham->ten,
                 'price' => $sanPham->price_vnd,
-                'stock_quantity' => $sanPham->stock_quantity
+                'stock_quantity' => $sanPham->so_luong_ton
             ];
         })->toArray();
     }

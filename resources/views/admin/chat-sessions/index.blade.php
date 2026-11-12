@@ -122,8 +122,8 @@
                             $displayId = 'CHAT-' . strtoupper(substr($session->session_id, 0, 8));
                             $startedAt = \Carbon\Carbon::parse($session->started_at);
                             $lastMessageAt = \Carbon\Carbon::parse($session->last_message_at);
-                            $userName = $session->nguoiDung?->name ?? 'Không rõ';
-                            $userMeta = $session->nguoiDung?->email ?? 'User #' . $session->MaKH;
+                            $userName = $session->nguoiDung?->ho_ten ?? 'Không rõ';
+                            $userMeta = $session->nguoiDung?->email ?? 'User #' . $session->ma_nd;
                         @endphp
                         <tr>
                             <td>
@@ -161,8 +161,8 @@
                 @php
                     $displayId = 'CHAT-' . strtoupper(substr($session->session_id, 0, 8));
                     $lastMessageAt = \Carbon\Carbon::parse($session->last_message_at);
-                    $userName = $session->nguoiDung?->name ?? 'Không rõ';
-                    $userMeta = $session->nguoiDung?->email ?? 'User #' . $session->MaKH;
+                    $userName = $session->nguoiDung?->ho_ten ?? 'Không rõ';
+                    $userMeta = $session->nguoiDung?->email ?? 'User #' . $session->ma_nd;
                 @endphp
                 <article class="admin-mobile-item">
                     <div class="d-flex justify-content-between gap-3">

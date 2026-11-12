@@ -38,9 +38,9 @@ class ProfileTest extends TestCase
 
         $nguoiDung->refresh();
 
-        $this->assertSame('Test User', $nguoiDung->name);
+        $this->assertSame('Test User', $nguoiDung->ho_ten);
         $this->assertSame('test@example.com', $nguoiDung->email);
-        $this->assertNull($nguoiDung->email_verified_at);
+        $this->assertNull($nguoiDung->thoi_diem_xac_thuc_email);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void
@@ -58,7 +58,7 @@ class ProfileTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect('/profile');
 
-        $this->assertNotNull($nguoiDung->refresh()->email_verified_at);
+        $this->assertNotNull($nguoiDung->refresh()->thoi_diem_xac_thuc_email);
     }
 
     public function test_user_can_delete_their_account(): void

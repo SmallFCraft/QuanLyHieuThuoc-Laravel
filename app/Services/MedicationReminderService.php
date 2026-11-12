@@ -37,7 +37,7 @@ class MedicationReminderService
      * `order_items` row per batch, so iterating rows directly would overwrite the
      * reminder and derive the course length from the last (smallest) batch.
      *
-     * Idempotent: keyed on MaDH + MaSP so replaying a status change cannot
+     * Idempotent: keyed on ma_dh + ma_sp so replaying a status change cannot
      * duplicate a schedule.
      */
     public function createFromOrder(DonHang $donHang): int
@@ -52,22 +52,22 @@ class MedicationReminderService
                 continue;
             }
 
-            $productId = (int) $item->MaSP;
-            $quantities[$productId] = ($quantities[$productId] ?? 0) + (int) $item->quantity;
+            $productId = (int) $item->ma_sp;
+            $quantities[$productId] = ($quantities[$productId] ?? 0) + (int) $item->so_luong;
             $sanPhams[$productId] = $item->sanPham;
         }
 
         foreach ($quantities as $productId => $quantity) {
             $sanPham = $sanPhams[$productId];
-            $timesPerDay = $this->parseTimesPerDay($sanPham->usage);
+            $timesPerDay = $this->parseTimesPerDay($sanPham->cach_dung);
 
             NhacUongThuoc::updateOrCreate(
                 [
-                    'MaDH' => $donHang->MaDH,
-                    'MaSP' => $productId,
+                    'ma_dh' => $donHang->ma_dh,
+                    'ma_sp' => $productId,
                 ],
                 [
-                    'MaKH' => $donHang->MaKH,
+                    'ma_nd' => $donHang->ma_nd,
                     'dosage_text' => $this->dosageText($sanPham),
                     'times_per_day' => $timesPerDay,
                     'duration_days' => $this->durationDays($quantity, $timesPerDay),
@@ -82,14 +82,14 @@ class MedicationReminderService
     }
 
     /**
-     * `products.usage` is free text written through a WYSIWYG editor, so it can be
+     * `san_phams.cach_dung` is free text written through a WYSIWYG editor, so it can be
      * longer than the column and can carry markup. Truncate rather than let a
      * strict-mode insert abort the order transaction.
      */
     private function dosageText(\App\Models\SanPham $sanPham): string
     {
-        $raw = trim(strip_tags((string) ($sanPham->usage ?? '')));
-        $text = $raw !== '' ? $raw : (string) $sanPham->name;
+        $raw = trim(strip_tags((string) ($sanPham->cach_dung ?? '')));
+        $text = $raw !== '' ? $raw : (string) $sanPham->ten;
 
         return mb_substr($text, 0, self::MAX_DOSAGE_TEXT);
     }
@@ -157,14 +157,14 @@ class MedicationReminderService
                     } catch (\Throwable $e) {
                         // A broken mailbox must not stall the rest of the batch.
                         Log::warning('Medication reminder mail failed', [
-                            'MaNN' => $nhacUong->MaNN,
+                            'ma_nn' => $nhacUong->ma_nn,
                             'error' => $e->getMessage(),
                         ]);
                     }
 
                     $nhacUong->advanceSchedule();
                 }
-            }, 'MaNN');
+            }, 'ma_nn');
 
         return $sent;
     }
@@ -189,10 +189,10 @@ class MedicationReminderService
     /**
      * Stop reminding a specific user about a specific product, across every order.
      */
-    public function cancelForUser(int $userId, int $MaSP): void
+    public function cancelForUser(int $userId, int $maSp): void
     {
-        NhacUongThuoc::where('MaKH', $userId)
-            ->where('MaSP', $MaSP)
+        NhacUongThuoc::where('ma_nd', $userId)
+            ->where('ma_sp', $maSp)
             ->where('status', 'active')
             ->update([
                 'status' => 'cancelled',

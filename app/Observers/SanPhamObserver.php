@@ -14,13 +14,13 @@ class SanPhamObserver
     public function created(SanPham $sanPham): void
     {
         // Auto-create a batch when product is created
-        if ($sanPham->batch_number && $sanPham->expiration_date) {
+        if ($sanPham->so_lo && $sanPham->ngay_het_han) {
             LoSanPham::create([
-                'MaSP' => $sanPham->MaSP,
-                'batch_number' => $sanPham->batch_number,
-                'expiration_date' => $sanPham->expiration_date,
-                'stock_quantity' => $sanPham->stock_quantity ?? 0,
-                'reorder_point' => $sanPham->reorder_point ?? 10,
+                'ma_sp' => $sanPham->ma_sp,
+                'so_lo' => $sanPham->so_lo,
+                'ngay_het_han' => $sanPham->ngay_het_han,
+                'so_luong_ton' => $sanPham->so_luong_ton ?? 0,
+                'muc_canh_bao' => $sanPham->muc_canh_bao ?? 10,
             ]);
         }
 

@@ -32,10 +32,10 @@ class CheckoutController extends Controller
 
         // OPTIMIZED: Load all products in 1 query instead of N+1
         $productIds = array_keys($cart);
-        $sanPhams = SanPham::whereIn('MaSP', $productIds)
+        $sanPhams = SanPham::whereIn('ma_sp', $productIds)
             ->notExpired()
             ->get()
-            ->keyBy('MaSP');
+            ->keyBy('ma_sp');
         
         $cartItems = [];
         $total = 0;
@@ -43,7 +43,7 @@ class CheckoutController extends Controller
         foreach ($cart as $productId => $quantity) {
             if (isset($sanPhams[$productId])) {
                 $sanPham = $sanPhams[$productId];
-                if ($sanPham->stock_quantity >= $quantity) {
+                if ($sanPham->so_luong_ton >= $quantity) {
                     $cartItems[] = [
                         'sanPham' => $sanPham,
                         'quantity' => $quantity,
@@ -120,10 +120,10 @@ class CheckoutController extends Controller
                     ]
                 );
 
-                Cache::put($completedKey, $donHang->MaDH, now()->addMinutes(10));
+                Cache::put($completedKey, $donHang->ma_dh, now()->addMinutes(10));
                 session()->forget('cart');
 
-                return redirect()->route('checkout.success', $donHang->MaDH)
+                return redirect()->route('checkout.success', $donHang->ma_dh)
                     ->with('success', 'Đặt hàng thành công!');
             });
         } catch (LockTimeoutException) {

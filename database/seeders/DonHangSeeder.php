@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Product;
-use App\Models\User;
+use App\Models\DonHang;
+use App\Models\ChiTietDonHang;
+use App\Models\SanPham;
+use App\Models\NguoiDung;
 use Illuminate\Database\Seeder;
 use Carbon\Carbon;
 
@@ -16,7 +16,7 @@ class DonHangSeeder extends Seeder
      */
     public function run(): void
     {
-        $nguoiDungs = NguoiDung::where('role', 'User')->get();
+        $nguoiDungs = NguoiDung::where('vai_tro', 'User')->get();
         $sanPhams = SanPham::all();
         
         if ($nguoiDungs->isEmpty() || $sanPhams->isEmpty()) {
@@ -48,11 +48,11 @@ class DonHangSeeder extends Seeder
             
             // Create order
             $donHang = DonHang::create([
-                'MaKH' => $nguoiDung->MaKH,
-                'total_amount' => 0, // Will be calculated after adding items
-                'status' => $status,
-                'shipping_address' => $addresses[array_rand($addresses)],
-                'shipping_phone' => $phones[array_rand($phones)],
+                'ma_nd' => $nguoiDung->ma_nd,
+                'tong_tien' => 0, // Will be calculated after adding items
+                'trang_thai' => $status,
+                'dia_chi_giao_hang' => $addresses[array_rand($addresses)],
+                'sdt_giao_hang' => $phones[array_rand($phones)],
                 'created_at' => Carbon::now()->subDays(rand(1, 30)),
             ]);
 
@@ -69,19 +69,19 @@ class DonHangSeeder extends Seeder
                 $lo = $sanPham->cacLo()->first();
                 
                 ChiTietDonHang::create([
-                    'MaDH' => $donHang->MaDH,
-                    'MaSP' => $sanPham->MaSP,
-                    'MaLo' => $lo ? $lo->MaLo : null,
-                    'quantity' => $quantity,
-                    'unit_price' => $unitPrice,
-                    'batch_number' => $sanPham->batch_number,
+                    'ma_dh' => $donHang->ma_dh,
+                    'ma_sp' => $sanPham->ma_sp,
+                    'ma_lo' => $lo ? $lo->ma_lo : null,
+                    'so_luong' => $quantity,
+                    'don_gia' => $unitPrice,
+                    'so_lo' => $sanPham->so_lo,
                 ]);
                 
                 $totalAmount += $quantity * $unitPrice;
             }
             
             // Update order total amount
-            $donHang->update(['total_amount' => $totalAmount]);
+            $donHang->update(['tong_tien' => $totalAmount]);
         }
         
         $this->command->info('Created 20 orders with various statuses');

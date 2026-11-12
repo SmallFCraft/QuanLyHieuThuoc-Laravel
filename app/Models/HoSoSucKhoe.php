@@ -7,12 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class HoSoSucKhoe extends Model
 {
-    protected $table = 'user_health_profiles';
+    protected $table = 'ho_so_suc_khoes';
 
-    protected $primaryKey = 'MaHS';
+    protected $primaryKey = 'ma_hs';
 
     protected $fillable = [
-        'MaKH',
+        'ma_nd',
         'allergies',
         'chronic_conditions',
         'current_medications',
@@ -46,7 +46,7 @@ class HoSoSucKhoe extends Model
 
     public function nguoiDung()
     {
-        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'ma_nd', 'ma_nd');
     }
 
     /**
@@ -126,6 +126,6 @@ class HoSoSucKhoe extends Model
      */
     public static function consentedFor(int $userId): ?self
     {
-        return static::where('MaKH', $userId)->consented()->first();
+        return static::where('ma_nd', $userId)->consented()->first();
     }
 }

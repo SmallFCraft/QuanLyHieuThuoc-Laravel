@@ -36,18 +36,17 @@ class ImageRecognitionServiceTest extends TestCase
             $this->createMock(AiProviderService::class)
         );
 
-        $this->danhMuc = DanhMuc::factory()->create(['name' => 'Vitamin và khoáng chất']);
+        $this->danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin và khoáng chất']);
     }
 
     protected function createProduct(string $name, string $ingredients = '', string $usage = ''): SanPham
     {
-        return SanPham::factory()->create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'name' => $name,
-            'ingredients' => $ingredients,
-            'usage' => $usage,
-            'stock_quantity' => 50,
-            'expiration_date' => now()->addYear(),
+        return SanPham::factory()->create(['ma_dm' => $this->danhMuc->ma_dm,
+            'ten' => $name,
+            'thanh_phan' => $ingredients,
+            'cach_dung' => $usage,
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
         ]);
     }
 
@@ -120,7 +119,7 @@ class ImageRecognitionServiceTest extends TestCase
         ]]);
 
         $this->assertTrue($matched[0]['matched']);
-        $this->assertSame($sanPham->MaSP, $matched[0]['product']['id']);
+        $this->assertSame($sanPham->ma_sp, $matched[0]['product']['id']);
     }
 
     public function test_exact_product_name_is_matched(): void
@@ -134,7 +133,7 @@ class ImageRecognitionServiceTest extends TestCase
         ]]);
 
         $this->assertTrue($matched[0]['matched']);
-        $this->assertSame($sanPham->MaSP, $matched[0]['product']['id']);
+        $this->assertSame($sanPham->ma_sp, $matched[0]['product']['id']);
         $this->assertGreaterThanOrEqual(0.9, $matched[0]['confidence']);
     }
 
@@ -148,7 +147,7 @@ class ImageRecognitionServiceTest extends TestCase
         ]]);
 
         $this->assertTrue($matched[0]['matched']);
-        $this->assertSame($sanPham->MaSP, $matched[0]['product']['id']);
+        $this->assertSame($sanPham->ma_sp, $matched[0]['product']['id']);
     }
 
     public function test_dosage_decides_between_two_strengths_of_the_same_medicine(): void
@@ -163,24 +162,22 @@ class ImageRecognitionServiceTest extends TestCase
         ]]);
 
         $this->assertTrue($matched[0]['matched']);
-        $this->assertSame($target->MaSP, $matched[0]['product']['id']);
+        $this->assertSame($target->ma_sp, $matched[0]['product']['id']);
     }
 
     public function test_same_product_in_two_batches_is_not_treated_as_ambiguous(): void
     {
-        $earliest = SanPham::factory()->create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'name' => 'Vitamin C 1000mg',
-            'ingredients' => 'Acid ascorbic 1000mg',
-            'stock_quantity' => 10,
-            'expiration_date' => now()->addMonths(3),
+        $earliest = SanPham::factory()->create(['ma_dm' => $this->danhMuc->ma_dm,
+            'ten' => 'Vitamin C 1000mg',
+            'thanh_phan' => 'Acid ascorbic 1000mg',
+            'so_luong_ton' => 10,
+            'ngay_het_han' => now()->addMonths(3),
         ]);
-        SanPham::factory()->create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'name' => 'Vitamin C 1000mg',
-            'ingredients' => 'Acid ascorbic 1000mg',
-            'stock_quantity' => 40,
-            'expiration_date' => now()->addYears(2),
+        SanPham::factory()->create(['ma_dm' => $this->danhMuc->ma_dm,
+            'ten' => 'Vitamin C 1000mg',
+            'thanh_phan' => 'Acid ascorbic 1000mg',
+            'so_luong_ton' => 40,
+            'ngay_het_han' => now()->addYears(2),
         ]);
 
         $matched = $this->service->matchProducts([[
@@ -189,6 +186,6 @@ class ImageRecognitionServiceTest extends TestCase
         ]]);
 
         $this->assertTrue($matched[0]['matched']);
-        $this->assertSame($earliest->MaSP, $matched[0]['product']['id'], 'FEFO batch should win');
+        $this->assertSame($earliest->ma_sp, $matched[0]['product']['id'], 'FEFO batch should win');
     }
 }

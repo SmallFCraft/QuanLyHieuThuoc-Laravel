@@ -2,7 +2,7 @@
 
 @section('title', 'Chi tiết sản phẩm')
 @section('page-title', 'Chi tiết sản phẩm')
-@section('page-subtitle', $product->name)
+@section('page-subtitle', $product->ten)
 
 @section('content')
 <div class="container-fluid px-0">
@@ -18,7 +18,7 @@
         <div class="col-lg-4">
             <section class="admin-card h-100">
                 @if($product->image_url)
-                    <img src="{{ $product->image_url }}" alt="Ảnh {{ $product->name }}" class="admin-product-media">
+                    <img src="{{ $product->image_url }}" alt="Ảnh {{ $product->ten }}" class="admin-product-media">
                 @else
                     <div class="admin-product-placeholder">
                         <div class="text-center">
@@ -29,12 +29,12 @@
                 @endif
 
                 <div class="mt-3">
-                    <h2 class="h5 fw-bold mb-1">{{ $product->name }}</h2>
+                    <h2 class="h5 fw-bold mb-1">{{ $product->ten }}</h2>
                     <div class="text-secondary small">Mã sản phẩm {{ $product->display_code }}</div>
                 </div>
 
                 <div class="d-grid gap-2 mt-4">
-                    <a href="{{ route('admin.products.edit', $product->MaSP) }}" class="btn btn-warning">
+                    <a href="{{ route('admin.products.edit', $product->ma_sp) }}" class="btn btn-warning">
                         <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Chỉnh sửa
                     </a>
                     <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary">
@@ -55,13 +55,13 @@
                 <div class="col-sm-6 col-xl-3">
                     <div class="stat-card {{ $product->isLowStock() ? 'expiring' : 'revenue' }}">
                         <p class="stat-label">Tồn kho</p>
-                        <div class="stat-value">{{ $product->stock_quantity }}</div>
+                        <div class="stat-value">{{ $product->so_luong_ton }}</div>
                     </div>
                 </div>
                 <div class="col-sm-6 col-xl-3">
                     <div class="stat-card orders">
                         <p class="stat-label">Ngưỡng cảnh báo</p>
-                        <div class="stat-value">{{ $product->reorder_point }}</div>
+                        <div class="stat-value">{{ $product->muc_canh_bao }}</div>
                     </div>
                 </div>
                 <div class="col-sm-6 col-xl-3">
@@ -84,13 +84,13 @@
                     <div class="col-md-6">
                         <div class="border rounded p-3 h-100">
                             <div class="text-secondary small">Danh mục</div>
-                            <div class="fw-semibold">{{ $product->danhMuc->name ?? 'Chưa phân loại' }}</div>
+                            <div class="fw-semibold">{{ $product->danhMuc->ten ?? 'Chưa phân loại' }}</div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="border rounded p-3 h-100">
                             <div class="text-secondary small">Số lô</div>
-                            <div class="fw-semibold">{{ $product->batch_number }}</div>
+                            <div class="fw-semibold">{{ $product->so_lo }}</div>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -129,11 +129,11 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <h3 class="h6 fw-bold">Thành phần</h3>
-                        <div class="text-secondary">{!! $product->ingredients ?: '<em>Chưa có thông tin.</em>' !!}</div>
+                        <div class="text-secondary">{!! $product->thanh_phan ?: '<em>Chưa có thông tin.</em>' !!}</div>
                     </div>
                     <div class="col-md-6">
                         <h3 class="h6 fw-bold">Hướng dẫn sử dụng</h3>
-                        <div class="text-secondary">{!! $product->usage ?: '<em>Chưa có thông tin.</em>' !!}</div>
+                        <div class="text-secondary">{!! $product->cach_dung ?: '<em>Chưa có thông tin.</em>' !!}</div>
                     </div>
                 </div>
             </section>

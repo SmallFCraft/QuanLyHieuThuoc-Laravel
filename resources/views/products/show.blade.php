@@ -1,23 +1,23 @@
 @extends('layouts.app')
 
-@section('title', $product->name . ' - Nhà Thuốc Sinh Thái')
+@section('title', $product->ten . ' - Nhà Thuốc Sinh Thái')
 
 @php
     $discountPrice = $product->price_vnd * 1.1;
-    $inStock = $product->stock_quantity > 0;
-    $hasIngredients = filled($product->ingredients);
-    $hasUsage = filled($product->usage);
+    $inStock = $product->so_luong_ton > 0;
+    $hasIngredients = filled($product->thanh_phan);
+    $hasUsage = filled($product->cach_dung);
 @endphp
 
 @section('content')
-<div class="product-detail-page" data-product-id="{{ $product->MaSP }}">
+<div class="product-detail-page" data-product-id="{{ $product->ma_sp }}">
     <section class="product-detail-hero product-detail-hero--rich">
         <div class="container position-relative">
             <nav aria-label="breadcrumb" class="product-detail-breadcrumb">
                 <ol class="breadcrumb mb-0 small">
                     <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('messages.home') }}</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('products.index') }}">{{ __('messages.products') }}</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">{{ $product->name }}</li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ $product->ten }}</li>
                 </ol>
             </nav>
 
@@ -28,7 +28,7 @@
                             <div class="product-image-main" data-product-image-container>
                                 <x-product-image
                                     :src="$product->image_url"
-                                    :alt="$product->name"
+                                    :alt="$product->ten"
                                     class="w-100 h-100 object-fit-cover product-main-img"
                                     id="mainProductImage"
                                     icon-size="4rem"
@@ -37,7 +37,7 @@
                                 @auth
                                     <button class="product-favorite-media-button" type="button"
                                             data-favorite-toggle
-                                            data-product-id="{{ $product->MaSP }}"
+                                            data-product-id="{{ $product->ma_sp }}"
                                             data-favorite-label="{{ __('messages.save_favorite') }}"
                                             data-saved-label="{{ __('messages.saved_favorite') }}"
                                             aria-pressed="false"
@@ -61,7 +61,7 @@
                         <div class="product-mini-metrics">
                             <div>
                                 <i class="bi bi-eye"></i>
-                                <span>{{ number_format($product->views_count, 0, ',', '.') }}</span>
+                                <span>{{ number_format($product->luot_xem, 0, ',', '.') }}</span>
                                 <small>lượt xem</small>
                             </div>
                             @if($product->shelf_life_text)
@@ -81,8 +81,8 @@
                             <span class="product-status-chip product-status-chip--trust">
                                 <i class="bi bi-patch-check-fill"></i>{{ __('messages.product_detail_badge') }}
                             </span>
-                            <a href="{{ route('products.category', $product->MaDM) }}" class="product-status-chip product-status-chip--link">
-                                <i class="bi bi-bookmark"></i>{{ $product->danhMuc->name }}
+                            <a href="{{ route('products.category', $product->ma_dm) }}" class="product-status-chip product-status-chip--link">
+                                <i class="bi bi-bookmark"></i>{{ $product->danhMuc->ten }}
                             </a>
                             @if($inStock)
                                 <span class="product-status-chip product-status-chip--success">
@@ -96,7 +96,7 @@
                             @endif
                         </div>
 
-                        <h1 class="product-detail-title">{{ $product->name }}</h1>
+                        <h1 class="product-detail-title">{{ $product->ten }}</h1>
                         <p class="product-detail-subtitle">{{ __('messages.product_detail_subtitle') }}</p>
 
                         <div class="product-price-card">
@@ -154,7 +154,7 @@
                         @if($inStock)
                             <form action="{{ route('cart.add') }}" method="POST" class="product-buy-panel js-add-to-cart-form" id="buy-panel">
                                 @csrf
-                                <input type="hidden" name="MaSP" value="{{ $product->MaSP }}">
+                                <input type="hidden" name="MaSP" value="{{ $product->ma_sp }}">
 
                                 <div class="product-quantity-row">
                                     <div>
@@ -166,7 +166,7 @@
                                         </button>
                                         {{-- max still bounds the input so the cart cannot be handed an
                                              unfillable quantity; the ceiling itself is not shown. --}}
-                                        <input type="number" name="quantity" id="qty-input" value="1" min="1" max="{{ $product->stock_quantity }}" data-unit-price="{{ $product->price_vnd }}">
+                                        <input type="number" name="quantity" id="qty-input" value="1" min="1" max="{{ $product->so_luong_ton }}" data-unit-price="{{ $product->price_vnd }}">
                                         <button type="button" onclick="changeQty(1)" aria-label="Tăng số lượng">
                                             <i class="bi bi-plus"></i>
                                         </button>
@@ -251,7 +251,7 @@
                                     </div>
                                     <div>
                                         <span>{{ __('messages.product_category') }}</span>
-                                        <strong>{{ $product->danhMuc->name }}</strong>
+                                        <strong>{{ $product->danhMuc->ten }}</strong>
                                     </div>
                                     <div>
                                         <span>{{ __('messages.stock_status') }}</span>
@@ -268,13 +268,13 @@
 
                             @if($hasIngredients)
                                 <div class="tab-pane fade" id="ingredients" role="tabpanel">
-                                    <div class="product-long-text">{{ $product->ingredients }}</div>
+                                    <div class="product-long-text">{{ $product->thanh_phan }}</div>
                                 </div>
                             @endif
 
                             @if($hasUsage)
                                 <div class="tab-pane fade" id="usage" role="tabpanel">
-                                    <div class="product-long-text">{{ $product->usage }}</div>
+                                    <div class="product-long-text">{{ $product->cach_dung }}</div>
                                 </div>
                             @endif
 
@@ -300,11 +300,11 @@
                         </details>
                         <details>
                             <summary>{{ __('messages.product_ingredients') }}</summary>
-                            <div class="product-long-text">{{ $product->ingredients ?: __('messages.not_available') }}</div>
+                            <div class="product-long-text">{{ $product->thanh_phan ?: __('messages.not_available') }}</div>
                         </details>
                         <details>
                             <summary>{{ __('messages.product_usage') }}</summary>
-                            <div class="product-long-text">{{ $product->usage ?: __('messages.not_available') }}</div>
+                            <div class="product-long-text">{{ $product->cach_dung ?: __('messages.not_available') }}</div>
                         </details>
                         <details>
                             <summary>{{ __('messages.safety_note') }}</summary>
@@ -352,7 +352,7 @@
                         <span>{{ __('messages.related_products_desc') }}</span>
                         <h2>{{ __('messages.related_products') }}</h2>
                     </div>
-                    <a href="{{ route('products.category', $product->MaDM) }}" class="product-text-link">
+                    <a href="{{ route('products.category', $product->ma_dm) }}" class="product-text-link">
                         {{ __('messages.home_view_all') }} <i class="bi bi-arrow-right"></i>
                     </a>
                 </div>
@@ -403,7 +403,7 @@
                             data-bs-dismiss="modal" aria-label="Close"></button>
                     <x-product-image
                         :src="$product->image_url"
-                        :alt="$product->name"
+                        :alt="$product->ten"
                         class="w-100 h-100 object-fit-contain rounded-4"
                         icon-size="4rem"
                         loading="eager"
@@ -418,9 +418,9 @@
 @push('scripts')
 <script>
 const productDetailState = {
-    id: @json((string) $product->MaSP),
-    name: @json($product->name),
-    shareUrl: @json(route('products.show', $product->MaSP)),
+    id: @json((string) $product->ma_sp),
+    name: @json($product->ten),
+    shareUrl: @json(route('products.show', $product->ma_sp)),
     copiedLabel: @json(__('messages.copied_link')),
 };
 

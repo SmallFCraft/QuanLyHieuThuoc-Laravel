@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class TinNhanChat extends Model
 {
-    protected $table = 'chat_messages';
+    protected $table = 'tin_nhan_chats';
 
-    protected $primaryKey = 'MaTN';
+    protected $primaryKey = 'ma_tn';
 
     /**
      * The attributes that are mass assignable.
@@ -16,7 +16,7 @@ class TinNhanChat extends Model
      * @var array<string>
      */
     protected $fillable = [
-        'MaKH',
+        'ma_nd',
         'session_id',
         'role',
         'content',
@@ -46,6 +46,6 @@ class TinNhanChat extends Model
      */
     public function nguoiDung()
     {
-        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'ma_nd', 'ma_nd');
     }
 }

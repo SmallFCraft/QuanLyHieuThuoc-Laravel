@@ -156,7 +156,7 @@
             <div class="d-flex align-items-center gap-3 flex-wrap">
                 <span class="rx-user small">
                     <span class="d-block opacity-75">{{ __('messages.pharmacist.signed_in_as') }}</span>
-                    <strong>{{ auth()->user()->name }}</strong>
+                    <strong>{{ auth()->user()->ho_ten }}</strong>
                 </span>
                 <form method="POST" action="{{ route('logout') }}" class="m-0">
                     @csrf

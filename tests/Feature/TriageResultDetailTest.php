@@ -34,29 +34,27 @@ class TriageResultDetailTest extends TestCase
     {
         parent::setUp();
 
-        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt', 'mo_ta' => 'Giảm đau, hạ sốt']);
         $this->seed(TriThucYTeSeeder::class);
 
         $this->service = app(MedicalTriageService::class);
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(34)->toDateString(),
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(34)->toDateString(),
         ]);
     }
 
     protected function stock(string $name, string $ingredients, string $usage, int $quantity = 50): SanPham
     {
-        return SanPham::create([
-            'MaDM' => DanhMuc::first()->MaDM,
-            'name' => $name,
-            'ingredients' => $ingredients,
-            'usage' => $usage,
-            'price' => 5000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => $quantity,
-            'reorder_point' => 5,
-            'batch_number' => 'B-' . uniqid(),
+        return SanPham::create(['ma_dm' => DanhMuc::first()->ma_dm,
+            'ten' => $name,
+            'thanh_phan' => $ingredients,
+            'cach_dung' => $usage,
+            'gia' => 5000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => $quantity,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'B-' . uniqid(),
         ]);
     }
 
@@ -66,17 +64,17 @@ class TriageResultDetailTest extends TestCase
     protected function runWizard(array $answers): PhienSangLoc
     {
         $this->actingAs($this->nguoiDung)->get(route('health.check'));
-        $phien = PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        $phien = PhienSangLoc::where('ma_nd', $this->nguoiDung->ma_nd)->inProgress()->latest('ma_sl')->firstOrFail();
 
         foreach ($answers as $step => $answer) {
-            $current = PhienSangLoc::find($phien->MaSL);
+            $current = PhienSangLoc::find($phien->ma_sl);
 
             if ($current === null || $current->status !== 'in_progress') {
                 break;
             }
 
             $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => $step,
                 'answer' => $answer,
             ]);
@@ -106,8 +104,8 @@ class TriageResultDetailTest extends TestCase
         $phien = $this->runWizard($this->headacheAnswers());
         $ids = collect($phien->suggested_products)->pluck('id');
 
-        $this->assertTrue($ids->contains($painkiller->MaSP));
-        $this->assertFalse($ids->contains($unrelated->MaSP));
+        $this->assertTrue($ids->contains($painkiller->ma_sp));
+        $this->assertFalse($ids->contains($unrelated->ma_sp));
     }
 
     public function test_no_matching_medicine_means_no_suggestion_at_all(): void
@@ -127,7 +125,7 @@ class TriageResultDetailTest extends TestCase
         $this->assertSame([], $phien->suggested_products);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.products_empty'));
     }
@@ -141,7 +139,7 @@ class TriageResultDetailTest extends TestCase
 
         $phien = $this->runWizard($this->headacheAnswers());
 
-        $this->assertSame($best->MaSP, $phien->suggested_products[0]['id']);
+        $this->assertSame($best->ma_sp, $phien->suggested_products[0]['id']);
     }
 
     public function test_a_diacritic_only_overlap_does_not_count_as_a_match(): void
@@ -168,8 +166,7 @@ class TriageResultDetailTest extends TestCase
 
         // An allergy rather than pregnancy: pregnancy fires its own red flag, which
         // routes to refer_doctor and suggests nothing, so it could never exercise this.
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'allergies' => ['ibuprofen'],
             'consented_at' => now(),
         ]);
@@ -182,7 +179,7 @@ class TriageResultDetailTest extends TestCase
         // The cart blocks this exact product one click later; the warning has to appear
         // where the suggestion is made.
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.safety_check_title'))
             ->assertSee(__('messages.health.product_has_warning'))
@@ -193,8 +190,7 @@ class TriageResultDetailTest extends TestCase
     {
         $this->stock('Ibuprofen 400mg', 'Ibuprofen 400mg', 'Giảm đau, hạ sốt, chống viêm', 200);
 
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'is_pregnant' => true,
             'consented_at' => now(),
         ]);
@@ -210,8 +206,7 @@ class TriageResultDetailTest extends TestCase
     {
         $this->stock('Paracetamol 500mg', 'Paracetamol 500mg', 'Giảm đau, hạ sốt', 100);
 
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'allergies' => ['penicillin'],
             'consented_at' => now(),
         ]);
@@ -220,7 +215,7 @@ class TriageResultDetailTest extends TestCase
 
         // Silence would read as "not checked".
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.safety_check_clear'))
             ->assertDontSee(__('messages.health.product_has_warning'));
@@ -233,7 +228,7 @@ class TriageResultDetailTest extends TestCase
         $phien = $this->runWizard($this->headacheAnswers());
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.safety_check_no_profile'))
             ->assertSee(route('profile.edit'), false);
@@ -246,7 +241,7 @@ class TriageResultDetailTest extends TestCase
         $phien = $this->runWizard($this->headacheAnswers());
 
         $content = $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->getContent();
 
@@ -268,7 +263,7 @@ class TriageResultDetailTest extends TestCase
         $this->assertSame('emergency', $phien->outcome);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.basis_red_flags_found'))
             ->assertDontSee(__('messages.health.basis_red_flags_cleared'));
@@ -283,7 +278,7 @@ class TriageResultDetailTest extends TestCase
 
         // The dosage is the part the customer needs; a 90-character cut removed it.
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee($usage, false);
     }
@@ -306,7 +301,7 @@ class TriageResultDetailTest extends TestCase
         // The "we found nothing in stock" wording must not appear where the decision
         // was "no medicine, see a human".
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.no_products'))
             ->assertDontSee(__('messages.health.products_empty'));
@@ -317,22 +312,22 @@ class TriageResultDetailTest extends TestCase
         $fresh = $this->stock('Paracetamol 500mg', 'Paracetamol 500mg', 'Giảm đau, hạ sốt', 100);
         $empty = $this->stock('Hapacol 650mg', 'Paracetamol 650mg', 'Giảm đau, hạ sốt', 0);
         $expired = $this->stock('Efferalgan 500mg', 'Paracetamol 500mg', 'Giảm đau, hạ sốt', 100);
-        $expired->forceFill(['expiration_date' => now()->subDay()])->save();
+        $expired->forceFill(['ngay_het_han' => now()->subDay()])->save();
 
         $phien = $this->runWizard($this->headacheAnswers());
         $ids = collect($phien->suggested_products)->pluck('id');
 
-        $this->assertTrue($ids->contains($fresh->MaSP));
-        $this->assertFalse($ids->contains($empty->MaSP));
-        $this->assertFalse($ids->contains($expired->MaSP));
+        $this->assertTrue($ids->contains($fresh->ma_sp));
+        $this->assertFalse($ids->contains($empty->ma_sp));
+        $this->assertFalse($ids->contains($expired->ma_sp));
     }
 
     public function test_a_symptom_with_no_catalog_query_suggests_nothing(): void
     {
         TrieuChungYTe::where('code', 'headache')->update(['catalog_query' => null]);
         QuyTacPhanTangYTe::whereIn(
-            'MaTC',
-            TrieuChungYTe::where('code', 'headache')->pluck('MaTC')
+            'ma_tc',
+            TrieuChungYTe::where('code', 'headache')->pluck('ma_tc')
         )->update(['suggest_categories' => []]);
 
         $this->stock('Paracetamol 500mg', 'Paracetamol 500mg', 'Giảm đau, hạ sốt', 100);
@@ -369,7 +364,7 @@ class TriageResultDetailTest extends TestCase
 
         // Grouped under its own heading so it is not read as a sixth wizard step.
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.answers_clarify_title'))
             ->assertSee('Cơn đau âm ỉ hay dữ dội ạ?', false)

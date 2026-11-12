@@ -65,7 +65,7 @@ class CleanupChatbotImages extends Command
                         $errorCount++;
 
                         Log::error('Failed to delete chatbot image', [
-                            'MaAnh' => $image->MaAnh,
+                            'ma_anh' => $image->ma_anh,
                             'file_path' => $image->file_path ?? $image->image_path,
                             'error' => $e->getMessage()
                         ]);

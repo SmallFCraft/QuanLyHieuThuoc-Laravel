@@ -22,14 +22,14 @@ class AdminOrdersExport implements FromCollection, WithHeadings, WithMapping, Sh
     {
         return DonHang::query()
             ->with('nguoiDung')
-            ->when($this->status, fn ($query) => $query->where('status', $this->status))
+            ->when($this->status, fn ($query) => $query->where('trang_thai', $this->status))
             ->when($this->search, function ($query) {
                 $search = $this->search;
 
                 $query->where(function ($inner) use ($search) {
-                    $inner->where('MaDH', 'like', "%{$search}%")
-                        ->orWhere('status', 'like', "%{$search}%")
-                        ->orWhereHas('nguoiDung', fn ($nguoiDungQuery) => $nguoiDungQuery->where('name', 'like', "%{$search}%"));
+                    $inner->where('ma_dh', 'like', "%{$search}%")
+                        ->orWhere('trang_thai', 'like', "%{$search}%")
+                        ->orWhereHas('nguoiDung', fn ($nguoiDungQuery) => $nguoiDungQuery->where('ho_ten', 'like', "%{$search}%"));
                 });
             })
             ->orderByDesc('created_at')
@@ -50,10 +50,10 @@ class AdminOrdersExport implements FromCollection, WithHeadings, WithMapping, Sh
     public function map($donHang): array
     {
         return [
-            '#' . $donHang->MaDH,
-            $donHang->nguoiDung->name ?? 'Khách hàng không tồn tại',
-            (int) round((float) $donHang->total_amount),
-            VietnameseHelper::getOrderStatusText($donHang->status),
+            '#' . $donHang->ma_dh,
+            $donHang->nguoiDung->ho_ten ?? 'Khách hàng không tồn tại',
+            (int) round((float) $donHang->tong_tien),
+            VietnameseHelper::getOrderStatusText($donHang->trang_thai),
             optional($donHang->created_at)->format('d/m/Y H:i'),
         ];
     }

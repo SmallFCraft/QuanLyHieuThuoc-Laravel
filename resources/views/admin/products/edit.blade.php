@@ -2,7 +2,7 @@
 
 @section('title', 'Chỉnh Sửa Sản Phẩm')
 @section('page-title', 'Chỉnh Sửa Sản Phẩm')
-@section('page-subtitle', $product->name)
+@section('page-subtitle', $product->ten)
 
 @section('content')
 <div class="container-fluid">
@@ -17,7 +17,7 @@
                 </ol>
             </nav>
 
-            <form action="{{ route('admin.products.update', $product->MaSP) }}" method="POST" enctype="multipart/form-data" id="editProductForm">
+            <form action="{{ route('admin.products.update', $product->ma_sp) }}" method="POST" enctype="multipart/form-data" id="editProductForm">
                 @csrf
                 @method('PUT')
 
@@ -31,7 +31,7 @@
                             <div class="mb-3">
                                 <label for="name" class="form-label fw-medium">Tên Sản Phẩm <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control @error('name') is-invalid @enderror"
-                                    id="name" name="name" value="{{ old('name', $product->name) }}"
+                                    id="name" name="name" value="{{ old('name', $product->ten) }}"
                                     placeholder="Nhập tên thuốc / sản phẩm..." required>
                                 @error('name')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -41,17 +41,17 @@
                             <!-- Category -->
                             <div class="mb-3">
                                 <label for="MaDM" class="form-label fw-medium">Danh Mục <span class="text-danger">*</span></label>
-                                <select class="form-select select2-basic @error('MaDM') is-invalid @enderror"
+                                <select class="form-select select2-basic @error('ma_dm') is-invalid @enderror"
                                     id="MaDM" name="MaDM" required>
                                     <option value="">-- Chọn danh mục --</option>
                                     @foreach($categories as $category)
-                                        <option value="{{ $category->MaDM }}"
-                                            {{ old('MaDM', $product->MaDM) == $category->MaDM ? 'selected' : '' }}>
-                                            {{ $category->name }}
+                                        <option value="{{ $category->ma_dm }}"
+                                            {{ old('ma_dm', $product->ma_dm) == $category->ma_dm ? 'selected' : '' }}>
+                                            {{ $category->ten }}
                                         </option>
                                     @endforeach
                                 </select>
-                                @error('MaDM')
+                                @error('ma_dm')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -76,7 +76,7 @@
                                         <span class="input-group-text"><i class="bi bi-boxes"></i></span>
                                         <input type="number" class="form-control @error('stock_quantity') is-invalid @enderror"
                                             id="stock_quantity" name="stock_quantity"
-                                            value="{{ old('stock_quantity', $product->stock_quantity) }}"
+                                            value="{{ old('stock_quantity', $product->so_luong_ton) }}"
                                             min="0" required>
                                         @error('stock_quantity')
                                             <div class="invalid-feedback">{{ $message }}</div>
@@ -91,7 +91,7 @@
                                     <label for="batch_number" class="form-label fw-medium">Số Lô <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control @error('batch_number') is-invalid @enderror"
                                         id="batch_number" name="batch_number"
-                                        value="{{ old('batch_number', $product->batch_number) }}"
+                                        value="{{ old('batch_number', $product->so_lo) }}"
                                         placeholder="VD: LOT-2024-001" required>
                                     @error('batch_number')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -101,7 +101,7 @@
                                     <label for="reorder_point" class="form-label fw-medium">Ngưỡng Cảnh Báo Tồn Kho</label>
                                     <input type="number" class="form-control @error('reorder_point') is-invalid @enderror"
                                         id="reorder_point" name="reorder_point"
-                                        value="{{ old('reorder_point', $product->reorder_point) }}"
+                                        value="{{ old('reorder_point', $product->muc_canh_bao) }}"
                                         min="0">
                                     @error('reorder_point')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -114,7 +114,7 @@
                                 <label for="expiration_date" class="form-label fw-medium">Hạn Sử Dụng <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control @error('expiration_date') is-invalid @enderror"
                                     id="expiration_date" name="expiration_date"
-                                    value="{{ old('expiration_date', $product->expiration_date->format('Y-m-d')) }}" required>
+                                    value="{{ old('expiration_date', $product->ngay_het_han->format('Y-m-d')) }}" required>
                                 @error('expiration_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -129,7 +129,7 @@
                                 <label for="ingredients" class="form-label fw-medium">Thành Phần</label>
                                 <textarea class="form-control summernote @error('ingredients') is-invalid @enderror"
                                     id="ingredients" name="ingredients" rows="4"
-                                    placeholder="Liệt kê các thành phần chính của sản phẩm...">{{ old('ingredients', $product->ingredients) }}</textarea>
+                                    placeholder="Liệt kê các thành phần chính của sản phẩm...">{{ old('ingredients', $product->thanh_phan) }}</textarea>
                                 @error('ingredients')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -139,7 +139,7 @@
                                 <label for="usage" class="form-label fw-medium">Hướng Dẫn Sử Dụng</label>
                                 <textarea class="form-control summernote @error('usage') is-invalid @enderror"
                                     id="usage" name="usage" rows="4"
-                                    placeholder="Hướng dẫn liều dùng, cách sử dụng...">{{ old('usage', $product->usage) }}</textarea>
+                                    placeholder="Hướng dẫn liều dùng, cách sử dụng...">{{ old('usage', $product->cach_dung) }}</textarea>
                                 @error('usage')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -220,7 +220,7 @@
                                     <i class="bi bi-arrow-left me-2"></i>Quay Lại
                                 </a>
                                 <hr class="my-1">
-                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete({{ $product->MaSP }})">
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete({{ $product->ma_sp }})">
                                     <i class="bi bi-trash me-2"></i>Xóa Sản Phẩm Này
                                 </button>
                             </div>
@@ -230,7 +230,7 @@
             </form>
 
             <!-- Hidden Delete Form -->
-            <form id="deleteForm" action="{{ route('admin.products.destroy', $product->MaSP) }}" method="POST" style="display: none;">
+            <form id="deleteForm" action="{{ route('admin.products.destroy', $product->ma_sp) }}" method="POST" style="display: none;">
                 @csrf
                 @method('DELETE')
             </form>

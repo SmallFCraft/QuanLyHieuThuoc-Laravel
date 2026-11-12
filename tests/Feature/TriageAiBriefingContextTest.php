@@ -34,13 +34,12 @@ class TriageAiBriefingContextTest extends TestCase
 
         config()->set('chatbot.ai.triage.briefing', true);
 
-        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt', 'mo_ta' => 'Giảm đau, hạ sốt']);
         $this->seed(TriThucYTeSeeder::class);
 
-        $this->customer = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(41)->toDateString(),
+        $this->customer = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(41)->toDateString(),
         ]);
     }
 
@@ -78,8 +77,7 @@ class TriageAiBriefingContextTest extends TestCase
 
     protected function priorSession(string $symptom): PhienSangLoc
     {
-        return PhienSangLoc::create([
-            'MaKH' => $this->customer->MaKH,
+        return PhienSangLoc::create(['ma_nd' => $this->customer->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'reviewed',
@@ -92,7 +90,7 @@ class TriageAiBriefingContextTest extends TestCase
     protected function triageSession(array $attributes = []): PhienSangLoc
     {
         return PhienSangLoc::create(array_merge([
-            'MaKH' => $this->customer->MaKH,
+            'ma_nd' => $this->customer->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -127,8 +125,7 @@ class TriageAiBriefingContextTest extends TestCase
 
     public function test_prompt_carries_age_and_prior_symptom_when_ai_consent_granted(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->customer->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->customer->ma_nd,
             'allergies' => ['aspirin'],
             'consented_at' => now(),
             'ai_consent_at' => now(),
@@ -155,8 +152,7 @@ class TriageAiBriefingContextTest extends TestCase
      */
     public function test_prompt_excludes_profile_when_ai_consent_not_granted(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->customer->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->customer->ma_nd,
             'allergies' => ['amoxicillin'],
             'chronic_conditions' => ['tiểu đường'],
             'current_medications' => ['metformin'],
@@ -194,8 +190,7 @@ class TriageAiBriefingContextTest extends TestCase
 
         $withoutConsent = $this->userMessage();
 
-        HoSoSucKhoe::create([
-            'MaKH' => $this->customer->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->customer->ma_nd,
             'allergies' => ['aspirin'],
             'consented_at' => now(),
             'ai_consent_at' => now(),

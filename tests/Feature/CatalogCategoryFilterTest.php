@@ -30,17 +30,16 @@ class CatalogCategoryFilterTest extends TestCase
 
     private function stock(string $categoryName, int $products): DanhMuc
     {
-        $danhMuc = DanhMuc::create(['name' => $categoryName]);
+        $danhMuc = DanhMuc::create(['ten' => $categoryName]);
 
         for ($i = 0; $i < $products; $i++) {
-            SanPham::create([
-                'MaDM' => $danhMuc->MaDM,
-                'name' => "{$categoryName} sản phẩm {$i}",
-                'price' => 50000,
-                'expiration_date' => now()->addYears(2),
-                'stock_quantity' => 10,
-                'reorder_point' => 5,
-                'batch_number' => 'LC-' . md5($categoryName . $i),
+            SanPham::create(['ma_dm' => $danhMuc->ma_dm,
+                'ten' => "{$categoryName} sản phẩm {$i}",
+                'gia' => 50000,
+                'ngay_het_han' => now()->addYears(2),
+                'so_luong_ton' => 10,
+                'muc_canh_bao' => 5,
+                'so_lo' => 'LC-' . md5($categoryName . $i),
             ]);
         }
 
@@ -76,21 +75,21 @@ class CatalogCategoryFilterTest extends TestCase
 
     public function test_a_category_without_stock_is_left_out(): void
     {
-        DanhMuc::create(['name' => 'Danh mục rỗng']);
+        DanhMuc::create(['ten' => 'Danh mục rỗng']);
 
         $this->assertNotContains('Danh mục rỗng', $this->renderedOrder());
     }
 
     public function test_the_all_row_counts_the_whole_catalog_even_while_filtered(): void
     {
-        $danhMuc = DanhMuc::where('name', 'Dược mỹ phẩm')->first();
+        $danhMuc = DanhMuc::where('ten', 'Dược mỹ phẩm')->first();
 
         // Reading $products->total() here showed the filtered count, so the "all"
         // row claimed 1 product while sitting above 10.
         //
         // Anchored on catalog-filter-count: a bare '>10</span>' also matches the header
         // dropdown's own total, so the regression above would still pass.
-        $this->get("/products?category={$danhMuc->MaDM}")
+        $this->get("/products?category={$danhMuc->ma_dm}")
             ->assertOk()
             ->assertSee('<span class="catalog-filter-count">10</span>', false);
     }
@@ -123,9 +122,9 @@ class CatalogCategoryFilterTest extends TestCase
 
     public function test_the_mobile_summary_names_the_active_category(): void
     {
-        $danhMuc = DanhMuc::where('name', 'Dụng cụ y tế')->first();
+        $danhMuc = DanhMuc::where('ten', 'Dụng cụ y tế')->first();
 
-        $this->get("/products?category={$danhMuc->MaDM}")
+        $this->get("/products?category={$danhMuc->ma_dm}")
             ->assertOk()
             ->assertSee('catalog-filter__toggle-current">Dụng cụ y tế', false);
     }
@@ -139,9 +138,9 @@ class CatalogCategoryFilterTest extends TestCase
 
     public function test_the_active_category_is_marked_for_assistive_tech(): void
     {
-        $danhMuc = DanhMuc::where('name', 'Dụng cụ y tế')->first();
+        $danhMuc = DanhMuc::where('ten', 'Dụng cụ y tế')->first();
 
-        $this->get("/products?category={$danhMuc->MaDM}")
+        $this->get("/products?category={$danhMuc->ma_dm}")
             ->assertOk()
             ->assertSee('aria-current="page"', false);
 
@@ -157,12 +156,12 @@ class CatalogCategoryFilterTest extends TestCase
     {
         // <details> carries the open/close state, and every category is a real link.
         $html = $this->get('/products')->assertOk()->getContent();
-        $danhMuc = DanhMuc::where('name', 'Dụng cụ y tế')->first();
+        $danhMuc = DanhMuc::where('ten', 'Dụng cụ y tế')->first();
 
         $this->assertStringContainsString('<details', $html);
         $this->assertStringContainsString('<summary', $html);
         $this->assertStringContainsString(
-            route('products.index', ['category' => $danhMuc->MaDM]),
+            route('products.index', ['category' => $danhMuc->ma_dm]),
             $html
         );
     }
@@ -185,7 +184,7 @@ class CatalogCategoryFilterTest extends TestCase
 
     public function test_the_header_dropdown_leaves_out_categories_with_nothing_in_stock(): void
     {
-        DanhMuc::create(['name' => 'Danh mục rỗng']);
+        DanhMuc::create(['ten' => 'Danh mục rỗng']);
 
         // It used to list every category, so those rows opened an empty product page.
         $this->get('/')

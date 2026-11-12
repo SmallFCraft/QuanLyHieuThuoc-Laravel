@@ -25,16 +25,16 @@ class NguoiDungFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'ho_ten' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'birth_date' => fake()->optional()->date(),
-            'gender' => fake()->optional()->randomElement(['male', 'female', 'other']),
-            'address' => fake()->optional()->streetAddress(),
-            'phone' => fake()->optional()->numerify('09########'),
+            'thoi_diem_xac_thuc_email' => now(),
+            'ngay_sinh' => fake()->optional()->date(),
+            'gioi_tinh' => fake()->optional()->randomElement(['male', 'female', 'other']),
+            'dia_chi' => fake()->optional()->streetAddress(),
+            'so_dien_thoai' => fake()->optional()->numerify('09########'),
             'password' => static::$password ??= Hash::make('password'),
-            'role' => 'User',
-            'status' => 'active',
+            'vai_tro' => 'User',
+            'trang_thai' => 'active',
             'remember_token' => Str::random(10),
         ];
     }
@@ -45,7 +45,7 @@ class NguoiDungFactory extends Factory
     public function unverified(): static
     {
         return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+            'thoi_diem_xac_thuc_email' => null,
         ]);
     }
 }

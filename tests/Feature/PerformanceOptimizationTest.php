@@ -24,19 +24,16 @@ class PerformanceOptimizationTest extends TestCase
     {
         parent::setUp();
         
-        $this->admin = NguoiDung::factory()->create([
-            'role' => 'Administrator',
-            'status' => 'active'
+        $this->admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator',
+            'trang_thai' => 'active'
         ]);
         
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active'
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active'
         ]);
         
-        $this->danhMuc = DanhMuc::create([
-            'name' => 'Test Category',
-            'description' => 'Test Description'
+        $this->danhMuc = DanhMuc::create(['ten' => 'Test Category',
+            'mo_ta' => 'Test Description'
         ]);
     }
 
@@ -44,14 +41,13 @@ class PerformanceOptimizationTest extends TestCase
     {
         // Create multiple products with categories
         for ($i = 1; $i <= 10; $i++) {
-            SanPham::create([
-                'MaDM' => $this->danhMuc->MaDM,
-                'name' => "Product {$i}",
-                'price' => 10000 * $i,
-                'expiration_date' => now()->addYear(),
-                'stock_quantity' => 100,
-                'reorder_point' => 10,
-                'batch_number' => "BATCH-{$i}"
+            SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+                'ten' => "Product {$i}",
+                'gia' => 10000 * $i,
+                'ngay_het_han' => now()->addYear(),
+                'so_luong_ton' => 100,
+                'muc_canh_bao' => 10,
+                'so_lo' => "BATCH-{$i}"
             ]);
         }
 
@@ -76,30 +72,27 @@ class PerformanceOptimizationTest extends TestCase
     {
         // Create orders with items
         for ($i = 1; $i <= 5; $i++) {
-            $sanPham = SanPham::create([
-                'MaDM' => $this->danhMuc->MaDM,
-                'name' => "Product {$i}",
-                'price' => 10000,
-                'expiration_date' => now()->addYear(),
-                'stock_quantity' => 100,
-                'reorder_point' => 10,
-                'batch_number' => "BATCH-ORDER-{$i}"
+            $sanPham = SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+                'ten' => "Product {$i}",
+                'gia' => 10000,
+                'ngay_het_han' => now()->addYear(),
+                'so_luong_ton' => 100,
+                'muc_canh_bao' => 10,
+                'so_lo' => "BATCH-ORDER-{$i}"
             ]);
 
-            $donHang = DonHang::create([
-                'MaKH' => $this->nguoiDung->MaKH,
-                'total_amount' => 20000,
-                'status' => 'Pending',
-                'shipping_address' => '123 Test Street',
-                'shipping_phone' => '0901234567'
+            $donHang = DonHang::create(['ma_nd' => $this->nguoiDung->ma_nd,
+                'tong_tien' => 20000,
+                'trang_thai' => 'Pending',
+                'dia_chi_giao_hang' => '123 Test Street',
+                'sdt_giao_hang' => '0901234567'
             ]);
 
-            ChiTietDonHang::create([
-                'MaDH' => $donHang->MaDH,
-                'MaSP' => $sanPham->MaSP,
-                'quantity' => 2,
-                'unit_price' => 10000,
-                'batch_number' => "BATCH-ORDER-{$i}"
+            ChiTietDonHang::create(['ma_dh' => $donHang->ma_dh,
+                'ma_sp' => $sanPham->ma_sp,
+                'so_luong' => 2,
+                'don_gia' => 10000,
+                'so_lo' => "BATCH-ORDER-{$i}"
             ]);
         }
 
@@ -123,21 +116,20 @@ class PerformanceOptimizationTest extends TestCase
     {
         // Create many products
         for ($i = 1; $i <= 100; $i++) {
-            SanPham::create([
-                'MaDM' => $this->danhMuc->MaDM,
-                'name' => "Product {$i}",
-                'price' => 10000,
-                'expiration_date' => now()->addDays($i),
-                'stock_quantity' => 100,
-                'reorder_point' => 10,
-                'batch_number' => "BATCH-PERF-{$i}"
+            SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+                'ten' => "Product {$i}",
+                'gia' => 10000,
+                'ngay_het_han' => now()->addDays($i),
+                'so_luong_ton' => 100,
+                'muc_canh_bao' => 10,
+                'so_lo' => "BATCH-PERF-{$i}"
             ]);
         }
 
-        // Query using indexed column (expiration_date)
+        // Query using indexed column (ngay_het_han)
         $startTime = microtime(true);
         
-        $expiringProducts = SanPham::where('expiration_date', '<=', now()->addDays(30))
+        $expiringProducts = SanPham::where('ngay_het_han', '<=', now()->addDays(30))
             ->get();
         
         $endTime = microtime(true);
@@ -187,12 +179,11 @@ class PerformanceOptimizationTest extends TestCase
     public function test_dashboard_metrics_caching(): void
     {
         // Create test data
-        DonHang::create([
-            'MaKH' => $this->nguoiDung->MaKH,
-            'total_amount' => 100000,
-            'status' => 'Completed',
-            'shipping_address' => '123 Test Street',
-            'shipping_phone' => '0901234567'
+        DonHang::create(['ma_nd' => $this->nguoiDung->ma_nd,
+            'tong_tien' => 100000,
+            'trang_thai' => 'Completed',
+            'dia_chi_giao_hang' => '123 Test Street',
+            'sdt_giao_hang' => '0901234567'
         ]);
 
         // Clear cache
@@ -204,7 +195,7 @@ class PerformanceOptimizationTest extends TestCase
         $metrics1 = Cache::remember('dashboard_metrics', 300, function () {
             return [
                 'total_orders' => DonHang::count(),
-                'total_revenue' => DonHang::where('status', 'Completed')->sum('total_amount')
+                'total_revenue' => DonHang::where('trang_thai', 'Completed')->sum('tong_tien')
             ];
         });
         
@@ -218,7 +209,7 @@ class PerformanceOptimizationTest extends TestCase
         $metrics2 = Cache::remember('dashboard_metrics', 300, function () {
             return [
                 'total_orders' => DonHang::count(),
-                'total_revenue' => DonHang::where('status', 'Completed')->sum('total_amount')
+                'total_revenue' => DonHang::where('trang_thai', 'Completed')->sum('tong_tien')
             ];
         });
         
@@ -239,14 +230,13 @@ class PerformanceOptimizationTest extends TestCase
     {
         // Create many products
         for ($i = 1; $i <= 50; $i++) {
-            SanPham::create([
-                'MaDM' => $this->danhMuc->MaDM,
-                'name' => "Product {$i}",
-                'price' => 10000,
-                'expiration_date' => now()->addYear(),
-                'stock_quantity' => 100,
-                'reorder_point' => 10,
-                'batch_number' => "BATCH-PAGE-{$i}"
+            SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+                'ten' => "Product {$i}",
+                'gia' => 10000,
+                'ngay_het_han' => now()->addYear(),
+                'so_luong_ton' => 100,
+                'muc_canh_bao' => 10,
+                'so_lo' => "BATCH-PAGE-{$i}"
             ]);
         }
 
@@ -261,30 +251,29 @@ class PerformanceOptimizationTest extends TestCase
     public function test_select_specific_columns_reduces_data_transfer(): void
     {
         // Create product with all fields
-        SanPham::create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'name' => 'Test Product',
-            'ingredients' => str_repeat('Long ingredient list ', 100),
-            'usage' => str_repeat('Long usage instructions ', 100),
-            'price' => 10000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 100,
-            'reorder_point' => 10,
-            'batch_number' => 'BATCH-SELECT'
+        SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+            'ten' => 'Test Product',
+            'thanh_phan' => str_repeat('Long ingredient list ', 100),
+            'cach_dung' => str_repeat('Long usage instructions ', 100),
+            'gia' => 10000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 100,
+            'muc_canh_bao' => 10,
+            'so_lo' => 'BATCH-SELECT'
         ]);
 
-        $sanPhams = SanPham::select('MaSP', 'name', 'price')->get();
+        $sanPhams = SanPham::select('ma_sp', 'ten', 'gia')->get();
         $allProducts = SanPham::all();
 
         $selectedAttributes = $sanPhams->first()->getAttributes();
         $allAttributes = $allProducts->first()->getAttributes();
 
-        $this->assertArrayHasKey('MaSP', $selectedAttributes);
-        $this->assertArrayHasKey('name', $selectedAttributes);
-        $this->assertArrayHasKey('price', $selectedAttributes);
-        $this->assertArrayNotHasKey('ingredients', $selectedAttributes);
-        $this->assertArrayNotHasKey('usage', $selectedAttributes);
-        $this->assertArrayHasKey('ingredients', $allAttributes);
+        $this->assertArrayHasKey('ma_sp', $selectedAttributes);
+        $this->assertArrayHasKey('ten', $selectedAttributes);
+        $this->assertArrayHasKey('gia', $selectedAttributes);
+        $this->assertArrayNotHasKey('thanh_phan', $selectedAttributes);
+        $this->assertArrayNotHasKey('cach_dung', $selectedAttributes);
+        $this->assertArrayHasKey('thanh_phan', $allAttributes);
         $this->assertLessThan(
             strlen(json_encode($allAttributes)),
             strlen(json_encode($selectedAttributes))
@@ -295,14 +284,13 @@ class PerformanceOptimizationTest extends TestCase
     {
         // Create many products
         for ($i = 1; $i <= 100; $i++) {
-            SanPham::create([
-                'MaDM' => $this->danhMuc->MaDM,
-                'name' => "Product {$i}",
-                'price' => 10000,
-                'expiration_date' => now()->addYear(),
-                'stock_quantity' => 100,
-                'reorder_point' => 10,
-                'batch_number' => "BATCH-CHUNK-{$i}"
+            SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+                'ten' => "Product {$i}",
+                'gia' => 10000,
+                'ngay_het_han' => now()->addYear(),
+                'so_luong_ton' => 100,
+                'muc_canh_bao' => 10,
+                'so_lo' => "BATCH-CHUNK-{$i}"
             ]);
         }
 

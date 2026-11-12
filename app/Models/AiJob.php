@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class AiJob extends Model
 {
-    protected $primaryKey = 'MaAJ';
+    protected $primaryKey = 'ma_aj';
 
     public const KIND_CHAT = 'chat';
     public const KIND_TRIAGE_EVALUATION = 'triage_eval';
@@ -33,7 +33,7 @@ class AiJob extends Model
 
     protected $fillable = [
         'uuid',
-        'MaKH',
+        'ma_nd',
         'kind',
         'status',
         'payload',
@@ -54,7 +54,7 @@ class AiJob extends Model
 
     public function user()
     {
-        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'ma_nd', 'ma_nd');
     }
 
     public function isFinished(): bool
@@ -94,7 +94,7 @@ class AiJob extends Model
     protected function hasLiveWorker(): bool
     {
         return static::query()
-            ->where('MaKH', $this->MaKH)
+            ->where('ma_nd', $this->ma_nd)
             ->where('status', 'running')
             ->where('started_at', '>=', now()->subSeconds(self::WORKER_ALIVE_SECONDS))
             ->exists();

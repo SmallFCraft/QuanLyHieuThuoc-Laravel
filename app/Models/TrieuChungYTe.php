@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class TrieuChungYTe extends Model
 {
-    protected $table = 'medical_symptoms';
+    protected $table = 'trieu_chung_y_tes';
 
-    protected $primaryKey = 'MaTC';
+    protected $primaryKey = 'ma_tc';
 
     protected $fillable = [
         'code',
@@ -28,7 +28,7 @@ class TrieuChungYTe extends Model
 
     public function redFlags()
     {
-        return $this->hasMany(CoDoYTe::class, 'applies_to_symptom', 'MaTC');
+        return $this->hasMany(CoDoYTe::class, 'applies_to_symptom', 'ma_tc');
     }
 
     public function scopeActive($query)

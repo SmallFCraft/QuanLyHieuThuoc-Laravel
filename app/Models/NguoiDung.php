@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 
 class NguoiDung extends Authenticatable
 {
-    protected $table = 'users';
+    protected $table = 'nguoi_dungs';
 
     /** @use HasFactory<\Database\Factories\NguoiDungFactory> */
     use HasFactory, Notifiable;
@@ -20,7 +20,7 @@ class NguoiDung extends Authenticatable
      *
      * @var string
      */
-    protected $primaryKey = 'MaKH';
+    protected $primaryKey = 'ma_nd';
 
     /**
      * The attributes that are mass assignable.
@@ -28,16 +28,16 @@ class NguoiDung extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'ho_ten',
         'email',
-        'birth_date',
-        'gender',
-        'address',
-        'phone',
-        'avatar',
+        'ngay_sinh',
+        'gioi_tinh',
+        'dia_chi',
+        'so_dien_thoai',
+        'anh_dai_dien',
         'password',
-        'role',
-        'status',
+        'vai_tro',
+        'trang_thai',
     ];
 
     /**
@@ -55,11 +55,31 @@ class NguoiDung extends Authenticatable
      *
      * @return array<string, string>
      */
+    // Cột đã việt hóa thành thoi_diem_xac_thuc_email; Breeze (VerifyEmailController,
+    // MustVerifyEmail trait) gọi $this->email_verified_at nên map qua accessor/mutator.
+    public function getEmailVerifiedAtAttribute(): ?\Illuminate\Support\Carbon
+    {
+        return $this->thoi_diem_xac_thuc_email;
+    }
+
+    public function setEmailVerifiedAtAttribute($value): void
+    {
+        $this->attributes['thoi_diem_xac_thuc_email'] = $value;
+    }
+
+    public function markEmailAsVerified(): static
+    {
+        $this->thoi_diem_xac_thuc_email = $this->freshTimestamp();
+        $this->save();
+
+        return $this;
+    }
+
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'birth_date' => 'date',
+            'thoi_diem_xac_thuc_email' => 'datetime',
+            'ngay_sinh' => 'date',
             'password' => 'hashed',
         ];
     }
@@ -71,7 +91,7 @@ class NguoiDung extends Authenticatable
      */
     public function isAdministrator(): bool
     {
-        return $this->role === 'Administrator';
+        return $this->vai_tro === 'Administrator';
     }
 
     /**
@@ -81,7 +101,7 @@ class NguoiDung extends Authenticatable
      */
     public function isPharmacist(): bool
     {
-        return $this->role === 'Pharmacist';
+        return $this->vai_tro === 'Pharmacist';
     }
 
     /**
@@ -91,7 +111,7 @@ class NguoiDung extends Authenticatable
      */
     public function isActive(): bool
     {
-        return $this->status === 'active';
+        return $this->trang_thai === 'active';
     }
 
     /**
@@ -99,7 +119,7 @@ class NguoiDung extends Authenticatable
      */
     public function donHangs()
     {
-        return $this->hasMany(DonHang::class, 'MaKH', 'MaKH');
+        return $this->hasMany(DonHang::class, 'ma_nd', 'ma_nd');
     }
 
     /**
@@ -107,7 +127,7 @@ class NguoiDung extends Authenticatable
      */
     public function hoSoSucKhoe()
     {
-        return $this->hasOne(HoSoSucKhoe::class, 'MaKH', 'MaKH');
+        return $this->hasOne(HoSoSucKhoe::class, 'ma_nd', 'ma_nd');
     }
 
     /**
@@ -116,7 +136,7 @@ class NguoiDung extends Authenticatable
      */
     public function ageInYears(): ?int
     {
-        return $this->birth_date?->age;
+        return $this->ngay_sinh?->age;
     }
 
     /**
@@ -127,11 +147,11 @@ class NguoiDung extends Authenticatable
      */
     public function avatarUrl(): ?string
     {
-        if (! $this->avatar) {
+        if (! $this->anh_dai_dien) {
             return null;
         }
 
-        if (! Storage::disk(config('uploads.avatars.disk', 'public'))->exists($this->avatar)) {
+        if (! Storage::disk(config('uploads.avatars.disk', 'public'))->exists($this->anh_dai_dien)) {
             return null;
         }
 
@@ -140,12 +160,12 @@ class NguoiDung extends Authenticatable
         // được. asset() lấy origin từ request hiện tại.
         // ponytail: gắn với disk 'public' + symlink public/storage. Đổi sang S3 thì
         // quay lại Storage::url() và đặt APP_URL/ASSET_URL cho đúng.
-        return asset('storage/' . ltrim($this->avatar, '/'));
+        return asset('storage/' . ltrim($this->anh_dai_dien, '/'));
     }
 
     /** Chữ cái đầu của tên, dùng khi chưa có ảnh đại diện. */
     public function initial(): string
     {
-        return mb_strtoupper(mb_substr(trim($this->name), 0, 1)) ?: '?';
+        return mb_strtoupper(mb_substr(trim($this->ho_ten), 0, 1)) ?: '?';
     }
 }

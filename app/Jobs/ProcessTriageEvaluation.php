@@ -55,7 +55,7 @@ class ProcessTriageEvaluation implements ShouldQueue
             return;
         }
 
-        $phien = PhienSangLoc::find($job->payload['MaSL'] ?? null);
+        $phien = PhienSangLoc::find($job->payload['ma_sl'] ?? null);
 
         if ($phien === null || $phien->status !== 'in_progress') {
             $jobs->markFailed($job, 'triage session is no longer open');
@@ -67,10 +67,10 @@ class ProcessTriageEvaluation implements ShouldQueue
 
         // AuditLogService reads Auth::id(); without this the worker writes audit rows
         // with a null customer, breaking the link to the person triaged.
-        Auth::onceUsingId((int) $job->MaKH);
+        Auth::onceUsingId((int) $job->ma_nd);
 
         try {
-            $result = $triage->evaluate($phien, HoSoSucKhoe::consentedFor((int) $job->MaKH));
+            $result = $triage->evaluate($phien, HoSoSucKhoe::consentedFor((int) $job->ma_nd));
 
             if ($triage->shouldAskClarify($phien, $result)) {
                 $triage->storeClarifyQuestions($phien, $result);
@@ -86,7 +86,7 @@ class ProcessTriageEvaluation implements ShouldQueue
             // wrong host or port. The controller turns this into a URL.
             $jobs->markDone($job, [
                 'next' => 'result',
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
             ]);
 
             // Rephrasing is its own job: it runs after the conclusion is fixed and
@@ -94,7 +94,7 @@ class ProcessTriageEvaluation implements ShouldQueue
             $jobs->dispatchAdviceRewriteIfEligible($phien);
         } catch (\Throwable $exception) {
             Log::error('Triage evaluation job failed', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
 

@@ -19,7 +19,7 @@ class ChatSessionController extends Controller
         $cacPhien = TinNhanChat::query()
             ->select([
                 'session_id',
-                'MaKH',
+                'ma_nd',
                 DB::raw('COUNT(*) as messages_count'),
                 DB::raw('MIN(created_at) as started_at'),
                 DB::raw('MAX(created_at) as last_message_at'),
@@ -30,24 +30,24 @@ class ChatSessionController extends Controller
                     $inner->where('session_id', 'like', "%{$search}%")
                         ->orWhere('session_id', 'like', "%{$sessionSearch}%")
                         ->orWhereHas('nguoiDung', function ($nguoiDungQuery) use ($search) {
-                            $nguoiDungQuery->where('name', 'like', "%{$search}%")
+                            $nguoiDungQuery->where('ho_ten', 'like', "%{$search}%")
                                 ->orWhere('email', 'like', "%{$search}%");
                         });
 
                     $numericSearch = ltrim($search, '#');
                     if (ctype_digit($numericSearch)) {
-                        $inner->orWhere('MaKH', (int) $numericSearch);
+                        $inner->orWhere('ma_nd', (int) $numericSearch);
                     }
                 });
             })
-            ->groupBy('session_id', 'MaKH')
+            ->groupBy('session_id', 'ma_nd')
             ->orderByDesc('last_message_at')
             ->get();
 
         $summary = [
             'total_sessions' => $cacPhien->count(),
             'total_messages' => $cacPhien->sum(fn ($session) => (int) $session->messages_count),
-            'identified_users' => $cacPhien->pluck('MaKH')->filter()->unique()->count(),
+            'identified_users' => $cacPhien->pluck('ma_nd')->filter()->unique()->count(),
             'latest_at' => $cacPhien->first()?->last_message_at,
         ];
 
@@ -63,7 +63,7 @@ class ChatSessionController extends Controller
         $cacTinNhan = TinNhanChat::with('nguoiDung')
             ->where('session_id', $sessionId)
             ->orderBy('created_at')
-            ->orderBy('MaTN')
+            ->orderBy('ma_tn')
             ->get();
 
         abort_if($cacTinNhan->isEmpty(), 404);
@@ -76,7 +76,7 @@ class ChatSessionController extends Controller
         $cacAnh->each(function (AnhChatbot $anh) use ($sessionId): void {
             $anh->admin_url = route('admin.chatSessions.images.show', [
                 'sessionId' => $sessionId,
-                'image' => $anh->MaAnh,
+                'image' => $anh->ma_anh,
             ]);
         });
 
@@ -135,7 +135,7 @@ class ChatSessionController extends Controller
                 continue;
             }
 
-            $map[$tinNhan->MaTN] = $anhKhop;
+            $map[$tinNhan->ma_tn] = $anhKhop;
         }
 
         return $map;

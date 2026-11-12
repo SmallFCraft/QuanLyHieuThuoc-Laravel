@@ -25,7 +25,7 @@ class StorefrontSearchTest extends TestCase
     {
         parent::setUp();
 
-        $this->painRelief = DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt']);
+        $this->painRelief = DanhMuc::create(['ten' => 'Thuốc giảm đau, hạ sốt']);
 
         $this->make('Viên nén Paracetamol Stada 500mg', 'Paracetamol 500mg', 'Điều trị các cơn đau đầu, đau lưng.');
         $this->make('Viên nén Panadol Extra đỏ GSK', 'Caffeine 65mg, Paracetamol 500mg', 'Giảm đau đầu, hạ sốt.');
@@ -36,16 +36,15 @@ class StorefrontSearchTest extends TestCase
 
     private function make(string $name, string $ingredients, string $usage): SanPham
     {
-        return SanPham::create([
-            'MaDM' => $this->painRelief->MaDM,
-            'name' => $name,
-            'ingredients' => $ingredients,
-            'usage' => $usage,
-            'price' => 50000,
-            'expiration_date' => now()->addYears(2),
-            'stock_quantity' => 40,
-            'reorder_point' => 10,
-            'batch_number' => 'LC-' . md5($name),
+        return SanPham::create(['ma_dm' => $this->painRelief->ma_dm,
+            'ten' => $name,
+            'thanh_phan' => $ingredients,
+            'cach_dung' => $usage,
+            'gia' => 50000,
+            'ngay_het_han' => now()->addYears(2),
+            'so_luong_ton' => 40,
+            'muc_canh_bao' => 10,
+            'so_lo' => 'LC-' . md5($name),
         ]);
     }
 
@@ -54,10 +53,10 @@ class StorefrontSearchTest extends TestCase
     {
         return SanPham::query()
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
+            ->where('so_luong_ton', '>', 0)
             ->storefrontSearch($term)
             ->orderBySearchRelevance($term)
-            ->pluck('name')
+            ->pluck('ten')
             ->all();
     }
 
@@ -144,13 +143,13 @@ class StorefrontSearchTest extends TestCase
         $fromSearch = $this->get(route('products.search', ['q' => 'paracetamol']))
             ->assertOk()
             ->viewData('products')
-            ->pluck('name')
+            ->pluck('ten')
             ->all();
 
         $fromCatalog = $this->get(route('products.index', ['q' => 'paracetamol']))
             ->assertOk()
             ->viewData('products')
-            ->pluck('name')
+            ->pluck('ten')
             ->all();
 
         $this->assertSame($fromSearch, $fromCatalog);

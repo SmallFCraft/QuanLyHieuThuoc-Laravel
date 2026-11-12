@@ -43,12 +43,12 @@ class TriageAiBriefingTest extends TestCase
         // The candidate list is derived from `medical_triage_rules.suggest_categories`,
         // so the real seed is what makes this test exercise the real allow-list.
         // Category first: the seeder maps rule categories by name.
-        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt', 'mo_ta' => 'Giảm đau, hạ sốt']);
         $this->seed(TriThucYTeSeeder::class);
 
         config()->set('chatbot.ai.triage.briefing', true);
 
-        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
     }
 
     /**
@@ -58,16 +58,15 @@ class TriageAiBriefingTest extends TestCase
      */
     protected function stockedProduct(string $name = 'Paracetamol 500mg', string $ingredients = 'Paracetamol 500mg'): SanPham
     {
-        return SanPham::create([
-            'MaDM' => DanhMuc::first()->MaDM,
-            'name' => $name,
-            'ingredients' => $ingredients,
-            'usage' => 'Giảm đau, hạ sốt. Uống 1-2 viên mỗi 4-6 giờ',
-            'price' => 2000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 50,
-            'reorder_point' => 5,
-            'batch_number' => 'B-' . uniqid(),
+        return SanPham::create(['ma_dm' => DanhMuc::first()->ma_dm,
+            'ten' => $name,
+            'thanh_phan' => $ingredients,
+            'cach_dung' => 'Giảm đau, hạ sốt. Uống 1-2 viên mỗi 4-6 giờ',
+            'gia' => 2000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 50,
+            'muc_canh_bao' => 5,
+            'so_lo' => 'B-' . uniqid(),
         ]);
     }
 
@@ -97,7 +96,7 @@ class TriageAiBriefingTest extends TestCase
     protected function triageSession(array $attributes = []): PhienSangLoc
     {
         return PhienSangLoc::create(array_merge([
-            'MaKH' => $this->nguoiDung->MaKH,
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -218,7 +217,7 @@ class TriageAiBriefingTest extends TestCase
             'why' => '<parameter>why>Em ghi lại triệu chứng: đau đầu ngày thứ nhất, mức độ bình thường.',
             'watch_for' => ['<parameter name="watch_for">Sốt cao hoặc nôn nhiều.'],
             'products' => [
-                ['id' => $sanPham->MaSP, 'reason' => '<parameter name="reason">Hạ sốt tại nhà, an toàn cho ca này.</parameter>'],
+                ['id' => $sanPham->ma_sp, 'reason' => '<parameter name="reason">Hạ sốt tại nhà, an toàn cho ca này.</parameter>'],
             ],
         ]));
 
@@ -311,14 +310,14 @@ class TriageAiBriefingTest extends TestCase
         $this->fakeToolCall($this->fullBriefing([
             'products' => [
                 ['id' => 999999, 'reason' => 'Thuốc này không tồn tại trong kho.'],
-                ['id' => $sanPham->MaSP, 'reason' => 'Hạ sốt, giảm đau, phù hợp với sốt nhẹ.'],
+                ['id' => $sanPham->ma_sp, 'reason' => 'Hạ sốt, giảm đau, phù hợp với sốt nhẹ.'],
             ],
         ]));
 
         $phien = $this->generate($this->triageSession());
         $ids = collect($phien->ai_briefing['products'])->pluck('id');
 
-        $this->assertTrue($ids->contains($sanPham->MaSP));
+        $this->assertTrue($ids->contains($sanPham->ma_sp));
         $this->assertFalse($ids->contains(999999));
     }
 
@@ -328,7 +327,7 @@ class TriageAiBriefingTest extends TestCase
 
         $this->fakeToolCall($this->fullBriefing([
             'products' => [[
-                'id' => $sanPham->MaSP,
+                'id' => $sanPham->ma_sp,
                 'name' => 'Thuốc bịa 999mg',
                 'price' => 1,
                 'reason' => 'Hạ sốt, giảm đau.',
@@ -345,10 +344,10 @@ class TriageAiBriefingTest extends TestCase
     public function test_an_out_of_stock_product_is_never_a_candidate(): void
     {
         $sanPham = $this->stockedProduct();
-        $sanPham->forceFill(['stock_quantity' => 0])->save();
+        $sanPham->forceFill(['so_luong_ton' => 0])->save();
 
         $this->fakeToolCall($this->fullBriefing([
-            'products' => [['id' => $sanPham->MaSP, 'reason' => 'Hạ sốt.']],
+            'products' => [['id' => $sanPham->ma_sp, 'reason' => 'Hạ sốt.']],
         ]));
 
         $phien = $this->generate($this->triageSession());
@@ -363,7 +362,7 @@ class TriageAiBriefingTest extends TestCase
         $sanPham = $this->stockedProduct();
 
         $this->fakeToolCall($this->fullBriefing([
-            'products' => [['id' => $sanPham->MaSP, 'reason' => 'Hạ sốt.']],
+            'products' => [['id' => $sanPham->ma_sp, 'reason' => 'Hạ sốt.']],
         ]));
 
         $phien = $this->generate($this->triageSession([
@@ -381,11 +380,11 @@ class TriageAiBriefingTest extends TestCase
         $sanPham = $this->stockedProduct();
 
         $this->fakeToolCall($this->fullBriefing([
-            'products' => [['id' => $sanPham->MaSP, 'reason' => 'Hạ sốt.']],
+            'products' => [['id' => $sanPham->ma_sp, 'reason' => 'Hạ sốt.']],
         ]));
 
         $phien = $this->generate($this->triageSession([
-            'suggested_products' => [['id' => $sanPham->MaSP, 'name' => $sanPham->name]],
+            'suggested_products' => [['id' => $sanPham->ma_sp, 'name' => $sanPham->ten]],
         ]));
 
         $this->assertSame([], $phien->ai_briefing['products']);
@@ -452,7 +451,7 @@ class TriageAiBriefingTest extends TestCase
     }
 
     /**
-     * The candidate block is built from the catalogue's own `usage` column, which
+     * The candidate block is built from the catalogue's own `cach_dung` column, which
      * averages 2.8KB per product, so the prompt reached 126KB with 40 candidates.
      * Measured 2026-09-15 against the live provider: 126KB took 132s to first byte
      * and 23KB took 16s, against a 90s briefing budget — the briefing could not
@@ -466,7 +465,7 @@ class TriageAiBriefingTest extends TestCase
         // A usage line far longer than any real one, in the shape the catalogue
         // stores: instructions and warnings run together in one column.
         $sanPham = $this->stockedProduct('Paracetamol 500mg', 'Paracetamol 500mg');
-        $sanPham->forceFill(['usage' => str_repeat('Uống 1-2 viên mỗi 4-6 giờ. ', 400)])->save();
+        $sanPham->forceFill(['cach_dung' => str_repeat('Uống 1-2 viên mỗi 4-6 giờ. ', 400)])->save();
 
         $this->fakeToolCall($this->fullBriefing());
 
@@ -497,10 +496,10 @@ class TriageAiBriefingTest extends TestCase
     public function test_the_stored_briefing_keeps_the_full_usage_text(): void
     {
         $sanPham = $this->stockedProduct('Paracetamol 500mg', 'Paracetamol 500mg');
-        $sanPham->forceFill(['usage' => str_repeat('Uống 1-2 viên mỗi 4-6 giờ. ', 40)])->save();
+        $sanPham->forceFill(['cach_dung' => str_repeat('Uống 1-2 viên mỗi 4-6 giờ. ', 40)])->save();
 
         $this->fakeToolCall($this->fullBriefing(['products' => [
-            ['id' => $sanPham->MaSP, 'reason' => 'Phù hợp với triệu chứng.'],
+            ['id' => $sanPham->ma_sp, 'reason' => 'Phù hợp với triệu chứng.'],
         ]]));
 
         $phien = $this->generate($this->triageSession());
@@ -516,8 +515,7 @@ class TriageAiBriefingTest extends TestCase
 
     public function test_the_prompt_carries_the_customers_words_but_never_the_profile(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'allergies' => ['penicillin'],
             'consented_at' => now(),
         ]);
@@ -545,7 +543,7 @@ class TriageAiBriefingTest extends TestCase
         $phien = $this->generate($this->triageSession());
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.briefing_title'))
             ->assertSee(__('messages.health.ai_badge'))
@@ -567,20 +565,19 @@ class TriageAiBriefingTest extends TestCase
             'is_active' => true,
         ]);
 
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'is_pregnant' => true,
             'consented_at' => now(),
         ]);
 
         $this->fakeToolCall($this->fullBriefing([
-            'products' => [['id' => $ibuprofen->MaSP, 'reason' => 'Giảm đau, kháng viêm.']],
+            'products' => [['id' => $ibuprofen->ma_sp, 'reason' => 'Giảm đau, kháng viêm.']],
         ]));
 
         $phien = $this->generate($this->triageSession());
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.product_has_warning'));
     }
@@ -595,7 +592,7 @@ class TriageAiBriefingTest extends TestCase
         $phien = $this->triageSession();
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.briefing_title'));
 
@@ -613,7 +610,7 @@ class TriageAiBriefingTest extends TestCase
         $phien = $this->triageSession();
 
         for ($i = 0; $i < 4; $i++) {
-            $this->actingAs($this->nguoiDung)->get(route('health.result', $phien->MaSL))->assertOk();
+            $this->actingAs($this->nguoiDung)->get(route('health.result', $phien->ma_sl))->assertOk();
         }
 
         $this->assertSame('failed', $phien->refresh()->ai_briefing_status);
@@ -624,16 +621,15 @@ class TriageAiBriefingTest extends TestCase
     {
         $phien = $this->triageSession();
 
-        AiJob::create([
-            'uuid' => (string) Str::uuid(),
-            'MaKH' => $this->nguoiDung->MaKH,
+        AiJob::create(['uuid' => (string) Str::uuid(),
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'running',
-            'payload' => ['MaSL' => $phien->MaSL],
+            'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.briefing_pending'));
 

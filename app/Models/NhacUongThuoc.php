@@ -6,14 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class NhacUongThuoc extends Model
 {
-    protected $table = 'medication_reminders';
+    protected $table = 'nhac_uong_thuocs';
 
-    protected $primaryKey = 'MaNN';
+    protected $primaryKey = 'ma_nn';
 
     protected $fillable = [
-        'MaKH',
-        'MaDH',
-        'MaSP',
+        'ma_nd',
+        'ma_dh',
+        'ma_sp',
         'dosage_text',
         'times_per_day',
         'duration_days',
@@ -33,17 +33,17 @@ class NhacUongThuoc extends Model
 
     public function nguoiDung()
     {
-        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'ma_nd', 'ma_nd');
     }
 
     public function donHang()
     {
-        return $this->belongsTo(DonHang::class, 'MaDH', 'MaDH');
+        return $this->belongsTo(DonHang::class, 'ma_dh', 'ma_dh');
     }
 
     public function sanPham()
     {
-        return $this->belongsTo(SanPham::class, 'MaSP', 'MaSP');
+        return $this->belongsTo(SanPham::class, 'ma_sp', 'ma_sp');
     }
 
     public function scopeActive($query)

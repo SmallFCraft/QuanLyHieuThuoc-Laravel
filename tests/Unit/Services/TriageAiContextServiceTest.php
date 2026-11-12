@@ -16,12 +16,10 @@ class TriageAiContextServiceTest extends TestCase
 
     public function test_builds_context_with_age_profile_and_history(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'birth_date' => now()->subYears(30)->toDateString(),
+        $nguoiDung = NguoiDung::factory()->create(['ngay_sinh' => now()->subYears(30)->toDateString(),
         ]);
 
-        HoSoSucKhoe::create([
-            'MaKH' => $nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $nguoiDung->ma_nd,
             'consented_at' => now(),
             'ai_consent_at' => now(),
             'allergies' => ['Aspirin'],
@@ -29,15 +27,13 @@ class TriageAiContextServiceTest extends TestCase
             'current_medications' => ['Omeprazole'],
         ]);
 
-        PhienSangLoc::create([
-            'MaKH' => $nguoiDung->MaKH,
+        PhienSangLoc::create(['ma_nd' => $nguoiDung->ma_nd,
             'status' => 'reviewed',
             'outcome' => 'self_care',
             'collected_data' => ['raw_symptom_text' => 'Đau bụng nhẹ'],
         ]);
 
-        $phien = PhienSangLoc::create([
-            'MaKH' => $nguoiDung->MaKH,
+        $phien = PhienSangLoc::create(['ma_nd' => $nguoiDung->ma_nd,
             'status' => 'pending_pharmacist',
             'collected_data' => ['raw_symptom_text' => 'Đau đầu'],
         ]);
@@ -52,19 +48,16 @@ class TriageAiContextServiceTest extends TestCase
 
     public function test_excludes_health_profile_when_ai_consent_is_missing(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'birth_date' => now()->subYears(45)->toDateString(),
+        $nguoiDung = NguoiDung::factory()->create(['ngay_sinh' => now()->subYears(45)->toDateString(),
         ]);
 
-        HoSoSucKhoe::create([
-            'MaKH' => $nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $nguoiDung->ma_nd,
             'consented_at' => now(),
             'ai_consent_at' => null,
             'allergies' => ['SecretAllergy'],
         ]);
 
-        $phien = PhienSangLoc::create([
-            'MaKH' => $nguoiDung->MaKH,
+        $phien = PhienSangLoc::create(['ma_nd' => $nguoiDung->ma_nd,
             'status' => 'pending_pharmacist',
         ]);
 
@@ -76,19 +69,16 @@ class TriageAiContextServiceTest extends TestCase
 
     public function test_builds_context_without_any_profile(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'birth_date' => now()->subYears(60)->toDateString(),
+        $nguoiDung = NguoiDung::factory()->create(['ngay_sinh' => now()->subYears(60)->toDateString(),
         ]);
 
-        PhienSangLoc::create([
-            'MaKH' => $nguoiDung->MaKH,
+        PhienSangLoc::create(['ma_nd' => $nguoiDung->ma_nd,
             'status' => 'reviewed',
             'outcome' => 'refer_doctor',
             'collected_data' => ['raw_symptom_text' => 'Chóng mặt'],
         ]);
 
-        $phien = PhienSangLoc::create([
-            'MaKH' => $nguoiDung->MaKH,
+        $phien = PhienSangLoc::create(['ma_nd' => $nguoiDung->ma_nd,
             'status' => 'pending_pharmacist',
         ]);
 
@@ -100,37 +90,35 @@ class TriageAiContextServiceTest extends TestCase
 
     public function test_audits_only_when_profile_data_was_included(): void
     {
-        $consented = NguoiDung::factory()->create(['birth_date' => now()->subYears(30)->toDateString()]);
-        HoSoSucKhoe::create([
-            'MaKH' => $consented->MaKH,
+        $consented = NguoiDung::factory()->create(['ngay_sinh' => now()->subYears(30)->toDateString()]);
+        HoSoSucKhoe::create(['ma_nd' => $consented->ma_nd,
             'consented_at' => now(),
             'ai_consent_at' => now(),
             'allergies' => ['Aspirin'],
         ]);
-        $withProfile = PhienSangLoc::create(['MaKH' => $consented->MaKH, 'status' => 'pending_pharmacist']);
+        $withProfile = PhienSangLoc::create(['ma_nd' => $consented->ma_nd, 'status' => 'pending_pharmacist']);
 
         app(TriageAiContextService::class)->buildContext($withProfile);
 
-        $this->assertDatabaseHas('audit_logs', [
+        $this->assertDatabaseHas('nhat_ky_kiem_toans', [
             'action' => 'ai_context_sent',
-            'MaKH' => $consented->MaKH,
+            'ma_nd' => $consented->ma_nd,
         ]);
         $this->assertSame(
-            ['MaSL' => $withProfile->MaSL, 'MaKH' => $consented->MaKH],
+            ['ma_sl' => $withProfile->ma_sl, 'ma_nd' => $consented->ma_nd],
             NhatKyKiemToan::where('action', 'ai_context_sent')->sole()->new_values
         );
 
-        $allergyOnly = NguoiDung::factory()->create(['birth_date' => now()->subYears(30)->toDateString()]);
-        HoSoSucKhoe::create([
-            'MaKH' => $allergyOnly->MaKH,
+        $allergyOnly = NguoiDung::factory()->create(['ngay_sinh' => now()->subYears(30)->toDateString()]);
+        HoSoSucKhoe::create(['ma_nd' => $allergyOnly->ma_nd,
             'consented_at' => now(),
             'ai_consent_at' => null,
             'allergies' => ['SecretAllergy'],
         ]);
-        $unconsented = PhienSangLoc::create(['MaKH' => $allergyOnly->MaKH, 'status' => 'pending_pharmacist']);
+        $unconsented = PhienSangLoc::create(['ma_nd' => $allergyOnly->ma_nd, 'status' => 'pending_pharmacist']);
 
-        $noProfile = NguoiDung::factory()->create(['birth_date' => now()->subYears(30)->toDateString()]);
-        $bare = PhienSangLoc::create(['MaKH' => $noProfile->MaKH, 'status' => 'pending_pharmacist']);
+        $noProfile = NguoiDung::factory()->create(['ngay_sinh' => now()->subYears(30)->toDateString()]);
+        $bare = PhienSangLoc::create(['ma_nd' => $noProfile->ma_nd, 'status' => 'pending_pharmacist']);
 
         app(TriageAiContextService::class)->buildContext($unconsented);
         app(TriageAiContextService::class)->buildContext($bare);
@@ -140,10 +128,9 @@ class TriageAiContextServiceTest extends TestCase
 
     public function test_history_fences_customer_text_and_flattens_injected_newlines(): void
     {
-        $nguoiDung = NguoiDung::factory()->create(['birth_date' => now()->subYears(30)->toDateString()]);
+        $nguoiDung = NguoiDung::factory()->create(['ngay_sinh' => now()->subYears(30)->toDateString()]);
 
-        PhienSangLoc::create([
-            'MaKH' => $nguoiDung->MaKH,
+        PhienSangLoc::create(['ma_nd' => $nguoiDung->ma_nd,
             'status' => 'reviewed',
             'outcome' => 'self_care',
             'collected_data' => [
@@ -151,7 +138,7 @@ class TriageAiContextServiceTest extends TestCase
             ],
         ]);
 
-        $phien = PhienSangLoc::create(['MaKH' => $nguoiDung->MaKH, 'status' => 'pending_pharmacist']);
+        $phien = PhienSangLoc::create(['ma_nd' => $nguoiDung->ma_nd, 'status' => 'pending_pharmacist']);
 
         $context = app(TriageAiContextService::class)->buildContext($phien);
 
@@ -163,16 +150,15 @@ class TriageAiContextServiceTest extends TestCase
 
     public function test_history_survives_a_past_session_without_collected_data(): void
     {
-        $nguoiDung = NguoiDung::factory()->create(['birth_date' => now()->subYears(30)->toDateString()]);
+        $nguoiDung = NguoiDung::factory()->create(['ngay_sinh' => now()->subYears(30)->toDateString()]);
 
-        PhienSangLoc::create([
-            'MaKH' => $nguoiDung->MaKH,
+        PhienSangLoc::create(['ma_nd' => $nguoiDung->ma_nd,
             'status' => 'reviewed',
             'outcome' => 'self_care',
             'collected_data' => null,
         ]);
 
-        $phien = PhienSangLoc::create(['MaKH' => $nguoiDung->MaKH, 'status' => 'pending_pharmacist']);
+        $phien = PhienSangLoc::create(['ma_nd' => $nguoiDung->ma_nd, 'status' => 'pending_pharmacist']);
 
         $context = app(TriageAiContextService::class)->buildContext($phien);
 
@@ -181,14 +167,13 @@ class TriageAiContextServiceTest extends TestCase
 
     public function test_audits_nothing_when_the_consented_profile_is_empty(): void
     {
-        $nguoiDung = NguoiDung::factory()->create(['birth_date' => now()->subYears(30)->toDateString()]);
-        HoSoSucKhoe::create([
-            'MaKH' => $nguoiDung->MaKH,
+        $nguoiDung = NguoiDung::factory()->create(['ngay_sinh' => now()->subYears(30)->toDateString()]);
+        HoSoSucKhoe::create(['ma_nd' => $nguoiDung->ma_nd,
             'consented_at' => now(),
             'ai_consent_at' => now(),
         ]);
 
-        $phien = PhienSangLoc::create(['MaKH' => $nguoiDung->MaKH, 'status' => 'pending_pharmacist']);
+        $phien = PhienSangLoc::create(['ma_nd' => $nguoiDung->ma_nd, 'status' => 'pending_pharmacist']);
 
         app(TriageAiContextService::class)->buildContext($phien);
 
@@ -197,35 +182,35 @@ class TriageAiContextServiceTest extends TestCase
 
     public function test_history_limits_to_newest_three_sessions_ordered_newest_first(): void
     {
-        $nguoiDung = NguoiDung::factory()->create(['birth_date' => now()->subYears(30)->toDateString()]);
+        $nguoiDung = NguoiDung::factory()->create(['ngay_sinh' => now()->subYears(30)->toDateString()]);
 
         // 4 past sessions created in sequence
         PhienSangLoc::forceCreate([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'status' => 'reviewed',
             'collected_data' => ['raw_symptom_text' => 'Triệu chứng 1 (cũ nhất)'],
             'created_at' => now()->subDays(10),
         ]);
         PhienSangLoc::forceCreate([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'status' => 'reviewed',
             'collected_data' => ['raw_symptom_text' => 'Triệu chứng 2'],
             'created_at' => now()->subDays(5),
         ]);
         PhienSangLoc::forceCreate([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'status' => 'pending_pharmacist',
             'collected_data' => ['raw_symptom_text' => 'Triệu chứng 3'],
             'created_at' => now()->subDays(2),
         ]);
         PhienSangLoc::forceCreate([
-            'MaKH' => $nguoiDung->MaKH,
+            'ma_nd' => $nguoiDung->ma_nd,
             'status' => 'reviewed',
             'collected_data' => ['raw_symptom_text' => 'Triệu chứng 4 (mới nhất)'],
             'created_at' => now()->subDay(),
         ]);
 
-        $phien = PhienSangLoc::create(['MaKH' => $nguoiDung->MaKH, 'status' => 'pending_pharmacist']);
+        $phien = PhienSangLoc::create(['ma_nd' => $nguoiDung->ma_nd, 'status' => 'pending_pharmacist']);
 
         $context = app(TriageAiContextService::class)->buildContext($phien);
 
@@ -244,7 +229,7 @@ class TriageAiContextServiceTest extends TestCase
     public function test_returns_empty_string_when_nothing_is_known(): void
     {
         $phien = PhienSangLoc::create([
-            'MaKH' => NguoiDung::factory()->create(['birth_date' => null, 'gender' => null])->MaKH,
+            'ma_nd' => NguoiDung::factory()->create(['ngay_sinh' => null, 'gioi_tinh' => null])->ma_nd,
             'status' => 'pending_pharmacist',
         ]);
 

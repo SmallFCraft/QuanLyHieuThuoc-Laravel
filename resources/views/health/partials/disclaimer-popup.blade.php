@@ -43,8 +43,8 @@
              ?disclaimer=1 of a "Xem lại" visit never survives the POST. --}}
         <form method="POST" action="{{ route('health.disclaimer.ack') }}" class="m-0">
             @csrf
-            @isset($MaSL)
-                <input type="hidden" name="MaSL" value="{{ $MaSL }}">
+            @isset($ma_sl)
+                <input type="hidden" name="MaSL" value="{{ $ma_sl }}">
             @endisset
             <button type="submit" class="health-btn health-btn-primary w-100" data-disclaimer-ack>
                 <i class="bi bi-check2" aria-hidden="true"></i>{{ __('messages.health.disclaimer_ack') }}

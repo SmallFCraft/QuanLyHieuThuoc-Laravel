@@ -2,7 +2,7 @@
 
 @section('title', 'Chi tiết phiên chat')
 @section('page-title', 'Chi tiết phiên chat AI')
-@section('page-subtitle', $displaySessionId . ' · ' . ($sessionUser?->name ?? 'Không rõ người dùng'))
+@section('page-subtitle', $displaySessionId . ' · ' . ($sessionUser?->ho_ten ?? 'Không rõ người dùng'))
 
 @section('content')
 @php
@@ -10,7 +10,7 @@
     $assistantMessages = $messages->where('role', 'assistant')->count();
     $latestAssistantMessageId = $messages
         ->filter(fn ($message): bool => $message->role !== 'user')
-        ->last()?->MaTN;
+        ->last()?->ma_tn;
     $latestDisclaimerMessage = $messages
         ->filter(fn ($message): bool => $message->role !== 'user' && (bool) $message->show_disclaimer)
         ->last();
@@ -164,7 +164,7 @@
                     <div>
                         <dt>Người dùng</dt>
                         <dd>
-                            <span class="fw-semibold">{{ $sessionUser?->name ?? 'Không rõ' }}</span>
+                            <span class="fw-semibold">{{ $sessionUser?->ho_ten ?? 'Không rõ' }}</span>
                             @if($sessionUser?->email)
                                 <span class="d-block small text-secondary">{{ $sessionUser->email }}</span>
                             @endif
@@ -223,7 +223,7 @@
                                 $providerModel = config('chatbot.ai.model');
                             }
                             $messageSource = null;
-                            $messageImage = $messageImageMap[$message->MaTN] ?? null;
+                            $messageImage = $messageImageMap[$message->ma_tn] ?? null;
                             $messageImageLabel = data_get($message->metadata, 'image_upload')
                                 ? 'Ảnh người dùng gửi'
                                 : 'Ảnh tham chiếu';
@@ -314,7 +314,7 @@
                                             {!! $formatChatMarkdown($message->content) !!}
                                             <script type="application/json" class="js-admin-chat-markdown-source">{!! json_encode((string) $message->content, $chatMarkdownJsonOptions) !!}</script>
                                         </div>
-                                        @if($inlineDisclaimerMessageId && $message->MaTN === $inlineDisclaimerMessageId)
+                                        @if($inlineDisclaimerMessageId && $message->ma_tn === $inlineDisclaimerMessageId)
                                             <div class="admin-chat-inline-disclaimer">
                                                 <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
                                                 <span>{{ $inlineDisclaimerText }}</span>
@@ -360,9 +360,9 @@
                                                 @php
                                                     $matchedProduct = data_get($product, 'product');
                                                     $productPayload = is_array($matchedProduct) ? $matchedProduct : $product;
-                                                    $isMatched = (bool) data_get($product, 'matched', data_get($productPayload, 'id') || data_get($productPayload, 'MaSP'));
+                                                    $isMatched = (bool) data_get($product, 'matched', data_get($productPayload, 'id') || data_get($productPayload, 'ma_sp'));
                                                     $productName = data_get($productPayload, 'name') ?: data_get($product, 'parsed_name', 'Không rõ tên');
-                                                    $productId = data_get($productPayload, 'id', data_get($productPayload, 'MaSP'));
+                                                    $productId = data_get($productPayload, 'id', data_get($productPayload, 'ma_sp'));
                                                     $stockQuantity = data_get($productPayload, 'stock_quantity');
                                                     $parsedName = data_get($product, 'parsed_name');
                                                     $dosage = data_get($product, 'dosage');

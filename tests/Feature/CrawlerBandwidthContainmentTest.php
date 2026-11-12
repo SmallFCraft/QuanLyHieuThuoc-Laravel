@@ -22,18 +22,17 @@ class CrawlerBandwidthContainmentTest extends TestCase
     {
         parent::setUp();
 
-        $this->danhMuc = DanhMuc::create(['name' => 'Thuốc giảm đau']);
+        $this->danhMuc = DanhMuc::create(['ten' => 'Thuốc giảm đau']);
 
         // 14 sản phẩm = 2 trang (PER_PAGE = 10)
         for ($i = 0; $i < 14; $i++) {
-            SanPham::create([
-                'MaDM' => $this->danhMuc->MaDM,
-                'name' => "Sản phẩm thử nghiệm {$i}",
-                'price' => 20000,
-                'expiration_date' => now()->addYear(),
-                'stock_quantity' => 10,
-                'reorder_point' => 2,
-                'batch_number' => "BATCH-CRAWL-{$i}",
+            SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+                'ten' => "Sản phẩm thử nghiệm {$i}",
+                'gia' => 20000,
+                'ngay_het_han' => now()->addYear(),
+                'so_luong_ton' => 10,
+                'muc_canh_bao' => 2,
+                'so_lo' => "BATCH-CRAWL-{$i}",
             ]);
         }
     }
@@ -50,7 +49,7 @@ class CrawlerBandwidthContainmentTest extends TestCase
         // Ba đường phân trang cùng một lỗ: chỉ chặn index() thì hai đường còn lại vẫn
         // trả 200 đầy đủ và crawler vẫn sinh URL vô hạn.
         $this->get('/products?page=99999')->assertNotFound();
-        $this->get("/products/category/{$this->danhMuc->MaDM}?page=99999")->assertNotFound();
+        $this->get("/products/category/{$this->danhMuc->ma_dm}?page=99999")->assertNotFound();
         $this->get('/search?q=thuoc&page=99999')->assertNotFound();
     }
 
@@ -64,7 +63,7 @@ class CrawlerBandwidthContainmentTest extends TestCase
 
     public function test_a_missing_category_filter_returns_404_instead_of_an_empty_page(): void
     {
-        // where('MaDM', ...) trả danh sách rỗng 200 cho id không tồn tại, nên mỗi số
+        // where('ma_dm', ...) trả danh sách rỗng 200 cho id không tồn tại, nên mỗi số
         // tự đặt là một URL indexable.
         $this->get('/products?category=999999')->assertNotFound();
     }
@@ -112,7 +111,7 @@ class CrawlerBandwidthContainmentTest extends TestCase
     {
         // Tái hiện chính xác chuỗi bot cào trong log. `amp;page` là một tham số riêng
         // và vô hại; cái phải 404 là `page=7` trên catalog chỉ có 2 trang.
-        $this->get('/products?amp;page=74&category=' . $this->danhMuc->MaDM . '&page=7')
+        $this->get('/products?amp;page=74&category=' . $this->danhMuc->ma_dm . '&page=7')
             ->assertNotFound();
 
         // Và `amp;page` một mình thì vô hiệu: key đó không phải `page`, paginator bỏ
@@ -145,7 +144,7 @@ class CrawlerBandwidthContainmentTest extends TestCase
 
     public function test_a_paginated_category_also_collapses_its_canonical(): void
     {
-        $html = $this->get('/products?category=' . $this->danhMuc->MaDM . '&page=2')
+        $html = $this->get('/products?category=' . $this->danhMuc->ma_dm . '&page=2')
             ->assertOk()
             ->getContent();
 
@@ -154,7 +153,7 @@ class CrawlerBandwidthContainmentTest extends TestCase
         // Bộ lọc danh mục vẫn là một phần danh tính trang; chỉ `page` bị bỏ.
         $canonical = html_entity_decode($this->canonicalHref($html), ENT_QUOTES, 'UTF-8');
         $this->assertStringNotContainsString('page=', $canonical);
-        $this->assertStringContainsString('category=' . $this->danhMuc->MaDM, $canonical);
+        $this->assertStringContainsString('category=' . $this->danhMuc->ma_dm, $canonical);
     }
 
     public function test_first_page_of_catalog_remains_index_follow(): void

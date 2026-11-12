@@ -29,13 +29,12 @@ class TriageTypedAnswerTest extends TestCase
     {
         parent::setUp();
 
-        DanhMuc::create(['name' => 'Thuốc giảm đau - Hạ sốt', 'description' => 'Giảm đau, hạ sốt']);
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt', 'mo_ta' => 'Giảm đau, hạ sốt']);
         $this->seed(TriThucYTeSeeder::class);
 
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(34)->toDateString(),
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(34)->toDateString(),
         ]);
     }
 
@@ -43,7 +42,7 @@ class TriageTypedAnswerTest extends TestCase
     {
         $this->actingAs($this->nguoiDung)->get(route('health.check'));
 
-        return PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->latest('MaSL')->firstOrFail();
+        return PhienSangLoc::where('ma_nd', $this->nguoiDung->ma_nd)->inProgress()->latest('ma_sl')->firstOrFail();
     }
 
     public function test_the_form_default_button_does_not_carry_a_quick_pick_value(): void
@@ -76,7 +75,7 @@ class TriageTypedAnswerTest extends TestCase
         // On Enter the browser now posts only the typed answer, because the form's
         // default submit button is unnamed. `option_answer` arrives solely from a click.
         $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => 1,
             'answer' => 'tôi bị tiêu chảy từ sáng nay',
         ]);
@@ -93,7 +92,7 @@ class TriageTypedAnswerTest extends TestCase
 
         // The bug's real cost: the recorded symptom is what the rule engine matches on.
         $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => 1,
             'answer' => 'tôi bị tiêu chảy nhiều lần, mất nước',
         ]);
@@ -114,7 +113,7 @@ class TriageTypedAnswerTest extends TestCase
         $phien = $this->startSession();
 
         $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => 1,
             'answer' => '',
             'option_answer' => 'Tiêu chảy',
@@ -127,7 +126,7 @@ class TriageTypedAnswerTest extends TestCase
     {
         $phien = $this->startSession();
         $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => 1,
             'answer' => 'đau đầu',
         ]);
@@ -135,11 +134,11 @@ class TriageTypedAnswerTest extends TestCase
         // Back prefills the box with the stored answer. Clicking a different option must
         // replace it, so the click cannot lose to the value it is meant to overwrite.
         $this->actingAs($this->nguoiDung)->post(route('health.back'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
         ]);
 
         $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => 1,
             'answer' => 'đau đầu',
             'option_answer' => 'Tiêu chảy',
@@ -152,13 +151,13 @@ class TriageTypedAnswerTest extends TestCase
     {
         $phien = $this->startSession();
         $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => 1,
             'answer' => 'tôi bị ho',
         ]);
 
         $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-            'triage_session_id' => $phien->MaSL,
+            'triage_session_id' => $phien->ma_sl,
             'step' => 2,
             'answer' => 'khoảng 5 ngày rồi',
         ]);
@@ -192,7 +191,7 @@ class TriageTypedAnswerTest extends TestCase
             }
 
             $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => $step,
                 'answer' => $answer,
             ]);

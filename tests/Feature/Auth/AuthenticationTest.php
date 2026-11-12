@@ -13,11 +13,10 @@ class AuthenticationTest extends TestCase
 
     public function test_user_can_login_with_valid_credentials(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'email' => 'test@example.com',
+        $nguoiDung = NguoiDung::factory()->create(['email' => 'test@example.com',
             'password' => Hash::make('Password123'),
-            'role' => 'User',
-            'status' => 'active'
+            'vai_tro' => 'User',
+            'trang_thai' => 'active'
         ]);
 
         $response = $this->post(route('login'), [
@@ -31,11 +30,10 @@ class AuthenticationTest extends TestCase
 
     public function test_user_cannot_login_with_invalid_password(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'email' => 'test@example.com',
+        $nguoiDung = NguoiDung::factory()->create(['email' => 'test@example.com',
             'password' => Hash::make('Password123'),
-            'role' => 'User',
-            'status' => 'active'
+            'vai_tro' => 'User',
+            'trang_thai' => 'active'
         ]);
 
         $response = $this->post(route('login'), [
@@ -49,9 +47,8 @@ class AuthenticationTest extends TestCase
 
     public function test_admin_can_access_admin_panel(): void
     {
-        $admin = NguoiDung::factory()->create([
-            'role' => 'Administrator',
-            'status' => 'active'
+        $admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator',
+            'trang_thai' => 'active'
         ]);
 
         $response = $this->actingAs($admin)->get(route('admin.dashboard'));
@@ -61,9 +58,8 @@ class AuthenticationTest extends TestCase
 
     public function test_regular_user_cannot_access_admin_panel(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active'
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active'
         ]);
 
         $response = $this->actingAs($nguoiDung)->get(route('admin.dashboard'));
@@ -80,11 +76,10 @@ class AuthenticationTest extends TestCase
 
     public function test_authentication_attempt_is_logged(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'email' => 'test@example.com',
+        $nguoiDung = NguoiDung::factory()->create(['email' => 'test@example.com',
             'password' => Hash::make('Password123'),
-            'role' => 'User',
-            'status' => 'active'
+            'vai_tro' => 'User',
+            'trang_thai' => 'active'
         ]);
 
         $this->post(route('login'), [
@@ -93,19 +88,18 @@ class AuthenticationTest extends TestCase
         ]);
 
         // Check if audit log was created for login
-        $this->assertDatabaseHas('audit_logs', [
-            'MaKH' => $nguoiDung->MaKH,
+        $this->assertDatabaseHas('nhat_ky_kiem_toans', [
+            'ma_nd' => $nguoiDung->ma_nd,
             'action' => 'login_success'
         ]);
     }
 
     public function test_failed_authentication_attempt_is_logged(): void
     {
-        NguoiDung::factory()->create([
-            'email' => 'test@example.com',
+        NguoiDung::factory()->create(['email' => 'test@example.com',
             'password' => Hash::make('Password123'),
-            'role' => 'User',
-            'status' => 'active'
+            'vai_tro' => 'User',
+            'trang_thai' => 'active'
         ]);
 
         $this->post(route('login'), [
@@ -114,16 +108,15 @@ class AuthenticationTest extends TestCase
         ]);
 
         // Check if failed login attempt was logged
-        $this->assertDatabaseHas('audit_logs', [
+        $this->assertDatabaseHas('nhat_ky_kiem_toans', [
             'action' => 'login_failed'
         ]);
     }
 
     public function test_user_can_logout(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active'
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active'
         ]);
 
         $this->actingAs($nguoiDung);
@@ -136,11 +129,10 @@ class AuthenticationTest extends TestCase
 
     public function test_inactive_user_cannot_login(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'email' => 'test@example.com',
+        $nguoiDung = NguoiDung::factory()->create(['email' => 'test@example.com',
             'password' => Hash::make('Password123'),
-            'role' => 'User',
-            'status' => 'inactive'
+            'vai_tro' => 'User',
+            'trang_thai' => 'inactive'
         ]);
 
         $response = $this->post(route('login'), [
@@ -154,11 +146,10 @@ class AuthenticationTest extends TestCase
 
     public function test_csrf_token_is_required_for_login(): void
     {
-        $nguoiDung = NguoiDung::factory()->create([
-            'email' => 'test@example.com',
+        $nguoiDung = NguoiDung::factory()->create(['email' => 'test@example.com',
             'password' => Hash::make('Password123'),
-            'role' => 'User',
-            'status' => 'active'
+            'vai_tro' => 'User',
+            'trang_thai' => 'active'
         ]);
 
         $response = $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class)

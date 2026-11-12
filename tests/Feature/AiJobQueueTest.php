@@ -30,7 +30,7 @@ class AiJobQueueTest extends TestCase
     {
         parent::setUp();
 
-        $this->nguoiDung = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
     }
 
     /**
@@ -75,7 +75,7 @@ class AiJobQueueTest extends TestCase
         $job = AiJob::firstOrFail();
         $this->assertSame('queued', $job->status);
         $this->assertSame(AiJob::KIND_CHAT, $job->kind);
-        $this->assertSame((int) $this->nguoiDung->MaKH, (int) $job->MaKH);
+        $this->assertSame((int) $this->nguoiDung->ma_nd, (int) $job->ma_nd);
         $this->assertSame('Tôi cần tư vấn thuốc cảm', $job->payload['message']);
     }
 
@@ -110,13 +110,13 @@ class AiJobQueueTest extends TestCase
         $this->assertSame('Dạ, anh/chị uống nhiều nước nhé.', $job->result['response']);
         $this->assertNotNull($job->finished_at);
 
-        $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $this->nguoiDung->MaKH,
+        $this->assertDatabaseHas('tin_nhan_chats', [
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'role' => 'user',
             'content' => 'Tôi bị đau đầu',
         ]);
-        $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $this->nguoiDung->MaKH,
+        $this->assertDatabaseHas('tin_nhan_chats', [
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'role' => 'assistant',
             'content' => 'Dạ, anh/chị uống nhiều nước nhé.',
         ]);
@@ -165,7 +165,7 @@ class AiJobQueueTest extends TestCase
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
 
         // The uuid is a public id, not a capability token.
         $this->actingAs($other)
@@ -175,9 +175,8 @@ class AiJobQueueTest extends TestCase
 
     public function test_a_guest_cannot_poll(): void
     {
-        $job = AiJob::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->nguoiDung->MaKH,
+        $job = AiJob::create(['uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'queued',
         ]);
@@ -206,13 +205,13 @@ class AiJobQueueTest extends TestCase
         $this->assertStringContainsString('AI provider failed', $job->error);
 
         // Support must still be able to see what was asked.
-        $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $this->nguoiDung->MaKH,
+        $this->assertDatabaseHas('tin_nhan_chats', [
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'role' => 'user',
             'content' => 'Chatbot đang lỗi à?',
         ]);
-        $this->assertDatabaseHas('chat_messages', [
-            'MaKH' => $this->nguoiDung->MaKH,
+        $this->assertDatabaseHas('tin_nhan_chats', [
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'role' => 'system',
             'content' => 'Không thể xử lý tin nhắn do lỗi hệ thống.',
         ]);
@@ -268,9 +267,8 @@ class AiJobQueueTest extends TestCase
      */
     protected function strandedJob(): AiJob
     {
-        $job = AiJob::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->nguoiDung->MaKH,
+        $job = AiJob::create(['uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'queued',
             'payload' => ['message' => 'Tôi bị ho', 'context' => [], 'session_id' => 'test-session'],
@@ -306,7 +304,7 @@ class AiJobQueueTest extends TestCase
         $this->fakeService($this->reply());
         $victim = $this->strandedJob();
 
-        $attacker = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $attacker = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
 
         $this->actingAs($attacker)->postJson('/api/chatbot/message', [
             'message' => 'Xin chào',
@@ -403,7 +401,7 @@ class AiJobQueueTest extends TestCase
             ->postJson('/api/chatbot/message', ['message' => 'Tôi bị ho'])
             ->json('job_id');
 
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
 
         $this->actingAs($other)
             ->deleteJson("/api/ai-jobs/{$jobId}")
@@ -414,9 +412,8 @@ class AiJobQueueTest extends TestCase
 
     public function test_a_guest_cannot_stop_a_turn(): void
     {
-        $job = AiJob::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->nguoiDung->MaKH,
+        $job = AiJob::create(['uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'queued',
         ]);
@@ -430,8 +427,7 @@ class AiJobQueueTest extends TestCase
     {
         Queue::fake();
 
-        \App\Models\HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        \App\Models\HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'allergies' => ['penicillin'],
             'chronic_conditions' => ['loét dạ dày'],
             'consented_at' => now(),
@@ -467,27 +463,24 @@ class AiJobQueueTest extends TestCase
 
     public function test_cleanup_closes_a_job_whose_worker_died_and_drops_old_payloads(): void
     {
-        $stuck = AiJob::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->nguoiDung->MaKH,
+        $stuck = AiJob::create(['uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'running',
             'payload' => ['message' => 'tôi bị đau đầu'],
         ]);
         $stuck->forceFill(['created_at' => now()->subMinutes(30)])->save();
 
-        $old = AiJob::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->nguoiDung->MaKH,
+        $old = AiJob::create(['uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'done',
             'payload' => ['message' => 'tôi bị sốt'],
         ]);
         $old->forceFill(['created_at' => now()->subHours(30)])->save();
 
-        $recent = AiJob::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->nguoiDung->MaKH,
+        $recent = AiJob::create(['uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'done',
         ]);
@@ -496,20 +489,19 @@ class AiJobQueueTest extends TestCase
 
         $this->assertSame('failed', $stuck->refresh()->status);
         // The payload holds what the customer typed, so it must not sit in the DB.
-        $this->assertNull(AiJob::find($old->MaAJ));
-        $this->assertNotNull(AiJob::find($recent->MaAJ));
+        $this->assertNull(AiJob::find($old->ma_aj));
+        $this->assertNotNull(AiJob::find($recent->ma_aj));
     }
 
     public function test_cleanup_drops_the_queue_entry_of_the_job_it_retires(): void
     {
         config()->set('queue.default', 'database');
 
-        $job = AiJob::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->nguoiDung->MaKH,
+        $job = AiJob::create(['uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'queued',
-            'payload' => ['MaSL' => 1],
+            'payload' => ['ma_sl' => 1],
         ]);
         $job->forceFill(['created_at' => now()->subMinutes(30)])->save();
 
@@ -538,9 +530,8 @@ class AiJobQueueTest extends TestCase
         Queue::fake();
 
         // The worker is busy on a slow provider call, not absent.
-        AiJob::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'MaKH' => $this->nguoiDung->MaKH,
+        AiJob::create(['uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'ma_nd' => $this->nguoiDung->ma_nd,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'running',
         ])->forceFill(['started_at' => now()->subSeconds(30)])->save();
@@ -569,27 +560,25 @@ class AiJobQueueTest extends TestCase
         Queue::fake([\App\Jobs\ProcessTriageAdviceRewrite::class]);
         config()->set('chatbot.ai.triage.advice_rewrite', true);
 
-        $danhMuc = \App\Models\DanhMuc::create([
-            'name' => 'Thuốc giảm đau - Hạ sốt',
-            'description' => 'Giảm đau, hạ sốt',
+        $danhMuc = \App\Models\DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt',
+            'mo_ta' => 'Giảm đau, hạ sốt',
         ]);
         $this->seed(\Database\Seeders\TriThucYTeSeeder::class);
-        \App\Models\SanPham::factory()->create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Paracetamol 500mg',
-            'ingredients' => 'Paracetamol 500mg',
-            'usage' => 'Giảm đau đầu, hạ sốt',
-            'stock_quantity' => 50,
+        \App\Models\SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'thanh_phan' => 'Paracetamol 500mg',
+            'cach_dung' => 'Giảm đau đầu, hạ sốt',
+            'so_luong_ton' => 50,
         ]);
 
-        $this->nguoiDung->forceFill(['birth_date' => now()->subYears(34)->toDateString()])->save();
+        $this->nguoiDung->forceFill(['ngay_sinh' => now()->subYears(34)->toDateString()])->save();
 
         $this->actingAs($this->nguoiDung)->get(route('health.check'));
-        $phien = \App\Models\PhienSangLoc::where('MaKH', $this->nguoiDung->MaKH)->inProgress()->firstOrFail();
+        $phien = \App\Models\PhienSangLoc::where('ma_nd', $this->nguoiDung->ma_nd)->inProgress()->firstOrFail();
 
         foreach ([1 => 'đau đầu', 2 => 'hôm nay', 3 => 'chưa dùng gì', 4 => 'không có', 5 => 'không có thêm'] as $step => $answer) {
             $this->actingAs($this->nguoiDung)->post(route('health.answer'), [
-                'triage_session_id' => $phien->MaSL,
+                'triage_session_id' => $phien->ma_sl,
                 'step' => $step,
                 'answer' => $answer,
             ]);
@@ -607,7 +596,7 @@ class AiJobQueueTest extends TestCase
         Queue::assertPushed(\App\Jobs\ProcessTriageAdviceRewrite::class, 1);
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.outcome_self_care'))
             // Honest about what is still coming, while the conclusion is already there.
@@ -617,7 +606,7 @@ class AiJobQueueTest extends TestCase
         // banner tracks the job, not a one-shot flash, so it survives the reload that
         // a 15-second wait invites.
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.ai_pending'));
 
@@ -625,7 +614,7 @@ class AiJobQueueTest extends TestCase
         $phien->forceFill(['ai_status' => 'ok', 'ai_advice' => 'Anh/chị nghỉ ngơi nhé.'])->save();
 
         $this->actingAs($this->nguoiDung)
-            ->get(route('health.result', $phien->MaSL))
+            ->get(route('health.result', $phien->ma_sl))
             ->assertOk()
             ->assertSee(__('messages.health.outcome_self_care'))
             ->assertDontSee(__('messages.health.ai_pending'));
@@ -642,8 +631,7 @@ class AiJobQueueTest extends TestCase
 
         config()->set('chatbot.ai.triage.advice_rewrite', true);
 
-        $phien = \App\Models\PhienSangLoc::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        $phien = \App\Models\PhienSangLoc::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'entry_point' => 'page',
             'current_step' => 6,
             'status' => 'completed',
@@ -656,7 +644,7 @@ class AiJobQueueTest extends TestCase
 
         $this->assertSame(AiJob::KIND_TRIAGE_ADVICE, $job->kind);
         // No customer free text in the payload for this kind.
-        $this->assertSame(['MaSL' => $phien->MaSL], $job->payload);
+        $this->assertSame(['ma_sl' => $phien->ma_sl], $job->payload);
 
         (new \App\Jobs\ProcessTriageAdviceRewrite($job->uuid))->handle(
             app(\App\Services\Triage\Ai\TriageAiAdviceService::class),

@@ -9,7 +9,7 @@ use App\Support\VietnameseText;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Writes crawled catalog data into products and categories.
+ * Writes crawled catalog data into san_phams and danh_mucs.
  *
  * Two data layers meet here. Catalog fields (name, price, ingredients, usage,
  * image, category) belong to the source and are refreshed on every crawl. Stock
@@ -25,7 +25,7 @@ class ProductImportService
     private const SEED_REORDER_MIN = 10;
     private const SEED_REORDER_MAX = 30;
 
-    /** @var array<string, int> folded category name => MaDM, avoiding a lookup per product */
+    /** @var array<string, int> folded category name => ma_dm, avoiding a lookup per product */
     private array $categoryIds = [];
 
     /** @var array<string> display names of the categories this run had to create */
@@ -41,7 +41,7 @@ class ProductImportService
             $categoryId = $this->resolveCategoryId($source->categoryName);
             $batchNumber = $source->batchNumber();
 
-            $sanPham = SanPham::withTrashed()->firstWhere('batch_number', $batchNumber);
+            $sanPham = SanPham::withTrashed()->firstWhere('so_lo', $batchNumber);
 
             if ($sanPham === null) {
                 return $this->create($source, $categoryId, $batchNumber);
@@ -75,20 +75,20 @@ class ProductImportService
 
     private function create(LongChauProduct $source, int $categoryId, string $batchNumber): SanPham
     {
-        // ProductObserver::created() reads batch_number and expiration_date to build
-        // the matching product_batches row, so both must be set on insert.
+        // ProductObserver::created() reads so_lo and ngay_het_han to build
+        // the matching lo_san_phams row, so both must be set on insert.
         return SanPham::create([
-            'MaDM' => $categoryId,
-            'name' => $source->name,
-            'ingredients' => $source->ingredients,
-            'usage' => $source->usage,
-            'shelf_life_months' => $source->shelfLifeMonths,
-            'price' => $source->price,
-            'image' => $source->imageUrl,
-            'batch_number' => $batchNumber,
-            'expiration_date' => $source->expirationDate(),
-            'stock_quantity' => random_int(self::SEED_STOCK_MIN, self::SEED_STOCK_MAX),
-            'reorder_point' => random_int(self::SEED_REORDER_MIN, self::SEED_REORDER_MAX),
+            'ma_dm' => $categoryId,
+            'ten' => $source->name,
+            'thanh_phan' => $source->ingredients,
+            'cach_dung' => $source->usage,
+            'han_dung_thang' => $source->shelfLifeMonths,
+            'gia' => $source->price,
+            'hinh_anh' => $source->imageUrl,
+            'so_lo' => $batchNumber,
+            'ngay_het_han' => $source->expirationDate(),
+            'so_luong_ton' => random_int(self::SEED_STOCK_MIN, self::SEED_STOCK_MAX),
+            'muc_canh_bao' => random_int(self::SEED_REORDER_MIN, self::SEED_REORDER_MAX),
         ]);
     }
 
@@ -104,13 +104,13 @@ class ProductImportService
         }
 
         $sanPham->fill([
-            'MaDM' => $categoryId,
-            'name' => $source->name,
-            'ingredients' => $source->ingredients,
-            'usage' => $source->usage,
-            'shelf_life_months' => $source->shelfLifeMonths,
-            'price' => $source->price,
-            'image' => $source->imageUrl,
+            'ma_dm' => $categoryId,
+            'ten' => $source->name,
+            'thanh_phan' => $source->ingredients,
+            'cach_dung' => $source->usage,
+            'han_dung_thang' => $source->shelfLifeMonths,
+            'gia' => $source->price,
+            'hinh_anh' => $source->imageUrl,
         ])->save();
 
         return $sanPham;
@@ -134,12 +134,12 @@ class ProductImportService
             return $this->categoryIds[$folded];
         }
 
-        $danhMuc = DanhMuc::firstOrCreate(['name_folded' => $folded], ['name' => $name]);
+        $danhMuc = DanhMuc::firstOrCreate(['ten_khong_dau' => $folded], ['ten' => $name]);
 
         if ($danhMuc->wasRecentlyCreated) {
-            $this->newCategories[$folded] = $danhMuc->name;
+            $this->newCategories[$folded] = $danhMuc->ten;
         }
 
-        return $this->categoryIds[$folded] = (int) $danhMuc->MaDM;
+        return $this->categoryIds[$folded] = (int) $danhMuc->ma_dm;
     }
 }

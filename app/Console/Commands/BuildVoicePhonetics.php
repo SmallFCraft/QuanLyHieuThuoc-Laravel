@@ -25,7 +25,7 @@ class BuildVoicePhonetics extends Command
 
         [$rows, $tokens] = $this->collectFromProducts();
 
-        foreach (DanhMuc::pluck('name') as $name) {
+        foreach (DanhMuc::pluck('ten') as $name) {
             $this->addRow($rows, (string) $name, 'category', 1);
         }
 
@@ -65,8 +65,8 @@ class BuildVoicePhonetics extends Command
         $tokens = [];
 
         // cursor(): catalog đã 3.146 dòng và chỉ tăng, nên không nạp hết vào bộ nhớ.
-        SanPham::select('MaSP', 'name')->cursor()->each(function (SanPham $sanPham) use (&$rows, &$tokens): void {
-            $name = (string) $sanPham->name;
+        SanPham::select('ma_sp', 'ten')->cursor()->each(function (SanPham $sanPham) use (&$rows, &$tokens): void {
+            $name = (string) $sanPham->ten;
 
             $this->addRow($rows, $name, 'product', 1);
 

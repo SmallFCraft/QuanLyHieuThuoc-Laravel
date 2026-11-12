@@ -24,17 +24,16 @@ class VoiceEvalCommandTest extends TestCase
         Http::preventStrayRequests();
         config(['search.voice.ai' => false, 'search.voice.phonetic_min_hits' => 1]);
 
-        $danhMuc = DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt']);
+        $danhMuc = DanhMuc::create(['ten' => 'Thuốc giảm đau, hạ sốt']);
 
-        SanPham::create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Thuốc hạ sốt Hapacol 500',
-            'ingredients' => 'Paracetamol 500mg',
-            'price' => 50000,
-            'expiration_date' => now()->addYears(2),
-            'stock_quantity' => 30,
-            'reorder_point' => 10,
-            'batch_number' => 'VN-1',
+        SanPham::create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Thuốc hạ sốt Hapacol 500',
+            'thanh_phan' => 'Paracetamol 500mg',
+            'gia' => 50000,
+            'ngay_het_han' => now()->addYears(2),
+            'so_luong_ton' => 30,
+            'muc_canh_bao' => 10,
+            'so_lo' => 'VN-1',
         ]);
 
         $this->artisan('voice:build-phonetics');

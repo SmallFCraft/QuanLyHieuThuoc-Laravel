@@ -121,7 +121,7 @@ abstract class TriageAiService
             $this->auditLogService->log(
                 action: $action,
                 modelType: PhienSangLoc::class,
-                modelId: $phien->MaSL,
+                modelId: $phien->ma_sl,
                 oldValues: null,
                 newValues: $values + [
                     'outcome' => $phien->outcome,
@@ -130,12 +130,12 @@ abstract class TriageAiService
                     'ai_provider_index' => $described['index'] ?? null,
                     'processing_time_ms' => round($durationMs, 1),
                 ],
-                userId: $phien->MaKH
+                userId: $phien->ma_nd
             );
         } catch (\Throwable $exception) {
             Log::warning('Triage AI audit failed', [
                 'action' => $action,
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
         }

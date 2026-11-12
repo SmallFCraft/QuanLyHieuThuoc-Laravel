@@ -62,10 +62,10 @@ class CrawlLongChauTest extends TestCase
 
         $sanPham = SanPham::sole();
 
-        $this->assertSame('00005713', str_replace('LC-', '', $sanPham->batch_number));
+        $this->assertSame('00005713', str_replace('LC-', '', $sanPham->so_lo));
         $this->assertSame(252000, $sanPham->price_vnd);
-        $this->assertStringContainsString('Panadol Extra', $sanPham->name);
-        $this->assertSame('Thuốc giảm đau, hạ sốt, kháng viêm', $sanPham->danhMuc->name);
+        $this->assertStringContainsString('Panadol Extra', $sanPham->ten);
+        $this->assertSame('Thuốc giảm đau, hạ sốt, kháng viêm', $sanPham->danhMuc->ten);
         $this->assertSame(1, LoSanPham::count());
         $this->assertSame(1, DanhMuc::count());
     }
@@ -228,6 +228,6 @@ class CrawlLongChauTest extends TestCase
         $this->artisan('crawl:longchau --sitemap=thuoc')->assertSuccessful();
 
         $this->assertSame(1, DanhMuc::count());
-        $this->assertSame('Cơ - xương - khớp', DanhMuc::sole()->name);
+        $this->assertSame('Cơ - xương - khớp', DanhMuc::sole()->ten);
     }
 }

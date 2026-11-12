@@ -53,7 +53,7 @@ class ProcessChatbotMessage implements ShouldQueue
         $payload = $job->payload ?? [];
         $message = (string) ($payload['message'] ?? '');
         $sessionId = (string) ($payload['session_id'] ?? '');
-        $userId = (int) $job->MaKH;
+        $userId = (int) $job->ma_nd;
 
         try {
             $response = $chatbot->processMessage($message, $userId, (array) ($payload['context'] ?? []));
@@ -82,7 +82,7 @@ class ProcessChatbotMessage implements ShouldQueue
             $this->storeFailure($userId, $sessionId, $message);
 
             Log::error('Chatbot message processing failed', [
-                'MaKH' => $userId,
+                'ma_nd' => $userId,
                 'session_id' => $sessionId,
                 'uuid' => $this->uuid,
                 'error' => $exception->getMessage(),
@@ -98,7 +98,7 @@ class ProcessChatbotMessage implements ShouldQueue
     protected function storeTurn(int $userId, string $sessionId, string $message, array $response): void
     {
         TinNhanChat::create([
-            'MaKH' => $userId,
+            'ma_nd' => $userId,
             'session_id' => $sessionId,
             'role' => 'user',
             'content' => $message,
@@ -112,7 +112,7 @@ class ProcessChatbotMessage implements ShouldQueue
         }
 
         TinNhanChat::create([
-            'MaKH' => $userId,
+            'ma_nd' => $userId,
             'session_id' => $sessionId,
             'role' => 'assistant',
             'content' => $response['response'] ?? '',
@@ -133,7 +133,7 @@ class ProcessChatbotMessage implements ShouldQueue
     {
         try {
             TinNhanChat::create([
-                'MaKH' => $userId,
+                'ma_nd' => $userId,
                 'session_id' => $sessionId,
                 'role' => 'user',
                 'content' => $message,
@@ -143,7 +143,7 @@ class ProcessChatbotMessage implements ShouldQueue
             ]);
 
             TinNhanChat::create([
-                'MaKH' => $userId,
+                'ma_nd' => $userId,
                 'session_id' => $sessionId,
                 'role' => 'system',
                 'content' => 'Không thể xử lý tin nhắn do lỗi hệ thống.',

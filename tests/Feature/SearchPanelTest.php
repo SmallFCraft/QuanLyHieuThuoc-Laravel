@@ -24,18 +24,17 @@ class SearchPanelTest extends TestCase
 
         Cache::flush();
 
-        $danhMuc = DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt']);
+        $danhMuc = DanhMuc::create(['ten' => 'Thuốc giảm đau, hạ sốt']);
 
         foreach (range(1, 3) as $i) {
-            SanPham::create([
-                'MaDM' => $danhMuc->MaDM,
-                'name' => "Viên nén Paracetamol số {$i}",
-                'price' => 50000 * $i,
-                'expiration_date' => now()->addYears(2),
-                'stock_quantity' => 20,
-                'reorder_point' => 5,
-                'batch_number' => "LC-panel-{$i}",
-                'views_count' => 100 - $i,
+            SanPham::create(['ma_dm' => $danhMuc->ma_dm,
+                'ten' => "Viên nén Paracetamol số {$i}",
+                'gia' => 50000 * $i,
+                'ngay_het_han' => now()->addYears(2),
+                'so_luong_ton' => 20,
+                'muc_canh_bao' => 5,
+                'so_lo' => "LC-panel-{$i}",
+                'luot_xem' => 100 - $i,
             ]);
         }
     }
@@ -70,7 +69,7 @@ class SearchPanelTest extends TestCase
         // "mới ra mắt" và "nổi bật", nên quét cả trang thì xoá hẳn khối panel vẫn xanh.
         $panel = $this->panelMarkup($response->getContent());
 
-        // Xem nhiều nhất là số 1 (views_count 99).
+        // Xem nhiều nhất là số 1 (luot_xem 99).
         $this->assertStringContainsString('Viên nén Paracetamol số 1', $panel);
     }
 
@@ -87,15 +86,14 @@ class SearchPanelTest extends TestCase
     public function test_the_panel_shows_at_most_three_popular_products(): void
     {
         foreach (range(4, 8) as $i) {
-            SanPham::create([
-                'MaDM' => DanhMuc::sole()->MaDM,
-                'name' => "Viên nén Paracetamol số {$i}",
-                'price' => 10000,
-                'expiration_date' => now()->addYears(2),
-                'stock_quantity' => 5,
-                'reorder_point' => 2,
-                'batch_number' => "LC-panel-{$i}",
-                'views_count' => 10,
+            SanPham::create(['ma_dm' => DanhMuc::sole()->ma_dm,
+                'ten' => "Viên nén Paracetamol số {$i}",
+                'gia' => 10000,
+                'ngay_het_han' => now()->addYears(2),
+                'so_luong_ton' => 5,
+                'muc_canh_bao' => 2,
+                'so_lo' => "LC-panel-{$i}",
+                'luot_xem' => 10,
             ]);
         }
 
@@ -111,7 +109,7 @@ class SearchPanelTest extends TestCase
         // thì test chỉ chứng minh query đúng chứ không chứng minh cache hết hạn đúng.
         $this->get(route('home'))->assertOk();
 
-        SanPham::each(fn (SanPham $sanPham) => $sanPham->forceFill(['stock_quantity' => 0])->save());
+        SanPham::each(fn (SanPham $sanPham) => $sanPham->forceFill(['so_luong_ton' => 0])->save());
 
         $panel = $this->panelMarkup($this->get(route('home'))->assertOk()->getContent());
 
@@ -156,7 +154,7 @@ class SearchPanelTest extends TestCase
         $this->getJson(route('products.suggestions', ['q' => 'paracetamol']))
             ->assertOk()
             ->assertJsonStructure([
-                'products' => [['MaSP', 'name', 'category', 'price', 'image_url', 'url']],
+                'products' => [['ma_sp', 'name', 'category', 'price', 'image_url', 'url']],
                 'categories',
             ]);
     }

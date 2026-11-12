@@ -66,36 +66,35 @@ class DashboardServiceTest extends TestCase
     public function test_top_selling_products_excludes_pending_and_cancelled_orders(): void
     {
         $nguoiDung = NguoiDung::factory()->create();
-        $danhMuc = DanhMuc::create(['name' => 'Dashboard Test']);
-        $sanPham = SanPham::create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Vitamin Dashboard',
-            'price' => 50000,
-            'expiration_date' => now()->addYear(),
-            'stock_quantity' => 100,
-            'reorder_point' => 10,
-            'batch_number' => 'DASHBOARD-001',
+        $danhMuc = DanhMuc::create(['ten' => 'Dashboard Test']);
+        $sanPham = SanPham::create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin Dashboard',
+            'gia' => 50000,
+            'ngay_het_han' => now()->addYear(),
+            'so_luong_ton' => 100,
+            'muc_canh_bao' => 10,
+            'so_lo' => 'DASHBOARD-001',
         ]);
 
         $completedOrder = $this->createOrder($nguoiDung, 'Completed', 200000, '2026-07-06 10:00:00');
         $pendingOrder = $this->createOrder($nguoiDung, 'Pending', 5000000, '2026-07-06 10:00:00');
 
-        DB::table('order_items')->insert([
+        DB::table('chi_tiet_don_hangs')->insert([
             [
-                'MaDH' => $completedOrder->MaDH,
-                'MaSP' => $sanPham->MaSP,
-                'quantity' => 4,
-                'unit_price' => 50000,
-                'batch_number' => 'DASHBOARD-001',
+                'ma_dh' => $completedOrder->ma_dh,
+                'ma_sp' => $sanPham->ma_sp,
+                'so_luong' => 4,
+                'don_gia' => 50000,
+                'so_lo' => 'DASHBOARD-001',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'MaDH' => $pendingOrder->MaDH,
-                'MaSP' => $sanPham->MaSP,
-                'quantity' => 100,
-                'unit_price' => 50000,
-                'batch_number' => 'DASHBOARD-001',
+                'ma_dh' => $pendingOrder->ma_dh,
+                'ma_sp' => $sanPham->ma_sp,
+                'so_luong' => 100,
+                'don_gia' => 50000,
+                'so_lo' => 'DASHBOARD-001',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -110,10 +109,10 @@ class DashboardServiceTest extends TestCase
     private function createOrder(NguoiDung $nguoiDung, string $status, int $amount, string $createdAt): DonHang
     {
         $timestamp = Carbon::parse($createdAt);
-        $id = DB::table('orders')->insertGetId([
-            'MaKH' => $nguoiDung->MaKH,
-            'total_amount' => $amount,
-            'status' => $status,
+        $id = DB::table('don_hangs')->insertGetId([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'tong_tien' => $amount,
+            'trang_thai' => $status,
             'created_at' => $timestamp,
             'updated_at' => $timestamp,
         ]);

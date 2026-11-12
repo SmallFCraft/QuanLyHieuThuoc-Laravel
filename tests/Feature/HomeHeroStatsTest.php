@@ -18,15 +18,15 @@ class HomeHeroStatsTest extends TestCase
 
     public function test_the_hero_counts_only_what_the_shop_can_actually_sell(): void
     {
-        $painRelief = DanhMuc::create(['name' => 'Thuốc giảm đau']);
-        $skincare = DanhMuc::create(['name' => 'Chăm sóc da']);
-        $empty = DanhMuc::create(['name' => 'Danh mục rỗng']);
+        $painRelief = DanhMuc::create(['ten' => 'Thuốc giảm đau']);
+        $skincare = DanhMuc::create(['ten' => 'Chăm sóc da']);
+        $empty = DanhMuc::create(['ten' => 'Danh mục rỗng']);
 
         $this->product($painRelief, 'Paracetamol Stada 500mg');
         $this->product($painRelief, 'Panadol Extra đỏ GSK');
         $this->product($skincare, 'Kem dưỡng ẩm Ceradan');
-        $this->product($skincare, 'Sữa rửa mặt hết hàng', ['stock_quantity' => 0]);
-        $this->product($empty, 'Siro ho đã hết hạn', ['expiration_date' => now()->subDay()]);
+        $this->product($skincare, 'Sữa rửa mặt hết hàng', ['so_luong_ton' => 0]);
+        $this->product($empty, 'Siro ho đã hết hạn', ['ngay_het_han' => now()->subDay()]);
 
         $html = $this->get(route('home'))->assertOk()->getContent();
 
@@ -42,14 +42,14 @@ class HomeHeroStatsTest extends TestCase
     private function product(DanhMuc $danhMuc, string $name, array $overrides = []): SanPham
     {
         return SanPham::create(array_merge([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => $name,
-            'price' => 45000,
-            'shelf_life_months' => 36,
-            'expiration_date' => now()->addMonths(36),
-            'stock_quantity' => 40,
-            'reorder_point' => 10,
-            'batch_number' => 'LC-' . fake()->unique()->numerify('########'),
+            'ma_dm' => $danhMuc->ma_dm,
+            'ten' => $name,
+            'gia' => 45000,
+            'han_dung_thang' => 36,
+            'ngay_het_han' => now()->addMonths(36),
+            'so_luong_ton' => 40,
+            'muc_canh_bao' => 10,
+            'so_lo' => 'LC-' . fake()->unique()->numerify('########'),
         ], $overrides));
     }
 }

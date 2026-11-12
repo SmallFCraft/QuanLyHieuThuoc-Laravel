@@ -22,17 +22,16 @@ class CatalogAsyncResultsTest extends TestCase
     {
         parent::setUp();
 
-        $this->danhMuc = DanhMuc::create(['name' => 'Thuốc hô hấp']);
+        $this->danhMuc = DanhMuc::create(['ten' => 'Thuốc hô hấp']);
 
         for ($i = 0; $i < 14; $i++) {
-            SanPham::create([
-                'MaDM' => $this->danhMuc->MaDM,
-                'name' => "Thuốc hô hấp số {$i}",
-                'price' => 45000,
-                'expiration_date' => now()->addYears(2),
-                'stock_quantity' => 8,
-                'reorder_point' => 4,
-                'batch_number' => 'LC-' . md5("respiratory-{$i}"),
+            SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+                'ten' => "Thuốc hô hấp số {$i}",
+                'gia' => 45000,
+                'ngay_het_han' => now()->addYears(2),
+                'so_luong_ton' => 8,
+                'muc_canh_bao' => 4,
+                'so_lo' => 'LC-' . md5("respiratory-{$i}"),
             ]);
         }
     }
@@ -54,7 +53,7 @@ class CatalogAsyncResultsTest extends TestCase
 
         $this->assertSame(
             10,
-            $this->get("/products/category/{$this->danhMuc->MaDM}")->assertOk()->viewData('products')->count()
+            $this->get("/products/category/{$this->danhMuc->ma_dm}")->assertOk()->viewData('products')->count()
         );
     }
 
@@ -75,20 +74,19 @@ class CatalogAsyncResultsTest extends TestCase
 
     public function test_the_fragment_honours_the_category_filter_and_the_page_number(): void
     {
-        $other = DanhMuc::create(['name' => 'Thuốc tiêu hoá']);
+        $other = DanhMuc::create(['ten' => 'Thuốc tiêu hoá']);
 
-        SanPham::create([
-            'MaDM' => $other->MaDM,
-            'name' => 'Thuốc tiêu hoá đơn lẻ',
-            'price' => 30000,
-            'expiration_date' => now()->addYears(2),
-            'stock_quantity' => 5,
-            'reorder_point' => 2,
-            'batch_number' => 'LC-digestive',
+        SanPham::create(['ma_dm' => $other->ma_dm,
+            'ten' => 'Thuốc tiêu hoá đơn lẻ',
+            'gia' => 30000,
+            'ngay_het_han' => now()->addYears(2),
+            'so_luong_ton' => 5,
+            'muc_canh_bao' => 2,
+            'so_lo' => 'LC-digestive',
         ]);
 
         $filtered = $this->getJson(
-            "/products?category={$other->MaDM}",
+            "/products?category={$other->ma_dm}",
             ['X-Requested-With' => 'XMLHttpRequest']
         )->assertOk();
 
@@ -104,7 +102,7 @@ class CatalogAsyncResultsTest extends TestCase
     public function test_a_plain_request_still_renders_the_whole_page(): void
     {
         // Không có JS thì mọi danh mục vẫn là link thật dẫn tới trang đầy đủ.
-        $this->get("/products?category={$this->danhMuc->MaDM}")
+        $this->get("/products?category={$this->danhMuc->ma_dm}")
             ->assertOk()
             ->assertViewIs('products.index')
             ->assertSee('data-catalog-results', false)

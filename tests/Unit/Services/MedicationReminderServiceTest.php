@@ -27,19 +27,17 @@ class MedicationReminderServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->danhMuc = DanhMuc::create([
-            'name' => 'Thuốc giảm đau - Hạ sốt',
-            'description' => 'Giảm đau, hạ sốt',
+        $this->danhMuc = DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt',
+            'mo_ta' => 'Giảm đau, hạ sốt',
         ]);
 
         $this->seed(TriThucYTeSeeder::class);
 
         $this->service = app(MedicationReminderService::class);
 
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active',
-            'birth_date' => now()->subYears(34)->toDateString(),
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+            'ngay_sinh' => now()->subYears(34)->toDateString(),
         ]);
     }
 
@@ -79,7 +77,7 @@ class MedicationReminderServiceTest extends TestCase
         $created = $this->service->createFromOrder($donHang);
 
         $this->assertSame(3, $created);
-        $this->assertSame(3, NhacUongThuoc::where('MaDH', $donHang->MaDH)->count());
+        $this->assertSame(3, NhacUongThuoc::where('ma_dh', $donHang->ma_dh)->count());
     }
 
     public function test_create_from_order_is_idempotent(): void
@@ -89,7 +87,7 @@ class MedicationReminderServiceTest extends TestCase
         $this->service->createFromOrder($donHang);
         $this->service->createFromOrder($donHang);
 
-        $this->assertSame(2, NhacUongThuoc::where('MaDH', $donHang->MaDH)->count());
+        $this->assertSame(2, NhacUongThuoc::where('ma_dh', $donHang->ma_dh)->count());
     }
 
     public function test_first_reminder_falls_inside_waking_hours(): void
@@ -101,7 +99,7 @@ class MedicationReminderServiceTest extends TestCase
         $donHang = $this->orderWithProducts(1);
 
         $this->service->createFromOrder($donHang);
-        $nhacUong = NhacUongThuoc::where('MaDH', $donHang->MaDH)->firstOrFail();
+        $nhacUong = NhacUongThuoc::where('ma_dh', $donHang->ma_dh)->firstOrFail();
 
         $this->assertNotNull($nhacUong->next_remind_at);
         $this->assertGreaterThanOrEqual(8, $nhacUong->next_remind_at->hour);
@@ -112,16 +110,15 @@ class MedicationReminderServiceTest extends TestCase
     {
         $sanPham = $this->product('Uống 1 viên x 3 lần/ngày');
         $donHang = $this->order();
-        ChiTietDonHang::create([
-            'MaDH' => $donHang->MaDH,
-            'MaSP' => $sanPham->MaSP,
-            'quantity' => 9,
-            'unit_price' => 10000,
-            'batch_number' => 'B-1',
+        ChiTietDonHang::create(['ma_dh' => $donHang->ma_dh,
+            'ma_sp' => $sanPham->ma_sp,
+            'so_luong' => 9,
+            'don_gia' => 10000,
+            'so_lo' => 'B-1',
         ]);
 
         $this->service->createFromOrder($donHang->fresh());
-        $nhacUong = NhacUongThuoc::where('MaSP', $sanPham->MaSP)->firstOrFail();
+        $nhacUong = NhacUongThuoc::where('ma_sp', $sanPham->ma_sp)->firstOrFail();
 
         $this->assertSame('Uống 1 viên x 3 lần/ngày', $nhacUong->dosage_text);
         $this->assertSame(3, $nhacUong->times_per_day);
@@ -200,13 +197,13 @@ class MedicationReminderServiceTest extends TestCase
 
     public function test_cancel_for_user_only_cancels_that_users_reminder(): void
     {
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
         $sanPham = $this->product('Uống 1 viên/ngày');
 
-        $mine = $this->reminder(['MaSP' => $sanPham->MaSP]);
-        $theirs = $this->reminder(['MaSP' => $sanPham->MaSP, 'MaKH' => $other->MaKH]);
+        $mine = $this->reminder(['ma_sp' => $sanPham->ma_sp]);
+        $theirs = $this->reminder(['ma_sp' => $sanPham->ma_sp, 'ma_nd' => $other->ma_nd]);
 
-        $this->service->cancelForUser((int) $this->nguoiDung->MaKH, (int) $sanPham->MaSP);
+        $this->service->cancelForUser((int) $this->nguoiDung->ma_nd, (int) $sanPham->ma_sp);
 
         $this->assertSame('cancelled', $mine->fresh()->status);
         $this->assertSame('active', $theirs->fresh()->status);
@@ -228,17 +225,17 @@ class MedicationReminderServiceTest extends TestCase
 
     public function test_a_customer_only_sees_their_own_active_reminders(): void
     {
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
         $mineProduct = $this->product('Uống 1 viên/ngày');
         $theirsProduct = $this->product('Uống 1 viên x 2 lần/ngày');
 
-        $this->reminder(['MaSP' => $mineProduct->MaSP]);
-        $this->reminder(['MaSP' => $theirsProduct->MaSP, 'MaKH' => $other->MaKH]);
+        $this->reminder(['ma_sp' => $mineProduct->ma_sp]);
+        $this->reminder(['ma_sp' => $theirsProduct->ma_sp, 'ma_nd' => $other->ma_nd]);
 
         // Neo vào aria-label của nút huỷ, không phải tên sản phẩm trần: panel tìm kiếm
         // nhúng sản phẩm xem nhiều vào mọi trang storefront, nên quét cả trang thì tên
         // nào cũng có thể xuất hiện ngoài bảng nhắc thuốc.
-        $cancelLabel = fn (SanPham $sanPham) => __('messages.reminder.btn_cancel_aria', ['name' => $sanPham->name]);
+        $cancelLabel = fn (SanPham $sanPham) => __('messages.reminder.btn_cancel_aria', ['name' => $sanPham->ten]);
 
         $this->actingAs($this->nguoiDung)
             ->get(route('reminders.index'))
@@ -249,11 +246,11 @@ class MedicationReminderServiceTest extends TestCase
 
     public function test_a_customer_cannot_cancel_someone_elses_reminder(): void
     {
-        $other = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
-        $theirs = $this->reminder(['MaKH' => $other->MaKH]);
+        $other = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $theirs = $this->reminder(['ma_nd' => $other->ma_nd]);
 
         $this->actingAs($this->nguoiDung)
-            ->post(route('reminders.cancel', $theirs->MaNN))
+            ->post(route('reminders.cancel', $theirs->ma_nn))
             ->assertRedirect(route('reminders.index'));
 
         $this->assertSame('active', $theirs->fresh()->status);
@@ -264,7 +261,7 @@ class MedicationReminderServiceTest extends TestCase
         $mine = $this->reminder();
 
         $this->actingAs($this->nguoiDung)
-            ->post(route('reminders.cancel', $mine->MaNN))
+            ->post(route('reminders.cancel', $mine->ma_nn))
             ->assertRedirect(route('reminders.index'));
 
         $this->assertSame('cancelled', $mine->fresh()->status);
@@ -274,20 +271,18 @@ class MedicationReminderServiceTest extends TestCase
 
     private function product(string $usage): SanPham
     {
-        return SanPham::factory()->create([
-            'MaDM' => $this->danhMuc->MaDM,
-            'usage' => $usage,
+        return SanPham::factory()->create(['ma_dm' => $this->danhMuc->ma_dm,
+            'cach_dung' => $usage,
         ]);
     }
 
     private function order(?NguoiDung $nguoiDung = null): DonHang
     {
-        return DonHang::create([
-            'MaKH' => ($nguoiDung ?? $this->nguoiDung)->MaKH,
-            'total_amount' => 100000,
-            'status' => 'Completed',
-            'shipping_address' => '12 Nguyễn Huệ, Quận 1',
-            'shipping_phone' => '0901234567',
+        return DonHang::create(['ma_nd' => ($nguoiDung ?? $this->nguoiDung)->ma_nd,
+            'tong_tien' => 100000,
+            'trang_thai' => 'Completed',
+            'dia_chi_giao_hang' => '12 Nguyễn Huệ, Quận 1',
+            'sdt_giao_hang' => '0901234567',
         ]);
     }
 
@@ -302,12 +297,11 @@ class MedicationReminderServiceTest extends TestCase
 
         for ($i = 0; $i < $lines; $i++) {
             $sanPham = $this->product($usages[$i % count($usages)]);
-            ChiTietDonHang::create([
-                'MaDH' => $donHang->MaDH,
-                'MaSP' => $sanPham->MaSP,
-                'quantity' => 6,
-                'unit_price' => 10000,
-                'batch_number' => 'B-' . $i,
+            ChiTietDonHang::create(['ma_dh' => $donHang->ma_dh,
+                'ma_sp' => $sanPham->ma_sp,
+                'so_luong' => 6,
+                'don_gia' => 10000,
+                'so_lo' => 'B-' . $i,
             ]);
         }
 
@@ -317,9 +311,9 @@ class MedicationReminderServiceTest extends TestCase
     private function reminder(array $attributes = []): NhacUongThuoc
     {
         return NhacUongThuoc::create(array_merge([
-            'MaKH' => $this->nguoiDung->MaKH,
-            'MaDH' => null,
-            'MaSP' => $this->product('Uống 1 viên x 2 lần/ngày')->MaSP,
+            'ma_nd' => $this->nguoiDung->ma_nd,
+            'ma_dh' => null,
+            'ma_sp' => $this->product('Uống 1 viên x 2 lần/ngày')->ma_sp,
             'dosage_text' => 'Uống 1 viên x 2 lần/ngày',
             'times_per_day' => 2,
             'duration_days' => 5,

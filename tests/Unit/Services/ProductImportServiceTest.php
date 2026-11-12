@@ -46,28 +46,28 @@ class ProductImportServiceTest extends TestCase
 
         $sanPham = SanPham::sole();
 
-        $this->assertSame('Viên nén Panadol Extra đỏ GSK (15 vỉ x 12 viên)', $sanPham->name);
+        $this->assertSame('Viên nén Panadol Extra đỏ GSK (15 vỉ x 12 viên)', $sanPham->ten);
         $this->assertSame(252000, $sanPham->price_vnd);
-        $this->assertSame('Caffeine 65mg, Paracetamol 500mg', $sanPham->ingredients);
+        $this->assertSame('Caffeine 65mg, Paracetamol 500mg', $sanPham->thanh_phan);
         // Stored as the CDN's resized variant, not the multi-megabyte master.
         $this->assertSame(
             'https://cdn.nhathuoclongchau.com.vn/unsafe/600x0/filters:quality(90):format(webp)/panadol.png',
-            $sanPham->image
+            $sanPham->hinh_anh
         );
-        $this->assertSame('LC-00005713', $sanPham->batch_number);
+        $this->assertSame('LC-00005713', $sanPham->so_lo);
         $this->assertSame(
             'Thuốc giảm đau, hạ sốt, kháng viêm',
-            $sanPham->danhMuc->name
+            $sanPham->danhMuc->ten
         );
 
-        // ProductObserver turns batch_number + expiration_date into the batch row
+        // ProductObserver turns so_lo + ngay_het_han into the batch row
         // that FEFO and the expiry warnings read.
         $lo = LoSanPham::sole();
-        $this->assertSame($sanPham->MaSP, $lo->MaSP);
-        $this->assertSame('LC-00005713', $lo->batch_number);
+        $this->assertSame($sanPham->ma_sp, $lo->ma_sp);
+        $this->assertSame('LC-00005713', $lo->so_lo);
         $this->assertSame(
-            $sanPham->expiration_date->toDateString(),
-            $lo->expiration_date->toDateString()
+            $sanPham->ngay_het_han->toDateString(),
+            $lo->ngay_het_han->toDateString()
         );
     }
 
@@ -77,16 +77,16 @@ class ProductImportServiceTest extends TestCase
 
         $this->importer()->import($this->product(['expirationDate' => '24 tháng']));
 
-        $this->assertSame('2028-08-30', SanPham::sole()->expiration_date->toDateString());
+        $this->assertSame('2028-08-30', SanPham::sole()->ngay_het_han->toDateString());
     }
 
     public function test_the_product_code_is_generated_from_the_category(): void
     {
         $this->importer()->import($this->product());
 
-        // SanPham::booted() derives it from the category code; the crawler must not
+        // SanPham::booted() derives it from the category code (ma_san_pham); the crawler must not
         // set it by hand.
-        $this->assertNotNull(SanPham::sole()->product_code);
+        $this->assertNotNull(SanPham::sole()->ma_san_pham);
     }
 
     public function test_a_second_crawl_updates_in_place_instead_of_duplicating(): void
@@ -107,11 +107,11 @@ class ProductImportServiceTest extends TestCase
         $lo = LoSanPham::sole();
 
         // What a pharmacist would enter after real stock arrives.
-        $lo->update(['stock_quantity' => 42, 'expiration_date' => '2027-01-15']);
+        $lo->update(['so_luong_ton' => 42, 'ngay_het_han' => '2027-01-15']);
         $sanPham->forceFill([
-            'stock_quantity' => 42,
-            'reorder_point' => 7,
-            'expiration_date' => '2027-01-15',
+            'so_luong_ton' => 42,
+            'muc_canh_bao' => 7,
+            'ngay_het_han' => '2027-01-15',
         ])->save();
 
         $this->importer()->import($this->product(['prices' => [['level' => 1, 'price' => 300000]]]));
@@ -119,15 +119,15 @@ class ProductImportServiceTest extends TestCase
         $lo->refresh();
         $sanPham->refresh();
 
-        $this->assertSame(42, $lo->stock_quantity, 'Real stock survives a recrawl.');
-        $this->assertSame('2027-01-15', $lo->expiration_date->toDateString());
-        $this->assertSame(7, $sanPham->reorder_point);
+        $this->assertSame(42, $lo->so_luong_ton, 'Real stock survives a recrawl.');
+        $this->assertSame('2027-01-15', $lo->ngay_het_han->toDateString());
+        $this->assertSame(7, $sanPham->muc_canh_bao);
 
-        // products.stock_quantity là cột gác "Còn hàng"/"Hết hàng" và mức max của giỏ,
-        // products.expiration_date là cột gác notExpired() — cả hai đều phải sống sót,
+        // san_phams.so_luong_ton là cột gác "Còn hàng"/"Hết hàng" và mức max của giỏ,
+        // san_phams.ngay_het_han là cột gác notExpired() — cả hai đều phải sống sót,
         // không chỉ dòng batch.
-        $this->assertSame(42, $sanPham->stock_quantity, 'Storefront stock survives a recrawl.');
-        $this->assertSame('2027-01-15', $sanPham->expiration_date->toDateString());
+        $this->assertSame(42, $sanPham->so_luong_ton, 'Storefront stock survives a recrawl.');
+        $this->assertSame('2027-01-15', $sanPham->ngay_het_han->toDateString());
 
         $this->assertSame(300000, $sanPham->price_vnd, 'Catalog fields still refresh.');
     }
@@ -146,7 +146,7 @@ class ProductImportServiceTest extends TestCase
 
     public function test_an_existing_category_is_matched_by_name_not_duplicated(): void
     {
-        DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt, kháng viêm']);
+        DanhMuc::create(['ten' => 'Thuốc giảm đau, hạ sốt, kháng viêm']);
 
         $this->importer()->import($this->product());
 
@@ -171,21 +171,21 @@ class ProductImportServiceTest extends TestCase
 
         $this->assertSame(1, DanhMuc::count());
         // First spelling seen keeps the display name.
-        $this->assertSame('Cơ - xương - khớp', DanhMuc::sole()->name);
-        $this->assertSame(3, SanPham::where('MaDM', DanhMuc::sole()->MaDM)->count());
+        $this->assertSame('Cơ - xương - khớp', DanhMuc::sole()->ten);
+        $this->assertSame(3, SanPham::where('ma_dm', DanhMuc::sole()->ma_dm)->count());
     }
 
     /** The per-run cache must not hand back a different row than the database would. */
     public function test_a_category_created_before_the_crawl_is_matched_across_spellings(): void
     {
-        DanhMuc::create(['name' => 'Cơ xương khớp']);
+        DanhMuc::create(['ten' => 'Cơ xương khớp']);
 
         $this->importer()->import($this->product([
             'categories' => [['level' => 1, 'name' => 'Thuốc'], ['level' => 2, 'name' => 'Cơ - xương - khớp']],
         ]));
 
         $this->assertSame(1, DanhMuc::count());
-        $this->assertSame('Cơ xương khớp', SanPham::sole()->danhMuc->name);
+        $this->assertSame('Cơ xương khớp', SanPham::sole()->danhMuc->ten);
     }
 
     public function test_a_product_that_changed_category_is_moved(): void
@@ -199,7 +199,7 @@ class ProductImportServiceTest extends TestCase
         ]));
 
         $this->assertSame(2, DanhMuc::count());
-        $this->assertSame('Thuốc tiêu hoá & gan mật', SanPham::sole()->danhMuc->name);
+        $this->assertSame('Thuốc tiêu hoá & gan mật', SanPham::sole()->danhMuc->ten);
     }
 
     public function test_generated_stock_stays_within_the_configured_range(): void
@@ -212,10 +212,10 @@ class ProductImportServiceTest extends TestCase
         }
 
         foreach (SanPham::all() as $sanPham) {
-            $this->assertGreaterThanOrEqual(0, $sanPham->stock_quantity);
-            $this->assertLessThanOrEqual(200, $sanPham->stock_quantity);
-            $this->assertGreaterThanOrEqual(10, $sanPham->reorder_point);
-            $this->assertLessThanOrEqual(30, $sanPham->reorder_point);
+            $this->assertGreaterThanOrEqual(0, $sanPham->so_luong_ton);
+            $this->assertLessThanOrEqual(200, $sanPham->so_luong_ton);
+            $this->assertGreaterThanOrEqual(10, $sanPham->muc_canh_bao);
+            $this->assertLessThanOrEqual(30, $sanPham->muc_canh_bao);
         }
     }
 

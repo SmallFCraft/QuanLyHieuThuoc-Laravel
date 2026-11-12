@@ -7,12 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class PhienSangLoc extends Model
 {
-    protected $table = 'triage_sessions';
+    protected $table = 'phien_sang_locs';
 
-    protected $primaryKey = 'MaSL';
+    protected $primaryKey = 'ma_sl';
 
     protected $fillable = [
-        'MaKH',
+        'ma_nd',
         'session_id',
         'collected_data',
         'matched_symptoms',
@@ -69,12 +69,12 @@ class PhienSangLoc extends Model
 
     public function nguoiDung()
     {
-        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'ma_nd', 'ma_nd');
     }
 
     public function pharmacist()
     {
-        return $this->belongsTo(NguoiDung::class, 'pharmacist_id', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'pharmacist_id', 'ma_nd');
     }
 
     public function scopeInProgress($query)

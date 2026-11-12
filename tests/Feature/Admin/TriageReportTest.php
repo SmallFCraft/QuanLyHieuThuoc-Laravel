@@ -24,21 +24,20 @@ class TriageReportTest extends TestCase
         parent::setUp();
 
         // The knowledge seeder resolves catalog categories by name, so it must exist first.
-        DanhMuc::create([
-            'name' => 'Thuốc giảm đau - Hạ sốt',
-            'description' => 'Giảm đau, hạ sốt',
+        DanhMuc::create(['ten' => 'Thuốc giảm đau - Hạ sốt',
+            'mo_ta' => 'Giảm đau, hạ sốt',
         ]);
 
         $this->seed(TriThucYTeSeeder::class);
 
-        $this->admin = NguoiDung::factory()->create(['role' => 'Administrator', 'status' => 'active']);
-        $this->customer = NguoiDung::factory()->create(['role' => 'User', 'status' => 'active']);
-        $this->pharmacist = NguoiDung::factory()->create(['role' => 'Pharmacist', 'status' => 'active']);
+        $this->admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator', 'trang_thai' => 'active']);
+        $this->customer = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $this->pharmacist = NguoiDung::factory()->create(['vai_tro' => 'Pharmacist', 'trang_thai' => 'active']);
     }
 
     private function makeSession(array $attributes = []): PhienSangLoc    {
         return PhienSangLoc::create(array_merge([
-            'MaKH' => $this->customer->MaKH,
+            'ma_nd' => $this->customer->ma_nd,
             'collected_data' => [
                 'raw_symptom_text' => 'đau đầu hai ngày',
                 'duration_days' => 2,
@@ -112,8 +111,8 @@ class TriageReportTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('admin.triageReports.index', ['outcome' => 'emergency']))
             ->assertOk()
-            ->assertSee('SL-' . $emergency->MaSL)
-            ->assertDontSee('SL-' . $selfCare->MaSL);
+            ->assertSee('SL-' . $emergency->ma_sl)
+            ->assertDontSee('SL-' . $selfCare->ma_sl);
     }
 
     public function test_date_range_filter_narrows_results(): void
@@ -129,8 +128,8 @@ class TriageReportTest extends TestCase
                 'date_to' => now()->toDateString(),
             ]))
             ->assertOk()
-            ->assertSee('SL-' . $recent->MaSL)
-            ->assertDontSee('SL-' . $old->MaSL);
+            ->assertSee('SL-' . $recent->ma_sl)
+            ->assertDontSee('SL-' . $old->ma_sl);
     }
 
     // --- Service metrics ---
@@ -152,7 +151,7 @@ class TriageReportTest extends TestCase
 
     public function test_average_wait_uses_reviewed_sessions_only(): void
     {
-        $reviewed = $this->makeSession(['status' => 'reviewed', 'pharmacist_id' => $this->pharmacist->MaKH]);
+        $reviewed = $this->makeSession(['status' => 'reviewed', 'pharmacist_id' => $this->pharmacist->ma_nd]);
         $reviewed->forceFill([
             'created_at' => now()->subMinutes(30),
             'reviewed_at' => now(),
@@ -249,8 +248,7 @@ class TriageReportTest extends TestCase
 
     public function test_detail_page_never_exposes_the_health_profile(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->customer->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->customer->ma_nd,
             'allergies' => ['Paracetamol'],
             'consented_at' => now(),
         ]);
@@ -258,9 +256,9 @@ class TriageReportTest extends TestCase
         $phien = $this->makeSession();
 
         $this->actingAs($this->admin)
-            ->get(route('admin.triageReports.show', $phien->MaSL))
+            ->get(route('admin.triageReports.show', $phien->ma_sl))
             ->assertOk()
-            ->assertSee('SL-' . $phien->MaSL)
+            ->assertSee('SL-' . $phien->ma_sl)
             ->assertDontSee('Paracetamol');
     }
 
@@ -268,12 +266,12 @@ class TriageReportTest extends TestCase
     {
         $phien = $this->makeSession([
             'status' => 'reviewed',
-            'pharmacist_id' => $this->pharmacist->MaKH,
+            'pharmacist_id' => $this->pharmacist->ma_nd,
             'pharmacist_note' => 'Đã tư vấn qua điện thoại.',
         ]);
 
         $this->actingAs($this->admin)
-            ->get(route('admin.triageReports.show', $phien->MaSL))
+            ->get(route('admin.triageReports.show', $phien->ma_sl))
             ->assertOk()
             ->assertSee('đau đầu')
             ->assertSee('Đã tư vấn qua điện thoại.');

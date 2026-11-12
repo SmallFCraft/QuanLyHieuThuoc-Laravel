@@ -118,11 +118,11 @@
             <div class="row g-3 g-lg-4">
                 @foreach($categories as $category)
                     <div class="col-6 col-md-4 col-lg-3 col-xl-2-4">
-                        <a href="{{ route('products.category', $category->MaDM) }}" class="home-category-card text-decoration-none">
+                        <a href="{{ route('products.category', $category->ma_dm) }}" class="home-category-card text-decoration-none">
                             <div class="home-category-icon">
                                 <i class="bi bi-{{ $category->icon ?? 'grid-fill' }}" style="font-size: 1.5rem;"></i>
                             </div>
-                            <span class="fw-semibold text-truncate d-block text-dark mb-1" title="{{ $category->name }}">{{ $category->name }}</span>
+                            <span class="fw-semibold text-truncate d-block text-dark mb-1" title="{{ $category->ten }}">{{ $category->ten }}</span>
                             <span class="home-category-count">{{ $category->products_count }} {{ mb_strtolower(__('messages.products')) }}</span>
                             <i class="bi bi-arrow-up-right home-category-arrow" aria-hidden="true"></i>
                         </a>
@@ -164,7 +164,7 @@
                                 <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle px-2 py-1 rounded-pill">
                                     <i class="bi bi-stars me-1"></i>{{ __('messages.home_new_badge') }}
                                 </span>
-                                @if($product->stock_quantity == 0)
+                                @if($product->so_luong_ton == 0)
                                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
                                         <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
                                     </span>
@@ -215,12 +215,12 @@
                             detail-label="{{ __('messages.home_view_details') }}"
                         >
                             <x-slot:badges>
-                                @if($product->views_count > 0)
+                                @if($product->luot_xem > 0)
                                     <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1 rounded-pill">
-                                        <i class="bi bi-eye-fill me-1"></i>{{ __('messages.home_views_count', ['count' => number_format($product->views_count)]) }}
+                                        <i class="bi bi-eye-fill me-1"></i>{{ __('messages.home_views_count', ['count' => number_format($product->luot_xem)]) }}
                                     </span>
                                 @endif
-                                @if($product->stock_quantity == 0)
+                                @if($product->so_luong_ton == 0)
                                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
                                         <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
                                     </span>

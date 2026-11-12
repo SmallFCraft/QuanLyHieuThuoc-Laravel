@@ -17,8 +17,8 @@ class HomeController extends Controller
     {
         // Sản phẩm mới ra mắt (theo ngày tạo mới nhất)
         $newProducts = SanPham::with('danhMuc')
-            ->where('expiration_date', '>', now())
-            ->where('stock_quantity', '>', 0)
+            ->where('ngay_het_han', '>', now())
+            ->where('so_luong_ton', '>', 0)
             ->whereNull('deleted_at')
             ->orderBy('created_at', 'desc')
             ->limit(8)
@@ -26,10 +26,10 @@ class HomeController extends Controller
 
         // Sản phẩm nổi bật (theo lượt xem cao nhất)
         $featuredProducts = SanPham::with('danhMuc')
-            ->where('expiration_date', '>', now())
-            ->where('stock_quantity', '>', 0)
+            ->where('ngay_het_han', '>', now())
+            ->where('so_luong_ton', '>', 0)
             ->whereNull('deleted_at')
-            ->orderBy('views_count', 'desc')
+            ->orderBy('luot_xem', 'desc')
             ->limit(8)
             ->get();
 
@@ -37,7 +37,7 @@ class HomeController extends Controller
         // trong khi kho chỉ có hơn 3.000 sản phẩm bán được và dược sĩ chỉ trực
         // 8:00-20:00 (xem messages.working_hours_desc).
         $sellableProductCount = SanPham::notExpired()
-            ->where('stock_quantity', '>', 0)
+            ->where('so_luong_ton', '>', 0)
             ->count();
 
         $sellableCategoryCount = DanhMuc::browsable()->count();

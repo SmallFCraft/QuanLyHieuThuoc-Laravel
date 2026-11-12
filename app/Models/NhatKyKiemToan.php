@@ -8,9 +8,9 @@ class NhatKyKiemToan extends Model
 {
     const UPDATED_AT = null; // Audit logs are immutable, no updated_at
 
-    protected $table = 'audit_logs';
+    protected $table = 'nhat_ky_kiem_toans';
 
-    protected $primaryKey = 'MaNK';
+    protected $primaryKey = 'ma_nk';
 
     /**
      * The attributes that are mass assignable.
@@ -18,7 +18,7 @@ class NhatKyKiemToan extends Model
      * @var array
      */
     protected $fillable = [
-        'MaKH',
+        'ma_nd',
         'action',
         'model_type',
         'MaDoiTuong',
@@ -44,7 +44,7 @@ class NhatKyKiemToan extends Model
      */
     public function nguoiDung()
     {
-        return $this->belongsTo(NguoiDung::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'ma_nd', 'ma_nd');
     }
 
     /**

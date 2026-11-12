@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class CoDoYTe extends Model
 {
-    protected $table = 'medical_red_flags';
+    protected $table = 'co_do_y_tes';
 
-    protected $primaryKey = 'MaCB';
+    protected $primaryKey = 'ma_cb';
 
     protected $fillable = [
         'code',
@@ -29,7 +29,7 @@ class CoDoYTe extends Model
 
     public function symptom()
     {
-        return $this->belongsTo(TrieuChungYTe::class, 'applies_to_symptom', 'MaTC');
+        return $this->belongsTo(TrieuChungYTe::class, 'applies_to_symptom', 'ma_tc');
     }
 
     public function scopeActive($query)

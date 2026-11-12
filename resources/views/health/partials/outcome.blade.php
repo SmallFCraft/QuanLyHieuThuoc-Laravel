@@ -62,7 +62,7 @@
     <div class="bg-white rounded-3 border p-3 p-md-4 mb-4">
         <p class="small fw-semibold text-gray-700 mb-2">
             <i class="bi bi-person-badge-fill me-1" aria-hidden="true"></i>
-            {{ __('messages.health.pharmacist_answer_by', ['name' => $session->pharmacist?->name ?? '']) }}
+            {{ __('messages.health.pharmacist_answer_by', ['name' => $session->pharmacist?->ho_ten ?? '']) }}
         </p>
         <div class="text-gray-800" style="white-space: pre-line;">{{ $session->pharmacist_note }}</div>
     </div>
@@ -106,7 +106,7 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('health.requestPharmacist', $session->MaSL) }}" class="mt-3">
+            <form method="POST" action="{{ route('health.requestPharmacist', $session->ma_sl) }}" class="mt-3">
                 @csrf
                 <button type="submit" class="health-btn health-btn-ghost w-100">
                     {{ __('messages.health.pharmacist_request_btn') }}

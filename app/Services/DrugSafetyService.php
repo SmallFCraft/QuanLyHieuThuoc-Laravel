@@ -71,7 +71,7 @@ class DrugSafetyService
      */
     public function checkProduct(SanPham $sanPham, ?HoSoSucKhoe $hoSo = null, ?NguoiDung $nguoiDung = null): array
     {
-        $ingredients = $this->extractIngredients($sanPham->ingredients ?? '');
+        $ingredients = $this->extractIngredients($sanPham->thanh_phan ?? '');
 
         if ($ingredients === []) {
             return ['warnings' => [], 'blocking' => false];
@@ -117,7 +117,7 @@ class DrugSafetyService
             }
         }
 
-        return $found->unique('MaTT')->values();
+        return $found->unique('ma_tt')->values();
     }
 
     /**
@@ -180,13 +180,13 @@ class DrugSafetyService
      */
     public function checkCart(array $cartItems, int $userId): array
     {
-        $productIds = collect($cartItems)->pluck('MaSP')->filter()->unique()->values();
+        $productIds = collect($cartItems)->pluck('ma_sp')->filter()->unique()->values();
 
         if ($productIds->isEmpty()) {
             return ['warnings' => [], 'blocking' => false];
         }
 
-        $sanPhams = SanPham::whereIn('MaSP', $productIds)->get();
+        $sanPhams = SanPham::whereIn('ma_sp', $productIds)->get();
         $nguoiDung = NguoiDung::find($userId);
         $hoSo = $this->consentedProfile($userId);
 
@@ -197,14 +197,14 @@ class DrugSafetyService
         }
 
         foreach ($this->productPairs($sanPhams) as [$left, $right]) {
-            foreach ($this->checkPair($left->ingredients ?? '', $right->ingredients ?? '') as $tuongTac) {
+            foreach ($this->checkPair($left->thanh_phan ?? '', $right->thanh_phan ?? '') as $tuongTac) {
                 $warnings[] = [
                     'type' => 'interaction',
                     'severity' => $tuongTac->severity,
-                    'title' => "{$left->name} + {$right->name}",
+                    'title' => "{$left->ten} + {$right->ten}",
                     'message' => $tuongTac->description_vi,
                     'action' => $tuongTac->recommendation_vi,
-                    'product_ids' => [$left->MaSP, $right->MaSP],
+                    'product_ids' => [$left->ma_sp, $right->ma_sp],
                 ];
             }
         }
@@ -227,20 +227,20 @@ class DrugSafetyService
 
         $warnings = $this->checkProduct($sanPham, $hoSo, $nguoiDung)['warnings'];
 
-        $existingIds = collect($existingCart)->pluck('MaSP')->filter()
-            ->reject(fn ($id) => (int) $id === (int) $sanPham->MaSP)
+        $existingIds = collect($existingCart)->pluck('ma_sp')->filter()
+            ->reject(fn ($id) => (int) $id === (int) $sanPham->ma_sp)
             ->unique();
 
         if ($existingIds->isNotEmpty()) {
-            foreach (SanPham::whereIn('MaSP', $existingIds)->get() as $existing) {
-                foreach ($this->checkPair($sanPham->ingredients ?? '', $existing->ingredients ?? '') as $tuongTac) {
+            foreach (SanPham::whereIn('ma_sp', $existingIds)->get() as $existing) {
+                foreach ($this->checkPair($sanPham->thanh_phan ?? '', $existing->thanh_phan ?? '') as $tuongTac) {
                     $warnings[] = [
                         'type' => 'interaction',
                         'severity' => $tuongTac->severity,
-                        'title' => "{$sanPham->name} + {$existing->name}",
+                        'title' => "{$sanPham->ten} + {$existing->ten}",
                         'message' => $tuongTac->description_vi,
                         'action' => $tuongTac->recommendation_vi,
-                        'product_ids' => [$sanPham->MaSP, $existing->MaSP],
+                        'product_ids' => [$sanPham->ma_sp, $existing->ma_sp],
                     ];
                 }
             }
@@ -264,11 +264,11 @@ class DrugSafetyService
             $this->auditLogService->log(
                 action: 'drug_warning_overridden',
                 modelType: SanPham::class,
-                modelId: $sanPham->MaSP,
+                modelId: $sanPham->ma_sp,
                 oldValues: null,
                 newValues: [
-                    'MaKH' => $userId,
-                    'product' => $sanPham->name,
+                    'ma_nd' => $userId,
+                    'product' => $sanPham->ten,
                     'warning_types' => collect($warnings)->pluck('type')->unique()->values()->all(),
                     'severities' => collect($warnings)->pluck('severity')->unique()->values()->all(),
                 ],
@@ -276,8 +276,8 @@ class DrugSafetyService
             );
         } catch (\Throwable $exception) {
             Log::warning('Drug warning override audit failed', [
-                'MaKH' => $userId,
-                'MaSP' => $sanPham->MaSP,
+                'ma_nd' => $userId,
+                'ma_sp' => $sanPham->ma_sp,
                 'error' => $exception->getMessage(),
             ]);
         }
@@ -357,7 +357,7 @@ class DrugSafetyService
     {
         $rows = collect($ingredients)
             ->flatMap(fn (string $ingredient) => $this->contraindicationIndex()[$ingredient] ?? [])
-            ->unique(fn (ChungChiDinhThuoc $row) => $row->MaCCD);
+            ->unique(fn (ChungChiDinhThuoc $row) => $row->ma_ccd);
 
         if ($rows->isEmpty()) {
             return [];
@@ -450,7 +450,7 @@ class DrugSafetyService
                     $warnings[] = [
                         'type' => 'current_medication',
                         'severity' => $tuongTac->severity,
-                        'title' => "{$sanPham->name} + thuốc đang dùng ({$medication})",
+                        'title' => "{$sanPham->ten} + thuốc đang dùng ({$medication})",
                         'message' => $tuongTac->description_vi,
                         'action' => $tuongTac->recommendation_vi,
                         'ingredient' => $incoming,
@@ -478,7 +478,7 @@ class DrugSafetyService
         foreach ($hoSo->allergies as $allergy) {
             $allergyTokens = $this->extractIngredients((string) $allergy);
             $normalizedAllergy = $this->normalizeIngredientText((string) $allergy);
-            $productName = $this->normalizeIngredientText($sanPham->name);
+            $productName = $this->normalizeIngredientText($sanPham->ten);
 
             // The name fallback needs the same length floor as isMeaningfulToken:
             // an allergy typed as "C" or "cá" would otherwise substring-match nearly
@@ -496,7 +496,7 @@ class DrugSafetyService
                 'type' => 'allergy',
                 'severity' => 'major',
                 'title' => "Anh/chị đã khai dị ứng với: {$allergy}",
-                'message' => "Sản phẩm {$sanPham->name} có thành phần trùng hoặc liên quan đến chất anh/chị đã khai dị ứng.",
+                'message' => "Sản phẩm {$sanPham->ten} có thành phần trùng hoặc liên quan đến chất anh/chị đã khai dị ứng.",
                 'action' => 'Anh/chị không nên dùng thuốc này. Vui lòng hỏi dược sĩ để được đổi sang thuốc khác.',
                 'ingredient' => $allergy,
             ];

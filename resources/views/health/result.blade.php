@@ -123,7 +123,7 @@
             @include('health.partials.disclaimer', ['disclaimerReviewable' => $disclaimerReviewable])
 
             @if ($showDisclaimerPopup ?? false)
-                @include('health.partials.disclaimer-popup', ['MaSL' => $session->MaSL])
+                @include('health.partials.disclaimer-popup', ['ma_sl' => $session->ma_sl])
             @endif
 
             @if ($aiJobId)
@@ -248,7 +248,7 @@
             ? [
                 'url' => route('ai-jobs.poll', $briefingJobId),
                 'banner' => 'triage-briefing-pending',
-                'paneUrl' => route('health.result.briefing-pane', $session->MaSL),
+                'paneUrl' => route('health.result.briefing-pane', $session->ma_sl),
                 // Unhidden instead of just dropping the skeleton: this banner is the
                 // content, so an empty slot would read as a stalled page.
                 'fallback' => 'triage-briefing-unavailable',

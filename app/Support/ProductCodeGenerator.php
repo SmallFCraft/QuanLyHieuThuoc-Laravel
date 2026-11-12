@@ -48,7 +48,7 @@ class ProductCodeGenerator
 
         while (DanhMuc::query()
             ->when($ignoreCategoryId, fn ($query) => $query->whereKeyNot($ignoreCategoryId))
-            ->where('code', $code)
+            ->where('ma_danh_muc', $code)
             ->exists()) {
             $tail = (string) $suffix++;
             $code = Str::substr($base, 0, max(1, 10 - strlen($tail))) . $tail;
@@ -59,20 +59,20 @@ class ProductCodeGenerator
 
     public static function productCodeForCategory(DanhMuc $danhMuc): string
     {
-        $prefix = self::normalizeCategoryCode($danhMuc->code)
-            ?: self::categoryCodeFromName($danhMuc->name);
+        $prefix = self::normalizeCategoryCode($danhMuc->ma_danh_muc)
+            ?: self::categoryCodeFromName($danhMuc->ten);
 
         for ($attempt = 0; $attempt < 50; $attempt++) {
             $code = $prefix . str_pad((string) random_int(0, 99999), 5, '0', STR_PAD_LEFT);
 
-            if (! SanPham::query()->where('product_code', $code)->exists()) {
+            if (! SanPham::query()->where('ma_san_pham', $code)->exists()) {
                 return $code;
             }
         }
 
         do {
             $code = $prefix . str_pad((string) random_int(0, 99999), 5, '0', STR_PAD_LEFT);
-        } while (SanPham::query()->where('product_code', $code)->exists());
+        } while (SanPham::query()->where('ma_san_pham', $code)->exists());
 
         return $code;
     }

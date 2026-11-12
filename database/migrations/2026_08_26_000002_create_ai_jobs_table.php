@@ -11,11 +11,11 @@ return new class extends Migration
         // A status table of its own, not Laravel's `jobs`: the worker deletes a row
         // from `jobs` the moment it picks it up, so there is nothing left to poll.
         Schema::create('ai_jobs', function (Blueprint $table) {
-            $table->id('MaAJ');
+            $table->id('ma_aj');
             // Public identifier handed to the browser, so the auto-increment key is
             // never exposed. Ownership is still checked on every poll.
             $table->uuid('uuid')->unique();
-            $table->foreignId('MaKH')->constrained('users', 'MaKH')->cascadeOnDelete();
+            $table->foreignId('ma_nd')->constrained('nguoi_dungs', 'ma_nd')->cascadeOnDelete();
             $table->string('kind', 32);
             // string, not enum: widening an enum needs per-driver branches (MySQL
             // MODIFY, Postgres CHECK, SQLite table rebuild), and the suite runs on
@@ -29,7 +29,7 @@ return new class extends Migration
             $table->timestamp('finished_at')->nullable();
             $table->timestamps();
 
-            $table->index(['MaKH', 'status'], 'ai_jobs_makh_status_idx');
+            $table->index(['ma_nd', 'status'], 'ai_jobs_ma_nd_status_idx');
             $table->index(['status', 'created_at'], 'ai_jobs_status_created_idx');
         });
     }

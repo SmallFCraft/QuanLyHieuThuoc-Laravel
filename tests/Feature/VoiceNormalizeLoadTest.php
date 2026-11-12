@@ -47,18 +47,17 @@ class VoiceNormalizeLoadTest extends TestCase
         // `phonetic`. Hạ ngưỡng cho fixture để index có cùng hình dạng như index thật.
         config(['search.voice.phonetic_min_hits' => 1]);
 
-        $danhMuc = DanhMuc::create(['name' => 'Thuốc giảm đau, hạ sốt']);
+        $danhMuc = DanhMuc::create(['ten' => 'Thuốc giảm đau, hạ sốt']);
 
         foreach ($this->catalogNames as $i => $name) {
-            SanPham::create([
-                'MaDM' => $danhMuc->MaDM,
-                'name' => $name,
-                'ingredients' => 'Paracetamol 500mg',
-                'price' => 50000,
-                'expiration_date' => now()->addYears(2),
-                'stock_quantity' => 30,
-                'reorder_point' => 10,
-                'batch_number' => "VL-{$i}",
+            SanPham::create(['ma_dm' => $danhMuc->ma_dm,
+                'ten' => $name,
+                'thanh_phan' => 'Paracetamol 500mg',
+                'gia' => 50000,
+                'ngay_het_han' => now()->addYears(2),
+                'so_luong_ton' => 30,
+                'muc_canh_bao' => 10,
+                'so_lo' => "VL-{$i}",
             ]);
         }
 

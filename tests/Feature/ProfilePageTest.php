@@ -28,7 +28,7 @@ class ProfilePageTest extends TestCase
     {
         parent::setUp();
 
-        $this->nguoiDung = NguoiDung::factory()->create(['name' => 'Nguyễn Văn An']);
+        $this->nguoiDung = NguoiDung::factory()->create(['ho_ten' => 'Nguyễn Văn An']);
     }
 
     public function test_the_page_opens_on_the_overview_tab(): void
@@ -64,11 +64,10 @@ class ProfilePageTest extends TestCase
     public function test_the_overview_counts_orders_by_status(): void
     {
         foreach (['Pending', 'Pending', 'Delivering', 'Completed'] as $status) {
-            DonHang::create([
-                'MaKH' => $this->nguoiDung->MaKH,
-                'total_amount' => 120000,
-                'status' => $status,
-                'shipping_address' => '1 Lê Văn Hiến, Đà Nẵng',
+            DonHang::create(['ma_nd' => $this->nguoiDung->ma_nd,
+                'tong_tien' => 120000,
+                'trang_thai' => $status,
+                'dia_chi_giao_hang' => '1 Lê Văn Hiến, Đà Nẵng',
             ]);
         }
 
@@ -86,11 +85,10 @@ class ProfilePageTest extends TestCase
     public function test_the_overview_lists_the_three_most_recent_orders(): void
     {
         foreach (range(1, 5) as $i) {
-            $donHang = DonHang::create([
-                'MaKH' => $this->nguoiDung->MaKH,
-                'total_amount' => 10000 * $i,
-                'status' => 'Completed',
-                'shipping_address' => "{$i} Lê Văn Hiến, Đà Nẵng",
+            $donHang = DonHang::create(['ma_nd' => $this->nguoiDung->ma_nd,
+                'tong_tien' => 10000 * $i,
+                'trang_thai' => 'Completed',
+                'dia_chi_giao_hang' => "{$i} Lê Văn Hiến, Đà Nẵng",
             ]);
 
             // created_at không nằm trong $fillable nên DonHang::create() bỏ qua nó và
@@ -105,26 +103,24 @@ class ProfilePageTest extends TestCase
 
         $this->assertCount(3, $recent);
         // Mới nhất trước: đơn thứ 5 tạo gần nhất.
-        $this->assertSame('5 Lê Văn Hiến, Đà Nẵng', $recent->first()->shipping_address);
+        $this->assertSame('5 Lê Văn Hiến, Đà Nẵng', $recent->first()->dia_chi_giao_hang);
     }
 
     public function test_the_overview_lists_only_this_users_active_reminders(): void
     {
-        $danhMuc = DanhMuc::create(['name' => 'Thuốc hô hấp']);
-        $sanPham = SanPham::create([
-            'MaDM' => $danhMuc->MaDM,
-            'name' => 'Thuốc ho Prospan',
-            'price' => 85000,
-            'expiration_date' => now()->addYears(2),
-            'stock_quantity' => 10,
-            'reorder_point' => 4,
-            'batch_number' => 'LC-prospan',
+        $danhMuc = DanhMuc::create(['ten' => 'Thuốc hô hấp']);
+        $sanPham = SanPham::create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Thuốc ho Prospan',
+            'gia' => 85000,
+            'ngay_het_han' => now()->addYears(2),
+            'so_luong_ton' => 10,
+            'muc_canh_bao' => 4,
+            'so_lo' => 'LC-prospan',
         ]);
         $other = NguoiDung::factory()->create();
 
-        NhacUongThuoc::create([
-            'MaKH' => $this->nguoiDung->MaKH,
-            'MaSP' => $sanPham->MaSP,
+        NhacUongThuoc::create(['ma_nd' => $this->nguoiDung->ma_nd,
+            'ma_sp' => $sanPham->ma_sp,
             'dosage_text' => '1 viên sau ăn',
             'times_per_day' => 2,
             'duration_days' => 5,
@@ -132,9 +128,8 @@ class ProfilePageTest extends TestCase
             'next_remind_at' => now()->addHours(3),
             'status' => 'active',
         ]);
-        NhacUongThuoc::create([
-            'MaKH' => $other->MaKH,
-            'MaSP' => $sanPham->MaSP,
+        NhacUongThuoc::create(['ma_nd' => $other->ma_nd,
+            'ma_sp' => $sanPham->ma_sp,
             'dosage_text' => '2 viên sau ăn',
             'times_per_day' => 2,
             'duration_days' => 5,
@@ -150,13 +145,12 @@ class ProfilePageTest extends TestCase
 
         // Lịch nhắc của người khác không được lọt vào: MaKH đi trong URL email.
         $this->assertCount(1, $reminders);
-        $this->assertSame((int) $this->nguoiDung->MaKH, (int) $reminders->first()->MaKH);
+        $this->assertSame((int) $this->nguoiDung->ma_nd, (int) $reminders->first()->ma_nd);
     }
 
     public function test_the_health_progress_is_hidden_without_consent(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'allergies' => ['penicillin'],
             'chronic_conditions' => ['tăng huyết áp'],
             'weight_kg' => 62,
@@ -174,8 +168,7 @@ class ProfilePageTest extends TestCase
 
     public function test_the_health_progress_shows_once_consent_is_given(): void
     {
-        HoSoSucKhoe::create([
-            'MaKH' => $this->nguoiDung->MaKH,
+        HoSoSucKhoe::create(['ma_nd' => $this->nguoiDung->ma_nd,
             'allergies' => ['penicillin'],
             'chronic_conditions' => ['tăng huyết áp'],
             'current_medications' => ['amlodipin'],
@@ -211,20 +204,19 @@ class ProfilePageTest extends TestCase
 
     public function test_the_overview_previews_three_favourite_products(): void
     {
-        $danhMuc = DanhMuc::create(['name' => 'Thuốc tiêu hoá & gan mật']);
+        $danhMuc = DanhMuc::create(['ten' => 'Thuốc tiêu hoá & gan mật']);
 
         foreach (range(1, 5) as $i) {
-            $sanPham = SanPham::create([
-                'MaDM' => $danhMuc->MaDM,
-                'name' => "Thuốc số {$i} điều trị viêm gan do virus, xơ gan",
-                'price' => 100000 + $i,
-                'expiration_date' => now()->addYears(2),
-                'stock_quantity' => 10,
-                'reorder_point' => 4,
-                'batch_number' => "LC-fav-{$i}",
+            $sanPham = SanPham::create(['ma_dm' => $danhMuc->ma_dm,
+                'ten' => "Thuốc số {$i} điều trị viêm gan do virus, xơ gan",
+                'gia' => 100000 + $i,
+                'ngay_het_han' => now()->addYears(2),
+                'so_luong_ton' => 10,
+                'muc_canh_bao' => 4,
+                'so_lo' => "LC-fav-{$i}",
             ]);
 
-            YeuThich::create(['MaKH' => $this->nguoiDung->MaKH, 'MaSP' => $sanPham->MaSP]);
+            YeuThich::create(['ma_nd' => $this->nguoiDung->ma_nd, 'ma_sp' => $sanPham->ma_sp]);
         }
 
         $response = $this->actingAs($this->nguoiDung)->get(route('profile.edit'))->assertOk();

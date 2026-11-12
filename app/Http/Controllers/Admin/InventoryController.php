@@ -84,7 +84,7 @@ class InventoryController extends Controller
     public function adjust(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'MaSP' => 'required|exists:products,MaSP',
+            'ma_sp' => 'required|exists:san_phams,ma_sp',
             'adjustment' => 'required|integer|not_in:0',
             'reason' => 'required|string|max:255',
         ], [
@@ -106,7 +106,7 @@ class InventoryController extends Controller
 
         try {
             $this->inventoryService->adjustStock(
-                productId: $request->MaSP,
+                productId: $request->ma_sp,
                 quantity: $request->adjustment,
                 reason: $request->reason,
                 userId: auth()->id()

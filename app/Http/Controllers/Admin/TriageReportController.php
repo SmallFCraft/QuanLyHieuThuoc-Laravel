@@ -22,7 +22,7 @@ class TriageReportController extends Controller
         $filters = $this->filters($request);
 
         $cacPhien = $this->reportService->filterSessions($filters)
-            ->with(['nguoiDung:MaKH,name,email', 'pharmacist:MaKH,name'])
+            ->with(['nguoiDung:ma_nd,ho_ten,email', 'pharmacist:ma_nd,ho_ten'])
             ->orderByDesc('created_at')
             ->paginate(20)
             ->withQueryString();
@@ -51,7 +51,7 @@ class TriageReportController extends Controller
      */
     public function show(int $MaSL)
     {
-        $phien = PhienSangLoc::with(['nguoiDung:MaKH,name,email', 'pharmacist:MaKH,name'])
+        $phien = PhienSangLoc::with(['nguoiDung:ma_nd,ho_ten,email', 'pharmacist:ma_nd,ho_ten'])
             ->findOrFail($MaSL);
 
         $cacTenTrieuChung = $this->symptomNamesFor(collect((array) ($phien->matched_symptoms ?? [])));

@@ -28,10 +28,10 @@ class InventoryService
 
             $hasBatches = $sanPham->cacLo()->exists();
             if ($hasBatches) {
-                $sanPham->cacLo()->orderBy('expiration_date')->orderBy('MaLo')->lockForUpdate()->get();
-                $oldQuantity = (int) $sanPham->cacLo()->sum('stock_quantity');
+                $sanPham->cacLo()->orderBy('ngay_het_han')->orderBy('ma_lo')->lockForUpdate()->get();
+                $oldQuantity = (int) $sanPham->cacLo()->sum('so_luong_ton');
             } else {
-                $oldQuantity = (int) ($sanPham->getAttributes()['stock_quantity'] ?? 0);
+                $oldQuantity = (int) ($sanPham->getAttributes()['so_luong_ton'] ?? 0);
             }
 
             $newQuantity = $oldQuantity + $quantity;
@@ -41,13 +41,13 @@ class InventoryService
 
             if ($hasBatches) {
                 $this->applyBatchStockDelta($sanPham, $quantity);
-                $newQuantity = (int) $sanPham->cacLo()->sum('stock_quantity');
+                $newQuantity = (int) $sanPham->cacLo()->sum('so_luong_ton');
                 // Sync stock_quantity to products table for consistency
-                DB::table('products')
-                    ->where('MaSP', $sanPham->MaSP)
-                    ->update(['stock_quantity' => $newQuantity, 'updated_at' => now()]);
+                DB::table('san_phams')
+                    ->where('ma_sp', $sanPham->ma_sp)
+                    ->update(['so_luong_ton' => $newQuantity, 'updated_at' => now()]);
             } else {
-                $sanPham->setAttribute('stock_quantity', $newQuantity);
+                $sanPham->setAttribute('so_luong_ton', $newQuantity);
                 $sanPham->save();
             }
 
@@ -55,21 +55,21 @@ class InventoryService
                 action: 'inventory_adjustment',
                 modelType: SanPham::class,
                 modelId: $productId,
-                oldValues: ['stock_quantity' => $oldQuantity],
+                oldValues: ['so_luong_ton' => $oldQuantity],
                 newValues: [
-                    'stock_quantity' => $newQuantity,
+                    'so_luong_ton' => $newQuantity,
                     'adjustment' => $quantity,
                     'reason' => $reason
                 ]
             );
 
             Log::info('Inventory adjusted', [
-                'MaSP' => $productId,
+                'ma_sp' => $productId,
                 'old_quantity' => $oldQuantity,
                 'new_quantity' => $newQuantity,
                 'adjustment' => $quantity,
                 'reason' => $reason,
-                'MaKH' => $userId
+                'ma_nd' => $userId
             ]);
 
             return true;
@@ -88,35 +88,35 @@ class InventoryService
         }
 
         if ($delta > 0) {
-            $batchNumber = $sanPham->getAttributes()['batch_number'] ?? null;
+            $batchNumber = $sanPham->getAttributes()['so_lo'] ?? null;
             $lo = null;
             if ($batchNumber !== null && $batchNumber !== '') {
                 $lo = $sanPham->cacLo()
-                    ->where('batch_number', $batchNumber)
+                    ->where('so_lo', $batchNumber)
                     ->first();
             }
             if (! $lo instanceof LoSanPham) {
-                $lo = $sanPham->cacLo()->orderBy('expiration_date')->orderBy('MaLo')->first();
+                $lo = $sanPham->cacLo()->orderBy('ngay_het_han')->orderBy('ma_lo')->first();
             }
             if (! $lo instanceof LoSanPham) {
                 throw new \Exception('Không tìm thấy lô sản phẩm để điều chỉnh tồn kho.');
             }
-            $lo->stock_quantity += $delta;
+            $lo->so_luong_ton += $delta;
             $lo->save();
 
             return;
         }
 
         $remaining = abs($delta);
-        foreach ($sanPham->cacLo()->orderBy('expiration_date')->orderBy('MaLo')->get() as $lo) {
+        foreach ($sanPham->cacLo()->orderBy('ngay_het_han')->orderBy('ma_lo')->get() as $lo) {
             if ($remaining <= 0) {
                 break;
             }
-            if ($lo->stock_quantity <= 0) {
+            if ($lo->so_luong_ton <= 0) {
                 continue;
             }
-            $take = min($lo->stock_quantity, $remaining);
-            $lo->stock_quantity -= $take;
+            $take = min($lo->so_luong_ton, $remaining);
+            $lo->so_luong_ton -= $take;
             $lo->save();
             $remaining -= $take;
         }
@@ -134,9 +134,9 @@ class InventoryService
     public function checkExpiration(int $daysThreshold = 30): Collection
     {
         return SanPham::with('danhMuc')
-            ->where('expiration_date', '<=', Carbon::now()->addDays($daysThreshold))
-            ->where('expiration_date', '>', Carbon::now())
-            ->orderBy('expiration_date', 'asc')
+            ->where('ngay_het_han', '<=', Carbon::now()->addDays($daysThreshold))
+            ->where('ngay_het_han', '>', Carbon::now())
+            ->orderBy('ngay_het_han', 'asc')
             ->get();
     }
 
@@ -149,7 +149,7 @@ class InventoryService
     {
         return SanPham::with('danhMuc')
             ->lowStock()
-            ->orderBy('stock_quantity', 'asc')
+            ->orderBy('so_luong_ton', 'asc')
             ->get();
     }
 
@@ -166,11 +166,11 @@ class InventoryService
     {
         return [
             'total_products' => SanPham::count(),
-            'total_value' => SanPham::sum(DB::raw('ROUND(price, 0) * stock_quantity')),
+            'total_value' => SanPham::sum(DB::raw('ROUND(gia, 0) * so_luong_ton')),
             'low_stock' => SanPham::lowStock()->count(),
             'expiring_soon' => SanPham::expiringSoon(30)->count(),
-            'expired' => SanPham::where('expiration_date', '<', Carbon::now())->count(),
-            'out_of_stock' => SanPham::where('stock_quantity', 0)->count(),
+            'expired' => SanPham::where('ngay_het_han', '<', Carbon::now())->count(),
+            'out_of_stock' => SanPham::where('so_luong_ton', 0)->count(),
         ];
     }
 }

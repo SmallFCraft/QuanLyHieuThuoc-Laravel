@@ -6,12 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class QuyTacPhanTangYTe extends Model
 {
-    protected $table = 'medical_triage_rules';
+    protected $table = 'quy_tac_phan_tang_y_tes';
 
-    protected $primaryKey = 'MaQT';
+    protected $primaryKey = 'ma_qt';
 
     protected $fillable = [
-        'MaTC',
+        'ma_tc',
         'conditions',
         'outcome',
         'advice_vi',
@@ -36,7 +36,7 @@ class QuyTacPhanTangYTe extends Model
 
     public function symptom()
     {
-        return $this->belongsTo(TrieuChungYTe::class, 'MaTC', 'MaTC');
+        return $this->belongsTo(TrieuChungYTe::class, 'ma_tc', 'ma_tc');
     }
 
     public function scopeActive($query)
@@ -49,6 +49,6 @@ class QuyTacPhanTangYTe extends Model
      */
     public function scopeMostSpecificFirst($query)
     {
-        return $query->orderByDesc('priority')->orderBy('MaQT');
+        return $query->orderByDesc('priority')->orderBy('ma_qt');
     }
 }

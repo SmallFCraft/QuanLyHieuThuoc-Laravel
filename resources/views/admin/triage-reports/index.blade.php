@@ -382,11 +382,11 @@
                                 $style = $outcomeStyles[$session->outcome] ?? null;
                             @endphp
                             <tr>
-                                <td class="fw-semibold">SL-{{ $session->MaSL }}</td>
+                                <td class="fw-semibold">SL-{{ $session->ma_sl }}</td>
                                 <td><time datetime="{{ $session->created_at->toIso8601String() }}">{{ $session->created_at->format('d/m/Y H:i') }}</time></td>
                                 <td>
-                                    <div class="fw-semibold">{{ $session->nguoiDung->name ?? __('triage_report.table.unknown') }}</div>
-                                    <div class="small text-secondary">{{ $session->nguoiDung->email ?? '#' . $session->MaKH }}</div>
+                                    <div class="fw-semibold">{{ $session->nguoiDung->ho_ten ?? __('triage_report.table.unknown') }}</div>
+                                    <div class="small text-secondary">{{ $session->nguoiDung->email ?? '#' . $session->ma_nd }}</div>
                                 </td>
                                 <td>{{ $symptomList->isEmpty() ? '—' : $symptomList->implode(', ') }}</td>
                                 <td>
@@ -400,11 +400,11 @@
                                 </td>
                                 <td>{{ $redFlagList->isEmpty() ? __('triage_report.table.none') : $redFlagList->implode(', ') }}</td>
                                 <td>{{ __('triage_report.status.' . $session->status) }}</td>
-                                <td>{{ $session->pharmacist->name ?? '—' }}</td>
+                                <td>{{ $session->pharmacist->ho_ten ?? '—' }}</td>
                                 <td>{{ $session->entry_point ? __('triage_report.entry_point.' . $session->entry_point) : '—' }}</td>
                                 <td class="text-center">
-                                    <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.triageReports.show', $session->MaSL) }}"
-                                       aria-label="{{ __('triage_report.table.view') }} SL-{{ $session->MaSL }}">
+                                    <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.triageReports.show', $session->ma_sl) }}"
+                                       aria-label="{{ __('triage_report.table.view') }} SL-{{ $session->ma_sl }}">
                                         <i class="bi bi-eye me-1" aria-hidden="true"></i>{{ __('triage_report.table.view') }}
                                     </a>
                                 </td>

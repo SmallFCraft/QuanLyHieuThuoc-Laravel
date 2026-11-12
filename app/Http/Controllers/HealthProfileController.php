@@ -20,7 +20,7 @@ class HealthProfileController extends Controller
     public function update(HealthProfileRequest $request): RedirectResponse
     {
         $userId = auth()->id();
-        $hoSo = HoSoSucKhoe::where('MaKH', $userId)->first();
+        $hoSo = HoSoSucKhoe::where('ma_nd', $userId)->first();
 
         $attributes = $request->profileAttributes();
         $attributes['consented_at'] = $request->boolean('consent')
@@ -38,13 +38,13 @@ class HealthProfileController extends Controller
         if ($hoSo) {
             $hoSo->fill($attributes)->save();
         } else {
-            $hoSo = HoSoSucKhoe::create($attributes + ['MaKH' => $userId]);
+            $hoSo = HoSoSucKhoe::create($attributes + ['ma_nd' => $userId]);
         }
 
         app(AuditLogService::class)->log(
             action: 'health_profile_updated',
             modelType: HoSoSucKhoe::class,
-            modelId: $hoSo->MaHS,
+            modelId: $hoSo->ma_hs,
             oldValues: null,
             newValues: $this->safeSummary($hoSo, $changed),
         );
@@ -55,10 +55,10 @@ class HealthProfileController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
-        $hoSo = HoSoSucKhoe::where('MaKH', auth()->id())->first();
+        $hoSo = HoSoSucKhoe::where('ma_nd', auth()->id())->first();
 
         if ($hoSo) {
-            $profileId = $hoSo->MaHS;
+            $profileId = $hoSo->ma_hs;
             $hoSo->delete();
 
             app(AuditLogService::class)->log(
@@ -66,7 +66,7 @@ class HealthProfileController extends Controller
                 modelType: HoSoSucKhoe::class,
                 modelId: $profileId,
                 oldValues: null,
-                newValues: ['MaKH' => auth()->id()],
+                newValues: ['ma_nd' => auth()->id()],
             );
         }
 
@@ -129,7 +129,7 @@ class HealthProfileController extends Controller
         }
 
         return [
-            'MaKH' => $hoSo->MaKH,
+            'ma_nd' => $hoSo->ma_nd,
             'changed_fields' => array_values($changed),
             'item_counts' => $counts,
             'has_notes' => filled($hoSo->notes),

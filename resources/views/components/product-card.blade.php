@@ -16,10 +16,10 @@
 ])
 
 @php
-    $detailUrl = route('products.show', $product->MaSP);
+    $detailUrl = route('products.show', $product->ma_sp);
     $detailText = $detailLabel ?? __('messages.view_details');
     $fitClass = $imageFit === 'contain' ? 'object-fit-contain p-2' : 'object-fit-cover';
-    $categoryName = $product->danhMuc?->name ?? __('messages.product_category');
+    $categoryName = $product->danhMuc?->ten ?? __('messages.product_category');
     $price = $product->formatted_price ?? format_currency_vi($product->price_vnd);
     $canShowFavorite = $showFavorite && auth()->check();
 @endphp
@@ -28,10 +28,10 @@
     <div class="store-product-card__media {{ $mediaClass }}" data-product-image-container>
         <a href="{{ $detailUrl }}"
            class="store-product-card__image-link"
-           aria-label="{{ $detailText }}: {{ $product->name }}">
+           aria-label="{{ $detailText }}: {{ $product->ten }}">
             <x-product-image
                 :src="$product->image_url"
-                :alt="$product->name"
+                :alt="$product->ten"
                 class="w-100 h-100 {{ $fitClass }} store-product-card__image {{ $imageClass }}"
                 :icon-class="$iconClass"
                 :icon-size="$iconSize"
@@ -52,7 +52,7 @@
                     <button type="button"
                             class="btn btn-light btn-sm store-product-card__icon-action store-product-card__favorite-action"
                             data-favorite-toggle
-                            data-product-id="{{ $product->MaSP }}"
+                            data-product-id="{{ $product->ma_sp }}"
                             data-favorite-label="{{ __('messages.save_favorite') }}"
                             data-saved-label="{{ __('messages.saved_favorite') }}"
                             aria-pressed="false"
@@ -67,7 +67,7 @@
 
     <div class="store-product-card__body {{ $bodyClass }}">
         <a href="{{ $detailUrl }}" class="text-decoration-none">
-            <h3 class="store-product-card__title" title="{{ $product->name }}">{{ $product->name }}</h3>
+            <h3 class="store-product-card__title" title="{{ $product->ten }}">{{ $product->ten }}</h3>
         </a>
         <p class="store-product-card__category">{{ $categoryName }}</p>
 
@@ -78,9 +78,9 @@
                 @else
                     {{-- Availability only. Exact stock counts and batch expiry dates are
                          internal figures; pharmacy storefronts state neither. --}}
-                    <span class="{{ $product->stock_quantity > 0 ? 'is-available' : 'is-unavailable' }}">
-                        <i class="bi {{ $product->stock_quantity > 0 ? 'bi-check-circle' : 'bi-x-circle' }}"></i>
-                        {{ $product->stock_quantity > 0 ? __('messages.in_stock') : __('messages.out_of_stock') }}
+                    <span class="{{ $product->so_luong_ton > 0 ? 'is-available' : 'is-unavailable' }}">
+                        <i class="bi {{ $product->so_luong_ton > 0 ? 'bi-check-circle' : 'bi-x-circle' }}"></i>
+                        {{ $product->so_luong_ton > 0 ? __('messages.in_stock') : __('messages.out_of_stock') }}
                     </span>
                     @if($product->shelf_life_text)
                         <span>
@@ -110,21 +110,21 @@
                 @if($showDetailAction)
                     <a href="{{ $detailUrl }}"
                        class="btn btn-light btn-sm store-product-card__icon-action store-product-card__detail-action"
-                       aria-label="{{ $detailText }}: {{ $product->name }}"
+                       aria-label="{{ $detailText }}: {{ $product->ten }}"
                        title="{{ $detailText }}">
                         <i class="bi bi-eye"></i>
                     </a>
                 @endif
 
                 @if($showCart)
-                    @if($product->stock_quantity > 0)
+                    @if($product->so_luong_ton > 0)
                         <form action="{{ route('cart.add') }}" method="POST" class="d-inline js-add-to-cart-form">
                             @csrf
-                            <input type="hidden" name="MaSP" value="{{ $product->MaSP }}">
+                            <input type="hidden" name="MaSP" value="{{ $product->ma_sp }}">
                             <input type="hidden" name="quantity" value="1">
                             <button type="submit"
                                     class="btn store-product-card__icon-action store-product-card__cart-action"
-                                    aria-label="{{ __('messages.add_to_cart') }}: {{ $product->name }}"
+                                    aria-label="{{ __('messages.add_to_cart') }}: {{ $product->ten }}"
                                     title="{{ __('messages.add_to_cart') }}">
                                 <i class="bi bi-cart-plus"></i>
                             </button>

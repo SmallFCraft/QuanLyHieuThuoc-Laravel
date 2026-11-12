@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class PhienAmGiongNoi extends Model
 {
-    protected $table = 'voice_phonetics';
+    protected $table = 'phien_am_giong_nois';
 
     public $timestamps = false;
 

@@ -28,7 +28,7 @@ class AdminTriageExport implements FromCollection, WithHeadings, WithMapping, Sh
     public function collection(): Collection
     {
         $sessions = $this->reportService->filterSessions($this->filters)
-            ->with(['nguoiDung:MaKH,name,email', 'pharmacist:MaKH,name'])
+            ->with(['nguoiDung:ma_nd,ho_ten,email', 'pharmacist:ma_nd,ho_ten'])
             ->orderByDesc('created_at')
             ->get();
 
@@ -63,14 +63,14 @@ class AdminTriageExport implements FromCollection, WithHeadings, WithMapping, Sh
     public function map($phien): array
     {
         return [
-            'SL-' . $phien->MaSL,
+            'SL-' . $phien->ma_sl,
             optional($phien->created_at)->format('d/m/Y H:i'),
-            $phien->nguoiDung->name ?? 'Không rõ',
+            $phien->nguoiDung->ho_ten ?? 'Không rõ',
             $this->symptomList($phien),
             $this->outcomeLabel($phien->outcome),
             $this->redFlagList($phien),
             $this->statusLabel($phien->status),
-            $phien->pharmacist->name ?? '—',
+            $phien->pharmacist->ho_ten ?? '—',
             $this->entryPointLabel($phien->entry_point),
         ];
     }

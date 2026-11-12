@@ -8,9 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('triage_sessions', function (Blueprint $table) {
-            $table->id('MaSL');
-            $table->foreignId('MaKH')->constrained('users', 'MaKH')->cascadeOnDelete();
+        Schema::create('phien_sang_locs', function (Blueprint $table) {
+            $table->id('ma_sl');
+            $table->foreignId('ma_nd')->constrained('nguoi_dungs', 'ma_nd')->cascadeOnDelete();
             $table->uuid('session_id')->nullable()->index();
             $table->json('collected_data')->nullable();
             $table->json('matched_symptoms')->nullable();
@@ -20,7 +20,7 @@ return new class extends Migration
             $table->text('advice_given')->nullable();
             $table->text('safety_net')->nullable();
             // AI output lives in its own columns so the deterministic record stays
-            // reconstructible from rule_id + medical_triage_rules. advice_given and
+            // reconstructible from rule_id + quy_tac_phan_tang_y_tes. advice_given and
             // safety_net are never overwritten by a language model.
             //
             // Not stored here on purpose: provider/model/latency (already in
@@ -57,21 +57,21 @@ return new class extends Migration
             $table->enum('status', ['in_progress', 'completed', 'pending_pharmacist', 'reviewed'])
                 ->default('in_progress');
             $table->foreignId('pharmacist_id')->nullable()
-                ->constrained('users', 'MaKH')->nullOnDelete();
+                ->constrained('nguoi_dungs', 'ma_nd')->nullOnDelete();
             $table->text('pharmacist_note')->nullable();
             $table->timestamp('reviewed_at')->nullable();
             $table->timestamps();
 
-            $table->index(['MaKH', 'status'], 'triage_sessions_makh_status_idx');
+            $table->index(['ma_nd', 'status'], 'phien_sang_locs_ma_nd_status_idx');
             $table->index(['status', 'created_at'], 'triage_sessions_queue_idx');
             $table->index('follow_up_at');
         });
 
-        Schema::create('medication_reminders', function (Blueprint $table) {
-            $table->id('MaNN');
-            $table->foreignId('MaKH')->constrained('users', 'MaKH')->cascadeOnDelete();
-            $table->foreignId('MaDH')->nullable()->constrained('orders', 'MaDH')->nullOnDelete();
-            $table->foreignId('MaSP')->constrained('products', 'MaSP')->cascadeOnDelete();
+        Schema::create('nhac_uong_thuocs', function (Blueprint $table) {
+            $table->id('ma_nn');
+            $table->foreignId('ma_nd')->constrained('nguoi_dungs', 'ma_nd')->cascadeOnDelete();
+            $table->foreignId('ma_dh')->nullable()->constrained('don_hangs', 'ma_dh')->nullOnDelete();
+            $table->foreignId('ma_sp')->constrained('san_phams', 'ma_sp')->cascadeOnDelete();
             $table->string('dosage_text');
             $table->unsignedTinyInteger('times_per_day')->default(1);
             $table->unsignedSmallInteger('duration_days')->default(3);
@@ -82,13 +82,13 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['status', 'next_remind_at'], 'medication_reminders_dispatch_idx');
-            $table->index(['MaKH', 'status'], 'medication_reminders_makh_status_idx');
+            $table->index(['ma_nd', 'status'], 'nhac_uong_thuocs_ma_nd_status_idx');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('medication_reminders');
-        Schema::dropIfExists('triage_sessions');
+        Schema::dropIfExists('nhac_uong_thuocs');
+        Schema::dropIfExists('phien_sang_locs');
     }
 };

@@ -34,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
                 DanhMuc::NAV_CACHE_KEY,
                 now()->addMinutes(10),
                 fn () => DanhMuc::query()
-                    ->select('MaDM', 'name')
+                    ->select('ma_dm', 'ten')
                     ->browsable()
                     ->get()
             ));
@@ -43,8 +43,8 @@ class AppServiceProvider extends ServiceProvider
                 DanhMuc::FOOTER_CACHE_KEY,
                 now()->addMinutes(10),
                 fn () => DanhMuc::query()
-                    ->withSum('sanPhams', 'views_count')
-                    ->orderByDesc('san_phams_sum_views_count')
+                    ->withSum('sanPhams', 'luot_xem')
+                    ->orderByDesc('san_phams_sum_luot_xem')
                     ->limit(4)
                     ->get()
             ));
@@ -58,10 +58,10 @@ class AppServiceProvider extends ServiceProvider
                 DanhMuc::SEARCH_PANEL_PRODUCTS_CACHE_KEY,
                 now()->addMinutes(10),
                 fn () => SanPham::query()
-                    ->select('MaSP', 'name', 'MaDM', 'price', 'image')
+                    ->select('ma_sp', 'ten', 'ma_dm', 'gia', 'hinh_anh')
                     ->notExpired()
-                    ->where('stock_quantity', '>', 0)
-                    ->orderByDesc('views_count')
+                    ->where('so_luong_ton', '>', 0)
+                    ->orderByDesc('luot_xem')
                     ->limit(3)
                     ->get()
             ));

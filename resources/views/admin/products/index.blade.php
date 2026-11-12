@@ -27,7 +27,7 @@
                 <select id="categoryFilter" class="form-select">
                     <option value="">Tất cả danh mục</option>
                     @foreach($categories as $category)
-                        <option value="{{ $category->MaDM }}">{{ $category->name }}</option>
+                        <option value="{{ $category->ma_dm }}">{{ $category->ten }}</option>
                     @endforeach
                 </select>
             </div>
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function () {
             { data: 'stock_quantity', name: 'stock_quantity' },
             { data: 'formatted_expiration_date', name: 'expiration_date' },
             { data: 'batch_number', name: 'batch_number' },
-            { data: 'MaSP', name: 'actions', orderable: false, searchable: false, className: 'text-center' }
+            { data: 'ma_sp', name: 'actions', orderable: false, searchable: false, className: 'text-center' }
         ],
         columnDefs: [
             {

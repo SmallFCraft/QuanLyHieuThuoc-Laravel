@@ -959,7 +959,7 @@ PROMPT;
             return $result;
         } catch (\Exception $e) {
             Log::error('Message processing failed', [
-                'MaKH' => $userId,
+                'ma_nd' => $userId,
                 'message' => $message,
                 'error' => $e->getMessage()
             ]);
@@ -1878,7 +1878,7 @@ PROMPT;
 
             $sanPham = $item['product'] ?? [];
             if (is_array($sanPham)) {
-                $id = (int) ($sanPham['id'] ?? $sanPham['MaSP'] ?? 0);
+                $id = (int) ($sanPham['id'] ?? $sanPham['ma_sp'] ?? 0);
                 if ($id > 0) {
                     $ids[] = $id;
                 }
@@ -1897,11 +1897,11 @@ PROMPT;
 
         $query = SanPham::with('danhMuc')
             ->notExpired()
-            ->where('stock_quantity', '>', 0);
+            ->where('so_luong_ton', '>', 0);
 
         $ids = array_values(array_unique(array_filter($ids)));
         if (!empty($ids)) {
-            return $query->whereIn('MaSP', $ids)
+            return $query->whereIn('ma_sp', $ids)
                 ->FEFO()
                 ->limit(5)
                 ->get();
@@ -1909,7 +1909,7 @@ PROMPT;
 
         $results = collect();
         foreach (array_values(array_unique($names)) as $name) {
-            $results = $results->concat($this->searchProducts($name))->unique('MaSP')->values();
+            $results = $results->concat($this->searchProducts($name))->unique('ma_sp')->values();
             if ($results->count() >= 5) {
                 return $results->take(5)->values();
             }
@@ -1946,7 +1946,7 @@ PROMPT;
                 continue;
             }
 
-            $searchResults = $searchResults->concat($results)->unique('MaSP')->values();
+            $searchResults = $searchResults->concat($results)->unique('ma_sp')->values();
 
             if ($searchResults->count() >= 5) {
                 $searchResults = $searchResults->take(5)->values();
@@ -2044,7 +2044,7 @@ PROMPT;
 
         $featuredProducts = collect();
         if ($danhMucs->count() === 1) {
-            $featuredProducts = $this->getFeaturedProductsForCategory((int) $danhMucs->first()->MaDM);
+            $featuredProducts = $this->getFeaturedProductsForCategory((int) $danhMucs->first()->ma_dm);
         }
 
         return [
@@ -2422,7 +2422,7 @@ PROMPT;
         // Re-read the rows: category and usage drive two lines of the shared block and
         // are not part of the recognition payload.
         $sanPhams = SanPham::with('danhMuc')
-            ->whereIn('MaSP', $ids)
+            ->whereIn('ma_sp', $ids)
             ->FEFO()
             ->get();
 
@@ -2560,7 +2560,7 @@ PROMPT;
                 modelId: null,
                 oldValues: null,
                 newValues: [
-                    'MaKH' => $userId,
+                    'ma_nd' => $userId,
                     'query' => $message,
                     'response_type' => $responseType,
                     'products_returned' => count($sanPhams),
@@ -2573,7 +2573,7 @@ PROMPT;
             );
         } catch (\Throwable $exception) {
             Log::warning('Chatbot audit logging failed', [
-                'MaKH' => $userId,
+                'ma_nd' => $userId,
                 'response_type' => $responseType,
                 'error' => $exception->getMessage(),
             ]);
@@ -2583,23 +2583,23 @@ PROMPT;
     protected function searchCategories(string $query = '', int $limit = 5): Collection
     {
         return DanhMuc::query()
-            ->select('MaDM', 'name', 'description', 'icon')
+            ->select('ma_dm', 'ten', 'mo_ta', 'bieu_tuong')
             ->whereHas('sanPhams', function ($builder) {
-                $builder->notExpired()->where('stock_quantity', '>', 0);
+                $builder->notExpired()->where('so_luong_ton', '>', 0);
             })
             ->withCount([
                 'sanPhams' => function ($builder) {
-                    $builder->notExpired()->where('stock_quantity', '>', 0);
+                    $builder->notExpired()->where('so_luong_ton', '>', 0);
                 }
             ])
             ->when($query !== '', function ($builder) use ($query) {
                 $builder->where(function ($categoryQuery) use ($query) {
-                    $categoryQuery->where('name', 'like', '%' . $query . '%')
-                        ->orWhere('description', 'like', '%' . $query . '%');
+                    $categoryQuery->where('ten', 'like', '%' . $query . '%')
+                        ->orWhere('mo_ta', 'like', '%' . $query . '%');
                 });
             })
             ->orderByDesc('san_phams_count')
-            ->orderBy('name')
+            ->orderBy('ten')
             ->limit($limit)
             ->get();
     }
@@ -2608,8 +2608,8 @@ PROMPT;
     {
         return SanPham::with('danhMuc')
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
-            ->where('MaDM', $categoryId)
+            ->where('so_luong_ton', '>', 0)
+            ->where('ma_dm', $categoryId)
             ->FEFO()
             ->limit(3)
             ->get();
@@ -2644,14 +2644,14 @@ PROMPT;
 
         $haystacks = [];
         foreach ($danhMucs as $danhMuc) {
-            $haystacks[(int) $danhMuc->MaDM] = VietnameseText::fold(
-                trim(((string) $danhMuc->name) . ' ' . ((string) $danhMuc->description))
+            $haystacks[(int) $danhMuc->ma_dm] = VietnameseText::fold(
+                trim(((string) $danhMuc->ten) . ' ' . ((string) $danhMuc->mo_ta))
             );
         }
 
         foreach (array_keys($candidates) as $candidate) {
             $matched = $danhMucs->filter(fn ($danhMuc): bool => VietnameseText::containsWord(
-                $haystacks[(int) $danhMuc->MaDM] ?? '',
+                $haystacks[(int) $danhMuc->ma_dm] ?? '',
                 $candidate
             ))->values();
 
@@ -2788,16 +2788,16 @@ PROMPT;
     {
         return $sanPhams->map(function ($sanPham) {
             return [
-                'id' => $sanPham->MaSP,
-                'name' => $sanPham->name,
+                'id' => $sanPham->ma_sp,
+                'name' => $sanPham->ten,
                 'price' => $sanPham->price_vnd,
-                'stock_quantity' => (int) $sanPham->stock_quantity,
+                'stock_quantity' => (int) $sanPham->so_luong_ton,
                 'image_url' => $sanPham->image_url,
-                'ingredients' => $sanPham->ingredients,
-                'usage' => $sanPham->usage,
-                'expiration_date' => optional($sanPham->expiration_date)->toDateString(),
-                'category' => $sanPham->danhMuc ? $sanPham->danhMuc->name : null,
-                'url' => route('products.show', $sanPham->MaSP)
+                'ingredients' => $sanPham->thanh_phan,
+                'usage' => $sanPham->cach_dung,
+                'expiration_date' => optional($sanPham->ngay_het_han)->toDateString(),
+                'category' => $sanPham->danhMuc ? $sanPham->danhMuc->ten : null,
+                'url' => route('products.show', $sanPham->ma_sp)
             ];
         })->values()->all();
     }
@@ -2806,12 +2806,12 @@ PROMPT;
     {
         return $danhMucs->map(function ($danhMuc) {
             return [
-                'id' => $danhMuc->MaDM,
-                'name' => $danhMuc->name,
-                'description' => $danhMuc->description,
-                'icon' => $danhMuc->icon,
+                'id' => $danhMuc->ma_dm,
+                'name' => $danhMuc->ten,
+                'description' => $danhMuc->mo_ta,
+                'icon' => $danhMuc->bieu_tuong,
                 'product_count' => (int) ($danhMuc->san_phams_count ?? 0),
-                'url' => route('products.index', ['category' => $danhMuc->MaDM])
+                'url' => route('products.index', ['category' => $danhMuc->ma_dm])
             ];
         })->values()->all();
     }
@@ -3482,7 +3482,7 @@ PROMPT;
         $payload = $this->formatProductsPayload(collect([$sanPham]));
 
         if ($warnings === []) {
-            $lines = [__('messages.chatbot.drug_safety_clear', ['name' => $sanPham->name])];
+            $lines = [__('messages.chatbot.drug_safety_clear', ['name' => $sanPham->ten])];
             if ($profile === null) {
                 $lines[] = __('messages.chatbot.drug_safety_no_profile');
             }
@@ -3496,7 +3496,7 @@ PROMPT;
         }
 
         $hasMajor = false;
-        $lines = [__('messages.chatbot.drug_safety_found', ['name' => $sanPham->name]), ''];
+        $lines = [__('messages.chatbot.drug_safety_found', ['name' => $sanPham->ten]), ''];
 
         foreach ($warnings as $warning) {
             $severity = (string) ($warning['severity'] ?? 'minor');
@@ -5548,7 +5548,7 @@ PROMPT;
 
         $userId = (int) ($context['user_id'] ?? 0);
         if ($userId > 0) {
-            $gender = NguoiDung::where('MaKH', $userId)->value('gender');
+            $gender = NguoiDung::where('ma_nd', $userId)->value('gioi_tinh');
             if ($gender === 'male') {
                 $messages[] = [
                     'role' => 'system',
@@ -5924,12 +5924,12 @@ PROMPT;
 
         $sanPhams = SanPham::with('danhMuc')
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
+            ->where('so_luong_ton', '>', 0)
             ->where(function ($q) use ($query) {
-                $q->where('name', 'LIKE', $query)
-                    ->orWhere('name', 'LIKE', "{$query} %")
-                    ->orWhere('name', 'LIKE', "% {$query}")
-                    ->orWhere('name', 'LIKE', "% {$query} %");
+                $q->where('ten', 'LIKE', $query)
+                    ->orWhere('ten', 'LIKE', "{$query} %")
+                    ->orWhere('ten', 'LIKE', "% {$query}")
+                    ->orWhere('ten', 'LIKE', "% {$query} %");
             })
             ->FEFO()
             ->limit(5)
@@ -5938,14 +5938,14 @@ PROMPT;
         if ($sanPhams->count() < 5) {
             $partialMatches = SanPham::with('danhMuc')
                 ->notExpired()
-                ->where('stock_quantity', '>', 0)
+                ->where('so_luong_ton', '>', 0)
                 ->where(function ($q) use ($query) {
-                    $q->where('name', 'LIKE', "%{$query}%")
-                        ->orWhere('ingredients', 'LIKE', "%{$query}%")
-                        ->orWhere('usage', 'LIKE', "%{$query}%");
+                    $q->where('ten', 'LIKE', "%{$query}%")
+                        ->orWhere('thanh_phan', 'LIKE', "%{$query}%")
+                        ->orWhere('cach_dung', 'LIKE', "%{$query}%");
                 })
                 ->when($sanPhams->isNotEmpty(), function ($q) use ($sanPhams) {
-                    $q->whereNotIn('MaSP', $sanPhams->pluck('MaSP'));
+                    $q->whereNotIn('ma_sp', $sanPhams->pluck('ma_sp'));
                 })
                 ->FEFO()
                 ->limit(self::QUERY_MATCH_FETCH_LIMIT)
@@ -5971,13 +5971,13 @@ PROMPT;
             if (!empty($words)) {
                 $queryBuilder = SanPham::with('danhMuc')
                     ->notExpired()
-                    ->where('stock_quantity', '>', 0);
+                    ->where('so_luong_ton', '>', 0);
 
                 $queryBuilder->where(function ($q) use ($words) {
                     foreach ($words as $word) {
                         $q->where(function ($subQ) use ($word) {
-                            $subQ->where('name', 'LIKE', "{$word}%")
-                                ->orWhere('name', 'LIKE', "% {$word}%");
+                            $subQ->where('ten', 'LIKE', "{$word}%")
+                                ->orWhere('ten', 'LIKE', "% {$word}%");
                         });
                     }
                 });
@@ -5986,7 +5986,7 @@ PROMPT;
 
                 if ($candidates->isNotEmpty()) {
                     $candidates = $candidates->map(function ($sanPham) use ($queryLower, $words) {
-                        $nameLower = mb_strtolower($sanPham->name, 'UTF-8');
+                        $nameLower = mb_strtolower($sanPham->ten, 'UTF-8');
                         $score = 0;
 
                         if ($nameLower === $queryLower) {
@@ -6047,11 +6047,11 @@ PROMPT;
 
             $matches = SanPham::with('danhMuc')
                 ->notExpired()
-                ->where('stock_quantity', '>', 0)
+                ->where('so_luong_ton', '>', 0)
                 ->where(function ($builder) use ($candidate) {
-                    $builder->where('name', 'LIKE', "%{$candidate}%")
-                        ->orWhere('ingredients', 'LIKE', "%{$candidate}%")
-                        ->orWhere('usage', 'LIKE', "%{$candidate}%");
+                    $builder->where('ten', 'LIKE', "%{$candidate}%")
+                        ->orWhere('thanh_phan', 'LIKE', "%{$candidate}%")
+                        ->orWhere('cach_dung', 'LIKE', "%{$candidate}%");
                 })
                 ->FEFO()
                 ->limit(self::QUERY_MATCH_FETCH_LIMIT)
@@ -6093,7 +6093,7 @@ PROMPT;
 
     protected function phraseOccursInProduct(SanPham $sanPham, string $phrase): bool
     {
-        foreach ([$sanPham->name, $sanPham->ingredients, $sanPham->usage] as $field) {
+        foreach ([$sanPham->ten, $sanPham->thanh_phan, $sanPham->cach_dung] as $field) {
             if ($this->phraseOccursAsWord((string) $field, $phrase)) {
                 return true;
             }
@@ -6241,7 +6241,7 @@ PROMPT;
                 $totalAmount += $itemTotal;
 
                 $validProducts[] = [
-                    'MaSP' => $sanPham['id'],
+                    'ma_sp' => $sanPham['id'],
                     'name' => $sanPham['name'],
                     'price' => $unitPrice,
                     'quantity' => $quantity,
@@ -6259,7 +6259,7 @@ PROMPT;
                 modelId: null,
                 oldValues: null,
                 newValues: [
-                    'MaKH' => $userId,
+                    'ma_nd' => $userId,
                     'source' => 'AI Chatbot',
                     'order_type' => 'draft',
                     'total_amount' => $totalAmount,
@@ -6283,7 +6283,7 @@ PROMPT;
             ];
         } catch (\Exception $e) {
             Log::error('Draft order creation failed', [
-                'MaKH' => $userId,
+                'ma_nd' => $userId,
                 'error' => $e->getMessage()
             ]);
 

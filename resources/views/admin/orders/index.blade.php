@@ -58,13 +58,13 @@
                             };
                         @endphp
                         <tr>
-                            <td><span class="fw-semibold">#{{ $order->MaDH }}</span></td>
-                            <td>{{ $order->nguoiDung->name }}</td>
+                            <td><span class="fw-semibold">#{{ $order->ma_dh }}</span></td>
+                            <td>{{ $order->nguoiDung->ho_ten }}</td>
                             <td class="fw-bold">{{ $order->formatted_total }}</td>
                             <td><span class="badge {{ $statusClass }}">{{ $statuses[$order->status]['label'] ?? $order->status }}</span></td>
                             <td>{{ $order->formatted_created_at }}</td>
                             <td>
-                                <a href="{{ route('admin.orders.show', $order->MaDH) }}" class="btn btn-sm btn-outline-primary">
+                                <a href="{{ route('admin.orders.show', $order->ma_dh) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye me-1" aria-hidden="true"></i>Xem
                                 </a>
                             </td>
@@ -87,13 +87,13 @@
                 <article class="admin-mobile-item">
                     <div class="d-flex justify-content-between gap-3">
                         <div>
-                            <strong>#{{ $order->MaDH }} · {{ $order->nguoiDung->name }}</strong>
+                            <strong>#{{ $order->ma_dh }} · {{ $order->nguoiDung->ho_ten }}</strong>
                             <div class="small text-secondary">{{ $order->formatted_created_at }}</div>
                             <div class="fw-bold mt-1">{{ $order->formatted_total }}</div>
                         </div>
                         <span class="badge {{ $statusClass }} align-self-start">{{ $statuses[$order->status]['label'] ?? $order->status }}</span>
                     </div>
-                    <a href="{{ route('admin.orders.show', $order->MaDH) }}" class="btn btn-sm btn-outline-primary w-100 mt-3">Xem chi tiết</a>
+                    <a href="{{ route('admin.orders.show', $order->ma_dh) }}" class="btn btn-sm btn-outline-primary w-100 mt-3">Xem chi tiết</a>
                 </article>
             @empty
                 <div class="admin-empty-state">Không có đơn hàng phù hợp.</div>

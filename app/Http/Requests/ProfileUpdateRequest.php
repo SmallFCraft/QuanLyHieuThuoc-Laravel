@@ -12,6 +12,14 @@ class ProfileUpdateRequest extends FormRequest
     /**
      * Chuỗi rỗng → null (chỉ với field có trong request — không ghi đè khi form chỉ gửi name/email).
      */
+    public const COLUMN_MAP = [
+        'name' => 'ho_ten',
+        'birth_date' => 'ngay_sinh',
+        'gender' => 'gioi_tinh',
+        'address' => 'dia_chi',
+        'phone' => 'so_dien_thoai',
+    ];
+
     protected function prepareForValidation(): void
     {
         $payload = [];
@@ -42,7 +50,7 @@ class ProfileUpdateRequest extends FormRequest
                 'lowercase',
                 'email',
                 'max:255',
-                Rule::unique(NguoiDung::class)->ignore($this->user()->MaKH, 'MaKH'),
+                Rule::unique(NguoiDung::class)->ignore($this->user()->ma_nd, 'ma_nd'),
             ],
             'birth_date' => ['nullable', 'date', 'before_or_equal:today', 'after:1900-01-01'],
             'gender' => ['nullable', 'string', 'in:male,female,other'],

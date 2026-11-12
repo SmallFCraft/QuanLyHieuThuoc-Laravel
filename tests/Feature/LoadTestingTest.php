@@ -22,31 +22,27 @@ class LoadTestingTest extends TestCase
     {
         parent::setUp();
         
-        $this->admin = NguoiDung::factory()->create([
-            'role' => 'Administrator',
-            'status' => 'active'
+        $this->admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator',
+            'trang_thai' => 'active'
         ]);
         
-        $this->nguoiDung = NguoiDung::factory()->create([
-            'role' => 'User',
-            'status' => 'active'
+        $this->nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active'
         ]);
         
-        $this->danhMuc = DanhMuc::create([
-            'name' => 'Test Category',
-            'description' => 'Test Description'
+        $this->danhMuc = DanhMuc::create(['ten' => 'Test Category',
+            'mo_ta' => 'Test Description'
         ]);
 
         // Create test products
         for ($i = 1; $i <= 50; $i++) {
-            SanPham::create([
-                'MaDM' => $this->danhMuc->MaDM,
-                'name' => "Product {$i}",
-                'price' => 10000 * $i,
-                'expiration_date' => now()->addYear(),
-                'stock_quantity' => 100,
-                'reorder_point' => 10,
-                'batch_number' => "BATCH-LOAD-{$i}"
+            SanPham::create(['ma_dm' => $this->danhMuc->ma_dm,
+                'ten' => "Product {$i}",
+                'gia' => 10000 * $i,
+                'ngay_het_han' => now()->addYear(),
+                'so_luong_ton' => 100,
+                'muc_canh_bao' => 10,
+                'so_lo' => "BATCH-LOAD-{$i}"
             ]);
         }
     }
@@ -71,12 +67,11 @@ class LoadTestingTest extends TestCase
     {
         // Create some orders for dashboard metrics
         for ($i = 1; $i <= 20; $i++) {
-            DonHang::create([
-                'MaKH' => $this->nguoiDung->MaKH,
-                'total_amount' => 50000,
-                'status' => ['Pending', 'Delivering', 'Completed', 'Cancelled'][rand(0, 3)],
-                'shipping_address' => '123 Test Street',
-                'shipping_phone' => '0901234567'
+            DonHang::create(['ma_nd' => $this->nguoiDung->ma_nd,
+                'tong_tien' => 50000,
+                'trang_thai' => ['Pending', 'Delivering', 'Completed', 'Cancelled'][rand(0, 3)],
+                'dia_chi_giao_hang' => '123 Test Street',
+                'sdt_giao_hang' => '0901234567'
             ]);
         }
 
@@ -103,7 +98,7 @@ class LoadTestingTest extends TestCase
         for ($i = 0; $i < 10; $i++) {
             $startTime = microtime(true);
             
-            $response = $this->get(route('products.show', $sanPham->MaSP));
+            $response = $this->get(route('products.show', $sanPham->ma_sp));
             
             $endTime = microtime(true);
             $times[] = ($endTime - $startTime) * 1000;
@@ -127,7 +122,7 @@ class LoadTestingTest extends TestCase
             $startTime = microtime(true);
             
             $response = $this->post(route('cart.add'), [
-                'MaSP' => $sanPham->MaSP,
+                'ma_sp' => $sanPham->ma_sp,
                 'quantity' => 1
             ]);
             
@@ -164,12 +159,11 @@ class LoadTestingTest extends TestCase
     {
         // Create many orders
         for ($i = 1; $i <= 50; $i++) {
-            DonHang::create([
-                'MaKH' => $this->nguoiDung->MaKH,
-                'total_amount' => 50000,
-                'status' => ['Pending', 'Delivering', 'Completed', 'Cancelled'][rand(0, 3)],
-                'shipping_address' => '123 Test Street',
-                'shipping_phone' => '0901234567'
+            DonHang::create(['ma_nd' => $this->nguoiDung->ma_nd,
+                'tong_tien' => 50000,
+                'trang_thai' => ['Pending', 'Delivering', 'Completed', 'Cancelled'][rand(0, 3)],
+                'dia_chi_giao_hang' => '123 Test Street',
+                'sdt_giao_hang' => '0901234567'
             ]);
         }
 
@@ -191,22 +185,20 @@ class LoadTestingTest extends TestCase
     {
         // Create orders with items
         for ($i = 1; $i <= 10; $i++) {
-            $donHang = DonHang::create([
-                'MaKH' => $this->nguoiDung->MaKH,
-                'total_amount' => 100000,
-                'status' => 'Completed',
-                'shipping_address' => '123 Test Street',
-                'shipping_phone' => '0901234567'
+            $donHang = DonHang::create(['ma_nd' => $this->nguoiDung->ma_nd,
+                'tong_tien' => 100000,
+                'trang_thai' => 'Completed',
+                'dia_chi_giao_hang' => '123 Test Street',
+                'sdt_giao_hang' => '0901234567'
             ]);
 
             $sanPhams = SanPham::take(3)->get();
             foreach ($sanPhams as $sanPham) {
-                \App\Models\ChiTietDonHang::create([
-                    'MaDH' => $donHang->MaDH,
-                    'MaSP' => $sanPham->MaSP,
-                    'quantity' => 2,
-                    'unit_price' => $sanPham->price,
-                    'batch_number' => $sanPham->batch_number
+                \App\Models\ChiTietDonHang::create(['ma_dh' => $donHang->ma_dh,
+                    'ma_sp' => $sanPham->ma_sp,
+                    'so_luong' => 2,
+                    'don_gia' => $sanPham->gia,
+                    'so_lo' => $sanPham->so_lo
                 ]);
             }
         }
@@ -217,7 +209,7 @@ class LoadTestingTest extends TestCase
         
         // Complex query with joins
         $donHangs = DonHang::with(['nguoiDung', 'chiTietDonHangs.sanPham.danhMuc'])
-            ->where('status', 'Completed')
+            ->where('trang_thai', 'Completed')
             ->get();
         
         $endTime = microtime(true);

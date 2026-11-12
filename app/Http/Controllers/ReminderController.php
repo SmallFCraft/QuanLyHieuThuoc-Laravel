@@ -27,7 +27,7 @@ class ReminderController extends Controller
     public function index(): View
     {
         $cacNhacUong = NhacUongThuoc::with('sanPham')
-            ->where('MaKH', (int) auth()->id())
+            ->where('ma_nd', (int) auth()->id())
             ->active()
             ->orderBy('next_remind_at')
             ->get();
@@ -39,8 +39,8 @@ class ReminderController extends Controller
 
     public function cancel(Request $request, int $MaNN): RedirectResponse
     {
-        $nhacUong = NhacUongThuoc::where('MaKH', (int) auth()->id())
-            ->where('MaNN', $MaNN)
+        $nhacUong = NhacUongThuoc::where('ma_nd', (int) auth()->id())
+            ->where('ma_nn', $MaNN)
             ->first();
 
         if (!$nhacUong) {
@@ -66,8 +66,8 @@ class ReminderController extends Controller
     {
         $improved = $request->boolean('improved');
 
-        $phien = PhienSangLoc::where('MaKH', (int) auth()->id())
-            ->where('MaSL', $MaSL)
+        $phien = PhienSangLoc::where('ma_nd', (int) auth()->id())
+            ->where('ma_sl', $MaSL)
             ->first();
 
         if (!$phien) {
@@ -76,7 +76,7 @@ class ReminderController extends Controller
         }
 
         if ($phien->follow_up_responded_at !== null) {
-            return redirect()->route('health.result', $phien->MaSL)
+            return redirect()->route('health.result', $phien->ma_sl)
                 ->with('success', __('messages.reminder.response_already_answered'));
         }
 
@@ -95,8 +95,8 @@ class ReminderController extends Controller
             'improved' => ['required', 'boolean'],
         ]);
 
-        $phien = PhienSangLoc::where('MaKH', (int) auth()->id())
-            ->where('MaSL', $MaSL)
+        $phien = PhienSangLoc::where('ma_nd', (int) auth()->id())
+            ->where('ma_sl', $MaSL)
             ->first();
 
         if (!$phien) {
@@ -107,13 +107,13 @@ class ReminderController extends Controller
         $result = $this->followUpService->recordResponse($phien, (bool) $validated['improved']);
 
         if ($result['already_answered']) {
-            return redirect()->route('health.result', $phien->MaSL)
+            return redirect()->route('health.result', $phien->ma_sl)
                 ->with('success', __('messages.reminder.response_already_answered'));
         }
 
         // The layout only renders `success` and `error`; the referral advice must
         // be visible, so it uses the `error` channel rather than a silent key.
-        return redirect()->route('health.result', $phien->MaSL)
+        return redirect()->route('health.result', $phien->ma_sl)
             ->with($result['improved'] ? 'success' : 'error', $result['message']);
     }
 }

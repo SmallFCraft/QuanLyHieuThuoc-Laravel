@@ -122,7 +122,7 @@ class TriageAiBriefingService extends TriageAiService
 
         $startedAt = microtime(true);
         $cacUngVien = $this->candidateProducts($phien);
-        $honorific = TriageAiContextService::honorificFor($phien->nguoiDung?->gender);
+        $honorific = TriageAiContextService::honorificFor($phien->nguoiDung?->gioi_tinh);
 
         try {
             $provider = $this->provider();
@@ -147,7 +147,7 @@ class TriageAiBriefingService extends TriageAiService
             );
         } catch (\Throwable $exception) {
             Log::warning('Triage AI briefing failed', [
-                'MaSL' => $phien->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -321,19 +321,19 @@ class TriageAiBriefingService extends TriageAiService
 
         return SanPham::with('danhMuc')
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
-            ->whereIn('MaDM', $categoryIds)
-            ->orderByDesc('stock_quantity')
+            ->where('so_luong_ton', '>', 0)
+            ->whereIn('ma_dm', $categoryIds)
+            ->orderByDesc('so_luong_ton')
             ->limit(self::MAX_CANDIDATES)
             ->get()
             ->map(fn (SanPham $sanPham) => [
-                'id' => (int) $sanPham->MaSP,
-                'name' => (string) $sanPham->name,
-                'ingredients' => (string) $sanPham->ingredients,
-                'usage' => (string) $sanPham->usage,
+                'id' => (int) $sanPham->ma_sp,
+                'name' => (string) $sanPham->ten,
+                'ingredients' => (string) $sanPham->thanh_phan,
+                'usage' => (string) $sanPham->cach_dung,
                 'price' => $sanPham->price_vnd,
-                'stock_quantity' => (int) $sanPham->stock_quantity,
-                'category' => $sanPham->danhMuc?->name,
+                'stock_quantity' => (int) $sanPham->so_luong_ton,
+                'category' => $sanPham->danhMuc?->ten,
                 // No `url`: this runs in a worker with no incoming request, so route()
                 // would bake APP_URL's host into the stored row. The result page builds
                 // the link from the id instead.

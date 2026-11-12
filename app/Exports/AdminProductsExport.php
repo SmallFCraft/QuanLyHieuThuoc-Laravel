@@ -21,9 +21,9 @@ class AdminProductsExport implements FromCollection, WithHeadings, WithMapping, 
     {
         return SanPham::query()
             ->with('danhMuc')
-            ->when($this->categoryId, fn ($query) => $query->where('MaDM', $this->categoryId))
+            ->when($this->categoryId, fn ($query) => $query->where('ma_dm', $this->categoryId))
             ->search($this->search)
-            ->orderByDesc('MaSP')
+            ->orderByDesc('ma_sp')
             ->get();
     }
 
@@ -44,12 +44,12 @@ class AdminProductsExport implements FromCollection, WithHeadings, WithMapping, 
     {
         return [
             $product->display_code,
-            $product->name,
-            $product->danhMuc->name ?? 'Chưa phân loại',
+            $product->ten,
+            $product->danhMuc->ten ?? 'Chưa phân loại',
             $product->price_vnd,
-            $product->stock_quantity,
-            optional($product->expiration_date)->format('d/m/Y'),
-            $product->batch_number,
+            $product->so_luong_ton,
+            optional($product->ngay_het_han)->format('d/m/Y'),
+            $product->so_lo,
         ];
     }
 }
