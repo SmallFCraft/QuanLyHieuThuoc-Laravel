@@ -41,6 +41,7 @@ return new class extends Migration
     /** @var array<string, array<string, string>> bảng => [cột cũ => cột mới] */
     private array $map = [
         'nguoi_dungs' => [
+            'MaKH' => 'ma_nd',
             'ma_nd' => 'ma_nd',
             'name' => 'ho_ten',
             'email_verified_at' => 'thoi_diem_xac_thuc_email',
@@ -53,6 +54,7 @@ return new class extends Migration
             'status' => 'trang_thai',
         ],
         'danh_mucs' => [
+            'MaDM' => 'ma_dm',
             'ma_dm' => 'ma_dm',
             'name' => 'ten',
             'name_folded' => 'ten_khong_dau',
@@ -61,6 +63,8 @@ return new class extends Migration
             'description' => 'mo_ta',
         ],
         'san_phams' => [
+            'MaSP' => 'ma_sp',
+            'MaDM' => 'ma_dm',
             'ma_sp' => 'ma_sp',
             'product_code' => 'ma_san_pham',
             'ma_dm' => 'ma_dm',
@@ -79,6 +83,8 @@ return new class extends Migration
             'views_count' => 'luot_xem',
         ],
         'lo_san_phams' => [
+            'MaLo' => 'ma_lo',
+            'MaSP' => 'ma_sp',
             'ma_lo' => 'ma_lo',
             'ma_sp' => 'ma_sp',
             'batch_number' => 'so_lo',
@@ -87,6 +93,8 @@ return new class extends Migration
             'reorder_point' => 'muc_canh_bao',
         ],
         'don_hangs' => [
+            'MaDH' => 'ma_dh',
+            'MaKH' => 'ma_nd',
             'ma_dh' => 'ma_dh',
             'ma_nd' => 'ma_nd',
             'total_amount' => 'tong_tien',
@@ -97,6 +105,10 @@ return new class extends Migration
             'order_notes' => 'ghi_chu',
         ],
         'chi_tiet_don_hangs' => [
+            'MaCTDH' => 'ma_ctdh',
+            'MaDH' => 'ma_dh',
+            'MaSP' => 'ma_sp',
+            'MaLo' => 'ma_lo',
             'ma_ctdh' => 'ma_ctdh',
             'ma_dh' => 'ma_dh',
             'ma_sp' => 'ma_sp',
@@ -106,6 +118,8 @@ return new class extends Migration
             'batch_number' => 'so_lo',
         ],
         'nhat_ky_kiem_toans' => [
+            'MaNK' => 'ma_nk',
+            'MaKH' => 'ma_nd',
             'ma_nk' => 'ma_nk',
             'ma_nd' => 'ma_nd',
         ],
@@ -113,49 +127,72 @@ return new class extends Migration
             'MaLH' => 'ma_lh',
         ],
         'anh_chatbots' => [
+            'MaAnh' => 'ma_anh',
+            'MaKH' => 'ma_nd',
             'ma_anh' => 'ma_anh',
             'ma_nd' => 'ma_nd',
         ],
         'tin_nhan_chats' => [
+            'MaTN' => 'ma_tn',
+            'MaKH' => 'ma_nd',
             'ma_tn' => 'ma_tn',
             'ma_nd' => 'ma_nd',
         ],
         'yeu_thiches' => [
+            'MaYT' => 'ma_yt',
+            'MaKH' => 'ma_nd',
+            'MaSP' => 'ma_sp',
             'ma_yt' => 'ma_yt',
             'ma_nd' => 'ma_nd',
             'ma_sp' => 'ma_sp',
         ],
         'trieu_chung_y_tes' => [
+            'MaTC' => 'ma_tc',
             'ma_tc' => 'ma_tc',
         ],
         'co_do_y_tes' => [
+            'MaCB' => 'ma_cb',
             'ma_cb' => 'ma_cb',
         ],
         'quy_tac_phan_tang_y_tes' => [
+            'MaQT' => 'ma_qt',
             'ma_qt' => 'ma_qt',
             'ma_tc' => 'ma_tc',
         ],
         'tuong_tac_thuocs' => [
+            'MaTT' => 'ma_tt',
             'ma_tt' => 'ma_tt',
         ],
         'chung_chi_dinh_thuocs' => [
+            'MaCCD' => 'ma_ccd',
             'ma_ccd' => 'ma_ccd',
         ],
         'ho_so_suc_khoes' => [
+            'MaHS' => 'ma_hs',
+            'MaKH' => 'ma_nd',
             'ma_hs' => 'ma_hs',
             'ma_nd' => 'ma_nd',
         ],
         'phien_sang_locs' => [
+            'MaSL' => 'ma_sl',
+            'MaKH' => 'ma_nd',
+            'MaNN' => 'ma_nn',
+            'MaDH' => 'ma_dh',
+            'MaSP' => 'ma_sp',
             'ma_sl' => 'ma_sl',
             'ma_nd' => 'ma_nd',
         ],
         'nhac_uong_thuocs' => [
+            'MaNN' => 'ma_nn',
+            'MaKH' => 'ma_nd',
             'ma_nn' => 'ma_nn',
             'ma_nd' => 'ma_nd',
             'ma_dh' => 'ma_dh',
             'ma_sp' => 'ma_sp',
         ],
         'ai_jobs' => [
+            'MaAJ' => 'ma_aj',
+            'MaKH' => 'ma_nd',
             'ma_aj' => 'ma_aj',
             'ma_nd' => 'ma_nd',
         ],

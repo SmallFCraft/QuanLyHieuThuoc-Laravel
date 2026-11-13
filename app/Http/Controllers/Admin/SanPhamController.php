@@ -22,7 +22,7 @@ class SanPhamController extends Controller
      */
     public function index()
     {
-        $categories = DanhMuc::orderBy('ten')->get();
+        $danhMucs = DanhMuc::orderBy('ten')->get();
         return view('admin.products.index', compact('danhMucs'));
     }
 
@@ -31,8 +31,8 @@ class SanPhamController extends Controller
      */
     public function create()
     {
-        $categories = DanhMuc::orderBy('ten')->get();
-        
+        $danhMucs = DanhMuc::orderBy('ten')->get();
+
         return view('admin.products.create', compact('danhMucs'));
     }
 
@@ -77,8 +77,8 @@ class SanPhamController extends Controller
     public function show(SanPham $product)
     {
         $product->load('danhMuc');
-        
-        return view('admin.products.show', compact('sanPham'));
+
+        return view('admin.products.show', ['sanPham' => $product]);
     }
 
     /**
@@ -86,9 +86,9 @@ class SanPhamController extends Controller
      */
     public function edit(SanPham $product)
     {
-        $categories = DanhMuc::orderBy('ten')->get();
-        
-        return view('admin.products.edit', compact('sanPham', 'danhMucs'));
+        $danhMucs = DanhMuc::orderBy('ten')->get();
+
+        return view('admin.products.edit', ['sanPham' => $product, 'danhMucs' => $danhMucs]);
     }
 
     /**
