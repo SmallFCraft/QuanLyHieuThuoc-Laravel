@@ -12,7 +12,7 @@ class NguoiDungSeeder extends Seeder
      */
     public function run(): void
     {
-        // Tài khoản quản trị (đăng nhập: admin@load99 / Gunny123456@)
+        // Tai khoan quan tri (dang nhap: admin@load99 / Gunny123456@)
         NguoiDung::updateOrCreate(
             ['email' => 'admin@load99'],
             [
@@ -28,7 +28,7 @@ class NguoiDungSeeder extends Seeder
             ]
         );
 
-        // Dược sĩ phụ trách hàng đợi sàng lọc (đăng nhập: duocsi@load99 / Gunny123456@)
+        // Duoc si phu trach hang doi sang loc (dang nhap: duocsi@load99 / Gunny123456@)
         NguoiDung::updateOrCreate(
             ['email' => 'duocsi@load99'],
             [

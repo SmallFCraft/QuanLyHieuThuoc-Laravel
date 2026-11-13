@@ -211,8 +211,8 @@
         }
     }
 
-    /* 992-1199px: col-lg-3 chỉ còn 192px, padding 1.5rem của .p-4 ăn 48px nên ô
-       lọc còn 120px và placeholder bị cắt. */
+    /* 992-1199px: col-lg-3 chi con 192px, padding 1.5rem cua .p-4 an 48px nen o
+       loc con 120px va placeholder bi cat. */
     @media (min-width: 992px) and (max-width: 1199.98px) {
         .catalog-sidebar-card {
             padding: 0.85rem !important;
@@ -412,8 +412,8 @@
 
             <!-- Products Grid -->
             <div class="col-lg-9">
-                {{-- data-catalog-results: catalog-async.js thay đúng khối này khi người
-                     dùng chọn danh mục hoặc đổi trang, nên vị trí cuộn không đổi. --}}
+                {{-- data-catalog-results: catalog-async.js thay dung khoi nay khi nguoi
+                     dung chon danh muc hoac doi trang, nen vi tri cuon khong doi. --}}
                 <div data-catalog-results aria-live="polite">
                     @include('products.partials.results')
                 </div>

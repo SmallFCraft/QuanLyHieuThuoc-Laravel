@@ -1,13 +1,13 @@
 /**
- * Lịch sử tìm kiếm, lưu ở localStorage.
+ * Lich su tim kiem, luu o localStorage.
  *
- * Cố ý không gửi lên server: từ khoá khách gõ là dữ liệu riêng, và lưu ở máy thì
- * tính năng chạy cho cả khách chưa đăng nhập mà không cần thêm bảng nào. Đổi lại,
- * lịch sử không theo khách sang máy khác — đó là đánh đổi có chủ ý.
+ * Co y khong gui len server: tu khoa khach go la du lieu rieng, va luu o may thi
+ * tinh nang chay cho ca khach chua dang nhap ma khong can them bang nao. Doi lai,
+ * lich su khong theo khach sang may khac — do la danh doi co chu y.
  */
 const KEY = 'pharmacy.search_history';
 
-// Đổi version khi hình dạng dữ liệu đổi: bản cũ bị xoá thay vì đọc sai.
+// Doi version khi hinh dang du lieu doi: ban cu bi xoa thay vi doc sai.
 const VERSION = 'v1';
 
 const MAX_STORED = 8;
@@ -24,8 +24,8 @@ export function readHistory() {
 
         return parsed.values.filter((value) => typeof value === 'string' && value !== '');
     } catch {
-        // localStorage bị chặn (chế độ riêng tư, cookie bị tắt) hoặc JSON hỏng:
-        // lịch sử là tiện ích, không được làm chết ô tìm kiếm.
+        // localStorage bi chan (che do rieng tu, cookie bi tat) hoac JSON hong:
+        // lich su la tien ich, khong duoc lam chet o tim kiem.
         return [];
     }
 }
@@ -34,11 +34,11 @@ function write(values) {
     try {
         localStorage.setItem(KEY, JSON.stringify({ version: VERSION, values }));
     } catch {
-        // Hết quota hoặc bị chặn — bỏ qua.
+        // Het quota hoac bi chan — bo qua.
     }
 }
 
-/** Từ khoá vừa tìm lên đầu; trùng thì di chuyển chứ không thêm dòng thứ hai. */
+/** Tu khoa vua tim len dau; trung thi di chuyen chu khong them dong thu hai. */
 export function pushHistory(term) {
     const value = String(term ?? '').trim().replace(/\s+/g, ' ');
 
@@ -61,10 +61,10 @@ export function clearHistory() {
 }
 
 /**
- * Ghi lại từ khoá khi khách thực sự tìm — submit form, không phải mỗi keystroke.
+ * Ghi lai tu khoa khi khach thuc su tim — submit form, khong phai moi keystroke.
  *
- * Bắt ở capture phase trên document: cả ba ô tìm kiếm (trang chủ, header, burger)
- * dùng cùng một form action, nên một listener là đủ và không cần sửa Blade.
+ * Bat o capture phase tren document: ca ba o tim kiem (trang chu, header, burger)
+ * dung cung mot form action, nen mot listener la du va khong can sua Blade.
  */
 export function initSearchHistoryCapture() {
     document.addEventListener('submit', (event) => {

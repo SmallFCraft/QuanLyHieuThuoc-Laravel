@@ -20,8 +20,8 @@ return new class extends Migration
             $table->string('gioi_tinh', 20)->nullable();
             $table->text('dia_chi')->nullable();
             $table->string('so_dien_thoai', 20)->nullable();
-            // Đường dẫn tương đối trên disk 'public' (vd "avatars/<uuid>.jpg"), không
-            // phải URL đầy đủ: đổi APP_URL hoặc chuyển disk thì không phải sửa dữ liệu.
+            // Duong dan tuong doi tren disk 'public' (vd "avatars/<uuid>.jpg"), khong
+            // phai URL day du: doi APP_URL hoac chuyen disk thi khong phai sua du lieu.
             $table->string('anh_dai_dien')->nullable();
             $table->string('password');
             $table->enum('vai_tro', ['Administrator', 'Pharmacist', 'User'])->default('User');

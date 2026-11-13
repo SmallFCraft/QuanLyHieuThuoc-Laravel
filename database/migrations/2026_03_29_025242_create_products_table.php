@@ -16,18 +16,18 @@ return new class extends Migration
             $table->string('ma_san_pham', 16)->nullable();
             $table->foreignId('ma_dm')->constrained('danh_mucs', 'ma_dm')->onDelete('restrict');
             $table->string('ten');
-            // Bản không dấu của các trường khách hàng tìm theo tên. Collation
-            // utf8mb4_0900_ai_ci gộp dấu thanh — "á" khớp "a" — nhưng không gộp "đ",
-            // nên khách gõ "dau dau" không ra gì còn "đau đầu" ra 30 sản phẩm. Fold
-            // thực hiện trong PHP bằng VietnameseText::fold(), cùng helper mà chatbot
-            // và triage engine dùng, để cả ba đồng ý một từ trông như thế nào.
+            // Ban khong dau cua cac truong khach hang tim theo ten. Collation
+            // utf8mb4_0900_ai_ci gop dau thanh — "a" khop "a" — nhung khong gop "d",
+            // nen khach go "dau dau" khong ra gi con "dau dau" ra 30 san pham. Fold
+            // thuc hien trong PHP bang VietnameseText::fold(), cung helper ma chatbot
+            // va triage engine dung, de ca ba dong y mot tu trong nhu the nao.
             $table->string('ten_khong_dau')->nullable();
             $table->text('thanh_phan')->nullable();
             $table->text('thanh_phan_khong_dau')->nullable();
             $table->text('cach_dung')->nullable();
-            // Hạn dùng do nhà sản xuất công bố, tính theo tháng kể từ ngày sản xuất —
-            // thuộc tính của sản phẩm. ngay_het_han là hạn của lô hàng thực tế đang
-            // giữ, do nhân viên nhập và FEFO tiêu thụ. Hai cái trả lời hai câu hỏi khác.
+            // Han dung do nha san xuat cong bo, tinh theo thang ke tu ngay san xuat —
+            // thuoc tinh cua san pham. ngay_het_han la han cua lo hang thuc te dang
+            // giu, do nhan vien nhap va FEFO tieu thu. Hai cai tra loi hai cau hoi khac.
             $table->unsignedSmallInteger('han_dung_thang')->nullable();
             $table->decimal('gia', 10, 2);
             $table->date('ngay_het_han');

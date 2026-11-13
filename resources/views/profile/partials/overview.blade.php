@@ -1,6 +1,6 @@
 @php
-    // Mức hoàn thiện hồ sơ tính trên các trường người dùng thực sự điền được.
-    // role/status do hệ thống đặt nên không tính vào đây.
+    // Muc hoan thien ho so tinh tren cac truong nguoi dung thuc su dien duoc.
+    // role/status do he thong dat nen khong tinh vao day.
     $profileFields = [
         __('messages.profile.name') => filled($user->ho_ten),
         __('messages.profile.email') => filled($user->email),
@@ -183,8 +183,8 @@
         </div>
 
         @php
-            // Chỉ 3 dòng: thẻ này nằm cạnh "đơn hàng gần đây" trong lưới 2 cột, dài
-            // hơn thì hai thẻ lệch chiều cao. Danh sách đầy đủ ở tab Yêu thích.
+            // Chi 3 dong: the nay nam canh "don hang gan day" trong luoi 2 cot, dai
+            // hon thi hai the lech chieu cao. Danh sach day du o tab Yeu thich.
             $previewFavorites = $favoriteItems->getCollection()
                 ->map(fn ($favorite) => $favorite->sanPham)
                 ->filter()

@@ -8,8 +8,8 @@
     </div>
 
     @php
-        // 5 đơn mỗi trang: khối này nằm trong một tab nên phân trang dài sẽ đẩy các
-        // tab còn lại xuống ngoài màn hình.
+        // 5 don moi trang: khoi nay nam trong mot tab nen phan trang dai se day cac
+        // tab con lai xuong ngoai man hinh.
         $orders = auth()->user()->donHangs()->with('chiTietDonHangs.sanPham')->latest()->paginate(5);
     @endphp
 

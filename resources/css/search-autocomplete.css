@@ -214,9 +214,9 @@
     }
 }
 
-/* ---------- Panel khi ô còn trống ---------- */
-/* Xu hướng tìm kiếm, lịch sử, danh mục nổi bật, sản phẩm xem nhiều. Cùng container
-   với khối gợi ý ở trên, nên khoảng cách và đường kẻ phải khớp .suggestion-section. */
+/* ---------- Panel khi o con trong ---------- */
+/* Xu huong tim kiem, lich su, danh muc noi bat, san pham xem nhieu. Cung container
+   voi khoi goi y o tren, nen khoang cach va duong ke phai khop .suggestion-section. */
 
 .search-panel-section {
     padding: 12px 16px;
@@ -249,8 +249,8 @@
     margin-bottom: 10px;
 }
 
-/* Nút chữ, không phải nút khối: hành động phụ cạnh một tiêu đề. min-height giữ vùng
-   bấm 44px trên điện thoại mà chữ vẫn nhỏ. */
+/* Nut chu, khong phai nut khoi: hanh dong phu canh mot tieu de. min-height giu vung
+   bam 44px tren dien thoai ma chu van nho. */
 .search-panel-clear {
     display: inline-flex;
     align-items: center;
@@ -313,7 +313,7 @@
     color: #075985;
 }
 
-/* Lịch sử là dữ liệu trung tính, không phải gợi ý của shop — nên nó xám, không xanh. */
+/* Lich su la du lieu trung tinh, khong phai goi y cua shop — nen no xam, khong xanh. */
 .search-panel-pill--history {
     padding-right: 6px;
     border-color: rgba(0, 0, 0, 0.12);
@@ -368,12 +368,12 @@
 }
 
 /**
- * Tìm kiếm bằng giọng nói.
+ * Tim kiem bang giong noi.
  *
- * Icon kính lúp và nút micro chia nhau đúng một ô 48px bên phải ô tìm kiếm (`pe-5`
- * của input). Chỉ một cái hiện: mặc định là icon, và chuyển sang micro khi
- * voice-search.js xác nhận browser có SpeechRecognition. Nhờ vậy lòng trong ô không
- * đổi, nên vòng quay placeholder ở 375px (~122px lòng trong) vẫn vừa.
+ * Icon kinh lup va nut micro chia nhau dung mot o 48px ben phai o tim kiem (`pe-5`
+ * cua input). Chi mot cai hien: mac dinh la icon, va chuyen sang micro khi
+ * voice-search.js xac nhan browser co SpeechRecognition. Nho vay long trong o khong
+ * doi, nen vong quay placeholder o 375px (~122px long trong) van vua.
  */
 .header-search-icon,
 .header-search-mic {
@@ -388,16 +388,16 @@
     pointer-events: none;
 }
 
-/* Chrome/Safari vẽ nút ✕ riêng trong input[type=search], và nó rơi đúng vào ô 48px
-   của nút mic — đo được 2026-09-02: vùng ✕ ở x≈301, hộp mic 261-305. Hai affordance
-   chồng nhau, cái ✕ xám nhìn như đang disabled. Ô đã có nút xoá riêng ở panel gợi ý. */
+/* Chrome/Safari ve nut ✕ rieng trong input[type=search], va no roi dung vao o 48px
+   cua nut mic — do duoc 2026-09-02: vung ✕ o x≈301, hop mic 261-305. Hai affordance
+   chong nhau, cai ✕ xam nhin nhu dang disabled. O da co nut xoa rieng o panel goi y. */
 [type='search']::-webkit-search-cancel-button {
     display: none;
 }
 
 .header-search-mic {
-    /* 44x44: ngưỡng chạm tối thiểu. Nút to hơn ô 48px của icon nên nó lùi vào 2px
-       thay vì 16px, và vẫn nằm trong bán kính của pill. */
+    /* 44x44: nguong cham toi thieu. Nut to hon o 48px cua icon nen no lui vao 2px
+       thay vi 16px, va van nam trong ban kinh cua pill. */
     display: none;
     width: 44px;
     height: 44px;
@@ -406,8 +406,8 @@
     border: 0;
     border-radius: 50%;
     background: transparent;
-    /* #047857 chứ không phải #059669: đo được 2026-09-02, #059669 trên nền ô cho
-       3.50:1 — qua ngưỡng 3:1 của icon nhưng sát, và cùng tông với nhãn trong dải.
+    /* #047857 chu khong phai #059669: do duoc 2026-09-02, #059669 tren nen o cho
+       3.50:1 — qua nguong 3:1 cua icon nhung sat, va cung tong voi nhan trong dai.
        #047857 cho 5.09:1. */
     color: #047857;
     font-size: 1.05rem;
@@ -415,7 +415,7 @@
     cursor: pointer;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
-/* Cả hai trạng thái đổi cùng lúc: không bao giờ có hai phần tử trong cùng một ô. */
+/* Ca hai trang thai doi cung luc: khong bao gio co hai phan tu trong cung mot o. */
 :root[data-voice-ready] .header-search-icon {
     display: none;
 }
@@ -431,9 +431,9 @@
     color: #047857;
 }
 
-/* Ring thay cho outline mặc định, không phải bỏ outline: bàn phím cần thấy focus.
-   Alpha 0.9 và tông đậm hơn: rgba(16,185,129,0.4) trên nền ô cho 1.42:1, dưới mức
-   3:1 mà một chỉ dấu focus cần. rgba(4,120,87,0.9) cho 4.24:1. */
+/* Ring thay cho outline mac dinh, khong phai bo outline: ban phim can thay focus.
+   Alpha 0.9 va tong dam hon: rgba(16,185,129,0.4) tren nen o cho 1.42:1, duoi muc
+   3:1 ma mot chi dau focus can. rgba(4,120,87,0.9) cho 4.24:1. */
 .header-search-mic:focus-visible {
     outline: none;
     box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.9);
@@ -444,15 +444,15 @@
     cursor: not-allowed;
 }
 
-/* Đang nghe: đỏ, có nhịp. Đây là một trong hai phần tử duy nhất động trên thanh
-   header, nên nó không tranh chú ý với gì khác. */
+/* Dang nghe: do, co nhip. Day la mot trong hai phan tu duy nhat dong tren thanh
+   header, nen no khong tranh chu y voi gi khac. */
 .header-search-mic[data-state='listening'] {
     background: rgba(239, 68, 68, 0.12);
     color: #dc2626;
     animation: voice-pulse 1.4s ease-in-out infinite;
 }
 
-/* Đang gọi server: spinner, vì chờ quá 300ms mà không có gì động là trông như treo. */
+/* Dang goi server: spinner, vi cho qua 300ms ma khong co gi dong la trong nhu treo. */
 .header-search-mic[data-state='working'] i {
     display: inline-block;
     animation: voice-spin 0.8s linear infinite;
@@ -467,9 +467,9 @@
     to { transform: rotate(360deg); }
 }
 /**
- * Dải "Nghe được: ...". position: fixed và ở ngoài panel gợi ý, vì
- * renderPanel()/renderSuggestions() ghi đè innerHTML của panel — mọi thứ chèn vào đó
- * bị xoá ở lần render kế. Ngoài luồng của header vì header là flex một hàng.
+ * Dai "Nghe duoc: ...". position: fixed va o ngoai panel goi y, vi
+ * renderPanel()/renderSuggestions() ghi de innerHTML cua panel — moi thu chen vao do
+ * bi xoa o lan render ke. Ngoai luong cua header vi header la flex mot hang.
  */
 .voice-status {
     position: fixed;
@@ -506,13 +506,13 @@
 
 .voice-status__undo {
     flex-shrink: 0;
-    /* 44px cao như nút mic; padding ngang thay cho ô vuông vì đây là nút chữ. */
+    /* 44px cao nhu nut mic; padding ngang thay cho o vuong vi day la nut chu. */
     min-height: 44px;
     padding: 0 0.5rem;
     border: 0;
     background: transparent;
-    /* #047857 chứ không phải #059669: đo được 2026-09-02, #059669 trên nền dải cho
-       3.77:1 mà chữ 13px cần 4.5:1. #047857 cho 5.48:1. */
+    /* #047857 chu khong phai #059669: do duoc 2026-09-02, #059669 tren nen dai cho
+       3.77:1 ma chu 13px can 4.5:1. #047857 cho 5.48:1. */
     color: #047857;
     font-size: 0.82rem;
     font-weight: 700;
@@ -526,7 +526,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    /* Trạng thái vẫn đổi màu, chỉ bỏ chuyển động — cùng lối với .site-header. */
+    /* Trang thai van doi mau, chi bo chuyen dong — cung loi voi .site-header. */
     .header-search-mic,
     .header-search-mic[data-state='listening'],
     .header-search-mic[data-state='working'] i {

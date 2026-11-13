@@ -79,7 +79,7 @@
                 </span>
 
                 {{-- The conclusion, at the scale of a result. Colour, icon and the word
-                     "Kết luận" all carry it, so the severity survives greyscale. --}}
+                     "Ket luan" all carry it, so the severity survives greyscale. --}}
                 <div class="health-verdict health-verdict--{{ $outcome }}">
                     <span class="health-verdict__icon" aria-hidden="true">
                         <i class="bi {{ $outcomeIcons[$outcome] ?? 'bi-shield-check' }}"></i>

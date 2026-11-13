@@ -1,4 +1,4 @@
-/* —— Trang chủ: glass + emerald #10b981 —— */
+/* —— Trang chu: glass + emerald #10b981 —— */
 .home-page {
     --home-emerald: #10b981;
     --home-emerald-soft: rgba(16, 185, 129, 0.12);
@@ -10,7 +10,7 @@
     overflow-x: clip;
 }
 
-/* Nền cả trang: blob + gradient để mọi lớp backdrop-filter có “hình” để mờ */
+/* Nen ca trang: blob + gradient de moi lop backdrop-filter co “hinh” de mo */
 .home-page::before {
     content: '';
     position: absolute;
@@ -30,7 +30,7 @@
     z-index: 1;
 }
 
-/* Glass mạnh hơn chỉ trên trang chủ (card / sản phẩm) */
+/* Glass manh hon chi tren trang chu (card / san pham) */
 .home-page .glass-card {
     background: rgba(255, 255, 255, 0.4) !important;
     backdrop-filter: blur(12px) saturate(130%);
@@ -66,7 +66,7 @@
     transform: none;
 }
 
-/* Lớp mesh lặp lại cho từng section (đậm nền phía sau glass cục bộ) */
+/* Lop mesh lap lai cho tung section (dam nen phia sau glass cuc bo) */
 .home-section-mesh {
     position: absolute;
     inset: 0;
@@ -86,10 +86,10 @@
         linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(248, 250, 252, 0.35) 100%);
 }
 
-/* Ảnh sản phẩm: nền kính nhẹ thay vì khối xám đặc */
+/* Anh san pham: nen kinh nhe thay vi khoi xam dac */
 .home-page .home-product-media {
     background: rgba(255, 255, 255, 0.5) !important;
-    /* bỏ backdrop ở ô ảnh — giảm layer GPU không cần thiết */
+    /* bo backdrop o o anh — giam layer GPU khong can thiet */
 }
 
 .home-hero-wrap {
@@ -158,15 +158,15 @@
     height: 100%;
 }
 
-/* Ba thẻ thống kê ở hero. Trước đây dùng .row + col-lg-auto nên mỗi thẻ rộng theo
-   độ dài nhãn của nó (99/88/147px trên desktop) và nhãn hai dòng làm thẻ thứ ba cao
-   hơn 24px. Grid ba cột 1fr bằng nhau, thẻ là con trực tiếp nên stretch theo hàng:
-   ba thẻ luôn cùng bề rộng và cùng chiều cao ở mọi bề rộng màn hình. */
+/* Ba the thong ke o hero. Truoc day dung .row + col-lg-auto nen moi the rong theo
+   do dai nhan cua no (99/88/147px tren desktop) va nhan hai dong lam the thu ba cao
+   hon 24px. Grid ba cot 1fr bang nhau, the la con truc tiep nen stretch theo hang:
+   ba the luon cung be rong va cung chieu cao o moi be rong man hinh. */
 .home-stat-row {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.5rem;
-    /* Không để ba thẻ giãn hết chiều ngang container ở tablet trở lên. */
+    /* Khong de ba the gian het chieu ngang container o tablet tro len. */
     max-width: 30rem;
     margin-inline: auto;
 }
@@ -187,7 +187,7 @@
     font-size: clamp(1.05rem, 2.4vw, 1.5rem);
     font-weight: 700;
     line-height: 1.15;
-    /* Chữ số cùng bề rộng: "3.132" và "51" thẳng cột nhau và không nhảy khi số đổi. */
+    /* Chu so cung be rong: "3.132" va "51" thang cot nhau va khong nhay khi so doi. */
     font-variant-numeric: tabular-nums;
 }
 
@@ -228,7 +228,7 @@
     margin-bottom: 1rem;
 }
 
-/* CTA: gradient xanh + độ trong suốt để backdrop-filter mờ nền trang */
+/* CTA: gradient xanh + do trong suot de backdrop-filter mo nen trang */
 .home-cta-glass {
     backdrop-filter: blur(12px) saturate(130%);
     -webkit-backdrop-filter: blur(12px) saturate(130%);
@@ -253,7 +253,7 @@
     line-height: 1.25;
 }
 
-/* FAQ: nền có màu để thấy blur + kính mờ rõ */
+/* FAQ: nen co mau de thay blur + kinh mo ro */
 .home-faq-section__mesh {
     position: absolute;
     inset: 0;
@@ -1210,27 +1210,27 @@
     color: var(--pharma-primary);
 }
 
-/* Lửa cho ba danh mục nhiều hàng nhất, ở cả dropdown header và sidebar catalog.
-   Nằm trong span nhãn ngay sau tên: nhãn xuống hai dòng (lưới 2 cột) thì lửa đi
-   theo chữ, hàng không lửa vẫn thẳng lề trái.
+/* Lua cho ba danh muc nhieu hang nhat, o ca dropdown header va sidebar catalog.
+   Nam trong span nhan ngay sau ten: nhan xuong hai dong (luoi 2 cot) thi lua di
+   theo chu, hang khong lua van thang le trai.
 
-   #b91c1c, không phải .text-danger (#dc2626): trên vệt tồn kho
-   rgba(16,185,129,0.19) thì dc2626 chỉ đạt 4.03:1, còn b91c1c đạt 5.41:1. */
+   #b91c1c, khong phai .text-danger (#dc2626): tren vet ton kho
+   rgba(16,185,129,0.19) thi dc2626 chi dat 4.03:1, con b91c1c dat 5.41:1. */
 .category-flame {
     margin-left: 0.3rem;
     font-size: 0.8em;
     color: #b91c1c;
 }
 
-/* Hàng đang chọn là gradient xanh đặc — đỏ trên đó không đạt AA, nên lửa lấy luôn
-   màu chữ trắng của hàng. */
+/* Hang dang chon la gradient xanh dac — do tren do khong dat AA, nen lua lay luon
+   mau chu trang cua hang. */
 .catalog-filter-link.is-active .category-flame,
 .nav-category-link.is-active .category-flame {
     color: inherit;
 }
 
-/* Khối kết quả catalog trong lúc chờ fetch (catalog-async.js). Mờ nhẹ thay vì
-   spinner: lưới cũ vẫn đọc được và không có khoảng trắng nhảy vào. */
+/* Khoi ket qua catalog trong luc cho fetch (catalog-async.js). Mo nhe thay vi
+   spinner: luoi cu van doc duoc va khong co khoang trang nhay vao. */
 [data-catalog-results] {
     transition: opacity 0.18s ease-out;
 }

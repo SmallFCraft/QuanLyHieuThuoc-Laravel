@@ -3,11 +3,11 @@
 @section('title', __('messages.profile.title') . ' - ' . __('messages.app_name'))
 
 @push('scripts')
-{{-- Chuỗi cho profile.js. Nằm ở đây chứ không hard-code trong JS, để bản dịch vẫn
-     đi qua lang/vi/profile.php như phần còn lại của trang. --}}
+{{-- Chuoi cho profile.js. Nam o day chu khong hard-code trong JS, de ban dich van
+     di qua lang/vi/profile.php nhu phan con lai cua trang. --}}
 @php
-    // Mảng dựng ngoài @json: Blade không phân tích được mảng nhiều dòng bên trong
-    // một directive và báo "Unclosed '['".
+    // Mang dung ngoai @json: Blade khong phan tich duoc mang nhieu dong ben trong
+    // mot directive va bao "Unclosed '['".
     $deleteConfirmItems = [
         __('messages.profile.js.delete_confirm_li1'),
         __('messages.profile.js.delete_confirm_li2'),
@@ -75,10 +75,10 @@
                 <div class="col-lg-3">
                     @include('profile.partials.user-card')
 
-                    {{-- Sidebar dọc từ lg trở lên; dưới đó là dải tab cuộn ngang bên dưới.
-                         role="tablist" bắt buộc: Bootstrap Tab tìm container qua
-                         closest('.list-group, .nav, [role="tablist"]') và im lặng không
-                         làm gì nếu không thấy. --}}
+                    {{-- Sidebar doc tu lg tro len; duoi do la dai tab cuon ngang ben duoi.
+                         role="tablist" bat buoc: Bootstrap Tab tim container qua
+                         closest('.list-group, .nav, [role="tablist"]') va im lang khong
+                         lam gi neu khong thay. --}}
                     <div class="profile-card d-none d-lg-block" style="padding: 0.75rem;">
                         <nav class="profile-nav" role="tablist" aria-label="{{ __('messages.profile.title') }}">
                             @foreach($tabs as $index => $tab)

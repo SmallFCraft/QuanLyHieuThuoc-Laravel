@@ -80,7 +80,7 @@
 {{-- Dropped from this block at the customer's request: the possible-condition guesses,
      the safety-net escalation threshold, and the follow-up reminder. The first was a
      probability nobody acts on; the last two are duplicated by the briefing's own
-     "theo dõi" and "khi nào đi khám" sections. --}}
+     "theo doi" and "khi nao di kham" sections. --}}
 
 {{-- Side channel, deliberately last and deliberately opt-in: the answer above is
      the result, a pharmacist is brought in only when the customer asks. Hidden for

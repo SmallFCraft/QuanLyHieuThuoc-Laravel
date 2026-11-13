@@ -7,30 +7,30 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Từ khoá khách đã tìm, một dòng mỗi từ khoá — không phải mỗi lượt tìm.
+     * Tu khoa khach da tim, mot dong moi tu khoa — khong phai moi luot tim.
      *
-     * Nguồn cho khối "Xu hướng tìm kiếm" ở panel tìm kiếm. Chỉ giữ dạng đã gộp nên
-     * bảng đứng yên ở cỡ vài nghìn dòng dù traffic tăng, và không lưu gì gắn với
-     * một người cụ thể: không MaKH, không IP, không user agent.
+     * Nguon cho khoi "Xu huong tim kiem" o panel tim kiem. Chi giu dang da gop nen
+     * bang dung yen o co vai nghin dong du traffic tang, va khong luu gi gan voi
+     * mot nguoi cu the: khong MaKH, khong IP, khong user agent.
      */
     public function up(): void
     {
         Schema::create('truy_van_tim_kiems', function (Blueprint $table) {
             $table->id();
 
-            // Khoá gộp là dạng đã fold: "Vitamin C", "vitamin c" và "vitamin  C"
-            // là cùng một xu hướng, không phải ba.
+            // Khoa gop la dang da fold: "Vitamin C", "vitamin c" va "vitamin  C"
+            // la cung mot xu huong, khong phai ba.
             $table->string('term_folded')->unique();
 
-            // Dạng khách gõ lần đầu, dùng để hiện pill — "omega 3" đọc dễ hơn
-            // "omega 3" đã bị lột dấu ở những từ có dấu.
+            // Dang khach go lan dau, dung de hien pill — "omega 3" doc de hon
+            // "omega 3" da bi lot dau o nhung tu co dau.
             $table->string('term');
 
             $table->unsignedInteger('hits')->default(1);
             $table->timestamp('last_searched_at');
 
-            // Xu hướng sắp theo hits trong cửa sổ last_searched_at, nên hai cột này
-            // luôn được đọc cùng nhau.
+            // Xu huong sap theo hits trong cua so last_searched_at, nen hai cot nay
+            // luon duoc doc cung nhau.
             $table->index(['last_searched_at', 'hits']);
         });
     }

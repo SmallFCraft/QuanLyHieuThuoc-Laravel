@@ -19,8 +19,8 @@
         </div>
     @endif
 
-    {{-- data-profile-form: profile.js gắn kiểm tra khi blur và tự lưu nháp vào
-         localStorage, xoá nháp sau khi submit thành công. --}}
+    {{-- data-profile-form: profile.js gan kiem tra khi blur va tu luu nhap vao
+         localStorage, xoa nhap sau khi submit thanh cong. --}}
     <form method="POST"
           action="{{ route('ho-so.update') }}"
           id="profileForm"

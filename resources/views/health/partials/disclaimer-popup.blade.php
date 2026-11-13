@@ -8,7 +8,7 @@
          action (see HealthCheckController::result);
        * dismissing is one real form POST, so the JS and no-JS paths are identical and
          the outcome page underneath is never re-rendered by it;
-       * the compact notice behind it keeps the title and a "Xem lại" link forever, so
+       * the compact notice behind it keeps the title and a "Xem lai" link forever, so
          nothing is hidden by dismissing.
 
      Class is not prefixed .health-disclaimer so no existing selector or test anchor
@@ -40,7 +40,7 @@
 
         {{-- No data-triage-form: the wizard's delegated submit listener must not turn
              this into a stage swap. ackDisclaimer() redirects to a named route, so the
-             ?disclaimer=1 of a "Xem lại" visit never survives the POST. --}}
+             ?disclaimer=1 of a "Xem lai" visit never survives the POST. --}}
         <form method="POST" action="{{ route('sang-loc.disclaimer.xac-nhan') }}" class="m-0">
             @csrf
             @isset($ma_sl)

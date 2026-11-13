@@ -42,10 +42,10 @@ Route::get('/api/search/suggestions', [SanPhamController::class, 'suggestions'])
     ->middleware('throttle:60,1,search-suggestions:')
     ->name('san-pham.goi-y');
 
-// Chuẩn hoá chuỗi Web Speech nghe được. POST vì nó nhận một mảng alternative, và
-// nằm trong nhóm `web` để dùng session/CSRF như phần còn lại của storefront.
-// Bucket throttle riêng: một lượt nói mất ít nhất 2 giây nên 30/phút là dư cho
-// người thật, mà voice không ăn vào hạn mức của autocomplete.
+// Chuan hoa chuoi Web Speech nghe duoc. POST vi no nhan mot mang alternative, va
+// nam trong nhom `web` de dung session/CSRF nhu phan con lai cua storefront.
+// Bucket throttle rieng: mot luot noi mat it nhat 2 giay nen 30/phut la du cho
+// nguoi that, ma voice khong an vao han muc cua autocomplete.
 Route::post('/api/voice/normalize', [TimKiemGiongNoiController::class, 'normalize'])
     ->middleware('throttle:30,1,voice-normalize:')
     ->name('tim-kiem-giong-noi.chuan-hoa');
@@ -131,7 +131,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [HoSoController::class, 'update'])->name('ho-so.update');
     Route::delete('/profile', [HoSoController::class, 'destroy'])->name('ho-so.destroy');
 
-    // throttle: mỗi lượt tải ảnh là một lần giải mã ảnh trên CPU, nên giới hạn nhịp.
+    // throttle: moi luot tai anh la mot lan giai ma anh tren CPU, nen gioi han nhip.
     Route::post('/profile/avatar', [HoSoController::class, 'updateAvatar'])
         ->middleware('throttle:12,1')
         ->name('ho-so.anh-dai-dien.update');

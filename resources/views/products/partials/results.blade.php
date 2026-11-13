@@ -1,6 +1,6 @@
-{{-- Khối kết quả catalog. Trang đầy đủ và nhánh AJAX của
-     ProductCatalogController::resultsFragment() render chung file này, nên lưới sản
-     phẩm không thể lệch nhau giữa hai đường. --}}
+{{-- Khoi ket qua catalog. Trang day du va nhanh AJAX cua
+     ProductCatalogController::resultsFragment() render chung file nay, nen luoi san
+     pham khong the lech nhau giua hai duong. --}}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <p class="text-gray-500 mb-0 small">
         {!! __('messages.showing_results', ['count' => '<strong class="text-gray-800">' . $sanPhams->count() . '</strong>', 'total' => '<strong class="text-gray-800">' . $sanPhams->total() . '</strong>']) !!}

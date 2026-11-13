@@ -17,7 +17,7 @@ use Illuminate\Database\Seeder;
  * reviewed by a licensed pharmacist. Every triage rule leaves `reviewed_by` null
  * on purpose — production use requires professional review first.
  * Drug pairs below are limited to active ingredients commonly stocked by
- * Vietnamese pharmacies. Products are crawled from Nhà Thuốc Long Châu, so a
+ * Vietnamese pharmacies. Products are crawled from Nha Thuoc Long Chau, so a
  * crawled product only triggers a check when its ingredient appears here.
  */
 class TriThucYTeSeeder extends Seeder
@@ -58,7 +58,7 @@ class TriThucYTeSeeder extends Seeder
     {
         return [
             ['code' => 'fever', 'name_vi' => 'sốt', 'body_system' => 'general', 'catalog_query' => 'hạ sốt',
-                // "nước sốt", "bánh mì sốt vang", "sốt cao cấp" are food, not fever.
+                // "nuoc sot", "banh mi sot vang", "sot cao cap" are food, not fever.
                 'guard_words' => ['nuoc', 'banh', 'mi', 'hu', 'chai', 'lo', 'goi', 'tuong', 'thit', 'nong', 'ruot'],
                 'aliases' => ['sot', 'sot cao', 'nong nguoi', 'phat sot', 'sot nhe', 'nong sot', 'dang sot']],
             ['code' => 'headache', 'name_vi' => 'đau đầu', 'body_system' => 'neuro', 'catalog_query' => 'giảm đau đầu',
@@ -106,7 +106,7 @@ class TriThucYTeSeeder extends Seeder
             ['code' => 'rash', 'name_vi' => 'phát ban', 'body_system' => 'derma', 'catalog_query' => 'dị ứng da',
                 'aliases' => ['phat ban', 'noi man', 'noi me day', 'noi san', 'do da']],
             ['code' => 'itching', 'name_vi' => 'ngứa', 'body_system' => 'derma', 'catalog_query' => 'chống ngứa',
-                // "con ngựa", "cưỡi ngựa" are horses, not itching.
+                // "con ngua", "cuoi ngua" are horses, not itching.
                 'guard_words' => ['con', 'cuoi', 'dan', 'chuong'],
                 'aliases' => ['ngua', 'ngua ngay', 'ngua da', 'chay ngua', 'ngua khap nguoi', 'ngua qua']],
             ['code' => 'allergy', 'name_vi' => 'dị ứng', 'body_system' => 'derma', 'catalog_query' => 'dị ứng',
@@ -123,8 +123,8 @@ class TriThucYTeSeeder extends Seeder
                 'aliases' => ['non ra mau', 'non mau', 'oi ra mau']],
             ['code' => 'menstrual_cramps', 'name_vi' => 'đau bụng kinh', 'body_system' => 'general', 'catalog_query' => 'giảm đau bụng kinh',
                 // Every alias is multi-word on purpose: bare "kinh" fires inside "kinh
-                // nghiệm", "kinh doanh", "kinh khủng". "đến tháng" is excluded for the
-                // same reason — it matches inside "đến tháng sau vẫn không đỡ".
+                // nghiem", "kinh doanh", "kinh khung". "den thang" is excluded for the
+                // same reason — it matches inside "den thang sau van khong do".
                 'aliases' => ['dau bung kinh', 'thong kinh', 'kinh nguyet', 'ky kinh nguyet', 'hanh kinh',
                     'dau bung khi co kinh', 'den ky kinh', 'dau bung ngay kinh']],
         ];
@@ -448,7 +448,7 @@ class TriThucYTeSeeder extends Seeder
                 categories: [$digestiveCategory]),
 
             // --- Menstrual ---
-            // Priority must clear abdominal_pain's 70: "đau bụng kinh" matches the generic
+            // Priority must clear abdominal_pain's 70: "dau bung kinh" matches the generic
             // "dau bung" alias too, and resolveRule() takes the highest priority across
             // every matched symptom, not the most specific symptom.
             $this->rule('menstrual_cramps', 'pharmacist_review', 85, ['duration_days' => ['>=' => 7]],
@@ -456,8 +456,8 @@ class TriThucYTeSeeder extends Seeder
             $this->rule('menstrual_cramps', 'self_care', 75, null,
                 group: 'đau bụng kinh nguyên phát', confidence: 0.5,
                 advice: "Chườm ấm vùng bụng dưới 15–20 phút mỗi lần, lặp lại khi cần.\nNghỉ ngơi, giữ ấm, uống đủ nước ấm; vận động nhẹ như đi bộ hoặc giãn cơ giúp giảm co thắt.\nThuốc giảm đau kháng viêm NSAID hiệu quả nhất khi uống ngay lúc mới bắt đầu đau thay vì chờ đau nhiều. Uống sau ăn, và hỏi dược sĩ trước nếu anh/chị có bệnh dạ dày, hen, bệnh thận hoặc đang dùng thuốc khác.",
-                // The engine matches one phrase at a time and cannot express "trễ kinh AND
-                // đau một bên", so the conjunction that rules out an ectopic pregnancy is
+                // The engine matches one phrase at a time and cannot express "tre kinh AND
+                // dau mot ben", so the conjunction that rules out an ectopic pregnancy is
                 // written for the patient to read rather than faked as a rule.
                 safetyNet: 'Đi khám ngay nếu: trễ kinh hoặc nghi có thai mà đau một bên bụng dưới; đau đột ngột dữ dội khác hẳn mọi kỳ trước; kèm sốt hoặc dịch âm đạo bất thường; choáng, ngất, nôn liên tục; hoặc ra máu nhiều phải thay băng mỗi giờ.',
                 categories: [$painCategory]),

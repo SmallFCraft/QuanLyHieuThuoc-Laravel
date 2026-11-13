@@ -101,7 +101,7 @@
         </div>
     </section>
 
-    <!-- Danh mục -->
+    <!-- Danh muc -->
     @if($danhMucs->isNotEmpty())
     <section class="home-categories-section pb-4 pb-md-5 position-relative overflow-hidden" id="danh-muc">
         <div class="home-section-mesh home-section-mesh--subtle" aria-hidden="true"></div>
@@ -133,7 +133,7 @@
     </section>
     @endif
 
-    <!-- Sản phẩm mới ra mắt -->
+    <!-- San pham moi ra mat -->
     <section class="py-4 py-md-5 position-relative overflow-hidden" id="moi-ra-mat">
         <div class="home-section-mesh" aria-hidden="true"></div>
         <div class="container position-relative">
@@ -187,7 +187,7 @@
         </div>
     </section>
 
-    <!-- Sản phẩm nổi bật (theo lượt xem) -->
+    <!-- San pham noi bat (theo luot xem) -->
     <section class="py-4 py-md-5 position-relative overflow-hidden" id="noi-bat">
         <div class="home-section-mesh" aria-hidden="true"></div>
         <div class="container position-relative">
@@ -244,7 +244,7 @@
         </div>
     </section>
 
-    <!-- Vì sao chọn chúng tôi -->
+    <!-- Vi sao chon chung toi -->
     <section class="py-4 py-md-5 position-relative overflow-hidden">
         <div class="home-section-mesh" aria-hidden="true"></div>
         <div class="container position-relative py-2">
@@ -284,7 +284,7 @@
         </div>
     </section>
 
-    <!-- Quy trình -->
+    <!-- Quy trinh -->
     <section class="py-4 py-md-5 position-relative overflow-hidden">
         <div class="home-section-mesh home-section-mesh--subtle" aria-hidden="true"></div>
         <div class="container position-relative">
@@ -318,7 +318,7 @@
         </div>
     </section>
 
-    <!-- FAQ (details/summary: hiển thị nội dung ổn định + glass rõ nét) -->
+    <!-- FAQ (details/summary: hien thi noi dung on dinh + glass ro net) -->
     <section class="home-faq-section py-4 py-md-5 position-relative overflow-hidden">
         <div class="home-faq-section__mesh" aria-hidden="true"></div>
         <div class="container position-relative" style="z-index: 1;">

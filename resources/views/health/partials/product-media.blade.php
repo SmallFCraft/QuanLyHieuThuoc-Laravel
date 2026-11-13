@@ -1,5 +1,5 @@
 {{-- Product photo for the cards on the result page. Shared by both lists so the two
-     never drift apart. Not a link: the card already ends in "Xem chi tiết", and a
+     never drift apart. Not a link: the card already ends in "Xem chi tiet", and a
      second link to the same page would give a screen reader two names for one target.
      Hidden in print, where the photo only costs ink. --}}
 <div class="health-product__media health-no-print" data-product-image-container>

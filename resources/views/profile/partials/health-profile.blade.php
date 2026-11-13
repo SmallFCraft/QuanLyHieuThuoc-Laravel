@@ -287,8 +287,8 @@
 .health-profile-card {
     --hp-focus-ring: 0 0 0 3px rgba(16, 185, 129, 0.35);
 }
-/* hp-input dùng chung kích thước với .profile-page .form-control để tab này không
-   lệch khỏi các tab còn lại. 16px giữ iOS Safari khỏi phóng viewport khi focus. */
+/* hp-input dung chung kich thuoc voi .profile-page .form-control de tab nay khong
+   lech khoi cac tab con lai. 16px giu iOS Safari khoi phong viewport khi focus. */
 .hp-input,
 .hp-tag-input {
     min-height: var(--profile-field-height, 46px);

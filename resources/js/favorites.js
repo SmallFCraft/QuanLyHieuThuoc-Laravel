@@ -247,8 +247,8 @@ async function refreshProfileFavoritesSection(favoritesRef) {
             return false;
         }
 
-        // Đọc lại root sau await: hai lần refresh chạy chồng nhau thì lần trước đã
-        // thay node, khiến `root` mất parent và outerHTML ném NoModificationAllowedError.
+        // Doc lai root sau await: hai lan refresh chay chong nhau thi lan truoc da
+        // thay node, khien `root` mat parent va outerHTML nem NoModificationAllowedError.
         const target = getProfileFavoritesRoot();
 
         if (!target?.parentNode) {
@@ -364,7 +364,7 @@ function showFavoriteError() {
     }
 }
 
-/** Idempotent: chạy lại được sau khi lưới sản phẩm bị thay tại chỗ, không gắn trùng. */
+/** Idempotent: chay lai duoc sau khi luoi san pham bi thay tai cho, khong gan trung. */
 function bindFavoriteButtons(favoritesRef) {
     getFavoriteButtons().forEach((button) => {
         if (button.dataset.favoriteToggleBound === 'true') {
@@ -503,8 +503,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupProfileRemoveButtons(favoritesRef);
 
-    // Lưới catalog được thay tại chỗ khi lọc danh mục / đổi trang (catalog-async.js),
-    // nên các nút tim mới cần gắn lại handler và áp lại trạng thái đã lưu.
+    // Luoi catalog duoc thay tai cho khi loc danh muc / doi trang (catalog-async.js),
+    // nen cac nut tim moi can gan lai handler va ap lai trang thai da luu.
     document.addEventListener('pharmacy:content-updated', () => {
         bindFavoriteButtons(favoritesRef);
         syncAllFavoriteButtons(favoritesRef.current);

@@ -13,8 +13,8 @@ return new class extends Migration
             $table->string('code', 50)->unique();
             $table->string('name_vi');
             $table->json('aliases');
-            // Words that make an alias mean something ordinary: "nước sốt" is a sauce,
-            // "con ngựa" is a horse. Stored next to the aliases they disambiguate so a
+            // Words that make an alias mean something ordinary: "nuoc sot" is a sauce,
+            // "con ngua" is a horse. Stored next to the aliases they disambiguate so a
             // pharmacist adding a short ambiguous alias can guard it without a code change.
             $table->json('guard_words')->nullable();
             $table->enum('body_system', [
@@ -34,7 +34,7 @@ return new class extends Migration
             $table->json('keywords');
             $table->enum('severity', ['emergency', 'urgent', 'caution'])->default('urgent');
             // Severity answers "how bad", not "should the chatbot stop everything".
-            // Rows like "đang mang thai" or "bé 1 tuổi" are patient context that the
+            // Rows like "dang mang thai" or "be 1 tuoi" are patient context that the
             // wizard must weigh, but in chat they would turn an ordinary product
             // question into emergency guidance. This column separates the two uses.
             $table->boolean('chat_short_circuit')->default(true);

@@ -11,8 +11,8 @@
     <div class="container">
         <div class="health-shell">
 
-            {{-- No eyebrow, no masthead. The label above the heading said "Sàng lọc
-                 sức khỏe", which is also the page title and the nav item — three
+            {{-- No eyebrow, no masthead. The label above the heading said "Sang loc
+                 suc khoe", which is also the page title and the nav item — three
                  renderings of one fact stacked vertically. The h1 is the section
                  name; the lede under it says what the five steps are for. --}}
             <header class="mb-4">

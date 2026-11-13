@@ -398,8 +398,8 @@ body.admin-body {
     box-shadow: none;
 }
 
-/* Xem chú thích trong app.css: placeholder quá dài phải cắt bằng ellipsis,
-   và khai báo phải nằm trên element chứ không phải ::placeholder. */
+/* Xem chu thich trong app.css: placeholder qua dai phai cat bang ellipsis,
+   va khai bao phai nam tren element chu khong phai ::placeholder. */
 input,
 textarea {
     text-overflow: ellipsis;

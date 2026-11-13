@@ -843,7 +843,7 @@ function chatbotWidget() {
                     } else if (matchedCount > 0) {
                         // Only show the summary bubble when there are matched products to display.
                         // When everything is unmatched, the detail bubble below already conveys
-                        // the same information (avoids the redundant "✅ Đã nhận dạng / ⚠️ không tìm thấy" message).
+                        // the same information (avoids the redundant "✅ Da nhan dang / ⚠️ khong tim thay" message).
                         let message = `✅ Đã nhận dạng được ${data.recognized_products.length} sản phẩm từ hình ảnh.\n\n`;
                         message += `📦 Tìm thấy ${matchedCount} sản phẩm trong kho.\n`;
                         if (unmatchedCount > 0) {
@@ -1330,7 +1330,7 @@ function chatbotWidget() {
         
         useSuggestion(text) {
             this.inputText = text;
-            // Focus vào input để người dùng có thể chỉnh sửa trước khi gửi
+            // Focus vao input de nguoi dung co the chinh sua truoc khi gui
             this.$nextTick(() => {
                 const input = this.$el.querySelector('.input-message');
                 if (input) {

@@ -1,10 +1,10 @@
 /**
- * Placeholder gõ từng chữ cho mọi ô tìm kiếm.
+ * Placeholder go tung chu cho moi o tim kiem.
  *
- * Thuần trang trí: <label class="visually-hidden"> mới là tên thật của ô và không
- * đổi theo animation — screen reader cần một tên ổn định, đọc lại tên ô mỗi 45ms là
- * không dùng được. Không có JS thì placeholder do server render đứng yên và tìm kiếm
- * chạy như cũ.
+ * Thuan trang tri: <label class="visually-hidden"> moi la ten that cua o va khong
+ * doi theo animation — screen reader can mot ten on dinh, doc lai ten o moi 45ms la
+ * khong dung duoc. Khong co JS thi placeholder do server render dung yen va tim kiem
+ * chay nhu cu.
  */
 const TYPE_MS = 45;
 const ERASE_MS = 22;
@@ -30,14 +30,14 @@ class PlaceholderTypewriter {
     }
 
     /**
-     * Bộ chuỗi cho khổ ô hiện tại. Ô hẹp lại ~90px khi header đầy đủ, nên chuỗi dài
-     * dùng ở đó sẽ bị text-overflow cắt — xem chú thích trong config/search.php.
+     * Bo chuoi cho kho o hien tai. O hep lai ~90px khi header day du, nen chuoi dai
+     * dung o do se bi text-overflow cat — xem chu thich trong config/search.php.
      *
-     * Đo lòng trong ô thay vì đọc data-header-scrolled: trạng thái đó chỉ nới ô trên
-     * điện thoại (dưới 992px), còn trên desktop ô luôn đủ rộng cho bộ dài.
+     * Do long trong o thay vi doc data-header-scrolled: trang thai do chi noi o tren
+     * dien thoai (duoi 992px), con tren desktop o luon du rong cho bo dai.
      *
-     * Đọc lúc bắt đầu mỗi câu, không phải mỗi ký tự: đổi bộ giữa câu sẽ cắt đứt chuỗi
-     * đang gõ dở. Cũng vì vậy không cần MutationObserver theo thuộc tính.
+     * Doc luc bat dau moi cau, khong phai moi ky tu: doi bo giua cau se cat dut chuoi
+     * dang go do. Cung vi vay khong can MutationObserver theo thuoc tinh.
      */
     activeSet() {
         if (this.phraseSets.wide.length === 0) {
@@ -47,7 +47,7 @@ class PlaceholderTypewriter {
         return this.fits(this.phraseSets.wide) ? this.phraseSets.wide : this.phraseSets.narrow;
     }
 
-    /** Chuỗi dài nhất trong bộ có vừa lòng trong ô ở kích thước hiện tại. */
+    /** Chuoi dai nhat trong bo co vua long trong o o kich thuoc hien tai. */
     fits(phrases) {
         const style = window.getComputedStyle(this.input);
         const inner = this.input.clientWidth
@@ -58,7 +58,7 @@ class PlaceholderTypewriter {
             return false;
         }
 
-        // Canvas measureText: không chèn node nào vào trang nên không gây layout.
+        // Canvas measureText: khong chen node nao vao trang nen khong gay layout.
         PlaceholderTypewriter.ruler ??= document.createElement('canvas').getContext('2d');
         PlaceholderTypewriter.ruler.font = style.font || `${style.fontSize} ${style.fontFamily}`;
 
@@ -70,8 +70,8 @@ class PlaceholderTypewriter {
         this.input.addEventListener('blur', this.resumeBound);
         document.addEventListener('visibilitychange', this.visibilityBound);
 
-        // Ô tìm kiếm trang chủ nằm ~900px dưới đầu trang: gõ chữ ở một ô ngoài màn
-        // hình là đốt CPU cho hiệu ứng không ai thấy.
+        // O tim kiem trang chu nam ~900px duoi dau trang: go chu o mot o ngoai man
+        // hinh la dot CPU cho hieu ung khong ai thay.
         if ('IntersectionObserver' in window) {
             this.observer = new IntersectionObserver((entries) => {
                 this.visible = entries[0].isIntersecting;
@@ -83,7 +83,7 @@ class PlaceholderTypewriter {
         this.resume();
     }
 
-    /** Đang gõ dở thì trả lại placeholder gốc, không để ô đứng với nửa câu. */
+    /** Dang go do thi tra lai placeholder goc, khong de o dung voi nua cau. */
     pause() {
         clearTimeout(this.timer);
         this.timer = null;
@@ -101,8 +101,8 @@ class PlaceholderTypewriter {
             return;
         }
 
-        // Ô đang focus hoặc đã có chữ: placeholder không hiện, và người đang gõ thì
-        // chữ chạy dưới con trỏ là nhiễu.
+        // O dang focus hoac da co chu: placeholder khong hien, va nguoi dang go thi
+        // chu chay duoi con tro la nhieu.
         if (document.activeElement === this.input || this.input.value !== '') {
             return;
         }
@@ -116,8 +116,8 @@ class PlaceholderTypewriter {
             return;
         }
 
-        // Đầu một câu là chỗ duy nhất an toàn để đổi bộ chuỗi: đang gõ dở mà đổi thì
-        // câu bị cắt ngang giữa từ.
+        // Dau mot cau la cho duy nhat an toan de doi bo chuoi: dang go do ma doi thi
+        // cau bi cat ngang giua tu.
         if (this.charIndex === 0 && !this.erasing) {
             const set = this.activeSet();
 
@@ -167,8 +167,8 @@ class PlaceholderTypewriter {
 }
 
 function initPlaceholderTypewriter() {
-    // Tôn trọng prefers-reduced-motion bằng cách giữ nguyên placeholder tĩnh, không
-    // phải bỏ trống ô.
+    // Ton trong prefers-reduced-motion bang cach giu nguyen placeholder tinh, khong
+    // phai bo trong o.
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         return;
     }

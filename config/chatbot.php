@@ -29,7 +29,7 @@ return [
         // vision step read plus the catalog lookup).
         'image_answer' => env('AI_IMAGE_ANSWER', true),
 
-        // Health triage ("Sàng lọc"). On by default: AI is the primary layer of the
+        // Health triage ("Sang loc"). On by default: AI is the primary layer of the
         // feature. The rule engine still decides every outcome, and each seam
         // degrades to the deterministic result when the provider is unavailable, so
         // "on" is safe. Env vars exist only as a kill switch.
@@ -86,8 +86,8 @@ return [
     */
 
     'images' => [
-        // Giới hạn dung lượng và định dạng dùng chung với ảnh đại diện — xem
-        // config/uploads.php. Client kiểm ở cùng ngưỡng nên không lệch với server.
+        // Gioi han dung luong va dinh dang dung chung voi anh dai dien — xem
+        // config/uploads.php. Client kiem o cung nguong nen khong lech voi server.
         'max_size' => env('UPLOAD_MAX_SIZE_KB', 5120), // KB
         'allowed_types' => ['jpeg', 'jpg', 'png'],
         'storage_path' => 'chatbot-uploads',

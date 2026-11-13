@@ -7,10 +7,10 @@
         </div>
     </div>
 
-    {{-- ponytail: các công tắc này chưa có cột lưu trong DB, nên trạng thái không
-         sống qua lần tải trang. Đánh dấu disabled + nhãn "sắp có" thay vì để chúng
-         trông như đã lưu được — trước đây bật/tắt chỉ ghi console.log.
-         Nâng cấp khi có bảng user_notification_preferences. --}}
+    {{-- ponytail: cac cong tac nay chua co cot luu trong DB, nen trang thai khong
+         song qua lan tai trang. Danh dau disabled + nhan "sap co" thay vi de chung
+         trong nhu da luu duoc — truoc day bat/tat chi ghi console.log.
+         Nang cap khi co bang user_notification_preferences. --}}
     @foreach([
         ['id' => 'orderNotif', 'label' => __('messages.profile.order_notif'), 'desc' => __('messages.profile.order_notif_desc'), 'on' => true],
         ['id' => 'promoNotif', 'label' => __('messages.profile.promo_notif'), 'desc' => __('messages.profile.promo_notif_desc'), 'on' => true],

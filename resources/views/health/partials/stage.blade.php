@@ -104,7 +104,7 @@
                  option and posted `option_answer=<first option>` alongside the typed
                  `answer` — the patient typed one complaint and the wizard recorded
                  another. It carries no name, so Enter posts only what was typed.
-                 Inert to assistive tech: the visible "Tiếp tục" button does the same job. --}}
+                 Inert to assistive tech: the visible "Tiep tuc" button does the same job. --}}
             <button type="submit" class="visually-hidden" tabindex="-1" aria-hidden="true">
                 {{ __('messages.health.btn_next') }}
             </button>

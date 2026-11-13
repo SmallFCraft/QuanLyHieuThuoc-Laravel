@@ -1,4 +1,4 @@
-{{-- Thẻ người dùng: ảnh đại diện, danh tính, số liệu nhanh. --}}
+{{-- The nguoi dung: anh dai dien, danh tinh, so lieu nhanh. --}}
 <div class="profile-card text-center mb-3" data-profile-user-card>
     <div class="profile-avatar-editor mb-3">
         <x-user-avatar :user="$user" :size="96" ring class="profile-avatar--lg" />
@@ -18,8 +18,8 @@
         <i class="bi bi-shield-check me-1" aria-hidden="true"></i>{{ role_text($user->vai_tro) }}
     </span>
 
-    {{-- Form ẩn: input file nằm ngoài luồng tab, nút camera ở trên mở nó.
-         enctype bắt buộc, thiếu thì file không bao giờ tới server. --}}
+    {{-- Form an: input file nam ngoai luong tab, nut camera o tren mo no.
+         enctype bat buoc, thieu thi file khong bao gio toi server. --}}
     <form method="POST"
           action="{{ route('ho-so.anh-dai-dien.update') }}"
           enctype="multipart/form-data"

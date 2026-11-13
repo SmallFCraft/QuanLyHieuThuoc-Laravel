@@ -3,23 +3,23 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | TÌM KIẾM — XU HƯỚNG & PLACEHOLDER
+    | TIM KIEM — XU HUONG & PLACEHOLDER
     |--------------------------------------------------------------------------
     */
 
     'trending' => [
-        // Số pill hiện ở panel. 8 vừa hai hàng trên điện thoại.
+        // So pill hien o panel. 8 vua hai hang tren dien thoai.
         'limit' => 8,
 
-        // Chỉ tính từ khoá được tìm trong bao nhiêu ngày gần đây.
+        // Chi tinh tu khoa duoc tim trong bao nhieu ngay gan day.
         'window_days' => 30,
 
-        // Từ khoá tối thiểu phải được tìm bao nhiêu lần mới lên panel. 2 để một
-        // lượt tìm lẻ của chính admin không thành "xu hướng".
+        // Tu khoa toi thieu phai duoc tim bao nhieu lan moi len panel. 2 de mot
+        // luot tim le cua chinh admin khong thanh "xu huong".
         'min_hits' => 2,
 
-        // Bù khi log còn ít: shop mới mở thì bảng search_queries rỗng, mà một panel
-        // trống trông như tính năng lỗi. Thật xếp trước, mồi bù vào sau.
+        // Bu khi log con it: shop moi mo thi bang search_queries rong, ma mot panel
+        // trong trong nhu tinh nang loi. That xep truoc, moi bu vao sau.
         'seed' => [
             'vitamin c',
             'tăng đề kháng',
@@ -33,12 +33,12 @@ return [
     ],
 
     /*
-    | Chuỗi placeholder gõ từng chữ, hai bộ theo trạng thái header.
+    | Chuoi placeholder go tung chu, hai bo theo trang thai header.
     |
-    | Ngưỡng là chiều rộng chứ không phải số ký tự: ô tìm kiếm ở 375px chỉ còn 122px
-    | lòng trong khi header đầy đủ (194px trừ 24px padding trái và 48px chỗ icon), và
-    | ~212px sau khi logo nhường chỗ. Dài hơn là bị text-overflow cắt mất chữ, nên
-    | resources/js/search-placeholder.js chọn bộ theo data-header-scrolled.
+    | Nguong la chieu rong chu khong phai so ky tu: o tim kiem o 375px chi con 122px
+    | long trong khi header day du (194px tru 24px padding trai va 48px cho icon), va
+    | ~212px sau khi logo nhuong cho. Dai hon la bi text-overflow cat mat chu, nen
+    | resources/js/search-placeholder.js chon bo theo data-header-scrolled.
     */
     'placeholder_rotation' => [
         'Tên thuốc...',
@@ -47,7 +47,7 @@ return [
         'Danh mục...',
     ],
 
-    // Đo được ở 375px sau khi cuộn: chuỗi dài nhất dưới đây là 171px, vừa 212px.
+    // Do duoc o 375px sau khi cuon: chuoi dai nhat duoi day la 171px, vua 212px.
     'placeholder_rotation_wide' => [
         'Tìm theo tên thuốc...',
         'Tìm theo triệu chứng...',
@@ -57,52 +57,52 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | TÌM KIẾM BẰNG GIỌNG NÓI
+    | TIM KIEM BANG GIONG NOI
     |--------------------------------------------------------------------------
     |
-    | Nhận diện chạy trong browser (Web Speech API) — server chỉ nhận text. Đo
-    | 2026-09-01: cả hai AI provider của repo đều không có STT tiếng Việt dùng
-    | được, nên mọi truy vấn điều khiển bằng giọng nói chỉ gửi văn bản lên.
+    | Nhan dien chay trong browser (Web Speech API) — server chi nhan text. Do
+    | 2026-09-01: ca hai AI provider cua repo deu khong co STT tieng Viet dung
+    | duoc, nen moi truy van dieu khien bang giong noi chi gui van ban len.
     */
     'voice' => [
-        // Tắt thì nút mic không render và route trả 404.
+        // Tat thi nut mic khong render va route tra 404.
         'enabled' => env('VOICE_SEARCH_ENABLED', true),
 
-        // Tầng AI tắt riêng được: hai tầng đầu vẫn chạy, câu lạ về nguyên văn.
+        // Tang AI tat rieng duoc: hai tang dau van chay, cau la ve nguyen van.
         'ai' => env('VOICE_SEARCH_AI', true),
 
-        // Thấp hơn AI_TIMEOUT nhiều: lời gọi này nằm trong một request đồng bộ
-        // mà khách đang chờ với ô tìm kiếm đang mở, nên phải fail fast.
+        // Thap hon AI_TIMEOUT nhieu: loi goi nay nam trong mot request dong bo
+        // ma khach dang cho voi o tim kiem dang mo, nen phai fail fast.
         'ai_timeout' => env('VOICE_SEARCH_AI_TIMEOUT', 8),
 
         'cache_ttl' => env('VOICE_SEARCH_CACHE_TTL', 86400),
 
-        // Đủ số lỗi này trong cửa sổ thì bỏ tầng AI trong đúng khoảng đó.
+        // Du so loi nay trong cua so thi bo tang AI trong dung khoang do.
         'breaker_failures' => 5,
         'breaker_window' => 300,
 
-        // Token phải xuất hiện đủ số lần trong tên sản phẩm mới vào index. Đo
-        // trên catalog hiện tại: 3.998 token khác nhau, 1.489 token đạt ngưỡng 3.
-        // Token 1-2 lần phần lớn là mã lô hoặc số đo bao bì.
+        // Token phai xuat hien du so lan trong ten san pham moi vao index. Do
+        // tren catalog hien tai: 3.998 token khac nhau, 1.489 token dat nguong 3.
+        // Token 1-2 lan phan lon la ma lo hoac so do bao bi.
         'phonetic_min_hits' => 3,
 
-        // Số từ T0 chịu kiểm. Mỗi từ là một truy vấn 4 nhánh LIKE, hai nhánh trong đó
-        // không dùng được index name_folded. Đo 2026-09-02: 3 alternative x 50 từ
-        // THẬT trong catalog tốn 100 truy vấn / 284ms. Một truy vấn tìm kiếm thật
-        // không dài tới 12 từ; dài hơn thì để T1 và AI xử lý.
+        // So tu T0 chiu kiem. Moi tu la mot truy van 4 nhanh LIKE, hai nhanh trong do
+        // khong dung duoc index name_folded. Do 2026-09-02: 3 alternative x 50 tu
+        // THAT trong catalog ton 100 truy van / 284ms. Mot truy van tim kiem that
+        // khong dai toi 12 tu; dai hon thi de T1 va AI xu ly.
         't0_max_words' => 12,
 
-        // Cửa sổ dài nhất xét tới. 3 là quá hẹp cho ca dùng chính: "pa ra xê ta môn"
-        // (paracetamol) là 5 âm tiết, và đo 2026-09-02 cho thấy dòng `Paracetamol` CÓ
-        // trong index, within() nhận nó, nhưng không cửa sổ nào chứa nổi cả cụm.
-        // Nhóm syllable-split của corpus: 2/7 khớp ở 3 từ, 4/7 ở 5 từ.
+        // Cua so dai nhat xet toi. 3 la qua hep cho ca dung chinh: "pa ra xe ta mon"
+        // (paracetamol) la 5 am tiet, va do 2026-09-02 cho thay dong `Paracetamol` CO
+        // trong index, within() nhan no, nhung khong cua so nao chua noi ca cum.
+        // Nhom syllable-split cua corpus: 2/7 khop o 3 tu, 4/7 o 5 tu.
         'max_window_words' => 5,
 
-        // Số cửa sổ tối đa lấy từ mỗi alternative. Phải nới cùng max_window_words:
-        // vòng lặp đi dài-trước nên với cap 6 nó tiêu hết ngân sách ngay ở tầng dài
-        // nhất và các cụm ngắn không bao giờ được sinh. Đo trên corpus 94 ca với cổng
-        // đồng-xuất-hiện: cap 6 cho 55/94 và 466 truy vấn, cap 14 cho 56/94 và 928.
-        // lookup() vẫn là MỘT truy vấn, phần tăng là nameHasWord() theo từ.
+        // So cua so toi da lay tu moi alternative. Phai noi cung max_window_words:
+        // vong lap di dai-truoc nen voi cap 6 no tieu het ngan sach ngay o tang dai
+        // nhat va cac cum ngan khong bao gio duoc sinh. Do tren corpus 94 ca voi cong
+        // dong-xuat-hien: cap 6 cho 55/94 va 466 truy van, cap 14 cho 56/94 va 928.
+        // lookup() van la MOT truy van, phan tang la nameHasWord() theo tu.
         'max_windows' => 14,
     ],
 ];

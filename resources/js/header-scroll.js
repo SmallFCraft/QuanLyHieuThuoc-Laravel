@@ -1,17 +1,17 @@
 /**
- * Trạng thái cuộn của header: logo nhường chỗ cho ô tìm kiếm khi khách cuộn xuống.
+ * Trang thai cuon cua header: logo nhuong cho cho o tim kiem khi khach cuon xuong.
  *
- * Cố ý không có listener scroll nào. Một sentinel cao 64px ở đầu <body> làm mốc, và
- * IntersectionObserver chỉ gọi lại đúng lúc mốc đó vượt qua mép trên viewport — hai
- * lần cho một chuyến cuộn xuống rồi lên, không phải mỗi frame. Toàn bộ phần chuyển
- * trạng thái nằm ở CSS (:root[data-header-scrolled] trong layouts/app.blade.php).
+ * Co y khong co listener scroll nao. Mot sentinel cao 64px o dau <body> lam moc, va
+ * IntersectionObserver chi goi lai dung luc moc do vuot qua mep tren viewport — hai
+ * lan cho mot chuyen cuon xuong roi len, khong phai moi frame. Toan bo phan chuyen
+ * trang thai nam o CSS (:root[data-header-scrolled] trong layouts/app.blade.php).
  *
- * Không theo chiều cuộn: cuộn lên giữa trang không mang logo trở lại. Ngón tay rê qua
- * lại quanh ngưỡng sẽ bật/tắt liên tục, và một header nhấp nháy giữa lúc đang đọc là
- * nhiễu chứ không phải tính năng.
+ * Khong theo chieu cuon: cuon len giua trang khong mang logo tro lai. Ngon tay re qua
+ * lai quanh nguong se bat/tat lien tuc, va mot header nhap nhay giua luc dang doc la
+ * nhieu chu khong phai tinh nang.
  *
- * Không có JS thì thuộc tính không bao giờ được đặt, header đứng ở trạng thái đầy đủ
- * và mọi thứ vẫn dùng được.
+ * Khong co JS thi thuoc tinh khong bao gio duoc dat, header dung o trang thai day du
+ * va moi thu van dung duoc.
  */
 const STATE_ATTRIBUTE = 'data-header-scrolled';
 
@@ -25,7 +25,7 @@ function initHeaderScroll() {
     const root = document.documentElement;
 
     const observer = new IntersectionObserver(([entry]) => {
-        // isIntersecting false = sentinel đã trôi hết lên trên viewport = scrollY > 64.
+        // isIntersecting false = sentinel da troi het len tren viewport = scrollY > 64.
         const scrolled = !entry.isIntersecting;
 
         if (root.hasAttribute(STATE_ATTRIBUTE) === scrolled) {
@@ -37,10 +37,10 @@ function initHeaderScroll() {
 
     observer.observe(sentinel);
 
-    // Panel gợi ý là position: fixed, đặt theo rect của form. Thanh header thu lại làm
-    // form.bottom dịch lên ~4px, nên panel đang mở phải được đặt lại. Phát sự kiện sau
-    // khi transition xong thay vì trong callback trên: lúc callback chạy kích thước mới
-    // chưa có. Cùng khuôn với pharmacy:content-updated của catalog-async.js.
+    // Panel goi y la position: fixed, dat theo rect cua form. Thanh header thu lai lam
+    // form.bottom dich len ~4px, nen panel dang mo phai duoc dat lai. Phat su kien sau
+    // khi transition xong thay vi trong callback tren: luc callback chay kich thuoc moi
+    // chua co. Cung khuon voi pharmacy:content-updated cua catalog-async.js.
     document.querySelector('.site-header')?.addEventListener('transitionend', (event) => {
         if (event.propertyName === 'padding-top' && event.target === event.currentTarget) {
             document.dispatchEvent(new CustomEvent('pharmacy:header-state', {

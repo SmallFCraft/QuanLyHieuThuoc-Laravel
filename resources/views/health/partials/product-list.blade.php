@@ -98,7 +98,7 @@
                     @endif
 
                     <div class="health-product__action">
-                        {{-- Four identical "Xem chi tiết" links would give a screen
+                        {{-- Four identical "Xem chi tiet" links would give a screen
                              reader four identical accessible names. --}}
                         <a href="{{ $product['url'] ?? '#' }}"
                            class="health-btn health-btn-ghost w-100 text-center text-decoration-none health-no-print"

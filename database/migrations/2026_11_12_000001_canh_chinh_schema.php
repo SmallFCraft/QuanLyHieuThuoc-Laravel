@@ -7,11 +7,11 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Chuyển dữ liệu đang chạy sang schema tiếng Việt.
+     * Canh chinh schema theo dat mau du an (localized schema naming).
      *
-     * LƯU Ý MYSQL: SQLite chấp nhận renameColumn trực tiếp. Trên MySQL, nếu cột
-     * đang được foreign key trỏ tới (vd nguoi_dungs.ma_nd), phải dropForeign()
-     * trước, renameColumn, rồi tạo lại foreign key sau. Bảng có FK trỏ ma_nd:
+     * LUU Y MYSQL: SQLite chap nhan renameColumn truc tiep. Tren MySQL, neu cot
+     * dang duoc foreign key tro toi (vd nguoi_dungs.ma_nd), phai dropForeign()
+     * truoc, renameColumn, roi tao lai foreign key sau. Bang co FK tro ma_nd:
      * sessions (user_id), don_hangs, chi_tiet_don_hangs, lo_san_phams, san_phams,
      * yeu_thiches, anh_chatbots, tin_nhan_chats, nhat_ky_kiem_toans, ho_so_suc_khoes,
      * phien_sang_locs, nhac_uong_thuocs, ai_jobs, quy_tac_phan_tang_y_tes (reviewed_by).
@@ -38,7 +38,7 @@ return new class extends Migration
         'medication_reminders' => 'nhac_uong_thuocs',
     ];
 
-    /** @var array<string, array<string, string>> bảng => [cột cũ => cột mới] */
+    /** @var array<string, array<string, string>> bang => [cot cu => cot moi] */
     private array $map = [
         'nguoi_dungs' => [
             'MaKH' => 'ma_nd',

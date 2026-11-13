@@ -69,12 +69,12 @@
                 'products.search',
             ]) ? 'noindex, nofollow' : 'index, follow';
 
-            // Trang 2 trở đi của một danh sách chỉ là lát cắt của cùng một tài liệu.
-            // noindex để công cụ không thu thập lại, nhưng vẫn follow để crawler đi
-            // ngược về trang gốc — không dùng nofollow vì sẽ cắt luôn đường tới sản phẩm.
-            // Chỉ chỉnh mặc định: yieldContent('meta_robots') của view vẫn thắng.
-            // filter_var, không phải (int): paginator nhận "2" nhưng từ chối "2.5",
-            // "02", "1e1", còn (int) ép cả nhóm đó sang 2 — trang 1 mà bị noindex.
+            // Trang 2 tro di cua mot danh sach chi la lat cat cua cung mot tai lieu.
+            // noindex de cong cu khong thu thap lai, nhung van follow de crawler di
+            // nguoc ve trang goc — khong dung nofollow vi se cat luon duong toi san pham.
+            // Chi chinh mac dinh: yieldContent('meta_robots') cua view van thang.
+            // filter_var, khong phai (int): paginator nhan "2" nhung tu choi "2.5",
+            // "02", "1e1", con (int) ep ca nhom do sang 2 — trang 1 ma bi noindex.
             $pageParam = request()->query('page');
             if ($defaultRobots === 'index, follow'
                 && is_string($pageParam)
@@ -84,8 +84,8 @@
             }
 
             $metaRobots = trim($__env->yieldContent('meta_robots', $defaultRobots));
-            // `q` cũng gập về: mỗi chuỗi tìm trên /products là một URL indexable mới.
-            // Trang kết quả thật nằm ở /search, nơi đã noindex; /products?q= chỉ là bản sao.
+            // `q` cung gap ve: moi chuoi tim tren /products la mot URL indexable moi.
+            // Trang ket qua that nam o /search, noi da noindex; /products?q= chi la ban sao.
             $metaCanonical = trim($__env->yieldContent(
                 'meta_canonical',
                 request()->fullUrlWithoutQuery(['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'page', 'q'])
@@ -535,9 +535,9 @@
             .navbar-collapse.collapse.show { visibility: visible !important; display: block; }
             .navbar-collapse.collapsing { visibility: visible !important; }
 
-            /* Ô tìm kiếm duy nhất của app, nằm giữa logo và burger ở mọi khổ. Không giới
-               hạn trên: dưới lg nó lấy hết chỗ còn lại, trên lg dừng ở 500px để nav link
-               còn chỗ. */
+            /* O tim kiem duy nhat cua app, nam giua logo va burger o moi kho. Khong gioi
+               han tren: duoi lg no lay het cho con lai, tren lg dung o 500px de nav link
+               con cho. */
             .header-search { min-width: 0; }
             .header-search input {
                 height: 42px;
@@ -549,8 +549,8 @@
                 box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
             }
 
-            /* Thanh header. Trước đây là inline style; chuyển ra class vì inline thắng
-               stylesheet, nên không thể override theo trạng thái cuộn. */
+            /* Thanh header. Truoc day la inline style; chuyen ra class vi inline thang
+               stylesheet, nen khong the override theo trang thai cuon. */
             .site-header {
                 background: rgba(255, 255, 255, 0.95);
                 backdrop-filter: blur(16px);
@@ -563,12 +563,12 @@
                             padding-bottom 0.26s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
-            /* Cuộn quá 64px thì thanh nổi rõ hơn khỏi nội dung phía sau.
-               resources/js/header-scroll.js đặt data-header-scrolled trên <html>; ở đây
-               chỉ có CSS, không JS nào chạy theo từng frame cuộn.
+            /* Cuon qua 64px thi thanh noi ro hon khoi noi dung phia sau.
+               resources/js/header-scroll.js dat data-header-scrolled tren <html>; o day
+               chi co CSS, khong JS nao chay theo tung frame cuon.
 
-               Hai khai báo này chỉ paint, không layout, nên áp cho mọi khổ. Phần nhường
-               chỗ ngang thì chỉ dưới lg — xem khối media dưới. */
+               Hai khai bao nay chi paint, khong layout, nen ap cho moi kho. Phan nhuong
+               cho ngang thi chi duoi lg — xem khoi media duoi. */
             :root[data-header-scrolled] .site-header {
                 background: rgba(255, 255, 255, 0.98);
                 backdrop-filter: blur(22px);
@@ -577,7 +577,7 @@
             }
 
             @media (prefers-reduced-motion: reduce) {
-                /* Trạng thái vẫn đổi, chỉ bỏ phần chuyển động. */
+                /* Trang thai van doi, chi bo phan chuyen dong. */
                 .site-header,
                 .navbar-brand,
                 .header-search,
@@ -592,28 +592,28 @@
                 .navbar-brand { font-size: 1.1rem; }
                 .navbar-brand img { height: 36px !important; }
 
-                /* Cuộn quá 64px: logo nhường hết chỗ ngang cho ô tìm kiếm và thanh gọn
-                   lại. Chỉ dưới lg — trên desktop ô đã dừng ở 500px và còn nav link bên
-                   phải, nên bỏ logo ở đó là mất thương hiệu mà không đổi được gì.
+                /* Cuon qua 64px: logo nhuong het cho ngang cho o tim kiem va thanh gon
+                   lai. Chi duoi lg — tren desktop o da dung o 500px va con nav link ben
+                   phai, nen bo logo o do la mat thuong hieu ma khong doi duoc gi.
 
-                   Nav là position: fixed nên đổi padding của nó không đẩy nội dung
-                   trang: main giữ nguyên padding-top: 86px. Reflow gói trong ba phần tử
-                   của thanh, một lần mỗi lần vượt ngưỡng — không phải mỗi frame cuộn. */
-                /* transition KHÔNG khai lại ở đây: khối reduced-motion ở trên cùng
-                   specificity nhưng đứng trước trong source order, nên khai lại là ghi
-                   đè nó — đo 2026-09-02 ở 375px, prefers-reduced-motion vẫn thấy
-                   padding-top trong transition-property. Chuyển động thật thì đã bị
-                   quy tắc `*` toàn cục trong storefront.css:2140 ép về 0.01ms, nên đây
-                   là dọn một khai báo tự mâu thuẫn, không phải sửa một lỗi thấy được.
-                   Khai báo gốc ở trên đã phủ khổ này. */
+                   Nav la position: fixed nen doi padding cua no khong day noi dung
+                   trang: main giu nguyen padding-top: 86px. Reflow goi trong ba phan tu
+                   cua thanh, mot lan moi lan vuot nguong — khong phai moi frame cuon. */
+                /* transition KHONG khai lai o day: khoi reduced-motion o tren cung
+                   specificity nhung dung truoc trong source order, nen khai lai la ghi
+                   de no — do 2026-09-02 o 375px, prefers-reduced-motion van thay
+                   padding-top trong transition-property. Chuyen dong that thi da bi
+                   quy tac `*` toan cuc trong storefront.css:2140 ep ve 0.01ms, nen day
+                   la don mot khai bao tu mau thuan, khong phai sua mot loi thay duoc.
+                   Khai bao goc o tren da phu kho nay. */
                 :root[data-header-scrolled] .site-header {
                     padding-top: 0.35rem;
                     padding-bottom: 0.35rem;
                 }
 
-                /* max-width, không phải display: none — 0 là trạng thái animate được,
-                   còn display thì nhảy. visibility: hidden để logo rời tab order và a11y
-                   tree, chứ không thành một link vô hình vẫn bấm được. */
+                /* max-width, khong phai display: none — 0 la trang thai animate duoc,
+                   con display thi nhay. visibility: hidden de logo roi tab order va a11y
+                   tree, chu khong thanh mot link vo hinh van bam duoc. */
                 .navbar-brand {
                     max-width: 120px;
                     transition: max-width 0.26s cubic-bezier(0.4, 0, 0.2, 1),
@@ -789,11 +789,11 @@
         @stack('styles')
     </head>
     <body class="bg-gray-50 text-gray-800">
-        {{-- Mốc đo cho resources/js/header-scroll.js: khi khối này trôi hết lên trên
-             viewport thì scrollY đã vượt 64px và header chuyển sang trạng thái gọn.
-             absolute + aria-hidden nên nó không chiếm chỗ và không có gì để đọc.
-             Cao 64px chứ không phải 1px: IntersectionObserver lấy mẫu theo frame nên
-             một phần tử 1px bị bỏ lỡ ở fractional pixel (zoom, DPR lẻ). --}}
+        {{-- Moc do cho resources/js/header-scroll.js: khi khoi nay troi het len tren
+             viewport thi scrollY da vuot 64px va header chuyen sang trang thai gon.
+             absolute + aria-hidden nen no khong chiem cho va khong co gi de doc.
+             Cao 64px chu khong phai 1px: IntersectionObserver lay mau theo frame nen
+             mot phan tu 1px bi bo lo o fractional pixel (zoom, DPR le). --}}
         <div data-header-sentinel aria-hidden="true" style="position: absolute; top: 0; left: 0; width: 1px; height: 64px; pointer-events: none;"></div>
 
         <!-- Navigation -->
@@ -807,23 +807,23 @@
                          Below lg the live text is hidden for the search bar, so the link
                          carries its own aria-label rather than relying on alt text. --}}
                     <img src="{{ asset('images/logo-icon.svg') }}" alt="" class="me-2 flex-shrink-0" width="40" height="40" style="height: 40px; width: auto; transition: transform 0.3s ease;">
-                    {{-- Dưới lg chỉ còn logo: dải 320-991px phải nhường hết chỗ ngang cho ô
-                         tìm kiếm, vốn là lối vào chính của cả trang. --}}
+                    {{-- Duoi lg chi con logo: dai 320-991px phai nhuong het cho ngang cho o
+                         tim kiem, von la loi vao chinh cua ca trang. --}}
                     <span class="text-emerald-700 text-truncate d-none d-lg-inline fw-bold" style="font-size: 1.15rem;">{{ __('messages.app_name') }}</span>
                 </a>
 
-                {{-- Ô tìm kiếm duy nhất của cả app, ngay trên hàng header ở mọi khổ màn hình.
-                     Trước đây có ba ô — header, trang chủ, trang catalog — cùng post một `q`,
-                     phải có JS ẩn bớt cho khỏi hiện hai ô một lúc. --}}
+                {{-- O tim kiem duy nhat cua ca app, ngay tren hang header o moi kho man hinh.
+                     Truoc day co ba o — header, trang chu, trang catalog — cung post mot `q`,
+                     phai co JS an bot cho khoi hien hai o mot luc. --}}
                 <div class="header-search flex-grow-1 mx-2 mx-lg-4">
                     <form action="{{ route('san-pham.tim-kiem') }}" method="GET" class="w-100 position-relative" role="search" aria-label="{{ __('messages.search_placeholder') }}">
                         <label for="header-search" class="visually-hidden">{{ __('messages.search_placeholder') }}</label>
                         <input type="search" id="header-search" name="q" value="{{ request('q') }}" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="{{ __('messages.search_mobile_placeholder') }}" autocomplete="off">
-                        {{-- Icon kính lúp và nút micro dùng CHUNG ô 48px của `pe-5`, chỉ một
-                             cái hiện. voice-search.js đặt data-voice-ready trên <html> khi
-                             browser có SpeechRecognition; CSS đổi chỗ theo đó. Nhờ vậy lòng
-                             trong ô không đổi một pixel — search-placeholder.js đo chỗ đó để
-                             chọn bộ chuỗi, và ở 375px nó chỉ còn ~122px. --}}
+                        {{-- Icon kinh lup va nut micro dung CHUNG o 48px cua `pe-5`, chi mot
+                             cai hien. voice-search.js dat data-voice-ready tren <html> khi
+                             browser co SpeechRecognition; CSS doi cho theo do. Nho vay long
+                             trong o khong doi mot pixel — search-placeholder.js do cho do de
+                             chon bo chuoi, va o 375px no chi con ~122px. --}}
                         <i class="bi bi-search header-search-icon text-emerald-600" aria-hidden="true"></i>
                         @if(config('search.voice.enabled', true))
                             <button type="button" class="header-search-mic" data-voice-search
@@ -1101,7 +1101,7 @@
                         <!-- Links Columns -->
                         <div class="col-lg-8 col-md-6">
                             <div class="row g-3 h-100">
-                                <!-- Danh mục -->
+                                <!-- Danh muc -->
                                 <div class="col-md-4 col-6">
                                     <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
                                         {{-- h2, not h6: these are the footer's own top-level
@@ -1131,7 +1131,7 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Hỗ trợ -->
+                                <!-- Ho tro -->
                                 <div class="col-md-4 col-6">
                                     <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
                                         {{-- h2, not h6: these are the footer's own top-level
@@ -1170,7 +1170,7 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Liên hệ -->
+                                <!-- Lien he -->
                                 <div class="col-md-4 col-12">
                                     <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
                                         {{-- h2, not h6: these are the footer's own top-level
@@ -1284,8 +1284,8 @@
         <!-- Chatbot Widget (Available for all users, login required to use) -->
         <x-chatbot-widget />
 
-        {{-- Nguồn cho panel tìm kiếm + chuỗi giao diện của nó. Một lần mỗi trang: cả
-             ba ô tìm kiếm dùng chung một <template>. --}}
+        {{-- Nguon cho panel tim kiem + chuoi giao dien cua no. Mot lan moi trang: ca
+             ba o tim kiem dung chung mot <template>. --}}
         @include('partials.search-panel')
 
         <script>
