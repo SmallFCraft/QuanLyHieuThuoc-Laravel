@@ -73,7 +73,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('profile.health.update') }}" id="healthProfileForm">
+    <form method="POST" action="{{ route('ho-so.suc-khoe.update') }}" id="healthProfileForm">
         @csrf
         @method('put')
 
@@ -268,7 +268,7 @@
                     <button type="button" class="btn btn-light rounded-pill px-4 hp-btn m-0" data-bs-dismiss="modal">
                         {{ __('messages.health_profile.delete_cancel') }}
                     </button>
-                    <form method="POST" action="{{ route('profile.health.destroy') }}" class="m-0">
+                    <form method="POST" action="{{ route('ho-so.suc-khoe.destroy') }}" class="m-0">
                         @csrf
                         @method('delete')
                         <button type="submit" class="btn btn-danger rounded-pill px-4 hp-btn w-100">

@@ -12,12 +12,12 @@
 <div class="container-fluid px-0">
     <div class="row g-3 g-xl-4 mb-4">
         <div class="col-sm-6 col-xl-3">
-            <a href="{{ route('admin.inventory.index') }}" class="text-decoration-none text-reset">
+            <a href="{{ route('admin.ton-kho.index') }}" class="text-decoration-none text-reset">
                 <div class="metric-card">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <div class="label">{{ __('messages.admin.inventory.total_products') }}</div>
-                            <div class="value">{{ $summary['total_products'] ?? 0 }}</div>
+                            <div class="value">{{ $tongHop['total_products'] ?? 0 }}</div>
                         </div>
                         <div class="icon"><i class="bi bi-boxes" aria-hidden="true"></i></div>
                     </div>
@@ -25,12 +25,12 @@
             </a>
         </div>
         <div class="col-sm-6 col-xl-3">
-            <a href="{{ route('admin.inventory.index', ['status' => 'low_stock']) }}" class="text-decoration-none text-reset">
+            <a href="{{ route('admin.ton-kho.index', ['status' => 'low_stock']) }}" class="text-decoration-none text-reset">
                 <div class="metric-card {{ $activeStatus === 'low_stock' ? 'border-danger' : '' }}">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <div class="label">{{ __('messages.admin.inventory.low_stock_label') }}</div>
-                            <div class="value">{{ $summary['low_stock'] ?? 0 }}</div>
+                            <div class="value">{{ $tongHop['low_stock'] ?? 0 }}</div>
                         </div>
                         <div class="icon" style="background:#fef2f2;color:#b91c1c;"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></div>
                     </div>
@@ -38,12 +38,12 @@
             </a>
         </div>
         <div class="col-sm-6 col-xl-3">
-            <a href="{{ route('admin.inventory.index', ['status' => 'expiring', 'days' => $days ?? 30]) }}" class="text-decoration-none text-reset">
+            <a href="{{ route('admin.ton-kho.index', ['status' => 'expiring', 'days' => $soNgay ?? 30]) }}" class="text-decoration-none text-reset">
                 <div class="metric-card {{ $activeStatus === 'expiring' ? 'border-warning' : '' }}">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <div class="label">{{ __('messages.admin.inventory.expiring_soon_label') }}</div>
-                            <div class="value">{{ $summary['expiring_soon'] ?? 0 }}</div>
+                            <div class="value">{{ $tongHop['expiring_soon'] ?? 0 }}</div>
                         </div>
                         <div class="icon" style="background:#fff7ed;color:#b45309;"><i class="bi bi-calendar-x" aria-hidden="true"></i></div>
                     </div>
@@ -51,12 +51,12 @@
             </a>
         </div>
         <div class="col-sm-6 col-xl-3">
-            <a href="{{ route('admin.inventory.index', ['status' => 'out_of_stock']) }}" class="text-decoration-none text-reset">
+            <a href="{{ route('admin.ton-kho.index', ['status' => 'out_of_stock']) }}" class="text-decoration-none text-reset">
                 <div class="metric-card {{ $activeStatus === 'out_of_stock' ? 'border-secondary' : '' }}">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <div class="label">{{ __('messages.admin.inventory.out_of_stock') }}</div>
-                            <div class="value">{{ $summary['out_of_stock'] ?? 0 }}</div>
+                            <div class="value">{{ $tongHop['out_of_stock'] ?? 0 }}</div>
                         </div>
                         <div class="icon" style="background:#f1f5f9;color:#475569;"><i class="bi bi-x-circle" aria-hidden="true"></i></div>
                     </div>
@@ -73,7 +73,7 @@
                     @if($activeStatus === 'low_stock')
                         Đang lọc sản phẩm tồn kho thấp.
                     @elseif($activeStatus === 'expiring')
-                        Đang lọc sản phẩm sắp hết hạn trong {{ $days ?? 30 }} ngày.
+                        Đang lọc sản phẩm sắp hết hạn trong {{ $soNgay ?? 30 }} ngày.
                     @elseif($activeStatus === 'out_of_stock')
                         Đang lọc sản phẩm hết hàng.
                     @elseif($activeStatus === 'expired')
@@ -83,8 +83,8 @@
                     @endif
                 </p>
             </div>
-            @if($activeStatus || ($search ?? '') !== '')
-                <a href="{{ route('admin.inventory.index') }}" class="btn btn-outline-secondary">
+            @if($activeStatus || ($tuKhoa ?? '') !== '')
+                <a href="{{ route('admin.ton-kho.index') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Xóa lọc
                 </a>
             @endif
@@ -92,24 +92,24 @@
 
         <div class="admin-toolbar">
             <div class="d-flex flex-wrap gap-2">
-                <a href="{{ route('admin.inventory.index', ['status' => 'low_stock']) }}" class="btn btn-outline-danger {{ $activeStatus === 'low_stock' ? 'active' : '' }}">Tồn thấp</a>
-                <a href="{{ route('admin.inventory.index', ['status' => 'expiring', 'days' => 30]) }}" class="btn btn-outline-warning {{ $activeStatus === 'expiring' ? 'active' : '' }}">Sắp hết hạn</a>
-                <a href="{{ route('admin.inventory.index', ['status' => 'out_of_stock']) }}" class="btn btn-outline-secondary {{ $activeStatus === 'out_of_stock' ? 'active' : '' }}">Hết hàng</a>
+                <a href="{{ route('admin.ton-kho.index', ['status' => 'low_stock']) }}" class="btn btn-outline-danger {{ $activeStatus === 'low_stock' ? 'active' : '' }}">Tồn thấp</a>
+                <a href="{{ route('admin.ton-kho.index', ['status' => 'expiring', 'days' => 30]) }}" class="btn btn-outline-warning {{ $activeStatus === 'expiring' ? 'active' : '' }}">Sắp hết hạn</a>
+                <a href="{{ route('admin.ton-kho.index', ['status' => 'out_of_stock']) }}" class="btn btn-outline-secondary {{ $activeStatus === 'out_of_stock' ? 'active' : '' }}">Hết hàng</a>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <form method="GET" action="{{ route('admin.inventory.index') }}" class="d-flex gap-2" role="search">
+                <form method="GET" action="{{ route('admin.ton-kho.index') }}" class="d-flex gap-2" role="search">
                     @if($activeStatus)
                         <input type="hidden" name="status" value="{{ $activeStatus }}">
                     @endif
-                    <input type="hidden" name="days" value="{{ $days ?? 30 }}">
+                    <input type="hidden" name="days" value="{{ $soNgay ?? 30 }}">
                     <label class="visually-hidden" for="inventorySearch">Tìm sản phẩm</label>
                     <input type="search" class="form-control" id="inventorySearch" name="q"
-                        value="{{ $search ?? '' }}" placeholder="Tên, số lô, mã, danh mục">
+                        value="{{ $tuKhoa ?? '' }}" placeholder="Tên, số lô, mã, danh mục">
                     <button type="submit" class="btn btn-outline-primary">
                         <i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Tìm</span>
                     </button>
                 </form>
-                <a href="{{ route('admin.products.create') }}" class="btn btn-success">
+                <a href="{{ route('admin.san-pham.create') }}" class="btn btn-success">
                     <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Thêm sản phẩm
                 </a>
             </div>
@@ -131,35 +131,35 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($products as $product)
+                    @foreach($sanPhams as $sanPham)
                         @php
                             $statusText = __('messages.admin.inventory.status_normal');
                             $statusClass = 'text-bg-success';
-                            if ($product->isExpired()) {
+                            if ($sanPham->isExpired()) {
                                 $statusText = __('messages.admin.inventory.status_expired');
                                 $statusClass = 'text-bg-danger';
-                            } elseif ($product->isExpiringSoon(30)) {
+                            } elseif ($sanPham->isExpiringSoon(30)) {
                                 $statusText = __('messages.admin.inventory.status_expiring_soon');
                                 $statusClass = 'text-bg-warning';
-                            } elseif ($product->isLowStock()) {
+                            } elseif ($sanPham->isLowStock()) {
                                 $statusText = __('messages.admin.inventory.status_low_stock');
                                 $statusClass = 'text-bg-info';
                             }
                         @endphp
                         <tr>
-                            <td><span class="fw-semibold">{{ $product->display_code }}</span></td>
-                            <td>{{ $product->ten }}</td>
-                            <td>{{ $product->danhMuc->ten ?? 'Chưa phân loại' }}</td>
-                            <td>{{ $product->so_lo }}</td>
-                            <td><span class="badge {{ $product->isLowStock() ? 'text-bg-danger' : 'text-bg-success' }}">{{ $product->so_luong_ton }}</span></td>
-                            <td>{{ $product->muc_canh_bao }}</td>
-                            <td>{{ $product->ngay_het_han->format('d/m/Y') }}</td>
+                            <td><span class="fw-semibold">{{ $sanPham->display_code }}</span></td>
+                            <td>{{ $sanPham->ten }}</td>
+                            <td>{{ $sanPham->danhMuc->ten ?? 'Chưa phân loại' }}</td>
+                            <td>{{ $sanPham->so_lo }}</td>
+                            <td><span class="badge {{ $sanPham->isLowStock() ? 'text-bg-danger' : 'text-bg-success' }}">{{ $sanPham->so_luong_ton }}</span></td>
+                            <td>{{ $sanPham->muc_canh_bao }}</td>
+                            <td>{{ $sanPham->ngay_het_han->format('d/m/Y') }}</td>
                             <td><span class="badge {{ $statusClass }}">{{ $statusText }}</span></td>
                             <td>
                                 <button class="btn btn-sm btn-outline-primary" type="button"
-                                    data-product-id="{{ $product->ma_sp }}"
-                                    data-product-name="{{ $product->ten }}"
-                                    data-product-stock="{{ $product->so_luong_ton }}"
+                                    data-product-id="{{ $sanPham->ma_sp }}"
+                                    data-product-name="{{ $sanPham->ten }}"
+                                    data-product-stock="{{ $sanPham->so_luong_ton }}"
                                     onclick="adjustInventory(this)">
                                     <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>{{ __('messages.admin.inventory.adjust') }}
                                 </button>
@@ -171,20 +171,20 @@
         </div>
 
         <div class="admin-mobile-list">
-            @forelse($products as $product)
+            @forelse($sanPhams as $sanPham)
                 <article class="admin-mobile-item">
                     <div class="d-flex justify-content-between gap-3">
                         <div>
-                            <strong>{{ $product->ten }}</strong>
-                            <div class="small text-secondary">{{ $product->display_code }} · {{ $product->danhMuc->ten ?? 'Chưa phân loại' }}</div>
-                            <div class="small text-secondary">Lô {{ $product->so_lo }} · HSD {{ $product->ngay_het_han->format('d/m/Y') }}</div>
+                            <strong>{{ $sanPham->ten }}</strong>
+                            <div class="small text-secondary">{{ $sanPham->display_code }} · {{ $sanPham->danhMuc->ten ?? 'Chưa phân loại' }}</div>
+                            <div class="small text-secondary">Lô {{ $sanPham->so_lo }} · HSD {{ $sanPham->ngay_het_han->format('d/m/Y') }}</div>
                         </div>
-                        <span class="badge {{ $product->isLowStock() ? 'text-bg-danger' : 'text-bg-success' }} align-self-start">{{ $product->so_luong_ton }}</span>
+                        <span class="badge {{ $sanPham->isLowStock() ? 'text-bg-danger' : 'text-bg-success' }} align-self-start">{{ $sanPham->so_luong_ton }}</span>
                     </div>
                     <button class="btn btn-sm btn-outline-primary w-100 mt-3" type="button"
-                        data-product-id="{{ $product->ma_sp }}"
-                        data-product-name="{{ $product->ten }}"
-                        data-product-stock="{{ $product->so_luong_ton }}"
+                        data-product-id="{{ $sanPham->ma_sp }}"
+                        data-product-name="{{ $sanPham->ten }}"
+                        data-product-stock="{{ $sanPham->so_luong_ton }}"
                         onclick="adjustInventory(this)">
                         <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>{{ __('messages.admin.inventory.adjust') }}
                     </button>
@@ -197,7 +197,7 @@
         {{-- Paging is server-side now, and DataTables' own pager is off, so these
              links have to render on desktop too — not just in the mobile list. --}}
         <div class="mt-3">
-            {{ $products->links() }}
+            {{ $sanPhams->links() }}
         </div>
     </section>
 </div>
@@ -257,11 +257,11 @@ document.addEventListener('DOMContentLoaded', function() {
         dom: '<"row align-items-center mb-3 g-2"<"col-12"B>>rt',
         buttons: [
             window.AdminUI.excelButton({
-                url: '{{ route('admin.inventory.export') }}',
+                url: '{{ route('admin.ton-kho.export') }}',
                 params: () => ({
                     status: @json($activeStatus),
-                    days: @json($days ?? 30),
-                    q: @json($search ?? ''),
+                    days: @json($soNgay ?? 30),
+                    q: @json($tuKhoa ?? ''),
                 }),
             })
         ]
@@ -273,7 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
         submitButton.disabled = true;
 
         $.ajax({
-            url: '{{ route("admin.inventory.adjust") }}',
+            url: '{{ route("admin.ton-kho.dieu-chinh") }}',
             type: 'POST',
             data: $(this).serialize(),
             success: function(response) {

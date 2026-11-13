@@ -5,10 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Một dòng của index phiên âm — bảng tra cứu, không phải thực thể nghiệp vụ.
+ * Mot dong cua index phien am — bang tra cuu, khong phai thuc the nghiep vu.
  *
- * Không quan hệ nào: đường nóng chỉ đọc `term` để trả về khách. Không timestamps:
- * mỗi lần dựng là truncate + insert lại, nên created_at không nói lên điều gì.
+ * Khong quan he nao: duong nong chi doc `term` de tra ve khach. Khong timestamps:
+ * moi lan dung la truncate + insert lai, nen created_at khong noi len dieu gi.
  */
 class PhienAmGiongNoi extends Model
 {

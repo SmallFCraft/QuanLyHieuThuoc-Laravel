@@ -128,7 +128,7 @@
              on the first line, where the sentence it introduces starts. --}}
         <p class="small text-gray-600 mt-3 mb-0 health-no-print">
             <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
-            <a href="{{ route('profile.edit') }}" class="health-link health-link--accent health-link--inline">
+            <a href="{{ route('ho-so.edit') }}" class="health-link health-link--accent health-link--inline">
                 {{ __('messages.health.safety_check_no_profile') }}
             </a>
         </p>

@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 class ProfileUpdateRequest extends FormRequest
 {
     /**
-     * Chuỗi rỗng → null (chỉ với field có trong request — không ghi đè khi form chỉ gửi name/email).
+     * Chuoi rong → null (chi voi field co trong request — khong ghi de khi form chi gui name/email).
      */
     public const COLUMN_MAP = [
         'name' => 'ho_ten',

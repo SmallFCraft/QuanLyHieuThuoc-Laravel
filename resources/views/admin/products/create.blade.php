@@ -11,13 +11,13 @@
             <!-- Breadcrumb -->
             <nav aria-label="breadcrumb" class="mb-4">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('admin.products.index') }}">Sản Phẩm</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.bang-dieu-khien') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.san-pham.index') }}">Sản Phẩm</a></li>
                     <li class="breadcrumb-item active">Thêm Mới</li>
                 </ol>
             </nav>
 
-            <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" id="createProductForm">
+            <form action="{{ route('admin.san-pham.store') }}" method="POST" enctype="multipart/form-data" id="createProductForm">
                 @csrf
 
                 <div class="row g-4">
@@ -43,7 +43,7 @@
                                 <select class="form-select select2-basic @error('ma_dm') is-invalid @enderror"
                                     id="MaDM" name="MaDM" required>
                                     <option value="">-- Chọn danh mục --</option>
-                                    @foreach($categories as $category)
+                                    @foreach($danhMucs as $category)
                                         <option value="{{ $category->ma_dm }}" data-code="{{ $category->code }}" {{ old('ma_dm') == $category->ma_dm ? 'selected' : '' }}>
                                             {{ $category->ten }}
                                         </option>
@@ -182,7 +182,7 @@
                                 <button type="submit" class="btn btn-primary btn-lg">
                                     <i class="bi bi-plus-circle me-2"></i>Thêm Sản Phẩm
                                 </button>
-                                <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary">
+                                <a href="{{ route('admin.san-pham.index') }}" class="btn btn-outline-secondary">
                                     <i class="bi bi-arrow-left me-2"></i>Quay Lại
                                 </a>
                             </div>

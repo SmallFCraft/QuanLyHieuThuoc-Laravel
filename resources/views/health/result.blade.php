@@ -218,14 +218,14 @@
                     <i class="bi bi-printer me-1" aria-hidden="true"></i>{{ __('messages.health.btn_print') }}
                 </button>
 
-                <form method="POST" action="{{ route('health.restart') }}">
+                <form method="POST" action="{{ route('sang-loc.bat-dau-lai') }}">
                     @csrf
                     <button type="submit" class="health-btn health-btn-primary w-100">
                         <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>{{ __('messages.health.btn_new_check') }}
                     </button>
                 </form>
 
-                <a href="{{ route('health.history') }}" class="health-btn health-btn-ghost text-decoration-none text-center">
+                <a href="{{ route('sang-loc.lich-su') }}" class="health-btn health-btn-ghost text-decoration-none text-center">
                     <i class="bi bi-clock-history me-1" aria-hidden="true"></i>{{ __('messages.health.btn_history') }}
                 </a>
             </div>
@@ -243,12 +243,12 @@
     // of magnitude — the advice rewrite is one short call, the briefing asks for six
     // sections — so waiting for both before reloading would hide the faster one.
     $pollJobs = array_values(array_filter([
-        $aiJobId ? ['url' => route('ai-jobs.poll', $aiJobId), 'banner' => 'triage-ai-pending'] : null,
+        $aiJobId ? ['url' => route('cong-viec-ai.kiem-tra', $aiJobId), 'banner' => 'triage-ai-pending'] : null,
         $briefingJobId
             ? [
-                'url' => route('ai-jobs.poll', $briefingJobId),
+                'url' => route('cong-viec-ai.kiem-tra', $briefingJobId),
                 'banner' => 'triage-briefing-pending',
-                'paneUrl' => route('health.result.briefing-pane', $session->ma_sl),
+                'paneUrl' => route('sang-loc.ket-qua.briefing-pane', $session->ma_sl),
                 // Unhidden instead of just dropping the skeleton: this banner is the
                 // content, so an empty slot would read as a stalled page.
                 'fallback' => 'triage-briefing-unavailable',

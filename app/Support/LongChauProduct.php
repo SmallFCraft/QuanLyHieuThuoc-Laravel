@@ -189,7 +189,7 @@ final class LongChauProduct
     }
 
     /**
-     * "Caffeine 65mg, Paracetamol 500mg" — the shape DrugSafetyService expects
+     * "Caffeine 65mg, Paracetamol 500mg" — the shape AnToanThuocService expects
      * when it tokenises san_phams.thanh_phan for interaction and allergy checks.
      */
     private static function formatIngredients(mixed $ingredients): ?string

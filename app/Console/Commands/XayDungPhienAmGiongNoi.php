@@ -1,0 +1,119 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Models\DanhMuc;
+use App\Models\PhienAmGiongNoi;
+use App\Models\SanPham;
+use App\Support\VietnameseText;
+use App\Support\PhienAmTiengViet;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+
+class XayDungPhienAmGiongNoi extends Command
+{
+    protected $signature = 'voice:build-phonetics';
+
+    protected $description = 'Dựng lại index phiên âm cho tìm kiếm bằng giọng nói';
+
+    /** 6 cot x 500 dong = 3.000 tham so, trong gioi han cua ca MySQL va SQLite. */
+    private const INSERT_CHUNK = 500;
+
+    public function handle(): int
+    {
+        $minHits = max(1, (int) config('search.voice.phonetic_min_hits', 3));
+
+        [$rows, $tokens] = $this->collectFromProducts();
+
+        foreach (DanhMuc::pluck('ten') as $name) {
+            $this->addRow($rows, (string) $name, 'category', 1);
+        }
+
+        foreach ($tokens as $folded => $token) {
+            if ($token['hits'] < $minHits) {
+                continue;
+            }
+
+            // Dang khach doc duoc, khong phai dang da lot dau: "thuoc" de doc hon
+            // "thuoc" khi no duoc dien vao o tim kiem.
+            arsort($token['forms']);
+
+            $this->addRow($rows, (string) array_key_first($token['forms']), 'token', $token['hits']);
+        }
+
+        // Transaction quanh ca truncate + insert: mot lan dung that bai giua duong
+        // de lai index rong, va index rong nghia la moi luot voice roi xuong AI.
+        DB::transaction(function () use ($rows) {
+            PhienAmGiongNoi::query()->delete();
+
+            foreach (array_chunk(array_values($rows), self::INSERT_CHUNK) as $chunk) {
+                PhienAmGiongNoi::insert($chunk);
+            }
+        });
+
+        $this->info(sprintf('Đã dựng %d cụm phiên âm.', count($rows)));
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * @return array{0: array<string, array<string, mixed>>, 1: array<string, array{hits: int, forms: array<string, int>}>}
+     */
+    private function collectFromProducts(): array
+    {
+        $rows = [];
+        $tokens = [];
+
+        // cursor(): catalog da 3.146 dong va chi tang, nen khong nap het vao bo nho.
+        SanPham::select('ma_sp', 'ten')->cursor()->each(function (SanPham $sanPham) use (&$rows, &$tokens): void {
+            $name = (string) $sanPham->ten;
+
+            $this->addRow($rows, $name, 'product', 1);
+
+            foreach (preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: [] as $word) {
+                $folded = VietnameseText::fold($word);
+
+                if ($folded === '' || mb_strlen($folded) < 2) {
+                    continue;
+                }
+
+                $tokens[$folded]['hits'] = ($tokens[$folded]['hits'] ?? 0) + 1;
+                $tokens[$folded]['forms'][$word] = ($tokens[$folded]['forms'][$word] ?? 0) + 1;
+            }
+        });
+
+        return [$rows, $tokens];
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $rows
+     */
+    private function addRow(array &$rows, string $term, string $kind, int $weight): void
+    {
+        $key = PhienAmTiengViet::khoa($term);
+        $folded = VietnameseText::fold($term);
+
+        if ($key === '' || $folded === '') {
+            return;
+        }
+
+        // Khoa gop theo (phonetic_key, term_folded) — dung cap unique cua bang, nen
+        // insert khong bao gio dung constraint.
+        $dedupe = $key . "\0" . $folded;
+
+        if (isset($rows[$dedupe])) {
+            $rows[$dedupe]['weight'] = max($rows[$dedupe]['weight'], $weight);
+
+            return;
+        }
+
+        $rows[$dedupe] = [
+            'phonetic_key' => $key,
+            'block_key' => PhienAmTiengViet::khoaKhoi($key),
+            'term' => mb_substr($term, 0, 191),
+            'term_folded' => mb_substr($folded, 0, 191),
+            'kind' => $kind,
+            'weight' => $weight,
+        ];
+    }
+}

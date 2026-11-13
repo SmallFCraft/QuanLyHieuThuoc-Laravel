@@ -8,18 +8,18 @@ use Illuminate\Database\Eloquent\Builder;
 abstract class Controller
 {
     /**
-     * Phân trang mà trang vượt quá trang cuối là 404, không phải một trang rỗng 200.
+     * Phan trang ma trang vuot qua trang cuoi la 404, khong phai mot trang rong 200.
      *
-     * Không có chặn này thì mỗi giá trị page là một URL hợp lệ dài hàng trăm KB, và
-     * crawler sinh URL mới vô hạn.
+     * Khong co chan nay thi moi gia tri page la mot URL hop le dai hang tram KB, va
+     * crawler sinh URL moi vo han.
      *
-     * Chỉ nhận số nguyên dương, đúng bằng những gì link phân trang thật có thể sinh
-     * ra. Paginator ép -5, abc, 02, 2.5 và số tràn về trang 1 nên so sánh một mình
-     * nó không bắt được: từng giá trị vẫn là một URL 200 mới, cùng nội dung trang 1.
+     * Chi nhan so nguyen duong, dung bang nhung gi link phan trang that co the sinh
+     * ra. Paginator ep -5, abc, 02, 2.5 va so tran ve trang 1 nen so sanh mot minh
+     * no khong bat duoc: tung gia tri van la mot URL 200 moi, cung noi dung trang 1.
      */
     protected function paginateOr404(Builder $query, int $perPage): LengthAwarePaginator
     {
-        // ?page[]=1 không phải do link nào sinh và làm query builder vỡ.
+        // ?page[]=1 khong phai do link nao sinh va lam query builder vo.
         abort_if(is_array(request()->query('page')), 400);
 
         abort_if(

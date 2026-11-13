@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\DangNhapRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,15 +22,15 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(DangNhapRequest $request): RedirectResponse
     {
         $request->authenticate();
 
         $request->session()->regenerate();
         
-        app(\App\Services\AuditLogService::class)->logAuthAttempt($request->email, true);
+        app(\App\Services\NhatKyKiemToanService::class)->ghiThuDangNhap($request->email, true);
 
-        return redirect()->intended(route('home', absolute: false));
+        return redirect()->intended(route('trang-chu', absolute: false));
     }
 
     /**
@@ -38,7 +38,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        app(\App\Services\AuditLogService::class)->logLogout();
+        app(\App\Services\NhatKyKiemToanService::class)->ghiDangXuat();
 
         Auth::guard('web')->logout();
 

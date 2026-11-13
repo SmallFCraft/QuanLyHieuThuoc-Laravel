@@ -31,21 +31,21 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($users as $user)
-                    <tr data-user-id="{{ $user->ma_nd }}" data-user-name="{{ $user->ho_ten }}" data-user-email="{{ $user->email }}" data-user-role="{{ $user->vai_tro }}" data-user-status="{{ $user->trang_thai }}">
-                        <td><span class="fw-semibold">#{{ $user->ma_nd }}</span></td>
-                        <td>{{ $user->ho_ten }}</td>
-                        <td>{{ $user->email }}</td>
-                        <td><span class="badge {{ $user->vai_tro === 'Administrator' ? 'text-bg-danger' : ($user->vai_tro === 'Pharmacist' ? 'text-bg-info' : 'text-bg-primary') }}">{{ \App\Helpers\VietnameseHelper::getRoleText($user->vai_tro) }}</span></td>
-                        <td><span class="badge {{ $user->trang_thai === 'active' ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $user->trang_thai === 'active' ? 'Hoạt động' : 'Vô hiệu hóa' }}</span></td>
-                        <td>{{ $user->created_at->format('d/m/Y H:i') }}</td>
+                    @foreach($nguoiDungs as $user)
+                    <tr data-user-id="{{ $nguoiDung->ma_nd }}" data-user-name="{{ $nguoiDung->ho_ten }}" data-user-email="{{ $nguoiDung->email }}" data-user-role="{{ $nguoiDung->vai_tro }}" data-user-status="{{ $nguoiDung->trang_thai }}">
+                        <td><span class="fw-semibold">#{{ $nguoiDung->ma_nd }}</span></td>
+                        <td>{{ $nguoiDung->ho_ten }}</td>
+                        <td>{{ $nguoiDung->email }}</td>
+                        <td><span class="badge {{ $nguoiDung->vai_tro === 'Administrator' ? 'text-bg-danger' : ($nguoiDung->vai_tro === 'Pharmacist' ? 'text-bg-info' : 'text-bg-primary') }}">{{ \App\Helpers\VietnameseHelper::getRoleText($nguoiDung->vai_tro) }}</span></td>
+                        <td><span class="badge {{ $nguoiDung->trang_thai === 'active' ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $nguoiDung->trang_thai === 'active' ? 'Hoạt động' : 'Vô hiệu hóa' }}</span></td>
+                        <td>{{ $nguoiDung->created_at->format('d/m/Y H:i') }}</td>
                         <td>
-                            <div class="btn-group" role="group" aria-label="Thao tác người dùng #{{ $user->ma_nd }}">
-                                <button class="btn btn-sm btn-outline-warning" type="button" onclick="editUser(this.closest('tr'))" aria-label="Sửa người dùng {{ $user->ho_ten }}">
+                            <div class="btn-group" role="group" aria-label="Thao tác người dùng #{{ $nguoiDung->ma_nd }}">
+                                <button class="btn btn-sm btn-outline-warning" type="button" onclick="editUser(this.closest('tr'))" aria-label="Sửa người dùng {{ $nguoiDung->ho_ten }}">
                                     <i class="bi bi-pencil" aria-hidden="true"></i>
                                 </button>
-                                <button class="btn btn-sm {{ $user->trang_thai === 'active' ? 'btn-outline-secondary' : 'btn-outline-success' }}" type="button" onclick="toggleStatus({{ $user->ma_nd }}, '{{ $user->trang_thai }}')" aria-label="{{ $user->trang_thai === 'active' ? 'Vô hiệu hóa' : 'Kích hoạt' }} người dùng {{ $user->ho_ten }}">
-                                    <i class="bi bi-{{ $user->trang_thai === 'active' ? 'x-circle' : 'check-circle' }}" aria-hidden="true"></i>
+                                <button class="btn btn-sm {{ $nguoiDung->trang_thai === 'active' ? 'btn-outline-secondary' : 'btn-outline-success' }}" type="button" onclick="toggleStatus({{ $nguoiDung->ma_nd }}, '{{ $nguoiDung->trang_thai }}')" aria-label="{{ $nguoiDung->trang_thai === 'active' ? 'Vô hiệu hóa' : 'Kích hoạt' }} người dùng {{ $nguoiDung->ho_ten }}">
+                                    <i class="bi bi-{{ $nguoiDung->trang_thai === 'active' ? 'x-circle' : 'check-circle' }}" aria-hidden="true"></i>
                                 </button>
                             </div>
                         </td>
@@ -56,30 +56,30 @@
         </div>
 
         <div class="admin-mobile-list">
-            @forelse($users as $user)
+            @forelse($nguoiDungs as $user)
                 <article class="admin-mobile-item">
                     <div class="d-flex justify-content-between gap-3">
                         <div class="min-w-0">
-                            <strong>{{ $user->ho_ten }}</strong>
-                            <div class="small text-secondary">{{ $user->email }}</div>
+                            <strong>{{ $nguoiDung->ho_ten }}</strong>
+                            <div class="small text-secondary">{{ $nguoiDung->email }}</div>
                             <div class="d-flex flex-wrap gap-2 mt-2">
-                                <span class="badge {{ $user->vai_tro === 'Administrator' ? 'text-bg-danger' : ($user->vai_tro === 'Pharmacist' ? 'text-bg-info' : 'text-bg-primary') }}">{{ \App\Helpers\VietnameseHelper::getRoleText($user->vai_tro) }}</span>
-                                <span class="badge {{ $user->trang_thai === 'active' ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $user->trang_thai === 'active' ? 'Hoạt động' : 'Vô hiệu hóa' }}</span>
+                                <span class="badge {{ $nguoiDung->vai_tro === 'Administrator' ? 'text-bg-danger' : ($nguoiDung->vai_tro === 'Pharmacist' ? 'text-bg-info' : 'text-bg-primary') }}">{{ \App\Helpers\VietnameseHelper::getRoleText($nguoiDung->vai_tro) }}</span>
+                                <span class="badge {{ $nguoiDung->trang_thai === 'active' ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $nguoiDung->trang_thai === 'active' ? 'Hoạt động' : 'Vô hiệu hóa' }}</span>
                             </div>
                         </div>
-                        <span class="small text-secondary">#{{ $user->ma_nd }}</span>
+                        <span class="small text-secondary">#{{ $nguoiDung->ma_nd }}</span>
                     </div>
                     <div class="d-flex gap-2 mt-3">
                         <button class="btn btn-sm btn-outline-warning flex-fill" type="button"
-                            data-user-id="{{ $user->ma_nd }}"
-                            data-user-name="{{ $user->ho_ten }}"
-                            data-user-email="{{ $user->email }}"
-                            data-user-role="{{ $user->vai_tro }}"
+                            data-user-id="{{ $nguoiDung->ma_nd }}"
+                            data-user-name="{{ $nguoiDung->ho_ten }}"
+                            data-user-email="{{ $nguoiDung->email }}"
+                            data-user-role="{{ $nguoiDung->vai_tro }}"
                             onclick="editUser(this)">
                             Sửa
                         </button>
-                        <button class="btn btn-sm {{ $user->trang_thai === 'active' ? 'btn-outline-secondary' : 'btn-outline-success' }} flex-fill" type="button" onclick="toggleStatus({{ $user->ma_nd }}, '{{ $user->trang_thai }}')">
-                            {{ $user->trang_thai === 'active' ? 'Vô hiệu hóa' : 'Kích hoạt' }}
+                        <button class="btn btn-sm {{ $nguoiDung->trang_thai === 'active' ? 'btn-outline-secondary' : 'btn-outline-success' }} flex-fill" type="button" onclick="toggleStatus({{ $nguoiDung->ma_nd }}, '{{ $nguoiDung->trang_thai }}')">
+                            {{ $nguoiDung->trang_thai === 'active' ? 'Vô hiệu hóa' : 'Kích hoạt' }}
                         </button>
                     </div>
                 </article>
@@ -93,7 +93,7 @@
 <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserTitle" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{{ route('admin.users.store') }}">
+            <form method="POST" action="{{ route('admin.nguoi-dung.store') }}">
                 @csrf
                 <div class="modal-header">
                     <h2 class="modal-title h5" id="createUserTitle">Thêm người dùng mới</h2>
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
         dom: '<"row align-items-center mb-3 g-2"<"col-md-4"l><"col-md-4"B><"col-md-4"f>>rt<"row align-items-center mt-3 g-2"<"col-md-6"i><"col-md-6"p>>',
         buttons: [
             window.AdminUI.excelButton({
-                url: '{{ route('admin.users.export') }}',
+                url: '{{ route('admin.nguoi-dung.export') }}',
                 params: (dt) => ({
                     q: dt.search(),
                 }),

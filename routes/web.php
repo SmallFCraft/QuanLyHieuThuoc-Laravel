@@ -1,80 +1,80 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ReminderController;
-use App\Http\Controllers\ProductCatalogController;
-use App\Http\Controllers\VoiceSearchController;
-use App\Http\Controllers\CartController;
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\FavoriteController;
-use App\Http\Controllers\HealthCheckController;
-use App\Http\Controllers\HealthProfileController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\ContactController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\OrderController as AdminOrderController;
-use App\Http\Controllers\Admin\ProductController as AdminProductController;
-use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
-use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
-use App\Http\Controllers\Admin\UserController as AdminUserController;
-use App\Http\Controllers\Admin\ChatSessionController as AdminChatSessionController;
-use App\Http\Controllers\Admin\TriageReportController as AdminTriageReportController;
-use App\Http\Controllers\Pharmacist\TriageQueueController;
+use App\Http\Controllers\HoSoController;
+use App\Http\Controllers\NhacUongThuocController;
+use App\Http\Controllers\SanPhamController;
+use App\Http\Controllers\TimKiemGiongNoiController;
+use App\Http\Controllers\GioHangController;
+use App\Http\Controllers\ThanhToanController;
+use App\Http\Controllers\YeuThichController;
+use App\Http\Controllers\SangLocController;
+use App\Http\Controllers\HoSoSucKhoeController;
+use App\Http\Controllers\TrangChuController;
+use App\Http\Controllers\LienHeController;
+use App\Http\Controllers\Admin\BangDieuKhienController;
+use App\Http\Controllers\Admin\DonHangController as AdminDonHangController;
+use App\Http\Controllers\Admin\SanPhamController as AdminSanPhamController;
+use App\Http\Controllers\Admin\DanhMucController as AdminDanhMucController;
+use App\Http\Controllers\Admin\TonKhoController as AdminTonKhoController;
+use App\Http\Controllers\Admin\NguoiDungController as AdminNguoiDungController;
+use App\Http\Controllers\Admin\PhienChatController as AdminPhienChatController;
+use App\Http\Controllers\Admin\BaoCaoSangLocController as AdminBaoCaoSangLocController;
+use App\Http\Controllers\DuocSi\HangChoSangLocController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
-Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/', [TrangChuController::class, 'index'])->name('trang-chu');
 
 // Contact routes
-Route::get('/contact', [ContactController::class, 'index'])->name('contact');
-Route::post('/contact/submit', [ContactController::class, 'submit'])
+Route::get('/contact', [LienHeController::class, 'index'])->name('lien-he');
+Route::post('/contact/submit', [LienHeController::class, 'submit'])
     ->middleware('throttle:5,1')
-    ->name('contact.submit');
+    ->name('lien-he.gui');
 
 // Product catalog routes
-Route::get('/products', [ProductCatalogController::class, 'index'])->name('products.index');
-Route::get('/products/{MaSP}', [ProductCatalogController::class, 'show'])->name('products.show');
-Route::get('/products/category/{MaDM}', [ProductCatalogController::class, 'byCategory'])->name('products.category');
-Route::get('/search', [ProductCatalogController::class, 'search'])->name('products.search');
+Route::get('/products', [SanPhamController::class, 'index'])->name('san-pham.index');
+Route::get('/products/{MaSP}', [SanPhamController::class, 'show'])->name('san-pham.show');
+Route::get('/products/category/{MaDM}', [SanPhamController::class, 'byCategory'])->name('san-pham.danh-muc');
+Route::get('/search', [SanPhamController::class, 'search'])->name('san-pham.tim-kiem');
 // Own bucket keyed on the route: the autocomplete fires on every keystroke past a
 // 300ms debounce, so it needs a ceiling that browsing the catalog does not share.
-Route::get('/api/search/suggestions', [ProductCatalogController::class, 'suggestions'])
+Route::get('/api/search/suggestions', [SanPhamController::class, 'suggestions'])
     ->middleware('throttle:60,1,search-suggestions:')
-    ->name('products.suggestions');
+    ->name('san-pham.goi-y');
 
 // Chuẩn hoá chuỗi Web Speech nghe được. POST vì nó nhận một mảng alternative, và
 // nằm trong nhóm `web` để dùng session/CSRF như phần còn lại của storefront.
 // Bucket throttle riêng: một lượt nói mất ít nhất 2 giây nên 30/phút là dư cho
 // người thật, mà voice không ăn vào hạn mức của autocomplete.
-Route::post('/api/voice/normalize', [VoiceSearchController::class, 'normalize'])
+Route::post('/api/voice/normalize', [TimKiemGiongNoiController::class, 'normalize'])
     ->middleware('throttle:30,1,voice-normalize:')
-    ->name('voice.normalize');
+    ->name('tim-kiem-giong-noi.chuan-hoa');
 
 // Shopping cart routes
-Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
-Route::match(['post', 'put'], '/cart/update/{MaSP}', [CartController::class, 'update'])->name('cart.update');
-Route::match(['post', 'delete'], '/cart/remove/{MaSP}', [CartController::class, 'remove'])->name('cart.remove');
+Route::get('/cart', [GioHangController::class, 'index'])->name('gio-hang.index');
+Route::post('/cart/add', [GioHangController::class, 'add'])->name('gio-hang.them');
+Route::match(['post', 'put'], '/cart/update/{MaSP}', [GioHangController::class, 'update'])->name('gio-hang.cap-nhat');
+Route::match(['post', 'delete'], '/cart/remove/{MaSP}', [GioHangController::class, 'remove'])->name('gio-hang.xoa');
 
 // Checkout routes (requires authentication)
 Route::middleware('auth')->group(function () {
-    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-    Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
-    Route::get('/checkout/success/{MaDH}', [CheckoutController::class, 'success'])->name('checkout.success');
+    Route::get('/checkout', [ThanhToanController::class, 'index'])->name('thanh-toan.index');
+    Route::post('/checkout/process', [ThanhToanController::class, 'process'])->name('thanh-toan.xu-ly');
+    Route::get('/checkout/success/{MaDH}', [ThanhToanController::class, 'success'])->name('thanh-toan.thanh-cong');
 });
 
 // Health triage routes (requires authentication)
 Route::middleware('auth')->group(function () {
-    Route::get('/health-check', [HealthCheckController::class, 'index'])->name('health.check');
-    Route::post('/health-check/answer', [HealthCheckController::class, 'answer'])
+    Route::get('/health-check', [SangLocController::class, 'index'])->name('sang-loc.kiem-tra');
+    Route::post('/health-check/answer', [SangLocController::class, 'answer'])
         ->middleware('throttle:20,1')
-        ->name('health.answer');
-    Route::post('/health-check/back', [HealthCheckController::class, 'back'])->name('health.back');
+        ->name('sang-loc.tra-loi');
+    Route::post('/health-check/back', [SangLocController::class, 'back'])->name('sang-loc.quay-lai');
     // One bounded AI follow-up round, offered on the wizard page after step 5.
-    Route::post('/health-check/clarify', [HealthCheckController::class, 'clarify'])
+    Route::post('/health-check/clarify', [SangLocController::class, 'clarify'])
         ->middleware('throttle:20,1')
-        ->name('health.clarify');
-    Route::post('/health-check/restart', [HealthCheckController::class, 'restart'])->name('health.restart');
+        ->name('sang-loc.lam-ro');
+    Route::post('/health-check/restart', [SangLocController::class, 'restart'])->name('sang-loc.bat-dau-lai');
 
     // Stop repeating the scope notice as a popup for the rest of the calendar day.
     // Decided server-side so the popup and its dismiss both work with JavaScript off.
@@ -84,67 +84,67 @@ Route::middleware('auth')->group(function () {
     // per-user counter. Measured — 40 hits on health.decision (its own limit is 120/min,
     // and the browser polls it every 1.5s while a worker decides) then 429 here, which
     // would mean the daily flag never gets written and the popup nags forever.
-    Route::post('/health-check/disclaimer', [HealthCheckController::class, 'ackDisclaimer'])
+    Route::post('/health-check/disclaimer', [SangLocController::class, 'ackDisclaimer'])
         ->middleware('throttle:10,1,disclaimer-ack:')
-        ->name('health.disclaimer.ack');
+        ->name('sang-loc.disclaimer.xac-nhan');
     // Progress of the queued outcome decision. Polled every second or two while the
     // patient waits, so it gets its own, higher limit.
-    Route::get('/health-check/decision/{uuid}', [HealthCheckController::class, 'decision'])
+    Route::get('/health-check/decision/{uuid}', [SangLocController::class, 'decision'])
         ->middleware('throttle:120,1')
-        ->name('health.decision');
-    Route::get('/health-check/history', [HealthCheckController::class, 'history'])->name('health.history');
-    Route::get('/health-check/result/{MaSL}', [HealthCheckController::class, 'result'])
+        ->name('sang-loc.quyet-dinh');
+    Route::get('/health-check/history', [SangLocController::class, 'history'])->name('sang-loc.lich-su');
+    Route::get('/health-check/result/{MaSL}', [SangLocController::class, 'result'])
         ->whereNumber('MaSL')
-        ->name('health.result');
-    Route::get('/health-check/result/{MaSL}/briefing-pane', [HealthCheckController::class, 'briefingPane'])
+        ->name('sang-loc.ket-qua');
+    Route::get('/health-check/result/{MaSL}/briefing-pane', [SangLocController::class, 'briefingPane'])
         ->middleware('throttle:60,1')
         ->whereNumber('MaSL')
-        ->name('health.result.briefing-pane');
+        ->name('sang-loc.ket-qua.briefing-pane');
     // Opt-in side channel: the AI/rule answer is the primary result, and the queue is
     // only entered when the customer asks for a human.
-    Route::post('/health-check/result/{MaSL}/pharmacist', [HealthCheckController::class, 'requestPharmacist'])
+    Route::post('/health-check/result/{MaSL}/pharmacist', [SangLocController::class, 'requestPharmacist'])
         ->middleware('throttle:10,1')
         ->whereNumber('MaSL')
-        ->name('health.requestPharmacist');
+        ->name('sang-loc.xin-duoc-si');
 
     // Follow-up from the email. The GET link only renders a confirmation page —
     // it is signed and changes nothing, so a mail scanner or prefetcher that opens
     // it cannot record an answer. The answer itself is a CSRF-protected POST.
-    Route::get('/health-check/{MaSL}/follow-up', [ReminderController::class, 'followUpConfirm'])
+    Route::get('/health-check/{MaSL}/follow-up', [NhacUongThuocController::class, 'followUpConfirm'])
         ->middleware('signed')
         ->whereNumber('MaSL')
-        ->name('health.followup.confirm');
-    Route::post('/health-check/{MaSL}/follow-up', [ReminderController::class, 'followUpResponse'])
+        ->name('sang-loc.theo-doi.xac-nhan');
+    Route::post('/health-check/{MaSL}/follow-up', [NhacUongThuocController::class, 'followUpResponse'])
         ->middleware('throttle:20,1')
         ->whereNumber('MaSL')
-        ->name('health.followup');
+        ->name('sang-loc.theo-doi.tra-loi');
 
-    Route::get('/reminders', [ReminderController::class, 'index'])->name('reminders.index');
-    Route::post('/reminders/{MaNN}/cancel', [ReminderController::class, 'cancel'])
+    Route::get('/reminders', [NhacUongThuocController::class, 'index'])->name('nhac-uong.index');
+    Route::post('/reminders/{MaNN}/cancel', [NhacUongThuocController::class, 'cancel'])
         ->whereNumber('MaNN')
-        ->name('reminders.cancel');
+        ->name('nhac-uong.huy');
 });
 
 // Profile routes
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile', [HoSoController::class, 'edit'])->name('ho-so.edit');
+    Route::patch('/profile', [HoSoController::class, 'update'])->name('ho-so.update');
+    Route::delete('/profile', [HoSoController::class, 'destroy'])->name('ho-so.destroy');
 
     // throttle: mỗi lượt tải ảnh là một lần giải mã ảnh trên CPU, nên giới hạn nhịp.
-    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])
+    Route::post('/profile/avatar', [HoSoController::class, 'updateAvatar'])
         ->middleware('throttle:12,1')
-        ->name('profile.avatar.update');
-    Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar'])->name('profile.avatar.destroy');
+        ->name('ho-so.anh-dai-dien.update');
+    Route::delete('/profile/avatar', [HoSoController::class, 'destroyAvatar'])->name('ho-so.anh-dai-dien.destroy');
 
-    Route::put('/profile/health', [HealthProfileController::class, 'update'])->name('profile.health.update');
-    Route::delete('/profile/health', [HealthProfileController::class, 'destroy'])->name('profile.health.destroy');
+    Route::put('/profile/health', [HoSoSucKhoeController::class, 'update'])->name('ho-so.suc-khoe.update');
+    Route::delete('/profile/health', [HoSoSucKhoeController::class, 'destroy'])->name('ho-so.suc-khoe.destroy');
 
-    Route::get('/favorites/ids', [FavoriteController::class, 'ids'])->name('favorites.ids');
-    Route::get('/favorites/section', [FavoriteController::class, 'section'])->name('favorites.section');
-    Route::post('/favorites/sync', [FavoriteController::class, 'sync'])->name('favorites.sync');
-    Route::post('/favorites/{product}/toggle', [FavoriteController::class, 'toggle'])->name('favorites.toggle');
-    Route::delete('/favorites/{product}', [FavoriteController::class, 'destroy'])->name('favorites.destroy');
+    Route::get('/favorites/ids', [YeuThichController::class, 'ids'])->name('yeu-thich.ids');
+    Route::get('/favorites/section', [YeuThichController::class, 'section'])->name('yeu-thich.section');
+    Route::post('/favorites/sync', [YeuThichController::class, 'sync'])->name('yeu-thich.sync');
+    Route::post('/favorites/{product}/toggle', [YeuThichController::class, 'toggle'])->name('yeu-thich.toggle');
+    Route::delete('/favorites/{product}', [YeuThichController::class, 'destroy'])->name('yeu-thich.destroy');
 });
 
 // Admin routes
@@ -153,57 +153,57 @@ Route::middleware('auth')->group(function () {
 // ChatbotImage, so without this Category and User changes leave no trail.
 Route::middleware(['auth', 'admin', 'audit'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard/revenue', [DashboardController::class, 'revenueChart'])->name('dashboard.revenue');
-    Route::get('/dashboard/order-status', [DashboardController::class, 'orderStatusChart'])->name('dashboard.orderStatus');
-    Route::get('/dashboard/top-products', [DashboardController::class, 'topProductsChart'])->name('dashboard.topProducts');
-    
+    Route::get('/dashboard', [BangDieuKhienController::class, 'index'])->name('bang-dieu-khien');
+    Route::get('/dashboard/revenue', [BangDieuKhienController::class, 'revenueChart'])->name('bang-dieu-khien.doanh-thu');
+    Route::get('/dashboard/order-status', [BangDieuKhienController::class, 'orderStatusChart'])->name('bang-dieu-khien.trang-thai-don');
+    Route::get('/dashboard/top-products', [BangDieuKhienController::class, 'topProductsChart'])->name('bang-dieu-khien.san-pham-ban-chay');
+
     // Products management
-    Route::get('/products/data', [AdminProductController::class, 'data'])->name('products.data');
-    Route::get('/products/export', [AdminProductController::class, 'export'])->name('products.export');
-    Route::resource('products', AdminProductController::class);
-    
+    Route::get('/products/data', [AdminSanPhamController::class, 'data'])->name('san-pham.data');
+    Route::get('/products/export', [AdminSanPhamController::class, 'export'])->name('san-pham.export');
+    Route::resource('products', AdminSanPhamController::class)->names('san-pham');
+
     // Categories management
-    Route::resource('categories', AdminCategoryController::class)->except(['show']);
-    
+    Route::resource('categories', AdminDanhMucController::class)->except(['show'])->names('danh-muc');
+
     // Orders management
-    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/export', [AdminOrderController::class, 'export'])->name('orders.export');
-    Route::get('/orders/{MaDH}', [AdminOrderController::class, 'show'])->name('orders.show');
-    Route::patch('/orders/{MaDH}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.updateStatus');
-    Route::post('/orders/{MaDH}/cancel', [AdminOrderController::class, 'cancel'])->name('orders.cancel');
-    
+    Route::get('/orders', [AdminDonHangController::class, 'index'])->name('don-hang.index');
+    Route::get('/orders/export', [AdminDonHangController::class, 'export'])->name('don-hang.export');
+    Route::get('/orders/{MaDH}', [AdminDonHangController::class, 'show'])->name('don-hang.show');
+    Route::patch('/orders/{MaDH}/status', [AdminDonHangController::class, 'updateStatus'])->name('don-hang.cap-nhat-trang-thai');
+    Route::post('/orders/{MaDH}/cancel', [AdminDonHangController::class, 'cancel'])->name('don-hang.huy');
+
     // Inventory management
-    Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('inventory.index');
-    Route::get('/inventory/export', [AdminInventoryController::class, 'export'])->name('inventory.export');
-    Route::get('/inventory/low-stock', [AdminInventoryController::class, 'lowStock'])->name('inventory.lowStock');
-    Route::get('/inventory/expiring', [AdminInventoryController::class, 'expiring'])->name('inventory.expiring');
-    Route::post('/inventory/adjust', [AdminInventoryController::class, 'adjust'])->name('inventory.adjust');
-    
+    Route::get('/inventory', [AdminTonKhoController::class, 'index'])->name('ton-kho.index');
+    Route::get('/inventory/export', [AdminTonKhoController::class, 'export'])->name('ton-kho.export');
+    Route::get('/inventory/low-stock', [AdminTonKhoController::class, 'lowStock'])->name('ton-kho.sap-het');
+    Route::get('/inventory/expiring', [AdminTonKhoController::class, 'expiring'])->name('ton-kho.sap-het-han');
+    Route::post('/inventory/adjust', [AdminTonKhoController::class, 'adjust'])->name('ton-kho.dieu-chinh');
+
     // Chat session lookup
-    Route::get('/chat-sessions', [AdminChatSessionController::class, 'index'])->name('chatSessions.index');
-    Route::get('/chat-sessions/{sessionId}/images/{image}', [AdminChatSessionController::class, 'image'])
+    Route::get('/chat-sessions', [AdminPhienChatController::class, 'index'])->name('phien-chat.index');
+    Route::get('/chat-sessions/{sessionId}/images/{image}', [AdminPhienChatController::class, 'image'])
         ->whereUuid('sessionId')
         ->whereNumber('image')
-        ->name('chatSessions.images.show');
-    Route::get('/chat-sessions/{sessionId}', [AdminChatSessionController::class, 'show'])
+        ->name('phien-chat.anh.show');
+    Route::get('/chat-sessions/{sessionId}', [AdminPhienChatController::class, 'show'])
         ->whereUuid('sessionId')
-        ->name('chatSessions.show');
+        ->name('phien-chat.show');
     // Triage report — static segments must precede {MaSL} or they get captured by it
-    Route::get('/triage-reports', [AdminTriageReportController::class, 'index'])->name('triageReports.index');
-    Route::get('/triage-reports/export', [AdminTriageReportController::class, 'export'])->name('triageReports.export');
-    Route::get('/triage-reports/chart/outcome', [AdminTriageReportController::class, 'outcomeChart'])->name('triageReports.outcomeChart');
-    Route::get('/triage-reports/chart/trend', [AdminTriageReportController::class, 'trendChart'])->name('triageReports.trendChart');
-    Route::get('/triage-reports/{MaSL}', [AdminTriageReportController::class, 'show'])
+    Route::get('/triage-reports', [AdminBaoCaoSangLocController::class, 'index'])->name('bao-cao-sang-loc.index');
+    Route::get('/triage-reports/export', [AdminBaoCaoSangLocController::class, 'export'])->name('bao-cao-sang-loc.export');
+    Route::get('/triage-reports/chart/outcome', [AdminBaoCaoSangLocController::class, 'outcomeChart'])->name('bao-cao-sang-loc.outcomeChart');
+    Route::get('/triage-reports/chart/trend', [AdminBaoCaoSangLocController::class, 'trendChart'])->name('bao-cao-sang-loc.trendChart');
+    Route::get('/triage-reports/{MaSL}', [AdminBaoCaoSangLocController::class, 'show'])
         ->whereNumber('MaSL')
-        ->name('triageReports.show');
+        ->name('bao-cao-sang-loc.show');
 
     // Users management
-    Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
-    Route::get('/users/export', [AdminUserController::class, 'export'])->name('users.export');
-    Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
-    Route::put('/users/{MaKH}', [AdminUserController::class, 'update'])->name('users.update');
-    Route::patch('/users/{MaKH}/status', [AdminUserController::class, 'updateStatus'])->name('users.updateStatus');
+    Route::get('/users', [AdminNguoiDungController::class, 'index'])->name('nguoi-dung.index');
+    Route::get('/users/export', [AdminNguoiDungController::class, 'export'])->name('nguoi-dung.export');
+    Route::post('/users', [AdminNguoiDungController::class, 'store'])->name('nguoi-dung.store');
+    Route::put('/users/{MaKH}', [AdminNguoiDungController::class, 'update'])->name('nguoi-dung.update');
+    Route::patch('/users/{MaKH}/status', [AdminNguoiDungController::class, 'updateStatus'])->name('nguoi-dung.cap-nhat-trang-thai');
 });
 
 /*
@@ -211,26 +211,26 @@ Route::middleware(['auth', 'admin', 'audit'])->prefix('admin')->name('admin.')->
 | Pharmacist Routes (Triage Review Queue)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'pharmacist'])->prefix('pharmacist')->name('pharmacist.')->group(function () {
-    Route::get('/triage-queue', [TriageQueueController::class, 'index'])->name('triage.index');
-    Route::get('/triage-queue/{MaSL}', [TriageQueueController::class, 'show'])
+Route::middleware(['auth', 'pharmacist'])->prefix('pharmacist')->name('duoc-si.')->group(function () {
+    Route::get('/triage-queue', [HangChoSangLocController::class, 'index'])->name('sang-loc.index');
+    Route::get('/triage-queue/{MaSL}', [HangChoSangLocController::class, 'show'])
         ->whereNumber('MaSL')
-        ->name('triage.show');
-    Route::post('/triage-queue/{MaSL}/claim', [TriageQueueController::class, 'claim'])
+        ->name('sang-loc.show');
+    Route::post('/triage-queue/{MaSL}/claim', [HangChoSangLocController::class, 'claim'])
         ->whereNumber('MaSL')
-        ->name('triage.claim');
-    Route::post('/triage-queue/{MaSL}/reply', [TriageQueueController::class, 'reply'])
+        ->name('sang-loc.claim');
+    Route::post('/triage-queue/{MaSL}/reply', [HangChoSangLocController::class, 'reply'])
         ->whereNumber('MaSL')
-        ->name('triage.reply');
+        ->name('sang-loc.reply');
     // POST, not GET: the draft costs a provider call, and GET show() writes an audit
     // row on every open. throttle so a held-down button cannot burn the AI budget.
-    Route::post('/triage-queue/{MaSL}/draft', [TriageQueueController::class, 'draft'])
+    Route::post('/triage-queue/{MaSL}/draft', [HangChoSangLocController::class, 'draft'])
         ->middleware('throttle:10,1')
         ->whereNumber('MaSL')
-        ->name('triage.draft');
-    Route::post('/triage-queue/{MaSL}/escalate', [TriageQueueController::class, 'escalate'])
+        ->name('sang-loc.draft');
+    Route::post('/triage-queue/{MaSL}/escalate', [HangChoSangLocController::class, 'escalate'])
         ->whereNumber('MaSL')
-        ->name('triage.escalate');
+        ->name('sang-loc.escalate');
 });
 
 require __DIR__.'/auth.php';

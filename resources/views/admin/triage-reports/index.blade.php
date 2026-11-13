@@ -93,7 +93,7 @@
     </div>
 
     <section class="admin-card mb-4">
-        <form method="GET" action="{{ route('admin.triageReports.index') }}" class="row g-3 align-items-end">
+        <form method="GET" action="{{ route('admin.bao-cao-sang-loc.index') }}" class="row g-3 align-items-end">
             <fieldset class="row g-3 align-items-end border-0 p-0 m-0">
                 <legend class="visually-hidden">{{ __('triage_report.filters.legend') }}</legend>
 
@@ -143,11 +143,11 @@
                     <i class="bi bi-funnel me-1" aria-hidden="true"></i>{{ __('triage_report.filters.apply') }}
                 </button>
                 @if($activeFilters !== [])
-                    <a class="btn btn-outline-secondary" href="{{ route('admin.triageReports.index') }}">
+                    <a class="btn btn-outline-secondary" href="{{ route('admin.bao-cao-sang-loc.index') }}">
                         <i class="bi bi-x-circle me-1" aria-hidden="true"></i>{{ __('triage_report.filters.reset') }}
                     </a>
                 @endif
-                <a class="btn btn-success ms-auto" href="{{ route('admin.triageReports.export', request()->query()) }}">
+                <a class="btn btn-success ms-auto" href="{{ route('admin.bao-cao-sang-loc.export', request()->query()) }}">
                     <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>{{ __('triage_report.filters.export') }}
                 </a>
             </div>
@@ -403,7 +403,7 @@
                                 <td>{{ $session->pharmacist->ho_ten ?? '—' }}</td>
                                 <td>{{ $session->entry_point ? __('triage_report.entry_point.' . $session->entry_point) : '—' }}</td>
                                 <td class="text-center">
-                                    <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.triageReports.show', $session->ma_sl) }}"
+                                    <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.bao-cao-sang-loc.show', $session->ma_sl) }}"
                                        aria-label="{{ __('triage_report.table.view') }} SL-{{ $session->ma_sl }}">
                                         <i class="bi bi-eye me-1" aria-hidden="true"></i>{{ __('triage_report.table.view') }}
                                     </a>
@@ -443,7 +443,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return target.toString();
     };
 
-    fetch(withQuery(@json(route('admin.triageReports.outcomeChart'))))
+    fetch(withQuery(@json(route('admin.bao-cao-sang-loc.outcomeChart'))))
         .then(response => {
             if (!response.ok) throw new Error('outcome chart request failed');
             return response.json();
@@ -472,7 +472,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(() => showError('triageOutcome', @json(__('triage_report.charts.outcome_error'))));
 
-    fetch(withQuery(@json(route('admin.triageReports.trendChart', ['days' => $trendDays]))))
+    fetch(withQuery(@json(route('admin.bao-cao-sang-loc.trendChart', ['days' => $trendDays]))))
         .then(response => {
             if (!response.ok) throw new Error('trend chart request failed');
             return response.json();

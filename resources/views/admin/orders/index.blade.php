@@ -27,7 +27,7 @@
         <div class="admin-toolbar">
             <div class="d-flex flex-wrap gap-2" role="group" aria-label="{{ __('messages.admin.orders.filter_by_status') }}">
                 @foreach($statuses as $value => $meta)
-                    <a href="{{ $value === '' ? route('admin.orders.index') : route('admin.orders.index', ['status' => $value]) }}"
+                    <a href="{{ $value === '' ? route('admin.don-hang.index') : route('admin.don-hang.index', ['status' => $value]) }}"
                        class="btn btn-outline-{{ $meta['class'] }} {{ (string) request('status') === (string) $value ? 'active' : '' }}">
                         {{ $meta['label'] }}
                     </a>
@@ -48,9 +48,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($orders as $order)
+                    @foreach($donHangs as $donHang)
                         @php
-                            $statusClass = match ($order->status) {
+                            $statusClass = match ($donHang->trang_thai) {
                                 'Pending' => 'text-bg-warning',
                                 'Delivering' => 'text-bg-info',
                                 'Completed' => 'text-bg-success',
@@ -58,13 +58,13 @@
                             };
                         @endphp
                         <tr>
-                            <td><span class="fw-semibold">#{{ $order->ma_dh }}</span></td>
-                            <td>{{ $order->nguoiDung->ho_ten }}</td>
-                            <td class="fw-bold">{{ $order->formatted_total }}</td>
-                            <td><span class="badge {{ $statusClass }}">{{ $statuses[$order->status]['label'] ?? $order->status }}</span></td>
-                            <td>{{ $order->formatted_created_at }}</td>
+                            <td><span class="fw-semibold">#{{ $donHang->ma_dh }}</span></td>
+                            <td>{{ $donHang->nguoiDung->ho_ten }}</td>
+                            <td class="fw-bold">{{ $donHang->formatted_total }}</td>
+                            <td><span class="badge {{ $statusClass }}">{{ $statuses[$donHang->trang_thai]['label'] ?? $donHang->trang_thai }}</span></td>
+                            <td>{{ $donHang->formatted_created_at }}</td>
                             <td>
-                                <a href="{{ route('admin.orders.show', $order->ma_dh) }}" class="btn btn-sm btn-outline-primary">
+                                <a href="{{ route('admin.don-hang.show', $donHang->ma_dh) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye me-1" aria-hidden="true"></i>Xem
                                 </a>
                             </td>
@@ -75,9 +75,9 @@
         </div>
 
         <div class="admin-mobile-list">
-            @forelse($orders as $order)
+            @forelse($donHangs as $donHang)
                 @php
-                    $statusClass = match ($order->status) {
+                    $statusClass = match ($donHang->trang_thai) {
                         'Pending' => 'text-bg-warning',
                         'Delivering' => 'text-bg-info',
                         'Completed' => 'text-bg-success',
@@ -87,13 +87,13 @@
                 <article class="admin-mobile-item">
                     <div class="d-flex justify-content-between gap-3">
                         <div>
-                            <strong>#{{ $order->ma_dh }} · {{ $order->nguoiDung->ho_ten }}</strong>
-                            <div class="small text-secondary">{{ $order->formatted_created_at }}</div>
-                            <div class="fw-bold mt-1">{{ $order->formatted_total }}</div>
+                            <strong>#{{ $donHang->ma_dh }} · {{ $donHang->nguoiDung->ho_ten }}</strong>
+                            <div class="small text-secondary">{{ $donHang->formatted_created_at }}</div>
+                            <div class="fw-bold mt-1">{{ $donHang->formatted_total }}</div>
                         </div>
-                        <span class="badge {{ $statusClass }} align-self-start">{{ $statuses[$order->status]['label'] ?? $order->status }}</span>
+                        <span class="badge {{ $statusClass }} align-self-start">{{ $statuses[$donHang->trang_thai]['label'] ?? $donHang->trang_thai }}</span>
                     </div>
-                    <a href="{{ route('admin.orders.show', $order->ma_dh) }}" class="btn btn-sm btn-outline-primary w-100 mt-3">Xem chi tiết</a>
+                    <a href="{{ route('admin.don-hang.show', $donHang->ma_dh) }}" class="btn btn-sm btn-outline-primary w-100 mt-3">Xem chi tiết</a>
                 </article>
             @empty
                 <div class="admin-empty-state">Không có đơn hàng phù hợp.</div>
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
         dom: '<"row align-items-center mb-3 g-2"<"col-md-4"l><"col-md-4"B><"col-md-4"f>>rt<"row align-items-center mt-3 g-2"<"col-md-6"i><"col-md-6"p>>',
         buttons: [
             window.AdminUI.excelButton({
-                url: '{{ route('admin.orders.export') }}',
+                url: '{{ route('admin.don-hang.export') }}',
                 params: (dt) => ({
                     status: @json(request('status')),
                     q: dt.search(),

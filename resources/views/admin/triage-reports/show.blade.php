@@ -38,7 +38,7 @@
 
 <div class="container-fluid px-0">
     <div class="mb-3">
-        <a class="btn btn-outline-secondary triage-back-btn" href="{{ route('admin.triageReports.index') }}">
+        <a class="btn btn-outline-secondary triage-back-btn" href="{{ route('admin.bao-cao-sang-loc.index') }}">
             <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>{{ __('triage_report.back_to_list') }}
         </a>
     </div>

@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Exports\AdminTriageExport;
+use App\Exports\QuanTriSangLocExport;
 use App\Http\Controllers\Controller;
 use App\Models\TrieuChungYTe;
 use App\Models\PhienSangLoc;
-use App\Services\Triage\TriageReportService;
+use App\Services\Triage\BaoCaoSangLocService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 
 class TriageReportController extends Controller
 {
-    public function __construct(private readonly TriageReportService $reportService)
+    public function __construct(private readonly BaoCaoSangLocService $reportService)
     {
     }
 
@@ -21,7 +21,7 @@ class TriageReportController extends Controller
     {
         $filters = $this->filters($request);
 
-        $cacPhien = $this->reportService->filterSessions($filters)
+        $cacPhien = $this->reportService->locCacPhien($filters)
             ->with(['nguoiDung:ma_nd,ho_ten,email', 'pharmacist:ma_nd,ho_ten'])
             ->orderByDesc('created_at')
             ->paginate(20)
@@ -32,15 +32,15 @@ class TriageReportController extends Controller
         );
 
         return view('admin.triage-reports.index', [
-            'summary' => $this->reportService->getSummary($filters),
-            'distribution' => $this->reportService->getOutcomeDistribution($filters),
-            'topSymptoms' => $this->reportService->getTopSymptoms(10, $filters),
-            'topRedFlags' => $this->reportService->getTopRedFlags(10, $filters),
-            'entryPoints' => $this->reportService->getEntryPointSplit($filters),
+            'summary' => $this->reportService->layTongHop($filters),
+            'distribution' => $this->reportService->layPhanBoKetQua($filters),
+            'topSymptoms' => $this->reportService->layTrieuChungNhieu(10, $filters),
+            'topRedFlags' => $this->reportService->layCoDoNhieu(10, $filters),
+            'entryPoints' => $this->reportService->layPhanBoNguonVao($filters),
             'sessions' => $cacPhien,
             'symptomNames' => $cacTenTrieuChung,
             'filters' => $filters,
-            'outcomeStyles' => TriageReportService::OUTCOME_STYLES,
+            'outcomeStyles' => BaoCaoSangLocService::OUTCOME_STYLES,
             'trendDays' => min(max($request->integer('days', 30), 1), 365),
         ]);
     }
@@ -60,26 +60,26 @@ class TriageReportController extends Controller
             'session' => $phien,
             'symptomNames' => $cacTenTrieuChung,
             'answers' => $this->collectedAnswers($phien),
-            'outcomeStyles' => TriageReportService::OUTCOME_STYLES,
+            'outcomeStyles' => BaoCaoSangLocService::OUTCOME_STYLES,
         ]);
     }
 
     public function outcomeChart(Request $request): JsonResponse
     {
-        return response()->json($this->reportService->getOutcomeDistribution($this->filters($request)));
+        return response()->json($this->reportService->layPhanBoKetQua($this->filters($request)));
     }
 
     public function trendChart(Request $request): JsonResponse
     {
         $days = min(max($request->integer('days', 30), 1), 365);
 
-        return response()->json($this->reportService->getDailyTrend($days, $this->filters($request)));
+        return response()->json($this->reportService->layXuHuongNgay($days, $this->filters($request)));
     }
 
     public function export(Request $request)
     {
         return Excel::download(
-            new AdminTriageExport($this->reportService, $this->filters($request)),
+            new QuanTriSangLocExport($this->reportService, $this->filters($request)),
             'bao-cao-sang-loc-' . now()->format('Y-m-d') . '.xlsx'
         );
     }

@@ -24,15 +24,15 @@
                         <div class="flex-grow-1">
                             <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
                                 <h6 class="fw-bold text-gray-900 mb-0">{{ __('messages.profile.order_prefix') }}{{ $order->ma_dh }}</h6>
-                                @if($order->status == 'Pending')
+                                @if($order->trang_thai == 'Pending')
                                     <span class="badge-glass-warning rounded-pill px-2 py-1 small">
                                         <i class="bi bi-clock me-1"></i>{{ order_status_text($order->trang_thai) }}
                                     </span>
-                                @elseif($order->status == 'Delivering')
+                                @elseif($order->trang_thai == 'Delivering')
                                     <span class="badge-glass-info rounded-pill px-2 py-1 small">
                                         <i class="bi bi-truck me-1"></i>{{ order_status_text($order->trang_thai) }}
                                     </span>
-                                @elseif($order->status == 'Completed')
+                                @elseif($order->trang_thai == 'Completed')
                                     <span class="badge-glass-success rounded-pill px-2 py-1 small">
                                         <i class="bi bi-check-circle me-1"></i>{{ order_status_text($order->trang_thai) }}
                                     </span>
@@ -93,15 +93,15 @@
                                 <div class="rounded-3 rounded-md-4 p-2 p-md-3 h-100 border border-amber-100" style="background: rgba(245,158,11,0.04);">
                                     <small class="text-gray-500 d-block mb-1" style="font-size: 0.7rem;"><i class="bi bi-info-circle text-amber-500 me-1"></i>{{ __('messages.profile.order_status') }}</small>
                                     <div class="mt-1">
-                                        @if($order->status == 'Pending')
+                                        @if($order->trang_thai == 'Pending')
                                             <span class="badge-glass-warning rounded-pill px-2 py-1" style="font-size: 0.7rem;">
                                                 <i class="bi bi-clock me-1"></i>{{ order_status_text($order->trang_thai) }}
                                             </span>
-                                        @elseif($order->status == 'Delivering')
+                                        @elseif($order->trang_thai == 'Delivering')
                                             <span class="badge-glass-info rounded-pill px-2 py-1" style="font-size: 0.7rem;">
                                                 <i class="bi bi-truck me-1"></i>{{ order_status_text($order->trang_thai) }}
                                             </span>
-                                        @elseif($order->status == 'Completed')
+                                        @elseif($order->trang_thai == 'Completed')
                                             <span class="badge-glass-success rounded-pill px-2 py-1" style="font-size: 0.7rem;">
                                                 <i class="bi bi-check-circle me-1"></i>{{ order_status_text($order->trang_thai) }}
                                             </span>
@@ -164,7 +164,7 @@
                             @foreach($order->chiTietDonHangs as $item)
                                 <div class="d-flex align-items-center gap-2 gap-md-3 p-2 p-md-3 {{ !$loop->last ? 'border-bottom' : '' }}" style="border-color: rgba(16,185,129,0.1) !important; background: rgba(255,255,255,0.7);">
                                     @if($item->sanPham)
-                                        <a href="{{ route('products.show', $item->sanPham->ma_sp) }}"
+                                        <a href="{{ route('san-pham.show', $item->sanPham->ma_sp) }}"
                                            class="position-relative bg-white rounded-2 rounded-md-3 overflow-hidden flex-shrink-0 border d-block"
                                            style="width: 48px; height: 48px; border-color: rgba(0,0,0,0.05) !important;"
                                            data-product-image-container
@@ -188,7 +188,7 @@
                                     @endif
                                     <div class="flex-grow-1 min-w-0">
                                         @if($item->sanPham)
-                                            <a href="{{ route('products.show', $item->sanPham->ma_sp) }}"
+                                            <a href="{{ route('san-pham.show', $item->sanPham->ma_sp) }}"
                                                class="fw-bold text-gray-800 mb-1 text-truncate text-decoration-none d-block"
                                                style="font-size: 0.85rem;">
                                                 {{ $item->sanPham->ten }}
@@ -227,7 +227,7 @@
             </div>
             <h6 class="fw-bold text-gray-700 mb-2">{{ __('messages.profile.no_orders') }}</h6>
             <p class="text-gray-500 mb-3">{{ __('messages.profile.no_orders_desc') }}</p>
-            <a href="{{ route('products.index') }}" class="btn btn-glass-primary rounded-pill px-4">
+            <a href="{{ route('san-pham.index') }}" class="btn btn-glass-primary rounded-pill px-4">
                 <i class="bi bi-cart-plus me-2"></i>{{ __('messages.profile.shop_now') }}
             </a>
         </div>

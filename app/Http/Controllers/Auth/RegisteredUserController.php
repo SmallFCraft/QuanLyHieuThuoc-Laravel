@@ -46,6 +46,6 @@ class RegisteredUserController extends Controller
 
         Auth::login($nguoiDung);
 
-        return redirect(route('home', absolute: false));
+        return redirect(route('trang-chu', absolute: false));
     }
 }

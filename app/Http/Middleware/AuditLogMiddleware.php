@@ -5,7 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use App\Services\AuditLogService;
+use App\Services\NhatKyKiemToanService;
 
 class AuditLogMiddleware
 {
@@ -45,7 +45,7 @@ class AuditLogMiddleware
             }
         }
         
-        app(AuditLogService::class)->log(
+        app(NhatKyKiemToanService::class)->ghi(
             $action,
             $modelType,
             null,

@@ -56,11 +56,11 @@
                  leaving the other two looking like debris beside it. --}}
             <div class="health-actions mt-4 health-no-print">
                 <div class="health-actions__group">
-                    <a href="{{ route('health.history') }}" class="health-link small">
+                    <a href="{{ route('sang-loc.lich-su') }}" class="health-link small">
                         <i class="bi bi-clock-history me-1" aria-hidden="true"></i>{{ __('messages.health.btn_history') }}
                     </a>
 
-                    <form method="POST" action="{{ route('health.restart') }}" class="d-inline m-0">
+                    <form method="POST" action="{{ route('sang-loc.bat-dau-lai') }}" class="d-inline m-0">
                         @csrf
                         <button type="submit" class="health-link small">
                             <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>{{ __('messages.health.btn_restart') }}
@@ -71,7 +71,7 @@
                 @unless ($hasProfile)
                     {{-- Its own block, so the offer reads as an offer rather than as the
                          third item in a menu the customer did not ask for. --}}
-                    <a href="{{ route('profile.edit') }}#health-profile" class="health-actions__offer">
+                    <a href="{{ route('ho-so.edit') }}#health-profile" class="health-actions__offer">
                         <span class="health-icon-tile health-actions__offer-tile" aria-hidden="true">
                             <i class="bi bi-person-vcard"></i>
                         </span>

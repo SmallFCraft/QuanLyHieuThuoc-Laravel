@@ -70,14 +70,14 @@ class HoSoSucKhoe extends Model
     /**
      * What people type into a tag field to mean "nothing to declare".
      *
-     * Not medical history: a literal "Không" in the allergy list made knownTerms()
-     * non-empty, which made MedicalTriageService::isStepCoveredByProfile() skip wizard
+     * Not medical history: a literal "Khong" in the allergy list made knownTerms()
+     * non-empty, which made SangLocYTeService::isStepCoveredByProfile() skip wizard
      * step 4 — so the triage never asked about chronic disease, allergy, pregnancy or
      * breastfeeding at all, and a follow-up round asked it instead.
      *
-     * Also keeps the encrypted column clean, because DrugSafetyService reads `allergies`
+     * Also keeps the encrypted column clean, because AnToanThuocService reads `allergies`
      * directly and falls back to substring-matching product names for terms of 4+ chars.
-     * "Không" folds to a 5-character string, so it is one unlucky product name away from
+     * "Khong" folds to a 5-character string, so it is one unlucky product name away from
      * blocking a cart with a bogus allergy warning.
      */
     public const NEGATION_TERMS = [

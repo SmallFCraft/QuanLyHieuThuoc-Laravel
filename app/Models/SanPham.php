@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Helpers\VietnameseHelper;
-use App\Support\ProductCodeGenerator;
+use App\Support\TaoMaSanPham;
 use App\Support\VietnameseText;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -66,7 +66,7 @@ class SanPham extends Model
             $danhMuc = DanhMuc::find($sanPham->ma_dm);
 
             if ($danhMuc instanceof DanhMuc) {
-                $sanPham->ma_san_pham = ProductCodeGenerator::productCodeForCategory($danhMuc);
+                $sanPham->ma_san_pham = TaoMaSanPham::maSanPhamTheoDanhMuc($danhMuc);
             }
         });
 
@@ -203,9 +203,9 @@ class SanPham extends Model
     }
 
     /**
-     * Shelf life for the storefront, the way pharmacy chains state it: "36 tháng"
+     * Shelf life for the storefront, the way pharmacy chains state it: "36 thang"
      * from the date of manufacture. Kept in the unit the manufacturer published —
-     * rewriting 36 months as "3 năm" would no longer match the source label.
+     * rewriting 36 months as "3 nam" would no longer match the source label.
      * Null when none was published, so callers hide the row instead of guessing.
      */
     public function getShelfLifeTextAttribute(): ?string
@@ -293,12 +293,12 @@ class SanPham extends Model
      * same way.
      *
      * Every word must match (AND, not OR). With a crawled catalog of thousands of
-     * rows, ORing the words of "thuốc ho cho trẻ" matched 2,875 of 3,132 products —
+     * rows, ORing the words of "thuoc ho cho tre" matched 2,875 of 3,132 products —
      * a result set that size is indistinguishable from no filter at all.
      *
      * Matching runs on the folded columns so an accent-free query works: the MySQL
-     * collation folds tone marks but not "đ", so "dau dau" found nothing while
-     * "đau đầu" found 30.
+     * collation folds tone marks but not "d", so "dau dau" found nothing while
+     * "dau dau" found 30.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -371,7 +371,7 @@ class SanPham extends Model
      * Folded query words, in the order typed. Single characters are dropped: one
      * letter matches most of the catalog and says nothing about intent.
      *
-     * Repeats are kept — "đau đầu" folds to "dau dau", and collapsing that to a
+     * Repeats are kept — "dau dau" folds to "dau dau", and collapsing that to a
      * single word would lose the phrase the ranking scores against.
      *
      * @return array<string>
@@ -421,7 +421,7 @@ class SanPham extends Model
             $inner->where('ten', 'like', $like)
                 ->orWhere('so_lo', 'like', $like)
                 ->orWhere('ma_san_pham', 'like', $like)
-                ->orWhereHas('danhMuc', fn ($danhMucQuery) => $danhMucQuery->where('name', 'like', $like));
+                ->orWhereHas('danhMuc', fn ($danhMucQuery) => $danhMucQuery->where('ten', 'like', $like));
         });
     }
 

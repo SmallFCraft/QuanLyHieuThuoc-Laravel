@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Chi tiết đơn hàng #' . $order->ma_dh)
-@section('page-title', 'Chi tiết đơn hàng #' . $order->ma_dh)
+@section('title', 'Chi tiết đơn hàng #' . $donHang->ma_dh)
+@section('page-title', 'Chi tiết đơn hàng #' . $donHang->ma_dh)
 @section('page-subtitle', 'Quản lý và cập nhật trạng thái đơn hàng')
 
 @section('content')
@@ -14,20 +14,20 @@
                 <table class="table table-borderless mb-0">
                     <tr>
                         <td class="text-gray-500 ps-0" style="width: 140px;">{{ __('messages.admin.orders.info_id') }}</td>
-                        <td class="fw-bold">#{{ $order->ma_dh }}</td>
+                        <td class="fw-bold">#{{ $donHang->ma_dh }}</td>
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">{{ __('messages.admin.orders.info_date') }}</td>
-                        <td class="fw-medium">{{ $order->formatted_created_at }}</td>
+                        <td class="fw-medium">{{ $donHang->formatted_created_at }}</td>
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">{{ __('messages.admin.orders.info_status') }}</td>
                         <td>
-                            @if($order->status == 'Pending')
+                            @if($donHang->trang_thai == 'Pending')
                                 <span class="badge bg-warning bg-opacity-10 text-warning-emphasis rounded-pill px-3 py-2"><i class="bi bi-clock me-1"></i>{{ __('messages.admin.orders.status_pending') }}</span>
-                            @elseif($order->status == 'Delivering')
+                            @elseif($donHang->trang_thai == 'Delivering')
                                 <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2"><i class="bi bi-truck me-1"></i>{{ __('messages.admin.orders.status_delivering') }}</span>
-                            @elseif($order->status == 'Completed')
+                            @elseif($donHang->trang_thai == 'Completed')
                                 <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2"><i class="bi bi-check-circle me-1"></i>Hoàn thành</span>
                             @else
                                 <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2"><i class="bi bi-x-circle me-1"></i>Đã hủy</span>
@@ -36,7 +36,7 @@
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">Tổng tiền</td>
-                        <td class="fw-bold text-emerald-700 fs-5">{{ $order->formatted_total }}</td>
+                        <td class="fw-bold text-emerald-700 fs-5">{{ $donHang->formatted_total }}</td>
                     </tr>
                 </table>
             </div>
@@ -49,25 +49,25 @@
                 <table class="table table-borderless mb-0">
                     <tr>
                         <td class="text-gray-500 ps-0" style="width: 140px;">Khách hàng</td>
-                        <td class="fw-medium">{{ $order->nguoiDung->ho_ten }}</td>
+                        <td class="fw-medium">{{ $donHang->nguoiDung->ho_ten }}</td>
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">Email</td>
-                        <td class="fw-medium">{{ $order->nguoiDung->email }}</td>
+                        <td class="fw-medium">{{ $donHang->nguoiDung->email }}</td>
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">Điện thoại</td>
-                        <td class="fw-medium">{{ $order->sdt_giao_hang ?? 'Chưa cung cấp' }}</td>
+                        <td class="fw-medium">{{ $donHang->sdt_giao_hang ?? 'Chưa cung cấp' }}</td>
                     </tr>
                     <tr>
                         <td class="text-gray-500 ps-0">Địa chỉ</td>
-                        <td class="fw-medium">{{ $order->dia_chi_giao_hang }}</td>
+                        <td class="fw-medium">{{ $donHang->dia_chi_giao_hang }}</td>
                     </tr>
-                    @if($order->thoi_gian_giao)
+                    @if($donHang->thoi_gian_giao)
                     <tr>
                         <td class="text-gray-500 ps-0">Thời gian giao</td>
                         <td class="fw-medium">
-                            @switch($order->thoi_gian_giao)
+                            @switch($donHang->thoi_gian_giao)
                                 @case('morning')
                                     <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3 py-2">
                                         <i class="bi bi-sunrise me-1"></i>Buổi sáng (8h - 12h)
@@ -91,10 +91,10 @@
                         </td>
                     </tr>
                     @endif
-                    @if($order->ghi_chu)
+                    @if($donHang->ghi_chu)
                     <tr>
                         <td class="text-gray-500 ps-0">Ghi chú</td>
-                        <td class="fw-medium fst-italic text-gray-700">"{{ $order->ghi_chu }}"</td>
+                        <td class="fw-medium fst-italic text-gray-700">"{{ $donHang->ghi_chu }}"</td>
                     </tr>
                     @endif
                 </table>
@@ -117,7 +117,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($order->chiTietDonHangs as $item)
+                    @foreach($donHang->chiTietDonHangs as $item)
                         <tr>
                             <td class="fw-medium">{{ $item->sanPham->ten }}</td>
                             <td class="text-gray-500 small">{{ $item->so_lo }}</td>
@@ -130,7 +130,7 @@
                 <tfoot>
                     <tr class="table-light">
                         <td colspan="4" class="text-end fw-bold">Tổng cộng:</td>
-                        <td class="fw-bold text-emerald-700 fs-5">{{ $order->formatted_total }}</td>
+                        <td class="fw-bold text-emerald-700 fs-5">{{ $donHang->formatted_total }}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -139,15 +139,15 @@
 
     <!-- Actions -->
     <div class="d-flex flex-wrap gap-3 align-items-center">
-        @if($order->status != 'Completed' && $order->status != 'Cancelled')
-            <form action="{{ route('admin.orders.updateStatus', $order->ma_dh) }}" method="POST" class="d-flex gap-2 align-items-center">
+        @if($donHang->trang_thai != 'Completed' && $donHang->trang_thai != 'Cancelled')
+            <form action="{{ route('admin.don-hang.cap-nhat-trang-thai', $donHang->ma_dh) }}" method="POST" class="d-flex gap-2 align-items-center">
                 @csrf
                 @method('PATCH')
                 <select name="status" class="form-select rounded-3 shadow-none" style="width: auto;">
-                    @if($order->status == 'Pending')
+                    @if($donHang->trang_thai == 'Pending')
                         <option value="Delivering">Chuyển sang Đang giao</option>
                         <option value="Cancelled">Hủy đơn hàng</option>
-                    @elseif($order->status == 'Delivering')
+                    @elseif($donHang->trang_thai == 'Delivering')
                         <option value="Completed">Hoàn thành</option>
                     @endif
                 </select>
@@ -157,8 +157,8 @@
             </form>
         @endif
 
-        @if($order->status == 'Pending')
-            <form action="{{ route('admin.orders.cancel', $order->ma_dh) }}" method="POST" class="d-inline">
+        @if($donHang->trang_thai == 'Pending')
+            <form action="{{ route('admin.don-hang.huy', $donHang->ma_dh) }}" method="POST" class="d-inline">
                 @csrf
                 <button type="submit" class="btn btn-outline-danger rounded-pill px-4 fw-medium" onclick="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')">
                     <i class="bi bi-x-lg me-1"></i>Hủy đơn hàng
@@ -166,7 +166,7 @@
             </form>
         @endif
 
-        <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-secondary rounded-pill px-4 fw-medium ms-auto">
+        <a href="{{ route('admin.don-hang.index') }}" class="btn btn-outline-secondary rounded-pill px-4 fw-medium ms-auto">
             <i class="bi bi-arrow-left me-1"></i>Quay lại
         </a>
     </div>

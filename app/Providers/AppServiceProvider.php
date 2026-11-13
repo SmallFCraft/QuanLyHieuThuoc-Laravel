@@ -49,9 +49,9 @@ class AppServiceProvider extends ServiceProvider
                     ->get()
             ));
 
-            // Dữ liệu cho panel tìm kiếm, nhúng thẳng vào trang thay vì gọi thêm một
-            // endpoint: panel mở là hiện ngay, không chờ mạng, và HTML đã được Blade
-            // escape. Cả ba khối đều sau cache nên chi phí là 2 query mỗi 10 phút.
+            // Du lieu cho panel tim kiem, nhung thang vao trang thay vi goi them mot
+            // endpoint: panel mo la hien ngay, khong cho mang, va HTML da duoc Blade
+            // escape. Ca ba khoi deu sau cache nen chi phi la 2 query moi 10 phut.
             $view->with('searchTrending', TruyVanTimKiem::trending());
 
             $view->with('searchPanelProducts', Cache::remember(

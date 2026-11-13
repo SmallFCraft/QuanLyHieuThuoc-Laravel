@@ -2,14 +2,14 @@
 
 namespace App\Services;
 
-use App\Jobs\ProcessChatbotMessage;
-use App\Jobs\ProcessTriageAdviceRewrite;
-use App\Jobs\ProcessTriageBriefing;
-use App\Jobs\ProcessTriageEvaluation;
+use App\Jobs\XuLyTinNhanChatbot;
+use App\Jobs\XuLyVietLaiLoiKhuyen;
+use App\Jobs\XuLyTomTatSangLoc;
+use App\Jobs\XuLyDanhGiaSangLoc;
 use App\Models\AiJob;
 use App\Models\PhienSangLoc;
-use App\Services\Triage\Ai\TriageAiAdviceService;
-use App\Services\Triage\Ai\TriageAiBriefingService;
+use App\Services\Triage\Ai\SangLocAiVietLaiService;
+use App\Services\Triage\Ai\SangLocAiTomTatService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -30,13 +30,13 @@ use Illuminate\Support\Str;
 class AiJobService
 {
     public function __construct(
-        protected AuditLogService $auditLogService,
+        protected NhatKyKiemToanService $nhatKyKiemToanService,
     ) {}
 
     /**
      * @param  array<string, mixed>  $context  Already-built chat context. Stored as-is:
      *                                         it holds the same message rows that are in `chat_messages` anyway, and
-     *                                         CleanupAiJobs wipes it after 24h.
+     *                                         DonDepCongViecAi wipes it after 24h.
      * @param  bool  $sync  Run the job in this request instead of queueing it. Used when
      *                      the browser detected that no worker picked the previous job up.
      */
@@ -62,9 +62,9 @@ class AiJobService
         $this->audit($job, 'ai_job_dispatched');
 
         if ($sync) {
-            ProcessChatbotMessage::dispatchSync($job->uuid);
+            XuLyTinNhanChatbot::dispatchSync($job->uuid);
         } else {
-            ProcessChatbotMessage::dispatch($job->uuid);
+            XuLyTinNhanChatbot::dispatch($job->uuid);
         }
 
         return $job->refresh();
@@ -75,7 +75,7 @@ class AiJobService
      *
      * The payload is only the session id: the service reads the answers from the row.
      * The patient waits on this job, so the conclusion is never revised after they
-     * have read it — see ProcessTriageEvaluation.
+     * have read it — see XuLyDanhGiaSangLoc.
      */
     public function dispatchEvaluation(PhienSangLoc $phien): AiJob
     {
@@ -89,7 +89,7 @@ class AiJobService
 
         // Queued, not run inline: the caller falls back to deciding in-request when
         // polling shows no worker ever picked the job up.
-        ProcessTriageEvaluation::dispatch($job->uuid);
+        XuLyDanhGiaSangLoc::dispatch($job->uuid);
 
         return $job->refresh();
     }
@@ -98,7 +98,7 @@ class AiJobService
      * Defer the advice rewrite for a session that is already finalised.
      *
      * The payload is only the session id: no customer free text, no profile field.
-     * TriageAiAdviceService reads what it needs from the row itself.
+     * SangLocAiVietLaiService reads what it needs from the row itself.
      */
     public function dispatchAdviceRewrite(PhienSangLoc $phien): AiJob
     {
@@ -110,7 +110,7 @@ class AiJobService
             'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
 
-        ProcessTriageAdviceRewrite::dispatch($job->uuid);
+        XuLyVietLaiLoiKhuyen::dispatch($job->uuid);
 
         return $job->refresh();
     }
@@ -121,7 +121,7 @@ class AiJobService
      */
     public function dispatchAdviceRewriteIfEligible(PhienSangLoc $phien): ?AiJob
     {
-        if (! app(TriageAiAdviceService::class)->isEligible($phien)) {
+        if (! app(SangLocAiVietLaiService::class)->duDieuKien($phien)) {
             return null;
         }
 
@@ -154,7 +154,7 @@ class AiJobService
             'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
 
-        ProcessTriageBriefing::dispatch($job->uuid);
+        XuLyTomTatSangLoc::dispatch($job->uuid);
 
         return $job->refresh();
     }
@@ -165,7 +165,7 @@ class AiJobService
      */
     public function dispatchBriefingIfEligible(PhienSangLoc $phien): ?AiJob
     {
-        if (! app(TriageAiBriefingService::class)->isEligible($phien)) {
+        if (! app(SangLocAiTomTatService::class)->duDieuKien($phien)) {
             return null;
         }
 
@@ -226,7 +226,7 @@ class AiJobService
      * Retire a turn the customer pressed stop on.
      *
      * `cancelled`, not `failed`: a late poll must not paint an error the customer never
-     * caused, and ProcessChatbotMessage re-reads the row after the provider answers, so
+     * caused, and XuLyTinNhanChatbot re-reads the row after the provider answers, so
      * a stopped turn never reaches `chat_messages` — the transcript keeps matching what
      * the customer actually saw.
      */
@@ -330,7 +330,7 @@ class AiJobService
     protected function audit(AiJob $job, string $action): void
     {
         try {
-            $this->auditLogService->log(
+            $this->nhatKyKiemToanService->ghi(
                 action: $action,
                 modelType: AiJob::class,
                 modelId: $job->ma_aj,

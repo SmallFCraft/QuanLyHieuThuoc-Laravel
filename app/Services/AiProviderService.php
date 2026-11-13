@@ -733,18 +733,18 @@ class AiProviderService
 
     /**
      * Tool-call argument tags are transport noise, not content. opencode (session 64)
-     * prefixed a value with the tag it was asked to fill — `<parameter>why>Sốt cao` or
-     * `<parameter name="why">Sốt cao` — and every consumer decodes these arguments
+     * prefixed a value with the tag it was asked to fill — `<parameter>why>Sot cao` or
+     * `<parameter name="why">Sot cao` — and every consumer decodes these arguments
      * (chatbot queries, triage briefing, triage facts), so the scrub belongs here
      * rather than in each service that happens to display the value.
      *
      * Scrub the decoded values, never the encoded blob: a regex over the JSON text can
      * run past the end of an unterminated tag and eat the fields in between (a dosage
-     * note like "Dùng <param 500mg" swallowed everything up to the next `>`), and the
+     * note like "Dung <param 500mg" swallowed everything up to the next `>`), and the
      * result is still valid JSON, so the loss is silent.
      *
      * Always returns a string, because that is the shape every consumer expects:
-     * TriageAiService::decodeToolCall rejects a non-string, and ChatbotService hands the
+     * SangLocAiService::decodeToolCall rejects a non-string, and ChatbotService hands the
      * value straight to json_decode. A payload with nothing to scrub is returned
      * byte-identical.
      */
@@ -766,7 +766,7 @@ class AiProviderService
         }
 
         // Some providers send arguments as an object/array rather than a JSON string.
-        // Consumers down the wire expect a string (TriageAiService rejects non-strings,
+        // Consumers down the wire expect a string (SangLocAiService rejects non-strings,
         // ChatbotService passes it straight to json_decode). Normalize to a JSON string.
         if (is_array($arguments)) {
             [$scrubbed] = $this->scrubArgumentValues($arguments);

@@ -22,7 +22,7 @@
     {{-- data-profile-form: profile.js gắn kiểm tra khi blur và tự lưu nháp vào
          localStorage, xoá nháp sau khi submit thành công. --}}
     <form method="POST"
-          action="{{ route('profile.update') }}"
+          action="{{ route('ho-so.update') }}"
           id="profileForm"
           data-profile-form
           data-draft-key="pharmacy.profileDraft.{{ $user->ma_nd }}"
@@ -188,8 +188,8 @@
                 <span class="profile-overview-item__icon"><i class="bi bi-shield-check"></i></span>
                 <div>
                     <small class="text-gray-500 d-block" style="font-size: 0.75rem;">{{ __('messages.profile.status') }}</small>
-                    <p class="fw-semibold {{ $user->status === 'active' ? 'text-success' : 'text-secondary' }} mb-0 small">
-                        <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;" aria-hidden="true"></i>{{ $user->status === 'active' ? __('messages.auth.status_active') : __('messages.auth.status_inactive') }}
+                    <p class="fw-semibold {{ $user->trang_thai === 'active' ? 'text-success' : 'text-secondary' }} mb-0 small">
+                        <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;" aria-hidden="true"></i>{{ $user->trang_thai === 'active' ? __('messages.auth.status_active') : __('messages.auth.status_inactive') }}
                     </p>
                 </div>
             </div>

@@ -14,18 +14,21 @@ class AiJob extends Model
     public const KIND_TRIAGE_BRIEFING = 'triage_briefing';
 
     /**
-     * Never picked up by a worker after this long means no worker is running.
+     * Never picked up by a worker after this long means no worker is coming.
      *
-     * Measured against pickup, not execution: a worker claims a job within a second
-     * and flips it to `running`, and `isStranded()` returns false for anything not
-     * `queued`. So a job still queued after 12s is one nobody is coming for — however
-     * long the provider call itself then takes.
+     * Measured against pickup, not execution: a worker claims a job and flips it to
+     * `running`, and `isStranded()` returns false for anything not `queued`. The
+     * threshold must exceed the worker's pickup latency: a daemon worker claims within
+     * a second, but the cron-per-minute worker on shared hosting (`queue:work
+     * --stop-when-empty`) can only claim a job at its next tick — up to 60s away plus
+     * boot time. A 12s value made every job lose that race: the result page abandoned
+     * the job and deleted its queue entry seconds before the tick.
      */
-    public const SYNC_FALLBACK_SECONDS = 12;
+    public const SYNC_FALLBACK_SECONDS = 75;
 
     /**
      * A `running` job older than this lost its worker, so it stops counting as proof
-     * that one is alive. Matches ProcessChatbotMessage::$timeout.
+     * that one is alive. Matches XuLyTinNhanChatbot::$timeout.
      */
     public const WORKER_ALIVE_SECONDS = 120;
 

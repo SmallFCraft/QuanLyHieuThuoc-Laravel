@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Support;
 
-use App\Services\DrugSafetyService;
+use App\Services\AnToanThuocService;
 use App\Support\LongChauProduct;
 use Illuminate\Support\Carbon;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -15,7 +15,7 @@ class LongChauProductTest extends TestCase
         return file_get_contents(base_path("tests/fixtures/longchau/{$name}"));
     }
 
-    public function test_it_maps_every_product_field_from_a_real_page(): void
+    public function test_mo_phong_du_cac_truong_san_pham_tu_trang_thuc(): void
     {
         $product = LongChauProduct::fromHtml($this->fixture('panadol.html'));
 
@@ -32,27 +32,27 @@ class LongChauProductTest extends TestCase
         $this->assertFalse($product->prescription);
     }
 
-    public function test_it_takes_the_box_price_not_the_per_unit_price(): void
+    public function test_lay_gia_hop_chu_khong_lay_gia_theo_don_vi(): void
     {
         // prices[] on the fixture is [Hộp 252000, Vỉ 16800, Viên 1400]. The row
         // describes a box, so the box price is the only one that matches it.
         $this->assertSame(252000, LongChauProduct::fromHtml($this->fixture('panadol.html'))->price);
     }
 
-    public function test_a_product_without_a_published_price_is_rejected(): void
+    public function test_san_pham_khong_cong_bo_gia_ban_tu_choi(): void
     {
         // Vietnamese law bars listing prescription drug prices online, so Long Châu
         // sends price: null for every unit. products.price is NOT NULL.
         $this->assertNull(LongChauProduct::fromHtml($this->fixture('bisoloc-no-price.html')));
     }
 
-    public function test_missing_next_data_is_reported_separately_from_an_unusable_product(): void
+    public function test_thieu_next_data_bao_cao_rieng_khoi_san_pham_khong_dung_duoc(): void
     {
         $this->assertNull(LongChauProduct::extractNextData('<html><body>404</body></html>'));
         $this->assertIsArray(LongChauProduct::extractNextData($this->fixture('panadol.html')));
     }
 
-    public function test_ingredients_use_the_format_drug_safety_service_parses(): void
+    public function test_thanh_phan_dung_dinh_dang_trich_xuat_hoat_chat_doc_duoc(): void
     {
         $product = LongChauProduct::fromHtml($this->fixture('panadol.html'));
 
@@ -60,13 +60,13 @@ class LongChauProductTest extends TestCase
 
         // The cart interaction check reads products.ingredients, so the crawler's
         // format has to survive its tokeniser or every warning goes silent.
-        $extracted = app(DrugSafetyService::class)->extractIngredients($product->ingredients);
+        $extracted = app(AnToanThuocService::class)->trichXuatHoatChat($product->ingredients);
 
         $this->assertContains('paracetamol', $extracted);
         $this->assertContains('caffeine', $extracted);
     }
 
-    public function test_usage_is_plain_text_carrying_both_indications_and_dosage(): void
+    public function test_cach_dung_la_van_ban_thuan_chua_ca_chi_dinh_va_lieu_dung(): void
     {
         $usage = LongChauProduct::fromHtml($this->fixture('panadol.html'))->usage;
 
@@ -90,7 +90,7 @@ class LongChauProductTest extends TestCase
     }
 
     #[DataProvider('shelfLifeProvider')]
-    public function test_it_reads_the_shelf_life_long_chau_publishes(?string $raw, ?int $expected): void
+    public function test_doc_han_su_dung_long_chau_cong_bo(?string $raw, ?int $expected): void
     {
         $product = LongChauProduct::fromNextData($this->nextData(['expirationDate' => $raw]));
 
@@ -99,7 +99,7 @@ class LongChauProductTest extends TestCase
         $this->assertSame($expected, $product->shelfLifeMonths);
     }
 
-    public function test_the_placeholder_batch_is_still_dated_without_a_published_shelf_life(): void
+    public function test_lo_du_phong_van_co_ngay_het_han_khi_khong_cong_bo_han_su_dung(): void
     {
         $product = LongChauProduct::fromNextData($this->nextData(['expirationDate' => null]));
 
@@ -111,7 +111,7 @@ class LongChauProductTest extends TestCase
         );
     }
 
-    public function test_the_batch_number_is_derived_from_the_sku_so_recrawling_reuses_the_batch(): void
+    public function test_so_lo_bat_xuat_tu_sku_de_crawl_lai_dung_lai_so_lo(): void
     {
         $product = LongChauProduct::fromHtml($this->fixture('panadol.html'));
 
@@ -120,7 +120,7 @@ class LongChauProductTest extends TestCase
         $this->assertSame('LC-00005713', $product->batchNumber());
     }
 
-    public function test_the_expiry_date_follows_the_published_shelf_life(): void
+    public function test_ngay_het_han_theo_han_su_dung_da_cong_bo(): void
     {
         $product = LongChauProduct::fromHtml($this->fixture('panadol.html'));
 
@@ -130,14 +130,14 @@ class LongChauProductTest extends TestCase
         );
     }
 
-    public function test_products_missing_a_name_category_or_sku_are_rejected(): void
+    public function test_san_pham_thieu_ten_danh_muc_hoac_sku_ban_tu_choi(): void
     {
         $this->assertNull(LongChauProduct::fromNextData($this->nextData(['webName' => '', 'name' => ''])));
         $this->assertNull(LongChauProduct::fromNextData($this->nextData(['sku' => null])));
         $this->assertNull(LongChauProduct::fromNextData($this->nextData(['categories' => []])));
     }
 
-    public function test_a_price_outside_the_storable_range_is_rejected(): void
+    public function test_gia_ngoai_khoang_luu_duoc_ban_tu_choi(): void
     {
         $this->assertNull(LongChauProduct::fromNextData($this->nextData([
             'prices' => [['level' => 1, 'price' => 0]],
@@ -147,7 +147,7 @@ class LongChauProductTest extends TestCase
         ])));
     }
 
-    public function test_it_falls_back_to_a_smaller_pack_when_the_box_has_no_price(): void
+    public function test_du_phong_ve_go_nho_hon_khi_hop_khong_co_gia(): void
     {
         $product = LongChauProduct::fromNextData($this->nextData([
             'prices' => [
@@ -160,7 +160,7 @@ class LongChauProductTest extends TestCase
         $this->assertSame(16800, $product->price, 'The largest pack with a price wins, not the cheapest.');
     }
 
-    public function test_oversized_strings_from_the_source_cannot_break_the_insert(): void
+    public function test_chuoi_qua_dai_tu_nguon_khong_lam_vo_insert(): void
     {
         $product = LongChauProduct::fromNextData($this->nextData([
             'webName' => str_repeat('a', 400),
@@ -171,7 +171,7 @@ class LongChauProductTest extends TestCase
         $this->assertNull($product->imageUrl);
     }
 
-    public function test_images_are_requested_through_the_cdn_resize_endpoint(): void
+    public function test_hinh_anh_yeu_cau_qua_endpoint_resize_cdn(): void
     {
         // The originals are 1.5-3.5 MB each. Long Châu's own resize endpoint serves
         // the same image as webp at 40-100 KB, which is what a product card needs.
@@ -183,7 +183,7 @@ class LongChauProductTest extends TestCase
         );
     }
 
-    public function test_a_nested_image_path_keeps_its_subfolder(): void
+    public function test_duong_dan_hinh_lom_giu_nguyen_thu_muc_con(): void
     {
         // Only the v1/static/ prefix is dropped; the resize endpoint 500s if a
         // remaining subfolder such as smalls/ is stripped too.
@@ -197,7 +197,7 @@ class LongChauProductTest extends TestCase
         );
     }
 
-    public function test_an_unexpected_image_host_or_path_is_stored_unchanged(): void
+    public function test_host_hoac_duong_dan_hinh_bat_ngo_du_luu_nguyen(): void
     {
         // If Long Châu moves its files, serving the original beats serving nothing.
         $product = LongChauProduct::fromNextData($this->nextData([
@@ -207,7 +207,7 @@ class LongChauProductTest extends TestCase
         $this->assertSame('https://images.example.com/v2/other/panadol.png', $product->imageUrl);
     }
 
-    public function test_an_already_resized_url_is_not_wrapped_twice(): void
+    public function test_url_da_resize_khong_bi_boc_ma_lan_nua(): void
     {
         $url = 'https://cdn.nhathuoclongchau.com.vn/unsafe/425x0/filters:quality(90):format(webp)/panadol.png';
 

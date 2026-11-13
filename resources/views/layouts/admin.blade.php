@@ -33,7 +33,7 @@
             <ul class="admin-nav">
                 <li class="admin-nav__label">Tổng quan</li>
                 <li>
-                    <a href="{{ route('admin.dashboard') }}" class="admin-nav__link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" @if(request()->routeIs('admin.dashboard')) aria-current="page" @endif>
+                    <a href="{{ route('admin.bang-dieu-khien') }}" class="admin-nav__link {{ request()->routeIs('admin.bang-dieu-khien') ? 'active' : '' }}" @if(request()->routeIs('admin.bang-dieu-khien')) aria-current="page" @endif>
                         <i class="bi bi-grid-1x2-fill" aria-hidden="true"></i>
                         <span>Dashboard</span>
                     </a>
@@ -41,31 +41,31 @@
 
                 <li class="admin-nav__label">Quản lý</li>
                 <li>
-                    <a href="{{ route('admin.users.index') }}" class="admin-nav__link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" @if(request()->routeIs('admin.users.*')) aria-current="page" @endif>
+                    <a href="{{ route('admin.nguoi-dung.index') }}" class="admin-nav__link {{ request()->routeIs('admin.nguoi-dung.*') ? 'active' : '' }}" @if(request()->routeIs('admin.nguoi-dung.*')) aria-current="page" @endif>
                         <i class="bi bi-people-fill" aria-hidden="true"></i>
                         <span>Người dùng</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ route('admin.products.index') }}" class="admin-nav__link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}" @if(request()->routeIs('admin.products.*')) aria-current="page" @endif>
+                    <a href="{{ route('admin.san-pham.index') }}" class="admin-nav__link {{ request()->routeIs('admin.san-pham.*') ? 'active' : '' }}" @if(request()->routeIs('admin.san-pham.*')) aria-current="page" @endif>
                         <i class="bi bi-box-seam-fill" aria-hidden="true"></i>
                         <span>Sản phẩm</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ route('admin.orders.index') }}" class="admin-nav__link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}" @if(request()->routeIs('admin.orders.*')) aria-current="page" @endif>
+                    <a href="{{ route('admin.don-hang.index') }}" class="admin-nav__link {{ request()->routeIs('admin.don-hang.*') ? 'active' : '' }}" @if(request()->routeIs('admin.don-hang.*')) aria-current="page" @endif>
                         <i class="bi bi-bag-check-fill" aria-hidden="true"></i>
                         <span>Đơn hàng</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ route('admin.categories.index') }}" class="admin-nav__link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>
+                    <a href="{{ route('admin.danh-muc.index') }}" class="admin-nav__link {{ request()->routeIs('admin.danh-muc.*') ? 'active' : '' }}" @if(request()->routeIs('admin.danh-muc.*')) aria-current="page" @endif>
                         <i class="bi bi-tags-fill" aria-hidden="true"></i>
                         <span>Danh mục</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ route('admin.inventory.index') }}" class="admin-nav__link {{ request()->routeIs('admin.inventory.*') ? 'active' : '' }}" @if(request()->routeIs('admin.inventory.*')) aria-current="page" @endif>
+                    <a href="{{ route('admin.ton-kho.index') }}" class="admin-nav__link {{ request()->routeIs('admin.ton-kho.*') ? 'active' : '' }}" @if(request()->routeIs('admin.ton-kho.*')) aria-current="page" @endif>
                         <i class="bi bi-boxes" aria-hidden="true"></i>
                         <span>Tồn kho</span>
                     </a>
@@ -73,19 +73,19 @@
 
                 <li class="admin-nav__label">Hệ thống</li>
                 <li>
-                    <a href="{{ route('admin.chatSessions.index') }}" class="admin-nav__link {{ request()->routeIs('admin.chatSessions.*') ? 'active' : '' }}" @if(request()->routeIs('admin.chatSessions.*')) aria-current="page" @endif>
+                    <a href="{{ route('admin.phien-chat.index') }}" class="admin-nav__link {{ request()->routeIs('admin.phien-chat.*') ? 'active' : '' }}" @if(request()->routeIs('admin.phien-chat.*')) aria-current="page" @endif>
                         <i class="bi bi-chat-dots-fill" aria-hidden="true"></i>
                         <span>Phiên chat AI</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ route('admin.triageReports.index') }}" class="admin-nav__link {{ request()->routeIs('admin.triageReports.*') ? 'active' : '' }}" @if(request()->routeIs('admin.triageReports.*')) aria-current="page" @endif>
+                    <a href="{{ route('admin.bao-cao-sang-loc.index') }}" class="admin-nav__link {{ request()->routeIs('admin.bao-cao-sang-loc.*') ? 'active' : '' }}" @if(request()->routeIs('admin.bao-cao-sang-loc.*')) aria-current="page" @endif>
                         <i class="bi bi-clipboard2-pulse-fill" aria-hidden="true"></i>
                         <span>Báo cáo sàng lọc</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ route('home') }}" class="admin-nav__link">
+                    <a href="{{ route('trang-chu') }}" class="admin-nav__link">
                         <i class="bi bi-house-door" aria-hidden="true"></i>
                         <span>Về trang chủ</span>
                     </a>
@@ -117,7 +117,7 @@
                             <p class="mb-0 fw-semibold small">{{ Auth::user()->email }}</p>
                         </li>
                         <li>
-                            <a class="dropdown-item py-2" href="{{ route('profile.edit') }}">
+                            <a class="dropdown-item py-2" href="{{ route('ho-so.edit') }}">
                                 <i class="bi bi-person me-2 text-secondary" aria-hidden="true"></i>Hồ sơ
                             </a>
                         </li>

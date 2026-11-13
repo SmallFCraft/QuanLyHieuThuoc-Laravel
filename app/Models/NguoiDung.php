@@ -55,8 +55,8 @@ class NguoiDung extends Authenticatable
      *
      * @return array<string, string>
      */
-    // Cột đã việt hóa thành thoi_diem_xac_thuc_email; Breeze (VerifyEmailController,
-    // MustVerifyEmail trait) gọi $this->email_verified_at nên map qua accessor/mutator.
+    // Cot da viet hoa thanh thoi_diem_xac_thuc_email; Breeze (VerifyEmailController,
+    // MustVerifyEmail trait) goi $this->email_verified_at nen map qua accessor/mutator.
     public function getEmailVerifiedAtAttribute(): ?\Illuminate\Support\Carbon
     {
         return $this->thoi_diem_xac_thuc_email;
@@ -140,10 +140,10 @@ class NguoiDung extends Authenticatable
     }
 
     /**
-     * URL ảnh đại diện, hoặc null khi chưa tải lên (giao diện tự đổ về chữ cái đầu).
+     * URL anh dai dien, hoac null khi chua tai len (giao dien tu do ve chu cai dau).
      *
-     * Kiểm tra file có thật: bản ghi có thể còn trỏ tới ảnh đã bị xoá khỏi disk, lúc
-     * đó một <img> hỏng xấu hơn là chữ cái đầu.
+     * Kiem tra file co that: ban ghi co the con tro toi anh da bi xoa khoi disk, luc
+     * do mot <img> hong xau hon la chu cai dau.
      */
     public function avatarUrl(): ?string
     {
@@ -155,15 +155,15 @@ class NguoiDung extends Authenticatable
             return null;
         }
 
-        // asset(), không phải Storage::url(): URL của disk 'public' dựng từ APP_URL, nên
-        // trên dev server (cổng 8123) nó trả về http://localhost/... và ảnh không tải
-        // được. asset() lấy origin từ request hiện tại.
-        // ponytail: gắn với disk 'public' + symlink public/storage. Đổi sang S3 thì
-        // quay lại Storage::url() và đặt APP_URL/ASSET_URL cho đúng.
+        // asset(), khong phai Storage::url(): URL cua disk 'public' dung tu APP_URL, nen
+        // tren dev server (cong 8123) no tra ve http://localhost/... va anh khong tai
+        // duoc. asset() lay origin tu request hien tai.
+        // ponytail: gan voi disk 'public' + symlink public/storage. Doi sang S3 thi
+        // quay lai Storage::url() va dat APP_URL/ASSET_URL cho dung.
         return asset('storage/' . ltrim($this->anh_dai_dien, '/'));
     }
 
-    /** Chữ cái đầu của tên, dùng khi chưa có ảnh đại diện. */
+    /** Chu cai dau cua ten, dung khi chua co anh dai dien. */
     public function initial(): string
     {
         return mb_strtoupper(mb_substr(trim($this->ho_ten), 0, 1)) ?: '?';

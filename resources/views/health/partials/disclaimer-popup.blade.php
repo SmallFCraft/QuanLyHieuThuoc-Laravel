@@ -41,7 +41,7 @@
         {{-- No data-triage-form: the wizard's delegated submit listener must not turn
              this into a stage swap. ackDisclaimer() redirects to a named route, so the
              ?disclaimer=1 of a "Xem lại" visit never survives the POST. --}}
-        <form method="POST" action="{{ route('health.disclaimer.ack') }}" class="m-0">
+        <form method="POST" action="{{ route('sang-loc.disclaimer.xac-nhan') }}" class="m-0">
             @csrf
             @isset($ma_sl)
                 <input type="hidden" name="MaSL" value="{{ $ma_sl }}">

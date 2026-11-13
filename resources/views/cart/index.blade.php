@@ -34,7 +34,7 @@
         <h1 class="fw-bold text-gray-900 mb-1">{{ __('messages.cart.title') }}</h1>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-emerald-600 text-decoration-none">{{ __('messages.home') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('trang-chu') }}" class="text-emerald-600 text-decoration-none">{{ __('messages.home') }}</a></li>
                 <li class="breadcrumb-item active" aria-current="page">{{ __('messages.cart.title') }}</li>
             </ol>
         </nav>
@@ -49,7 +49,7 @@
                     @if(session('drug_warning_product'))
                         {{-- Same request as before plus confirm_warning=1, so the override is
                              an explicit act by the customer, not a retry side effect. --}}
-                        <form action="{{ route('cart.add') }}" method="POST" class="d-flex flex-wrap gap-2 mt-3">
+                        <form action="{{ route('gio-hang.them') }}" method="POST" class="d-flex flex-wrap gap-2 mt-3">
                             @csrf
                             <input type="hidden" name="MaSP" value="{{ session('drug_warning_product') }}">
                             <input type="hidden" name="quantity" value="{{ session('drug_warning_quantity', 1) }}">
@@ -58,7 +58,7 @@
                                     style="min-height:44px; background:#B91C1C;">
                                 <i class="bi bi-check2-circle me-2" aria-hidden="true"></i>{{ __('messages.drug_safety.confirm_button') }}
                             </button>
-                            <a href="{{ route('products.index') }}" class="btn btn-outline-secondary fw-semibold rounded-pill px-4 d-inline-flex align-items-center"
+                            <a href="{{ route('san-pham.index') }}" class="btn btn-outline-secondary fw-semibold rounded-pill px-4 d-inline-flex align-items-center"
                                style="min-height:44px;">
                                 {{ __('messages.drug_safety.cancel_button') }}
                             </a>
@@ -68,7 +68,7 @@
             </div>
         @endif
 
-        @if(empty($cartItems))
+        @if(empty($cacMucGioHang))
             <!-- Empty Cart -->
             <div class="glass-card rounded-4 border-0 text-center py-5 px-4">
                 <div class="bg-emerald-50 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width:100px; height:100px;">
@@ -76,7 +76,7 @@
                 </div>
                 <h3 class="fw-bold text-gray-800 mb-2">{{ __('messages.cart.empty_title') }}</h3>
                 <p class="text-gray-500 mb-4">{{ __('messages.cart.empty_message') }}</p>
-                <a href="{{ route('products.index') }}" class="btn btn-glass-success rounded-pill px-5 py-3 fw-medium shadow-sm border-0">
+                <a href="{{ route('san-pham.index') }}" class="btn btn-glass-success rounded-pill px-5 py-3 fw-medium shadow-sm border-0">
                     <i class="bi bi-cart-plus me-2"></i>{{ __('messages.cart.start_shopping') }}
                 </a>
             </div>
@@ -88,12 +88,12 @@
                         <div class="p-4 border-bottom" style="border-color: rgba(0,0,0,0.06) !important;">
                             <h5 class="fw-bold mb-0">
                                 <i class="bi bi-cart3 text-emerald-600 me-2"></i>
-                                {{ __('messages.cart.items_count') }} (<span id="cart-count">{{ count($cartItems) }}</span>)
+                                {{ __('messages.cart.items_count') }} (<span id="cart-count">{{ count($cacMucGioHang) }}</span>)
                             </h5>
                         </div>
                         
                         <div id="cart-items-container">
-                            @foreach($cartItems as $item)
+                            @foreach($cacMucGioHang as $item)
                                 <div class="cart-item d-flex align-items-center gap-3 p-4 border-bottom flex-wrap position-relative" 
                                      style="border-color: rgba(0,0,0,0.04) !important;" 
                                      data-product-id="{{ $item["sanPham"]->ma_sp }}"
@@ -113,7 +113,7 @@
                                     <!-- Info -->
                                     <div class="flex-grow-1 min-w-0">
                                         <h6 class="fw-bold text-gray-800 mb-1 text-truncate">
-                                            <a href="{{ route('products.show', $item["sanPham"]->ma_sp) }}" class="cart-product-link">
+                                            <a href="{{ route('san-pham.show', $item["sanPham"]->ma_sp) }}" class="cart-product-link">
                                                 {{ $item["sanPham"]->ten }}
                                             </a>
                                         </h6>
@@ -156,7 +156,7 @@
                         </div>
                         
                         <div class="p-4">
-                            <a href="{{ route('products.index') }}" class="text-emerald-600 text-decoration-none fw-medium">
+                            <a href="{{ route('san-pham.index') }}" class="text-emerald-600 text-decoration-none fw-medium">
                                 <i class="bi bi-arrow-left me-2"></i>{{ __('messages.cart.continue_shopping') }}
                             </a>
                         </div>
@@ -172,7 +172,7 @@
                         
                         <div class="d-flex justify-content-between mb-2">
                             <span class="text-gray-500">{{ __('messages.cart.subtotal') }}</span>
-                            <span class="fw-medium" id="subtotal-amount">{{ number_format($total, 0, ',', '.') }} ₫</span>
+                            <span class="fw-medium" id="subtotal-amount">{{ number_format($tongTien, 0, ',', '.') }} ₫</span>
                         </div>
                         
                         <div class="d-flex justify-content-between mb-2">
@@ -184,11 +184,11 @@
                         
                         <div class="d-flex justify-content-between mb-4">
                             <span class="fw-bold fs-5">{{ __('messages.cart.total') }}</span>
-                            <span class="fw-bold fs-4 text-emerald-700" id="total-amount">{{ number_format($total, 0, ',', '.') }} ₫</span>
+                            <span class="fw-bold fs-4 text-emerald-700" id="total-amount">{{ number_format($tongTien, 0, ',', '.') }} ₫</span>
                         </div>
                         
                         @auth
-                            <a href="{{ route('checkout.index') }}" class="btn btn-lg w-100 text-white fw-bold rounded-pill shadow" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                            <a href="{{ route('thanh-toan.index') }}" class="btn btn-lg w-100 text-white fw-bold rounded-pill shadow" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
                                 <i class="bi bi-credit-card me-2"></i>{{ __('messages.cart.checkout_btn') }}
                             </a>
                         @else
@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <h3 class="fw-bold text-gray-800 mb-2">{{ __('messages.cart.empty_title') }}</h3>
                     <p class="text-gray-500 mb-4">{{ __('messages.cart.empty_message') }}</p>
-                    <a href="{{ route('products.index') }}" class="btn btn-glass-success rounded-pill px-5 py-3 fw-medium shadow-sm border-0">
+                    <a href="{{ route('san-pham.index') }}" class="btn btn-glass-success rounded-pill px-5 py-3 fw-medium shadow-sm border-0">
                         <i class="bi bi-cart-plus me-2"></i>{{ __('messages.cart.start_shopping') }}
                     </a>
                 </div>

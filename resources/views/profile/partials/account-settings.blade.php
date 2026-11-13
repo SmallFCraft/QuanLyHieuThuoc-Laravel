@@ -51,8 +51,8 @@
         <div class="col-md-6">
             <div class="p-3 rounded-3 bg-emerald-50">
                 <small class="text-gray-500 d-block mb-1">{{ __('messages.profile.status_label') }}</small>
-                <span class="badge {{ $user->status === 'active' ? 'bg-success' : 'bg-secondary' }} bg-opacity-10 {{ $user->status === 'active' ? 'text-success' : 'text-secondary' }} rounded-pill px-3 py-1">
-                    <i class="bi {{ $user->status === 'active' ? 'bi-check-circle' : 'bi-pause-circle' }} me-1" aria-hidden="true"></i>{{ $user->status === 'active' ? __('messages.auth.status_active') : __('messages.auth.status_inactive') }}
+                <span class="badge {{ $user->trang_thai === 'active' ? 'bg-success' : 'bg-secondary' }} bg-opacity-10 {{ $user->trang_thai === 'active' ? 'text-success' : 'text-secondary' }} rounded-pill px-3 py-1">
+                    <i class="bi {{ $user->trang_thai === 'active' ? 'bi-check-circle' : 'bi-pause-circle' }} me-1" aria-hidden="true"></i>{{ $user->trang_thai === 'active' ? __('messages.auth.status_active') : __('messages.auth.status_inactive') }}
                 </span>
             </div>
         </div>
@@ -85,7 +85,7 @@
         <strong>{{ __('messages.profile.delete_warning_title') }}</strong> {{ __('messages.profile.delete_warning_desc') }}
     </div>
 
-    <form method="POST" action="{{ route('profile.destroy') }}" id="deleteAccountForm">
+    <form method="POST" action="{{ route('ho-so.destroy') }}" id="deleteAccountForm">
         @csrf
         @method('delete')
 

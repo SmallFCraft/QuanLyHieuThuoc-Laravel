@@ -16,9 +16,9 @@ use Illuminate\Support\Str;
 class ChatbotService
 {
     protected AiProviderService $aiService;
-    protected InventoryService $inventoryService;
-    protected CheckoutService $checkoutService;
-    protected AuditLogService $auditLogService;
+    protected TonKhoService $tonKhoService;
+    protected ThanhToanService $thanhToanService;
+    protected NhatKyKiemToanService $nhatKyKiemToanService;
 
     /**
      * The widget turns a markdown link into a button only on an exact label match —
@@ -37,7 +37,7 @@ class ChatbotService
      * Used only when `medical_red_flags` cannot be read. Mirrors the seeded
      * chat_short_circuit rows so a database problem degrades urgent detection to
      * the same decisions rather than a different set. Bare 'ngat' and 'nguy hiem'
-     * are deliberately absent: they fire on "ngắt lời", "việc này nguy hiểm không".
+     * are deliberately absent: they fire on "ngat loi", "viec nay nguy hiem khong".
      */
     protected const URGENT_KEYWORDS_FALLBACK = [
         'ung thu', 'giai doan cuoi', 'cap cuu', 'nguy kich', 'rat nguy hiem', 'khan cap',
@@ -121,12 +121,12 @@ PROMPT;
     /**
      * Verbs and framing a customer wraps a catalog search in. Stripped before the
      * keyword tiers run, because whatever survives is LIKE-matched against product
-     * text as one phrase: "kiếm thuốc ho" found nothing while "thuốc ho" finds five.
+     * text as one phrase: "kiem thuoc ho" found nothing while "thuoc ho" finds five.
      *
      * Accent-free spellings are listed only where they cannot collide with real
-     * catalog vocabulary. "tim" is absent even though "tìm" belongs here — it is also
-     * the heart, and the catalog has cardiac products; same for "tiem" ("tiêm",
-     * injectable) as a folding of "tiệm".
+     * catalog vocabulary. "tim" is absent even though "tim" belongs here — it is also
+     * the heart, and the catalog has cardiac products; same for "tiem" ("tiem",
+     * injectable) as a folding of "tiem".
      */
     protected const SEARCH_STOP_WORDS = [
         'cho tôi hỏi', 'cho mình hỏi', 'tôi muốn tìm', 'tôi muốn mua', 'tôi cần tìm', 'tôi cần mua',
@@ -192,8 +192,8 @@ PROMPT;
     ];
 
     /**
-     * Chain names that double as everyday Vietnamese words ("an khang thịnh
-     * vượng"), so they only count next to a pharmacy word.
+     * Chain names that double as everyday Vietnamese words ("an khang thinh
+     * vuong"), so they only count next to a pharmacy word.
      */
     protected const OTHER_PHARMACY_AMBIGUOUS_KEYWORDS = [
         'an khang', 'trung son', 'guardian', 'my chau', 'vinh loi', 'phuc an khang',
@@ -204,7 +204,7 @@ PROMPT;
     ];
 
     /**
-     * Common Vietnamese place names, used to spot "nhà thuốc ... tại Đà Nẵng"
+     * Common Vietnamese place names, used to spot "nha thuoc ... tai Da Nang"
      * style questions that are about a location rather than a product.
      */
     protected const VIETNAM_PLACE_KEYWORDS = [
@@ -244,22 +244,22 @@ PROMPT;
     ];
 
     /**
-     * Tokens that carry no topic. A message made only of these ("có ổn không?",
-     * "vậy được không?") can only be understood against the previous turn.
+     * Tokens that carry no topic. A message made only of these ("co on khong?",
+     * "vay duoc khong?") can only be understood against the previous turn.
      */
     protected const ELLIPTICAL_FOLLOW_UP_TOKENS = [
         'co', 'khong', 'ko', 'hong', 'k', 'on', 'sao', 'vay', 'the', 'nao', 'gi',
         'duoc', 'chu', 'nhi', 'nhe', 'nha', 'a', 'ha', 'u', 'uh', 'oke', 'ok',
         'roi', 'thi', 'ma', 'day', 'do', 'nua', 'that', 'toi', 'minh', 'em',
         'anh', 'chi', 'ban', 'ai', 'la',
-        // "cho xem link sản phẩm đi" / "xem chi tiết đi" name no product of their
+        // "cho xem link san pham di" / "xem chi tiet di" name no product of their
         // own: they point at whatever the previous turn listed. Without these the
-        // message was searched as the literal query "cho link sản phẩm đi", found
+        // message was searched as the literal query "cho link san pham di", found
         // nothing, and the model invented product links instead.
         'link', 'xem', 'xin', 'chi', 'tiet', 'them', 'gui', 'cho', 'dua', 'di',
-        // A request to change the presentation of what was just listed: "tóm tắt lại
-        // theo dạng table", "tóm tắt lại thành bảng". Without these the message was
-        // searched as the query "tóm tắt", which matched unrelated products.
+        // A request to change the presentation of what was just listed: "tom tat lai
+        // theo dang table", "tom tat lai thanh bang". Without these the message was
+        // searched as the query "tom tat", which matched unrelated products.
         'tom', 'tat', 'lai', 'table', 'bang', 'dang', 'giup', 'nhé', 'theo', 'thanh',
     ];
 
@@ -272,12 +272,12 @@ PROMPT;
     protected const FOREIGN_SCRIPT_CLASS = '[\x{3000}-\x{30FF}\x{3400}-\x{4DBF}\x{4E00}-\x{9FFF}\x{F900}-\x{FAFF}\x{1100}-\x{11FF}\x{AC00}-\x{D7AF}\x{FF00}-\x{FFEF}\x{0400}-\x{04FF}\x{0E00}-\x{0E7F}\x{0600}-\x{06FF}\x{0590}-\x{05FF}\x{0900}-\x{097F}]';
 
     /**
-     * Filler words that must not drive a match on their own. "thuốc"/"sản phẩm" are
+     * Filler words that must not drive a match on their own. "thuoc"/"san pham" are
      * here because they appear in most category and product names at once.
      *
      * Accent-free spellings are listed only where they cannot collide with a
-     * meaningful word: "ho" (cough) and "tim" (heart) are left out even though "hỗ"
-     * and "tìm" are filler, because folding makes the two indistinguishable.
+     * meaningful word: "ho" (cough) and "tim" (heart) are left out even though "ho"
+     * and "tim" are filler, because folding makes the two indistinguishable.
      */
     protected const QUERY_NOISE_TOKENS = [
         'có', 'co', 'không', 'khong', 'ko', 'gì', 'gi', 'nào', 'nao',
@@ -294,12 +294,12 @@ PROMPT;
 
     /**
      * Price questions, stripped as whole phrases before the narrowing windows are
-     * built. "que thử thai giá bao nhiêu" searched on "bao nhiêu", which matched
-     * "cần trung hòa lượng acid dịch vị bao nhiêu" in an antacid's usage text and
+     * built. "que thu thai gia bao nhieu" searched on "bao nhieu", which matched
+     * "can trung hoa luong acid dich vi bao nhieu" in an antacid's usage text and
      * answered a pregnancy-test question with a stomach medicine.
      *
-     * Phrases, not tokens: "bao" alone is meaningful ("bao cao su"), "giá" folds
-     * together with "già" ("nước oxy già"). Longest first so the whole phrase goes.
+     * Phrases, not tokens: "bao" alone is meaningful ("bao cao su"), "gia" folds
+     * together with "gia" ("nuoc oxy gia"). Longest first so the whole phrase goes.
      */
     protected const QUERY_PRICE_PHRASES = [
         'gia bao nhieu', 'het bao nhieu', 'gia ca bao nhieu',
@@ -438,20 +438,20 @@ PROMPT;
     /**
      * Initialize ChatbotService with dependency injection.
      *
-     * @param InventoryService $inventoryService
-     * @param CheckoutService $checkoutService
-     * @param AuditLogService $auditLogService
+     * @param TonKhoService $tonKhoService
+     * @param ThanhToanService $thanhToanService
+     * @param NhatKyKiemToanService $nhatKyKiemToanService
      */
     public function __construct(
         AiProviderService $aiService,
-        InventoryService $inventoryService,
-        CheckoutService $checkoutService,
-        AuditLogService $auditLogService
+        TonKhoService $tonKhoService,
+        ThanhToanService $thanhToanService,
+        NhatKyKiemToanService $nhatKyKiemToanService
     ) {
         $this->aiService = $aiService;
-        $this->inventoryService = $inventoryService;
-        $this->checkoutService = $checkoutService;
-        $this->auditLogService = $auditLogService;
+        $this->tonKhoService = $tonKhoService;
+        $this->thanhToanService = $thanhToanService;
+        $this->nhatKyKiemToanService = $nhatKyKiemToanService;
     }
 
     /**
@@ -883,7 +883,7 @@ PROMPT;
                     $hasCatalogData = !empty($sanPhams) || !empty($danhMucs);
 
                     if (!$hasCatalogData) {
-                        // The lookup found nothing, so its "chưa thấy sản phẩm" block
+                        // The lookup found nothing, so its "chua thay san pham" block
                         // would contradict a reply that already stands on its own.
                         $responseText = $assistantText !== ''
                             ? $assistantText
@@ -1234,7 +1234,7 @@ PROMPT;
             $responseText = preg_replace($pattern, $replacement, $responseText) ?? $responseText;
         }
 
-        // Tidy the punctuation a stripped URL leaves behind: " , còn 300 ." and doubled spaces.
+        // Tidy the punctuation a stripped URL leaves behind: " , con 300 ." and doubled spaces.
         $responseText = preg_replace('/[ \t]+([,;.])/u', '$1', $responseText) ?? $responseText;
         $responseText = preg_replace('/[ \t]{2,}/u', ' ', $responseText) ?? $responseText;
 
@@ -1255,7 +1255,7 @@ PROMPT;
             }
 
             // self::PRODUCT_LINK_LABEL, not the product name: the widget promotes a link
-            // to a button on an exact label match, so "Xem chi tiết Smecta" stayed a
+            // to a button on an exact label match, so "Xem chi tiet Smecta" stayed a
             // plain inline link.
             $responseText = $this->replaceRawProductUrls(
                 $responseText,
@@ -1272,7 +1272,7 @@ PROMPT;
      *
      * A turn that never called the catalogue tool gets an empty product list, but the
      * model still remembers ids from earlier turns and writes its own links:
-     * "[Sản phẩm 322](http://localhost/products/322)" — a host without the dev port,
+     * "[San pham 322](http://localhost/products/322)" — a host without the dev port,
      * a label that is an id rather than a name, and a product this answer never
      * looked up. Only real product cards carry a link, and they are rendered from
      * `$sanPhams` after this runs.
@@ -1363,7 +1363,7 @@ PROMPT;
 
     /**
      * The widget already renders one disclaimer box per conversation from
-     * `show_disclaimer`, so a "tham khảo ý kiến dược sĩ/bác sĩ" tail in the text
+     * `show_disclaimer`, so a "tham khao y kien duoc si/bac si" tail in the text
      * itself says the same thing twice - and unlike the box it repeats on every
      * answer. The prompt asks the provider not to add it; this removes it when the
      * provider does anyway.
@@ -1417,8 +1417,8 @@ PROMPT;
     /**
      * True only when the sentence is nothing but the boilerplate: every known
      * fragment is subtracted and nothing substantive is left. Conditional advice
-     * ("nếu có bệnh nền thì nên hỏi dược sĩ") and real warnings ("có cảnh báo ở mức
-     * nghiêm trọng, nên hỏi dược sĩ") keep words that are not on the list, so they
+     * ("neu co benh nen thi nen hoi duoc si") and real warnings ("co canh bao o muc
+     * nghiem trong, nen hoi duoc si") keep words that are not on the list, so they
      * survive.
      */
     protected function isBoilerplateDisclaimerSentence(string $sentence): bool
@@ -1765,8 +1765,8 @@ PROMPT;
             return null;
         }
 
-        // A follow-up ("tóm tắt lại theo dạng table") names a format, not a product.
-        // Resolved as a query it became "tóm tắt", which the catalogue's substring
+        // A follow-up ("tom tat lai theo dang table") names a format, not a product.
+        // Resolved as a query it became "tom tat", which the catalogue's substring
         // search matched against seven unrelated products, and this builder answered
         // in PHP before the model was ever reached — so a request for a table came
         // back as a numbered list. Hand it to the model instead.
@@ -1982,7 +1982,7 @@ PROMPT;
                 }
             }
 
-            // A therapeutic-area query ("hỗ trợ tiêu hóa") matches a category but no
+            // A therapeutic-area query ("ho tro tieu hoa") matches a category but no
             // product name/ingredient/usage, so the keyword search comes back empty
             // while the matched category is full of relevant stock. Answer with that
             // stock instead of telling the customer nothing was found. Requires an
@@ -2190,7 +2190,7 @@ PROMPT;
      * @param string $question Caption typed with the image (may be empty)
      * @param string $imageDescription Vision description of the image
      * @param array $parsedProducts Raw products the vision step extracted
-     * @param array $recognizedProducts Catalog match result from ImageRecognitionService
+     * @param array $recognizedProducts Catalog match result from NhanDienHinhAnhService
      */
     public function answerImageQuestion(
         string $question,
@@ -2370,7 +2370,7 @@ PROMPT;
      * SanPham URLs for the rows the image matched, so a model that ignored the
      * "no links" rule can have them stripped before the shared block is appended.
      *
-     * @param array<int, mixed> $recognizedProducts matchProducts() output
+     * @param array<int, mixed> $recognizedProducts khopSanPham() output
      * @return array<int, string>
      */
     protected function recognizedProductUrls(array $recognizedProducts): array
@@ -2384,7 +2384,7 @@ PROMPT;
 
             $id = (int) data_get($item, 'product.id', 0);
             if ($id > 0) {
-                $urls[] = route('products.show', $id);
+                $urls[] = route('san-pham.show', $id);
             }
         }
 
@@ -2393,11 +2393,11 @@ PROMPT;
 
     /**
      * The catalog block for products the image matched, rendered by the same method the
-     * text path uses so both replies carry an identical "Mở sản phẩm" button.
+     * text path uses so both replies carry an identical "Mo san pham" button.
      *
      * Empty string when the image matched nothing in stock.
      *
-     * @param array<int, mixed> $recognizedProducts matchProducts() output
+     * @param array<int, mixed> $recognizedProducts khopSanPham() output
      */
     protected function renderRecognizedProductBlock(array $recognizedProducts): string
     {
@@ -2554,7 +2554,7 @@ PROMPT;
         bool $showDisclaimer
     ): void {
         try {
-            $this->auditLogService->log(
+            $this->nhatKyKiemToanService->ghi(
                 action: 'chatbot_query',
                 modelType: 'Chatbot',
                 modelId: null,
@@ -2617,7 +2617,7 @@ PROMPT;
 
     /**
      * DanhMuc lookup for functional queries. searchCategories() LIKE-matches the
-     * whole phrase, so "hỗ trợ tiêu hóa nhanh" misses the "Thuốc tiêu hóa" category
+     * whole phrase, so "ho tro tieu hoa nhanh" misses the "Thuoc tieu hoa" category
      * that holds every product being asked for. Matching runs in PHP over folded
      * name + description: the table is tiny, and the collation cannot be trusted to
      * ignore Vietnamese accents (MySQL utf8mb4_unicode_ci does, SQLite does not).
@@ -2667,7 +2667,7 @@ PROMPT;
 
     /**
      * Folded n-grams of the query, longest first, with filler words dropped so
-     * "hỗ trợ tiêu hóa nhanh" gets tried as "tieu hoa". Single tokens shorter than
+     * "ho tro tieu hoa nhanh" gets tried as "tieu hoa". Single tokens shorter than
      * 4 characters are skipped: they match far too much to identify a category.
      *
      * Diacritics are kept, because the product variant of this lookup feeds SQL
@@ -2675,12 +2675,12 @@ PROMPT;
      * folding here would make tests and production disagree.
      *
      * Within one length the rightmost n-gram comes first, because a Vietnamese noun
-     * phrase carries its topic at the end: "giảm đau dạ dày" must resolve through
-     * "dạ dày" (antacids) and not through "giảm đau", which would offer NSAIDs -
+     * phrase carries its topic at the end: "giam dau da day" must resolve through
+     * "da day" (antacids) and not through "giam dau", which would offer NSAIDs -
      * the one class of painkiller that makes a stomach complaint worse.
      *
-     * A multi-word query is never reduced to a single token: "tiêu hóa" narrowed to
-     * "hóa" matched "chống oxy hóa" and offered vitamin E for indigestion. Below two
+     * A multi-word query is never reduced to a single token: "tieu hoa" narrowed to
+     * "hoa" matched "chong oxy hoa" and offered vitamin E for indigestion. Below two
      * tokens the query is better answered as "not found", which lets the category
      * lookup take over.
      *
@@ -2727,9 +2727,9 @@ PROMPT;
     }
 
     /**
-     * Drop "giá bao nhiêu" and friends from an already-normalized query.
+     * Drop "gia bao nhieu" and friends from an already-normalized query.
      *
-     * Matched on the folded text so "gia"/"giá" and "nhieu"/"nhiêu" are one rule, but
+     * Matched on the folded text so "gia"/"gia" and "nhieu"/"nhieu" are one rule, but
      * cut out of the original by word position: the candidates are searched with LIKE
      * against real product text, which keeps its diacritics.
      */
@@ -2762,8 +2762,8 @@ PROMPT;
 
     /**
      * Whether the query is clean enough to quote back to the customer. What reaches
-     * the response builders is often a stripped fragment of the question ("hiên tai
-     * ở website trang danh muc không"), which reads like a bug when echoed.
+     * the response builders is often a stripped fragment of the question ("hien tai
+     * o website trang danh muc khong"), which reads like a bug when echoed.
      */
     protected function isPresentableQuery(string $query): bool
     {
@@ -2797,7 +2797,7 @@ PROMPT;
                 'usage' => $sanPham->cach_dung,
                 'expiration_date' => optional($sanPham->ngay_het_han)->toDateString(),
                 'category' => $sanPham->danhMuc ? $sanPham->danhMuc->ten : null,
-                'url' => route('products.show', $sanPham->ma_sp)
+                'url' => route('san-pham.show', $sanPham->ma_sp)
             ];
         })->values()->all();
     }
@@ -2811,7 +2811,7 @@ PROMPT;
                 'description' => $danhMuc->mo_ta,
                 'icon' => $danhMuc->bieu_tuong,
                 'product_count' => (int) ($danhMuc->san_phams_count ?? 0),
-                'url' => route('products.index', ['category' => $danhMuc->ma_dm])
+                'url' => route('san-pham.index', ['category' => $danhMuc->ma_dm])
             ];
         })->values()->all();
     }
@@ -2846,7 +2846,7 @@ PROMPT;
      * Products found through the category that matched the query, after the keyword
      * search over product name/ingredients/usage came back empty. The raw query is
      * deliberately not echoed: it reaches here as a stripped fragment of the
-     * question ("gì hỗ trơ tiêu hóa nhanh không"), and the category name already
+     * question ("gi ho tro tieu hoa nhanh khong"), and the category name already
      * says what was matched.
      */
     protected function buildCategoryProductFallbackResponseText(
@@ -3280,7 +3280,7 @@ PROMPT;
     /**
      * Questions about recreational or illegal drug use. Matched on whole tokens
      * only, and the list deliberately leaves out Vietnamese slang that doubles as
-     * an everyday word ("đá", "cỏ", "ke", "bóng đá"), plus controlled substances
+     * an everyday word ("da", "co", "ke", "bong da"), plus controlled substances
      * that are legitimate medicines ("morphin", "methadone", "fentanyl") - a
      * customer asking about those needs a pharmacist answer, not this guardrail.
      */
@@ -3345,8 +3345,8 @@ PROMPT;
     /**
      * Red flags live in `medical_red_flags` so a pharmacist can add a warning sign
      * without a code change. Only emergency/urgent rows flagged `chat_short_circuit`
-     * reach here — patient-context rows ("đang mang thai", "bé 1 tuổi") and `caution`
-     * rows ("kéo dài", "bệnh nền") are handled further down the ladder, otherwise an
+     * reach here — patient-context rows ("dang mang thai", "be 1 tuoi") and `caution`
+     * rows ("keo dai", "benh nen") are handled further down the ladder, otherwise an
      * ordinary product question would be answered with emergency guidance.
      *
      * Cached per request: this runs on every inbound message.
@@ -3397,7 +3397,7 @@ PROMPT;
             return null;
         }
 
-        // Explicit product hunting ("có thuốc đau đầu không") is a catalog job.
+        // Explicit product hunting ("co thuoc dau dau khong") is a catalog job.
         if ($this->wantsProductSuggestionForSymptom($message)) {
             return null;
         }
@@ -3448,7 +3448,7 @@ PROMPT;
             'disclaimer' => 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.',
             'response_type' => 'triage_handoff',
             'triage_handoff' => [
-                'url' => route('health.check'),
+                'url' => route('sang-loc.kiem-tra'),
                 'label' => __('messages.chatbot.triage_handoff_label'),
             ],
         ];
@@ -3477,7 +3477,7 @@ PROMPT;
         $nguoiDung = NguoiDung::with('hoSoSucKhoe')->find($userId);
         $profile = $nguoiDung?->hoSoSucKhoe?->hasConsented() ? $nguoiDung->hoSoSucKhoe : null;
 
-        $result = app(DrugSafetyService::class)->checkProduct($sanPham, $profile, $nguoiDung);
+        $result = app(AnToanThuocService::class)->kiemTraSanPham($sanPham, $profile, $nguoiDung);
         $warnings = $result['warnings'] ?? [];
         $payload = $this->formatProductsPayload(collect([$sanPham]));
 
@@ -4588,7 +4588,7 @@ PROMPT;
     }
 
     /**
-     * Travel and leisure questions ("đi Đà Nẵng chơi thì nên đi đâu?") are out of
+     * Travel and leisure questions ("di Da Nang choi thi nen di dau?") are out of
      * scope; catching them locally avoids an AI round trip for an answer the
      * assistant is not allowed to give anyway.
      */
@@ -4609,7 +4609,7 @@ PROMPT;
         $tokens = preg_split('/\s+/', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
         foreach ($tokens as $index => $token) {
-            // Bare "chơi" is leisure unless it is part of a product ("đồ chơi").
+            // Bare "choi" is leisure unless it is part of a product ("do choi").
             if ($token === 'choi' && !in_array($tokens[$index - 1] ?? '', ['do', 'dung', 'bo'], true)) {
                 return true;
             }
@@ -4640,9 +4640,9 @@ PROMPT;
     }
 
     /**
-     * "tìm thuốc ở nhà thuốc Long Châu tại Đà Nẵng" - the assistant cannot look
+     * "tim thuoc o nha thuoc Long Chau tai Da Nang" - the assistant cannot look
      * inside a competitor's catalog, and treating the whole sentence as a product
-     * keyword produced nonsense searches like `nhà long châu tại đà nẵng`.
+     * keyword produced nonsense searches like `nha long chau tai da nang`.
      */
     protected function isOtherPharmacyIntent(string $message): bool
     {
@@ -4693,8 +4693,8 @@ PROMPT;
     }
 
     /**
-     * Keep only the product part of a competitor question, so "tìm paracetamol ở
-     * nhà thuốc Long Châu Đà Nẵng" still searches for "paracetamol".
+     * Keep only the product part of a competitor question, so "tim paracetamol o
+     * nha thuoc Long Chau Da Nang" still searches for "paracetamol".
      */
     protected function resolveOtherPharmacyProductQuery(string $message): string
     {
@@ -4715,7 +4715,7 @@ PROMPT;
 
     /**
      * Drop filler words left at the edges of an extracted query so the reply
-     * shows `paracetamol` instead of `paracetamol ở`.
+     * shows `paracetamol` instead of `paracetamol o`.
      */
     protected function trimQueryFillerWords(string $query): string
     {
@@ -4961,7 +4961,7 @@ PROMPT;
             $name = preg_replace('/\s+/u', ' ', (string) $name);
             $name = trim((string) $name);
 
-            // "tôi là nam hay nữ?" is a question about gender, not a self-introduction:
+            // "toi la nam hay nu?" is a question about gender, not a self-introduction:
             // the capture is the whole clause and must not become a name. Same for a
             // bare gender word, an occupation, or a question the customer asked.
             if ($this->isNotAPersonName($name)) {
@@ -5009,14 +5009,14 @@ PROMPT;
     /**
      * Reject captures that are clearly not a customer's personal name.
      *
-     * "tôi là nam hay nữ?" matches `(?:tôi là)\s+(.+)` and captures `nam hay nữ?`.
+     * "toi la nam hay nu?" matches `(?:toi la)\s+(.+)` and captures `nam hay nu?`.
      * Without this check, "nam" was extracted as the customer's name, so the assistant
      * addressed them as "Nam" from then on. Same for occupations and questions.
      */
     protected function isNotAPersonName(string $name): bool
     {
         $normalized = $this->normalizeIntentText($name);
-        // Trailing particles ("nữ ạ", "nam nhé") are politeness, not part of the word.
+        // Trailing particles ("nu a", "nam nhe") are politeness, not part of the word.
         $trimmed = trim(preg_replace('/\s+(?:a|ạ|à|nhe|nhé|nha|da|dạ|vay|vậy)$/u', '', $normalized) ?? $normalized);
 
         if ($trimmed === '') {
@@ -5024,7 +5024,7 @@ PROMPT;
         }
 
         // A question mark is decisive. So is a question word — but "hay" is NOT one:
-        // folding turns the imperative "hãy cho mình biết" into "hay cho minh biet",
+        // folding turns the imperative "hay cho minh biet" into "hay cho minh biet",
         // and a name capture that contains it would be dropped for the wrong reason.
         // Gender questions are matched as the whole phrase instead.
         if (str_contains($name, '?')
@@ -5038,7 +5038,7 @@ PROMPT;
         }
 
         // Occupations, roles and pure-gender terms that are not common given names.
-        // "nu" (nữ) is blocked; "nam" is allowed because it is a very common given name.
+        // "nu" (nu) is blocked; "nam" is allowed because it is a very common given name.
         $occupations = [
             'nu', 'gioi tinh',
             'bac si', 'duoc si', 'y ta', 'dieu duong', 'nhan vien', 'sinh vien',
@@ -5419,7 +5419,7 @@ PROMPT;
 
     /**
      * Some aliases collide with everyday Vietnamese once diacritics are stripped:
-     * "nước sốt" is a sauce, "sốt ruột" is impatience, "con ngựa" is a horse. Decide
+     * "nuoc sot" is a sauce, "sot ruot" is impatience, "con ngua" is a horse. Decide
      * by the words on either side of the alias. Guard words come from
      * `medical_symptoms.guard_words`, so a pharmacist adding an ambiguous alias can
      * guard it without a code change.
@@ -5685,7 +5685,7 @@ PROMPT;
 
     /**
      * Latest topic the customer raised, used to resolve elliptical follow-ups
-     * ("có ổn không?") which the model otherwise attaches to whichever older topic
+     * ("co on khong?") which the model otherwise attaches to whichever older topic
      * looks unanswered - the reported case answered a drug question from four turns
      * earlier instead of the medicine list right above it.
      *
@@ -5735,7 +5735,7 @@ PROMPT;
      * QUERY_NOISE_TOKENS folded, so a token list compared against folded text matches.
      *
      * The constant holds accented and unaccented spellings; tokenizeNormalizedIntentText
-     * folds, so "sản"/"phẩm" arrive as "san"/"pham" and would never match the raw entry.
+     * folds, so "san"/"pham" arrive as "san"/"pham" and would never match the raw entry.
      *
      * @return array<int, string>
      */
@@ -5755,17 +5755,17 @@ PROMPT;
         }
 
         $tokens = $this->tokenizeNormalizedIntentText($normalized);
-        // Ten, not six: a politely phrased follow-up ("tóm tắt lại theo dạng table
-        // giúp tôi nhé") carries eight tokens, every one of them topic-free. The
+        // Ten, not six: a politely phrased follow-up ("tom tat lai theo dang table
+        // giup toi nhe") carries eight tokens, every one of them topic-free. The
         // allow-list below is what actually decides, so the cap only guards against
         // scanning a long paragraph.
         if (empty($tokens) || count($tokens) > 10) {
             return false;
         }
 
-        // Noise words ("sản phẩm", "cho", "xem") carry no topic either, and are already
+        // Noise words ("san pham", "cho", "xem") carry no topic either, and are already
         // excluded from search queries for the same reason. Allowed here so
-        // "cho xem link sản phẩm đi" resolves as the follow-up it is.
+        // "cho xem link san pham di" resolves as the follow-up it is.
         return $this->onlyContainsTokens(
             $tokens,
             array_merge(self::ELLIPTICAL_FOLLOW_UP_TOKENS, $this->normalizedNoiseTokens())
@@ -5797,8 +5797,8 @@ PROMPT;
     }
 
     /**
-     * "đau", "cảm", "ốm" and "ho" collide with everyday words once diacritics are
-     * stripped ("ở đâu", "nước cam", "cảm ơn", "họ"), so they are matched here
+     * "dau", "cam", "om" and "ho" collide with everyday words once diacritics are
+     * stripped ("o dau", "nuoc cam", "cam on", "ho"), so they are matched here
      * instead of through the accent-insensitive keyword list.
      */
     protected function containsAmbiguousSymptomWord(string $query): bool
@@ -5824,22 +5824,22 @@ PROMPT;
     protected function containsUnaccentedSymptomWord(string $normalizedMessage): bool
     {
         $guards = [
-            // "ở đâu", "bắt đầu", "đầu tiên", "đầu tháng"
+            // "o dau", "bat dau", "dau tien", "dau thang"
             'dau' => [
                 'before' => ['o', 've', 'tu', 'den', 'toi', 'noi', 'bat', 'khu'],
                 'after' => ['tien', 'nam', 'thang', 'tuan', 'ky', 'bep'],
             ],
-            // "nước cam", "cảm ơn", "cảm thấy", "cảm ứng"
+            // "nuoc cam", "cam on", "cam thay", "cam ung"
             'cam' => [
                 'before' => ['nuoc', 'trai', 'qua', 'ly', 'coc', 'mui', 'vitamin'],
                 'after' => ['on', 'thay', 'nhan', 'giac', 'tinh', 'xuc', 'ung'],
             ],
-            // "ôm nhau", "ôm chặt"
+            // "om nhau", "om chat"
             'om' => [
                 'before' => [],
                 'after' => ['nhau', 'chat', 'lay'],
             ],
-            // "hỗ trợ", "họ tên", "họ nói", "hộ khẩu"
+            // "ho tro", "ho ten", "ho noi", "ho khau"
             'ho' => [
                 'before' => ['nha', 'ma'],
                 'after' => ['tro', 'ten', 'hang', 'khau', 'so', 'noi', 'ay', 'do', 'nay', 'la', 'ngheo', 'gia'],
@@ -6033,7 +6033,7 @@ PROMPT;
      * progressively shorter parts of the query, longest first.
      *
      * The tiers above match the whole phrase, so one extra word sinks the search -
-     * "dạ dày" finds four medicines while "đau dạ dày" found none, even though the
+     * "da day" finds four medicines while "dau da day" found none, even though the
      * stock that answers it is the same.
      */
     protected function searchProductsByNarrowingQuery(string $query): Collection
@@ -6071,13 +6071,13 @@ PROMPT;
      * Keep only the rows where the phrase really occurs as a whole word.
      *
      * LIKE decides accent sensitivity by collation, and MySQL's utf8mb4_unicode_ci
-     * ignores Vietnamese diacritics entirely, so `%thử thai%` matched "hấp thu thải
-     * trừ" inside an antacid's pharmacology text — a pregnancy-test question answered
-     * with a stomach medicine. Substring matching is the other half of it: "bao nhiêu"
-     * hit "trung hòa lượng acid dịch vị bao nhiêu".
+     * ignores Vietnamese diacritics entirely, so `%thu thai%` matched "hap thu thai
+     * tru" inside an antacid's pharmacology text — a pregnancy-test question answered
+     * with a stomach medicine. Substring matching is the other half of it: "bao nhieu"
+     * hit "trung hoa luong acid dich vi bao nhieu".
      *
      * Diacritics are enforced only when the customer typed them, so "dau da day" keeps
-     * finding "đau dạ dày" while "thử thai" no longer matches "thu thải".
+     * finding "dau da day" while "thu thai" no longer matches "thu thai".
      */
     protected function keepGenuineMatches(Collection $sanPhams, string $phrase): Collection
     {
@@ -6253,7 +6253,7 @@ PROMPT;
                 ];
             }
 
-            $this->auditLogService->log(
+            $this->nhatKyKiemToanService->ghi(
                 action: 'chatbot_order_created',
                 modelType: 'Chatbot',
                 modelId: null,

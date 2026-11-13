@@ -39,7 +39,7 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            // Must exceed the longest job $timeout (ProcessTriageBriefing: 180s), or the
+            // Must exceed the longest job $timeout (XuLyTomTatSangLoc: 180s), or the
             // database driver reclaims a job that is still running and hands it to a
             // second worker. Guarded by tests/Feature/QueueRetryAfterInvariantTest.php.
             'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 200),

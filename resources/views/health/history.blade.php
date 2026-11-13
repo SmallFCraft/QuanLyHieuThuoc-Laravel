@@ -29,7 +29,7 @@
                 <div class="health-card p-5 text-center">
                     <i class="bi bi-clipboard2-x text-gray-300 d-block mb-3" style="font-size: 3rem;" aria-hidden="true"></i>
                     <p class="text-gray-600 mb-4">{{ __('messages.health.history_empty') }}</p>
-                    <a href="{{ route('health.check') }}" class="health-btn health-btn-primary text-decoration-none">
+                    <a href="{{ route('sang-loc.kiem-tra') }}" class="health-btn health-btn-primary text-decoration-none">
                         <i class="bi bi-clipboard2-pulse me-1" aria-hidden="true"></i>{{ __('messages.health.btn_start') }}
                     </a>
                 </div>
@@ -41,7 +41,7 @@
                             $symptomText = $item->collected_data['raw_symptom_text']
                                 ?? implode(', ', (array) ($item->collected_data['symptoms'] ?? []));
                         @endphp
-                        <a href="{{ route('health.result', $item->ma_sl) }}"
+                        <a href="{{ route('sang-loc.ket-qua', $item->ma_sl) }}"
                            class="health-card p-4 text-decoration-none d-block">
                             <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                                 <div class="flex-grow-1" style="min-width: 200px;">
@@ -69,7 +69,7 @@
             @endif
 
             <div class="text-center mt-4">
-                <a href="{{ route('health.check') }}" class="health-link health-link--accent small">
+                <a href="{{ route('sang-loc.kiem-tra') }}" class="health-link health-link--accent small">
                     <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>{{ __('messages.health.page_title') }}
                 </a>
             </div>

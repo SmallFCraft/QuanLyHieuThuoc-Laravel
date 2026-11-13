@@ -51,7 +51,7 @@ class TriThucYTeSeeder extends Seeder
     }
 
     /**
-     * Aliases are stored accent-free because MedicalTriageService normalises the
+     * Aliases are stored accent-free because SangLocYTeService normalises the
      * user's message with Str::ascii before matching.
      */
     protected function danhSachTrieuChung(): array
@@ -301,7 +301,7 @@ class TriThucYTeSeeder extends Seeder
     }
 
     /**
-     * Conditions are evaluated by MedicalTriageService::matchesConditions.
+     * Conditions are evaluated by SangLocYTeService::matchesConditions.
      * Higher priority wins, so age/pregnancy guards sit above the generic rule
      * for the same symptom.
      *
@@ -549,7 +549,7 @@ class TriThucYTeSeeder extends Seeder
 
     /**
      * Ingredient names are stored lowercase without dosage, matching how
-     * DrugSafetyService normalises products.ingredients before lookup. The crawler
+     * AnToanThuocService chuan hoa products.ingredients before lookup. The crawler
      * writes ingredients in the same "Name 500mg" form the parser expects.
      */
     protected function napTuongTacThuoc(): void

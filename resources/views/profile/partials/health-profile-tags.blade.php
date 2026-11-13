@@ -1,5 +1,5 @@
 {{-- Tag input shared by the three health list fields. Each tag ships as its own
-     hidden input so DrugSafetyService receives one term per item, not free text. --}}
+     hidden input so AnToanThuocService receives one term per item, not free text. --}}
 @php
     $items = collect($items ?? [])->map(fn ($item) => (string) $item)->values()->all();
     $suggestions = $suggestions ?? [];

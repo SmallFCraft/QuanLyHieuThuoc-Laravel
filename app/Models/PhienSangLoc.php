@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Services\Triage\TriageReportService;
+use App\Services\Triage\BaoCaoSangLocService;
 use Illuminate\Database\Eloquent\Model;
 
 class PhienSangLoc extends Model
@@ -113,7 +113,7 @@ class PhienSangLoc extends Model
      */
     public function analysisMetrics(): array
     {
-        $rank = array_search((string) $this->outcome, array_reverse(TriageReportService::OUTCOMES), true);
+        $rank = array_search((string) $this->outcome, array_reverse(BaoCaoSangLocService::OUTCOMES), true);
         $bandBase = [0, 25, 50, 75][$rank] ?? 0;
 
         $redFlags = collect($this->triggered_red_flags ?? []);

@@ -28,7 +28,7 @@
     <body style="background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 30%, #f8fafc 60%, #ecfdf5 100%); background-attachment: fixed;">
         <div class="min-vh-100 d-flex flex-column align-items-center justify-content-center px-3 py-5">
             <!-- Logo -->
-            <a href="{{ route('home') }}" class="text-decoration-none d-flex align-items-center gap-2 mb-4">
+            <a href="{{ route('trang-chu') }}" class="text-decoration-none d-flex align-items-center gap-2 mb-4">
                 <img src="{{ asset('images/logo-icon.svg') }}" alt="" width="48" height="48" style="height: 48px; width: auto;">
                 <span class="fw-bold fs-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-900 to-emerald-600">{{ __('messages.app_name') }}</span>
             </a>

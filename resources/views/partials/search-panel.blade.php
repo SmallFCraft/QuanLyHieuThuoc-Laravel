@@ -18,7 +18,7 @@
             </h3>
             <div class="search-panel-pills">
                 @foreach($searchTrending as $term)
-                    <a class="search-panel-pill" href="{{ route('products.search', ['q' => $term]) }}" data-search-term="{{ $term }}">{{ $term }}</a>
+                    <a class="search-panel-pill" href="{{ route('san-pham.tim-kiem', ['q' => $term]) }}" data-search-term="{{ $term }}">{{ $term }}</a>
                 @endforeach
             </div>
         </section>
@@ -31,7 +31,7 @@
             </h3>
             <div class="search-panel-pills">
                 @foreach($navCategories->take(4) as $category)
-                    <a class="search-panel-pill search-panel-pill--muted" href="{{ route('products.index', ['category' => $category->ma_dm]) }}">{{ $category->ten }}</a>
+                    <a class="search-panel-pill search-panel-pill--muted" href="{{ route('san-pham.index', ['category' => $category->ma_dm]) }}">{{ $category->ten }}</a>
                 @endforeach
             </div>
         </section>
@@ -42,17 +42,17 @@
             <h3 class="search-panel-heading">
                 <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>{{ __('messages.search_most_viewed') }}
             </h3>
-            @foreach($searchPanelProducts as $product)
+            @foreach($searchPanelProducts as $sanPham)
                 {{-- suggestion-item: dùng lại class mà điều hướng bàn phím của panel
                      đã bắt, nên mũi tên lên/xuống đi qua cả ba sản phẩm này. --}}
-                <a class="suggestion-item product-item" href="{{ route('products.show', $product->ma_sp) }}">
+                <a class="suggestion-item product-item" href="{{ route('san-pham.show', $sanPham->ma_sp) }}">
                     <div class="product-image" data-product-image-container style="position: relative;">
-                        <x-product-image :src="$product->image_url" :alt="$product->ten" icon-size="1.5rem" />
+                        <x-product-image :src="$sanPham->image_url" :alt="$sanPham->ten" icon-size="1.5rem" />
                     </div>
                     <div class="product-info">
-                        <div class="product-name">{{ $product->ten }}</div>
+                        <div class="product-name">{{ $sanPham->ten }}</div>
                         <div class="product-meta">
-                            <span class="product-price">{{ $product->formatted_price }}</span>
+                            <span class="product-price">{{ $sanPham->formatted_price }}</span>
                         </div>
                     </div>
                 </a>

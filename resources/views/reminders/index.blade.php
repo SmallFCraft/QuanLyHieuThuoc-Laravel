@@ -50,7 +50,7 @@
                                         {{ $reminder->next_remind_at ? $reminder->next_remind_at->format('d/m/Y H:i') : __('messages.reminder.no_next') }}
                                     </td>
                                     <td class="text-end">
-                                        <form method="POST" action="{{ route('reminders.cancel', $reminder->ma_nn) }}" class="d-inline">
+                                        <form method="POST" action="{{ route('nhac-uong.huy', $reminder->ma_nn) }}" class="d-inline">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill"
                                                     aria-label="{{ __('messages.reminder.btn_cancel_aria', ['name' => $productName]) }}">

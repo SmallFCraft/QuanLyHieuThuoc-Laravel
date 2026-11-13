@@ -59,8 +59,8 @@
         <h1 class="fw-bold text-gray-900 mb-1">{{ __('messages.checkout.title') }}</h1>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-emerald-600 text-decoration-none">{{ __('messages.home') }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('cart.index') }}" class="text-emerald-600 text-decoration-none">{{ __('messages.checkout.step_cart') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('trang-chu') }}" class="text-emerald-600 text-decoration-none">{{ __('messages.home') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('gio-hang.index') }}" class="text-emerald-600 text-decoration-none">{{ __('messages.checkout.step_cart') }}</a></li>
                 <li class="breadcrumb-item active" aria-current="page">{{ __('messages.checkout.breadcrumb_checkout') }}</li>
             </ol>
         </nav>
@@ -106,10 +106,10 @@
 
 <section class="py-4 py-md-5">
     <div class="container">
-        @if(!empty($drugWarnings))
+        @if(!empty($canhBaoThuoc))
             <div class="glass-card rounded-4 border-0 p-3 p-md-4 mb-3 mb-md-4">
                 <x-drug-warnings
-                    :warnings="$drugWarnings"
+                    :warnings="$canhBaoThuoc"
                     :title="__('messages.drug_safety.checkout_title')"
                     :intro="__('messages.drug_safety.checkout_intro')" />
             </div>
@@ -123,7 +123,7 @@
                     </h5>
                     <p class="text-gray-500 mb-3 mb-md-4 small">{{ __('messages.checkout.shipping_info_desc') }}</p>
                     
-                    <form action="{{ route('checkout.process') }}" method="POST" id="checkoutForm">
+                    <form action="{{ route('thanh-toan.xu-ly') }}" method="POST" id="checkoutForm">
                         @csrf
                         
                         <!-- Customer Name -->
@@ -300,7 +300,7 @@
 
                     <!-- Order Items -->
                     <div class="mb-3" style="max-height: 300px; overflow-y: auto;">
-                        @foreach($cartItems as $item)
+                        @foreach($cacMucGioHang as $item)
                             <div class="order-item d-flex align-items-center gap-3 mb-2 pb-2 border-bottom rounded-2 p-2" style="border-color: rgba(0,0,0,0.06) !important;">
                                 <div class="bg-gray-50 rounded-3 overflow-hidden flex-shrink-0 position-relative" style="width: 56px; height: 56px;" data-product-image-container>
                                     <x-product-image
@@ -324,8 +324,8 @@
                     <!-- Price Summary -->
                     <div class="border-top pt-3" style="border-color: rgba(0,0,0,0.06) !important;">
                         <div class="d-flex justify-content-between mb-2 small">
-                            <span class="text-gray-500">{{ __('messages.cart.subtotal') }} ({{ count($cartItems) }} {{ __('messages.cart.per_item') }})</span>
-                            <span class="fw-medium">{{ number_format($total, 0, ',', '.') }} ₫</span>
+                            <span class="text-gray-500">{{ __('messages.cart.subtotal') }} ({{ count($cacMucGioHang) }} {{ __('messages.cart.per_item') }})</span>
+                            <span class="fw-medium">{{ number_format($tongTien, 0, ',', '.') }} ₫</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2 small">
                             <span class="text-gray-500">{{ __('messages.cart.shipping_fee') }}</span>
@@ -340,7 +340,7 @@
                         
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <span class="fw-bold fs-6">{{ __('messages.cart.total') }}</span>
-                            <span class="fw-bold fs-4 text-emerald-700">{{ number_format($total, 0, ',', '.') }} ₫</span>
+                            <span class="fw-bold fs-4 text-emerald-700">{{ number_format($tongTien, 0, ',', '.') }} ₫</span>
                         </div>
 
                         <!-- Submit Button -->
@@ -359,7 +359,7 @@
 
                         <!-- Back to Cart -->
                         <div class="mt-3 text-center">
-                            <a href="{{ route('cart.index') }}" class="text-emerald-600 text-decoration-none fw-medium small">
+                            <a href="{{ route('gio-hang.index') }}" class="text-emerald-600 text-decoration-none fw-medium small">
                                 <i class="bi bi-arrow-left me-1"></i>{{ __('messages.checkout.back_to_cart') }}
                             </a>
                         </div>

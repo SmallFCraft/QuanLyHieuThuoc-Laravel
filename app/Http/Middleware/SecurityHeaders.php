@@ -22,11 +22,11 @@ class SecurityHeaders
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        // microphone=(self), không phải (): danh sách rỗng chặn cả chính origin này,
-        // nên Web Speech ở ô tìm kiếm bị từ chối ở tầng policy trước cả khi browser
-        // kịp hỏi người dùng. (self) chỉ cho phép trang cùng origin ĐƯỢC YÊU CẦU —
-        // browser vẫn hỏi và người dùng vẫn phải đồng ý; iframe khác origin vẫn bị chặn.
-        // camera vẫn đóng: ảnh vào bằng <input type="file">, không bằng camera stream.
+        // microphone=(self), khong phai (): danh sach rong chan ca chinh origin nay,
+        // nen Web Speech o o tim kiem bi tu choi o tang policy truoc ca khi browser
+        // kip hoi nguoi dung. (self) chi cho phep trang cung origin DUOC YEU CAU —
+        // browser van hoi va nguoi dung van phai dong y; iframe khac origin van bi chan.
+        // camera van dong: anh vao bang <input type="file">, khong bang camera stream.
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(self), camera=()');
         
         // Content Security Policy (adjust as needed for your application)

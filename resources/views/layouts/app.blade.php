@@ -9,23 +9,23 @@
             $appName = config('app.name', 'Nhà Thuốc Sinh Thái');
             $defaultDescription = __('messages.slogan');
 
-            if (request()->routeIs('products.show') && isset($product)) {
-                $defaultDescription = $product->ten;
+            if (request()->routeIs('san-pham.show') && isset($sanPham)) {
+                $defaultDescription = $sanPham->ten;
 
-                if (!empty($product->thanh_phan)) {
-                    $defaultDescription .= '. Thành phần: ' . $product->thanh_phan;
-                } elseif (!empty($product->cach_dung)) {
-                    $defaultDescription .= '. Công dụng: ' . $product->cach_dung;
+                if (!empty($sanPham->thanh_phan)) {
+                    $defaultDescription .= '. Thành phần: ' . $sanPham->thanh_phan;
+                } elseif (!empty($sanPham->cach_dung)) {
+                    $defaultDescription .= '. Công dụng: ' . $sanPham->cach_dung;
                 }
 
                 $defaultDescription .= '. Mua tại ' . $appName . '.';
-            } elseif (request()->routeIs('products.search') && !empty($searchTerm)) {
+            } elseif (request()->routeIs('san-pham.tim-kiem') && !empty($searchTerm)) {
                 $defaultDescription = 'Kết quả tìm kiếm cho "' . $searchTerm . '" tại ' . $appName . '. Khám phá dược phẩm và sản phẩm chăm sóc sức khỏe chính hãng.';
-            } elseif (request()->routeIs('products.category') && isset($category)) {
+            } elseif (request()->routeIs('san-pham.danh-muc') && isset($category)) {
                 $defaultDescription = 'Khám phá danh mục ' . $category->ten . ' tại ' . $appName . ' với các sản phẩm chính hãng, thông tin rõ ràng và hỗ trợ tư vấn tận tâm.';
-            } elseif (request()->routeIs('products.index')) {
+            } elseif (request()->routeIs('san-pham.index')) {
                 $defaultDescription = 'Khám phá danh mục thuốc, dược phẩm và sản phẩm chăm sóc sức khỏe tại ' . $appName . '. Nguồn gốc minh bạch, hỗ trợ tư vấn nhanh chóng.';
-            } elseif (request()->routeIs('contact')) {
+            } elseif (request()->routeIs('lien-he')) {
                 $defaultDescription = 'Liên hệ ' . $appName . ' để được hỗ trợ về sản phẩm, đơn hàng và tư vấn chăm sóc sức khỏe.';
             }
 
@@ -40,8 +40,8 @@
             $defaultMetaImage = asset('images/logo.png');
             $metaImage = trim($__env->yieldContent(
                 'meta_image',
-                request()->routeIs('products.show') && isset($product) && !empty($product->image_url)
-                    ? $product->image_url
+                request()->routeIs('san-pham.show') && isset($sanPham) && !empty($sanPham->image_url)
+                    ? $sanPham->image_url
                     : $defaultMetaImage
             ));
 
@@ -54,7 +54,7 @@
 
             $metaType = trim($__env->yieldContent(
                 'meta_type',
-                request()->routeIs('products.show') ? 'product' : 'website'
+                request()->routeIs('san-pham.show') ? 'product' : 'website'
             ));
 
             $defaultRobots = request()->routeIs([
@@ -93,8 +93,8 @@
             $metaLocale = app()->getLocale() === 'vi' ? 'vi_VN' : app()->getLocale();
             $metaImageAlt = trim($__env->yieldContent(
                 'meta_image_alt',
-                request()->routeIs('products.show') && isset($product)
-                    ? $product->ten . ' - ' . $appName
+                request()->routeIs('san-pham.show') && isset($sanPham)
+                    ? $sanPham->ten . ' - ' . $appName
                     : $appName . ' logo'
             ));
 
@@ -126,27 +126,27 @@
                 '@context' => 'https://schema.org',
                 '@type' => 'WebSite',
                 'name' => $appName,
-                'url' => route('home'),
+                'url' => route('trang-chu'),
                 'inLanguage' => app()->getLocale(),
                 'potentialAction' => [
                     '@type' => 'SearchAction',
-                    'target' => route('products.search') . '?q={search_term_string}',
+                    'target' => route('san-pham.tim-kiem') . '?q={search_term_string}',
                     'query-input' => 'required name=search_term_string',
                 ],
             ];
 
             $productSchema = null;
-            if (request()->routeIs('products.show') && isset($product)) {
+            if (request()->routeIs('san-pham.show') && isset($sanPham)) {
                 $productSchema = [
                     '@context' => 'https://schema.org',
                     '@type' => 'Product',
-                    'name' => $product->ten,
+                    'name' => $sanPham->ten,
                     'description' => $metaDescription,
                     'image' => [$metaImage],
                     // product_code, not batch_number: the batch is an internal
                     // inventory record and search engines index this markup.
-                    'sku' => $product->ma_san_pham ?: (string) $product->ma_sp,
-                    'category' => $product->danhMuc->ten ?? null,
+                    'sku' => $sanPham->ma_san_pham ?: (string) $sanPham->ma_sp,
+                    'category' => $sanPham->danhMuc->ten ?? null,
                     'brand' => [
                         '@type' => 'Brand',
                         'name' => $appName,
@@ -154,8 +154,8 @@
                     'offers' => [
                         '@type' => 'Offer',
                         'priceCurrency' => 'VND',
-                        'price' => $product->price_vnd,
-                        'availability' => $product->so_luong_ton > 0
+                        'price' => $sanPham->price_vnd,
+                        'availability' => $sanPham->so_luong_ton > 0
                             ? 'https://schema.org/InStock'
                             : 'https://schema.org/OutOfStock',
                         'url' => request()->url(),
@@ -235,11 +235,11 @@
 
         window.PharmacyFavorites = {
                 authenticated: @json(auth()->check()),
-                idsUrl: @json(route('favorites.ids')),
-                sectionUrl: @json(route('favorites.section')),
-                syncUrl: @json(route('favorites.sync')),
-                toggleUrlTemplate: @json(route('favorites.toggle', ['product' => '__PRODUCT_ID__'])),
-                destroyUrlTemplate: @json(route('favorites.destroy', ['product' => '__PRODUCT_ID__'])),
+                idsUrl: @json(route('yeu-thich.ids')),
+                sectionUrl: @json(route('yeu-thich.section')),
+                syncUrl: @json(route('yeu-thich.sync')),
+                toggleUrlTemplate: @json(route('yeu-thich.toggle', ['product' => '__PRODUCT_ID__'])),
+                destroyUrlTemplate: @json(route('yeu-thich.destroy', ['product' => '__PRODUCT_ID__'])),
                 loginUrl: @json(route('login')),
             };
 
@@ -800,7 +800,7 @@
         <nav class="navbar navbar-expand-lg fixed-top site-header">
             <div class="container-fluid px-3 px-lg-4 d-flex flex-nowrap align-items-center justify-content-between">
                 <!-- Branding -->
-                <a class="navbar-brand d-flex align-items-center overflow-hidden flex-shrink-0" href="{{ route('home') }}" aria-label="{{ __('messages.app_name') }}" style="white-space: nowrap;">
+                <a class="navbar-brand d-flex align-items-center overflow-hidden flex-shrink-0" href="{{ route('trang-chu') }}" aria-label="{{ __('messages.app_name') }}" style="white-space: nowrap;">
                     {{-- The square mark, not the old 2816x1536 lockup: at 40px the letters
                          inside that artwork were illegible and the file was 1,516 KB. The
                          name beside it is live text, so it stays selectable and localised.
@@ -816,7 +816,7 @@
                      Trước đây có ba ô — header, trang chủ, trang catalog — cùng post một `q`,
                      phải có JS ẩn bớt cho khỏi hiện hai ô một lúc. --}}
                 <div class="header-search flex-grow-1 mx-2 mx-lg-4">
-                    <form action="{{ route('products.search') }}" method="GET" class="w-100 position-relative" role="search" aria-label="{{ __('messages.search_placeholder') }}">
+                    <form action="{{ route('san-pham.tim-kiem') }}" method="GET" class="w-100 position-relative" role="search" aria-label="{{ __('messages.search_placeholder') }}">
                         <label for="header-search" class="visually-hidden">{{ __('messages.search_placeholder') }}</label>
                         <input type="search" id="header-search" name="q" value="{{ request('q') }}" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="{{ __('messages.search_mobile_placeholder') }}" autocomplete="off">
                         {{-- Icon kính lúp và nút micro dùng CHUNG ô 48px của `pe-5`, chỉ một
@@ -844,7 +844,7 @@
                     <ul class="navbar-nav align-items-lg-center">
                         <!-- Home Link -->
                         <li class="nav-item">
-                            <a class="nav-link text-gray-700 {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">
+                            <a class="nav-link text-gray-700 {{ request()->routeIs('trang-chu') ? 'active' : '' }}" href="{{ route('trang-chu') }}">
                                 <i class="bi bi-house-door me-1"></i>{{ __('messages.home') }}
                             </a>
                         </li>
@@ -866,8 +866,8 @@
                             @endphp
                             <ul class="dropdown-menu nav-categories-menu rounded-4 mt-2" data-catalog-filter>
                                 @php
-                                    $navMaxCount = max(1, (int) $navCategories->max('products_count'));
-                                    $navTotal = (int) $navCategories->sum('products_count');
+                                    $navMaxCount = max(1, (int) $navCategories->max('so_san_pham'));
+                                    $navTotal = (int) $navCategories->sum('so_san_pham');
                                 @endphp
                                 <li class="list-unstyled">
                                     <div class="nav-categories-head">
@@ -888,19 +888,19 @@
                                 @endif
                                 <li class="list-unstyled">
                                     <div class="nav-categories-list" data-catalog-filter-list>
-                                        @forelse($navCategories as $cat)
+                                        @forelse($navCategories as $danhMucNav)
                                             @php
-                                                $isActiveCategory = $activeCategoryId !== null && (string) $activeCategoryId === (string) $cat->ma_dm;
+                                                $isActiveCategory = $activeCategoryId !== null && (string) $activeCategoryId === (string) $danhMucNav->ma_dm;
                                             @endphp
                                             <a
                                                 class="dropdown-item nav-category-link {{ $isActiveCategory ? 'is-active' : '' }}"
-                                                href="{{ route('products.index', ['category' => $cat->ma_dm]) }}"
-                                                style="--depth: {{ round($cat->products_count / $navMaxCount * 100) }}%"
-                                                data-folded="{{ \App\Support\VietnameseText::fold($cat->ten) }}"
+                                                href="{{ route('san-pham.index', ['category' => $danhMucNav->ma_dm]) }}"
+                                                style="--depth: {{ round($danhMucNav->so_san_pham / $navMaxCount * 100) }}%"
+                                                data-folded="{{ \App\Support\VietnameseText::fold($danhMucNav->ten) }}"
                                                 @if($isActiveCategory) aria-current="page" @endif
                                             >
-                                                <span class="nav-category-title">{{ $cat->ten }}@if($loop->index < 3)<i class="bi bi-fire category-flame" aria-hidden="true"></i>@endif</span>
-                                                <span class="nav-category-count">{{ $cat->products_count }}</span>
+                                                <span class="nav-category-title">{{ $danhMucNav->ten }}@if($loop->index < 3)<i class="bi bi-fire category-flame" aria-hidden="true"></i>@endif</span>
+                                                <span class="nav-category-count">{{ $danhMucNav->so_san_pham }}</span>
                                             </a>
                                         @empty
                                             <span class="px-3 py-2 text-muted small text-center">{{ __('messages.loading_categories') }}</span>
@@ -910,7 +910,7 @@
                                 </li>
                                 <li><hr class="dropdown-divider nav-categories-divider"></li>
                                 <li>
-                                    <a class="dropdown-item nav-categories-cta" href="{{ route('products.index') }}">
+                                    <a class="dropdown-item nav-categories-cta" href="{{ route('san-pham.index') }}">
                                         <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>
                                         <span>{{ __('messages.all_products') }}</span>
                                         <span class="nav-categories-cta-count">{{ $navTotal }}</span>
@@ -921,14 +921,14 @@
 
                         <!-- Health Triage Link -->
                         <li class="nav-item">
-                            <a class="nav-link text-gray-700 {{ request()->routeIs('health.*') ? 'active' : '' }}" href="{{ route('health.check') }}">
+                            <a class="nav-link text-gray-700 {{ request()->routeIs('sang-loc.*') ? 'active' : '' }}" href="{{ route('sang-loc.kiem-tra') }}">
                                 <i class="bi bi-clipboard2-pulse me-1" aria-hidden="true"></i>{{ __('messages.health.nav') }}
                             </a>
                         </li>
 
                         <!-- Support Link -->
                         <li class="nav-item">
-                            <a class="nav-link text-gray-700 {{ request()->routeIs('contact') ? 'active' : '' }}" href="{{ route('contact') }}">
+                            <a class="nav-link text-gray-700 {{ request()->routeIs('lien-he') ? 'active' : '' }}" href="{{ route('lien-he') }}">
                                 <i class="bi bi-headset me-1"></i>{{ __('messages.contact') }}
                             </a>
                         </li>
@@ -938,7 +938,7 @@
                         
                         <!-- Cart -->
                         <li class="nav-item">
-                            <a class="nav-link text-gray-700 position-relative {{ request()->routeIs('cart.*') ? 'active' : '' }}" href="{{ route('cart.index') }}">
+                            <a class="nav-link text-gray-700 position-relative {{ request()->routeIs('gio-hang.*') ? 'active' : '' }}" href="{{ route('gio-hang.index') }}">
                                 <i class="bi bi-cart3 fs-5 me-1"></i>
                                 <span class="d-lg-none">{{ __('messages.cart.title') }}</span>
                                 @php $cartCount = session('cart') ? count(session('cart')) : 0; @endphp
@@ -971,7 +971,7 @@
                                     
                                     @if(auth()->user()->vai_tro === 'Administrator')
                                         <li>
-                                            <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('admin.dashboard') }}" style="transition: all 0.2s;">
+                                            <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('admin.bang-dieu-khien') }}" style="transition: all 0.2s;">
                                                 <i class="bi bi-speedometer2 text-emerald-600"></i>
                                                 <span class="fw-medium">{{ __('messages.dashboard') }}</span>
                                             </a>
@@ -980,21 +980,21 @@
                                     @endif
                                     
                                     <li>
-                                        <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('profile.edit') }}" style="transition: all 0.2s;">
+                                        <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('ho-so.edit') }}" style="transition: all 0.2s;">
                                             <i class="bi bi-person text-gray-500"></i>
                                             <span>{{ __('messages.my_profile') }}</span>
                                         </a>
                                     </li>
                                     
                                     <li>
-                                        <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('profile.edit') }}#orders" style="transition: all 0.2s;">
+                                        <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('ho-so.edit') }}#orders" style="transition: all 0.2s;">
                                             <i class="bi bi-bag text-gray-500"></i>
                                             <span>{{ __('messages.my_orders') }}</span>
                                         </a>
                                     </li>
                                     
                                     <li>
-                                        <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('profile.edit') }}#settings" style="transition: all 0.2s;">
+                                        <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('ho-so.edit') }}#settings" style="transition: all 0.2s;">
                                             <i class="bi bi-gear text-gray-500"></i>
                                             <span>{{ __('messages.settings') }}</span>
                                         </a>
@@ -1035,7 +1035,7 @@
             {{-- Flashed drug warnings render wherever the user was sent back to. Scoping
                  this to the cart page meant a warning raised from a product listing was
                  flashed, consumed and never shown. --}}
-            @if(session('drug_warnings') && !request()->routeIs('cart.index', 'checkout.index'))
+            @if(session('drug_warnings') && !request()->routeIs('gio-hang.index', 'thanh-toan.index'))
                 <div class="container pt-3">
                     <div class="glass-card rounded-4 border-0 p-3 p-md-4">
                         <x-drug-warnings :warnings="session('drug_warnings')" compact />
@@ -1077,7 +1077,7 @@
                         <!-- Brand Column -->
                         <div class="col-lg-4 col-md-6">
                             <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);">
-                                <a class="d-flex align-items-center mb-3 text-decoration-none" href="{{ route('home') }}">
+                                <a class="d-flex align-items-center mb-3 text-decoration-none" href="{{ route('trang-chu') }}">
                                     <img src="{{ asset('images/logo-icon.svg') }}" alt="" class="me-2" width="40" height="40" style="height: 40px; width: auto;">
                                     <span class="fs-5 fw-bold text-emerald-800">{{ __('messages.app_name') }}</span>
                                 </a>
@@ -1114,14 +1114,14 @@
                                         <ul class="list-unstyled mb-0">
                                             @forelse($footerCategories as $fCat)
                                             <li class="{{ !$loop->last ? 'mb-2' : 'mb-0' }}">
-                                                <a href="{{ route('products.index', ['category' => $fCat->ma_dm]) }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                <a href="{{ route('san-pham.index', ['category' => $fCat->ma_dm]) }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
                                                     {{ $fCat->ten }}
                                                 </a>
                                             </li>
                                             @empty
                                             <li class="mb-0">
-                                                <a href="{{ route('products.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                <a href="{{ route('san-pham.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
                                                     {{ __('messages.all_products') }}
                                                 </a>
@@ -1161,7 +1161,7 @@
                                                 </a>
                                             </li>
                                             <li class="mb-0">
-                                                <a href="{{ route('contact') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                <a href="{{ route('lien-he') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
                                                     {{ __('messages.contact_now') }}
                                                 </a>
@@ -1306,7 +1306,7 @@
         @if(config('search.voice.enabled', true))
             <script>
                 window.PharmacyVoiceLang = {
-                    url: @json(route('voice.normalize')),
+                    url: @json(route('tim-kiem-giong-noi.chuan-hoa')),
                     start: @json(__('messages.voice_start')),
                     listening: @json(__('messages.voice_listening')),
                     working: @json(__('messages.voice_working')),

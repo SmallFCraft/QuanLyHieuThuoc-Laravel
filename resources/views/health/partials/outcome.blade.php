@@ -106,7 +106,7 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('health.requestPharmacist', $session->ma_sl) }}" class="mt-3">
+            <form method="POST" action="{{ route('sang-loc.xin-duoc-si', $session->ma_sl) }}" class="mt-3">
                 @csrf
                 <button type="submit" class="health-btn health-btn-ghost w-100">
                     {{ __('messages.health.pharmacist_request_btn') }}

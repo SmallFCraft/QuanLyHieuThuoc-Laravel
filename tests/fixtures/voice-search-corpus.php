@@ -4,7 +4,7 @@
  * Tập kiểm định cho tìm kiếm bằng giọng nói tiếng Việt.
  *
  * MỤC ĐÍCH
- * Khoá lại hành vi của App\Services\VoiceSearchNormalizer trên đúng những chuỗi mà
+ * Khoá lại hành vi của App\Services\ChuanHoaTimKiemGiongNoi trên đúng những chuỗi mà
  * Chrome Web Speech `vi-VN` thật sự trả về — không phải trên chuỗi lý tưởng. Mỗi ca
  * là một cặp "máy nghe được" ↔ "khách thật sự muốn gì".
  *

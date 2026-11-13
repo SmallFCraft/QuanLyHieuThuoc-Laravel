@@ -43,7 +43,7 @@
             <h1 class="fw-bold text-gray-900 mb-1">{{ __('messages.profile.title') }}</h1>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0 small">
-                    <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-emerald-600 text-decoration-none">{{ __('messages.home') }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('trang-chu') }}" class="text-emerald-600 text-decoration-none">{{ __('messages.home') }}</a></li>
                     <li class="breadcrumb-item active" aria-current="page">{{ __('messages.profile.breadcrumb_account') }}</li>
                 </ol>
             </nav>

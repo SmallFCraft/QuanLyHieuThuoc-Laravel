@@ -48,7 +48,7 @@ return [
             // Fact extraction and the pharmacist draft may run inside the wizard's form
             // POST, so they keep the fail-fast budget.
             'timeout' => env('AI_TRIAGE_TIMEOUT', 30),
-            // The advice rewrite only ever runs from ProcessTriageAdviceRewrite, so it
+            // The advice rewrite only ever runs from XuLyVietLaiLoiKhuyen, so it
             // does not need to fail fast. Measured 2026-08-28: the same provider answered
             // in 2s, 7s, 33s and 62s on comparable prompts, and a budget sized for the
             // fast case discards the answer in the slow one.
@@ -76,8 +76,8 @@ return [
     | Image Upload Configuration
     |--------------------------------------------------------------------------
     |
-    | Prescription and receipt uploads. Read by ChatbotController (validation),
-    | ImageRecognitionService (storage) and chatbot:cleanup-images (retention).
+    | Prescription and receipt uploads. Read by TroLyChatbotController (validation),
+    | NhanDienHinhAnhService (storage) and chatbot:cleanup-images (retention).
     |
     | Not configured here: rate limits, which are route middleware — see the
     | `throttle:` calls in routes/api.php. Chat history is capped by the

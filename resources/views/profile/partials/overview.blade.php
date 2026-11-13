@@ -133,7 +133,7 @@
                     </li>
                 @endforeach
             </ul>
-            <a class="btn profile-btn-ghost mt-3" href="{{ route('reminders.index') }}">
+            <a class="btn profile-btn-ghost mt-3" href="{{ route('nhac-uong.index') }}">
                 <i class="bi bi-arrow-right me-1" aria-hidden="true"></i>{{ __('messages.profile.overview_view_reminders') }}
             </a>
         @else
@@ -193,28 +193,28 @@
 
         @if($previewFavorites->isNotEmpty())
             <ul class="profile-overview-list">
-                @foreach($previewFavorites as $product)
+                @foreach($previewFavorites as $sanPham)
                     <li>
-                        <a class="profile-overview-item" href="{{ route('products.show', $product->ma_sp) }}">
+                        <a class="profile-overview-item" href="{{ route('san-pham.show', $sanPham->ma_sp) }}">
                             <span class="profile-overview-thumb" data-product-image-container>
                                 <x-product-image
-                                    :src="$product->image_url"
-                                    :alt="$product->ten"
+                                    :src="$sanPham->image_url"
+                                    :alt="$sanPham->ten"
                                     class="w-100 h-100 object-fit-cover"
                                     icon-class="text-secondary opacity-25"
                                     icon-size="1.25rem"
                                 />
                             </span>
                             <span class="profile-overview-item__body">
-                                <span class="profile-overview-item__title">{{ $product->ten }}</span>
+                                <span class="profile-overview-item__title">{{ $sanPham->ten }}</span>
                                 <span class="profile-overview-item__meta">
-                                    {{ $product->danhMuc?->ten ?? __('messages.product_category') }}
-                                    @if($product->so_luong_ton < 1)
+                                    {{ $sanPham->danhMuc?->ten ?? __('messages.product_category') }}
+                                    @if($sanPham->so_luong_ton < 1)
                                         · <span class="text-danger">{{ __('messages.out_of_stock') }}</span>
                                     @endif
                                 </span>
                             </span>
-                            <span class="profile-overview-item__value">{{ $product->formatted_price }}</span>
+                            <span class="profile-overview-item__value">{{ $sanPham->formatted_price }}</span>
                         </a>
                     </li>
                 @endforeach
@@ -231,7 +231,7 @@
             </a>
         @else
             <p class="profile-overview-empty">{{ __('messages.profile.favorites_empty_desc') }}</p>
-            <a class="btn profile-btn-ghost" href="{{ route('products.index') }}">
+            <a class="btn profile-btn-ghost" href="{{ route('san-pham.index') }}">
                 <i class="bi bi-search me-1" aria-hidden="true"></i>{{ __('messages.profile.shop_now') }}
             </a>
         @endif

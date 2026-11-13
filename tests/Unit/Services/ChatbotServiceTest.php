@@ -4,11 +4,11 @@ namespace Tests\Unit\Services;
 
 use App\Models\DanhMuc;
 use App\Models\SanPham;
-use App\Services\AuditLogService;
+use App\Services\NhatKyKiemToanService;
 use App\Services\ChatbotService;
-use App\Services\CheckoutService;
+use App\Services\ThanhToanService;
 use App\Services\AiProviderService;
-use App\Services\InventoryService;
+use App\Services\TonKhoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\MockObject\MockObject;
 use Tests\TestCase;
@@ -35,19 +35,19 @@ class ChatbotServiceTest extends TestCase
         parent::setUp();
 
         $this->aiProviderService = $this->createMock(AiProviderService::class);
-        $inventoryService = $this->createMock(InventoryService::class);
-        $checkoutService = $this->createMock(CheckoutService::class);
-        $auditLogService = $this->createMock(AuditLogService::class);
+        $tonKhoService = $this->createMock(TonKhoService::class);
+        $thanhToanService = $this->createMock(ThanhToanService::class);
+        $auditLogService = $this->createMock(NhatKyKiemToanService::class);
 
         $this->chatbotService = new ChatbotService(
             $this->aiProviderService,
-            $inventoryService,
-            $checkoutService,
+            $tonKhoService,
+            $thanhToanService,
             $auditLogService
         );
     }
 
-    public function test_search_products_returns_at_most_5_products(): void
+    public function test_tra_cuu_san_pham_tra_toi_da_5_san_pham(): void
     {
         $danhMuc = DanhMuc::factory()->create();
 
@@ -63,7 +63,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertLessThanOrEqual(5, $results->count());
     }
 
-    public function test_search_products_only_returns_in_stock_products(): void
+    public function test_tra_cuu_san_pham_chi_tra_san_pham_con_hang(): void
     {
         $danhMuc = DanhMuc::factory()->create();
 
@@ -89,7 +89,7 @@ class ChatbotServiceTest extends TestCase
         }
     }
 
-    public function test_search_products_only_returns_non_expired_products(): void
+    public function test_tra_cuu_san_pham_chi_tra_san_pham_chua_het_han(): void
     {
         $danhMuc = DanhMuc::factory()->create();
 
@@ -115,7 +115,7 @@ class ChatbotServiceTest extends TestCase
         }
     }
 
-    public function test_search_products_applies_fefo_ordering(): void
+    public function test_tra_cuu_san_pham_sap_xep_fefo(): void
     {
         $danhMuc = DanhMuc::factory()->create();
 
@@ -143,7 +143,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertNotEquals($product1->ma_sp, $results->first()->ma_sp);
     }
 
-    public function test_search_products_searches_multiple_fields(): void
+    public function test_tra_cuu_san_pham_quet_nhieu_truong(): void
     {
         $danhMuc = DanhMuc::factory()->create();
 
@@ -180,7 +180,7 @@ class ChatbotServiceTest extends TestCase
         );
     }
 
-    public function test_search_products_loads_category_relationship(): void
+    public function test_tra_cuu_san_pham_tai_quan_he_danh_muc(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Pain Relief']);
 
@@ -197,14 +197,14 @@ class ChatbotServiceTest extends TestCase
         $this->assertEquals('Pain Relief', $results->first()->danhMuc->ten);
     }
 
-    public function test_search_products_returns_empty_when_no_matches(): void
+    public function test_tra_cuu_san_pham_tra_rong_khi_khop_gi(): void
     {
         $results = $this->chatbotService->searchProducts('NonexistentProduct');
 
         $this->assertEmpty($results);
     }
 
-    public function test_get_system_prompt_mentions_products_categories_and_safety_rules(): void
+    public function test_lay_prompt_he_thong_nhac_san_pham_danh_muc_va_quy_tac_an_toan(): void
     {
         $prompt = $this->chatbotService->getSystemPrompt();
 
@@ -216,7 +216,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('search_products', $prompt);
     }
 
-    public function test_function_schema_has_search_products_function(): void
+    public function test_schema_function_co_ham_tra_cuu_san_pham(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('getFunctionSchema');
@@ -230,7 +230,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertArrayHasKey('symptoms', $schema[0]['parameters']['properties']);
     }
 
-    public function test_gateway_upstream_error_is_not_classified_as_auth_denied(): void
+    public function test_loi_gateway_tu_phia_nguon_khong_bi_xem_la_loi_xac_thuc(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('classifyProviderError');
@@ -247,7 +247,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertSame('auth_or_access_denied', $method->invoke($this->chatbotService, $authError));
     }
 
-    public function test_a_rate_limit_that_names_the_api_key_is_not_an_access_denial(): void
+    public function test_gioi_han_ty_le_nhon_ma_api_khong_bi_xem_la_bi_cho_tu_choi(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('classifyProviderError');
@@ -262,7 +262,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertSame('capacity_or_rate_limit', $method->invoke($this->chatbotService, $rateLimited));
     }
 
-    public function test_competitor_pharmacy_question_is_answered_locally_without_nonsense_search(): void
+    public function test_cau_hoi_nha_thuoc_doi_thu_tra_loi_noi_bo_khong_quet_la_cai(): void
     {
         SanPham::factory()->create([
             'ma_dm' => DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau'])->ma_dm,
@@ -291,7 +291,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertEmpty($result['products']);
     }
 
-    public function test_competitor_pharmacy_question_still_searches_the_named_medicine(): void
+    public function test_cau_hoi_nha_thuoc_doi_thu_van_tra_cuu_thuoc_duoc_nhon_ten(): void
     {
         SanPham::factory()->create([
             'ma_dm' => DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau'])->ma_dm,
@@ -315,7 +315,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertSame('Paracetamol 500mg', $result['products'][0]['name']);
     }
 
-    public function test_pharmacy_location_question_points_to_maps(): void
+    public function test_cau_hoi_dia_chi_nha_thuoc_dan_ve_ban_do(): void
     {
         $result = $this->chatbotService->processMessage(
             'nhà thuốc ở đà nẵng có địa chỉ nào không?',
@@ -327,7 +327,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('Maps', $result['response']);
     }
 
-    public function test_ambiguous_chain_name_alone_is_not_treated_as_a_competitor_question(): void
+    public function test_ten_chuoi_nha_thuoc_mo_hu_khong_bi_do_la_cau_hoi_doi_thu(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('isOtherPharmacyIntent');
@@ -339,7 +339,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertTrue($method->invoke($this->chatbotService, 'long châu bán bao nhiêu?'));
     }
 
-    public function test_geo_restricted_provider_error_has_its_own_label(): void
+    public function test_loi_nha_cung_cap_chan_theo_vung_dia_ly_co_nhan_rieng(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $classify = $reflection->getMethod('classifyProviderError');
@@ -355,7 +355,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('khu vực', $describe->invoke($this->chatbotService, 'provider_geo_restricted'));
     }
 
-    public function test_provider_unavailable_response_explains_upstream_failure(): void
+    public function test_phan_hoi_nha_cung_cap_khong_san_sang_giai_thich_loi_tu_phia_nguon(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('buildProviderUnavailableResponse');
@@ -366,7 +366,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('upstream', $response);
     }
 
-    public function test_symptom_detection_ignores_accent_free_homographs(): void
+    public function test_nhan_dien_trieu_chung_bo_qua_tu_dong_am_khong_dau(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('isSymptomRelatedQuery');
@@ -404,7 +404,7 @@ class ChatbotServiceTest extends TestCase
         }
     }
 
-    public function test_travel_question_gets_out_of_domain_answer_instead_of_symptom_guidance(): void
+    public function test_cau_hoi_du_lich_nhan_loi_khuyen_ngoai_pham_vi_thay_huong_dan_trieu_chung(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -421,7 +421,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('nghỉ ngơi, uống đủ nước', $result['response']);
     }
 
-    public function test_validate_message_does_not_block_cong_dung_as_bad_word(): void
+    public function test_kiem_tra_tin_nhan_khong_chan_cong_dung_la_tu_xau(): void
     {
         $message = "v\u{1EAD}y c\u{00F2}n thu\u{1ED1}c n\u{00E0}o b\u{1ED5} m\u{1EAF}t kh\u{00F4}ng? n\u{1EBF}u c\u{00F3} cho v\u{00ED} d\u{1EE5}? h\u{00E3}y cho t\u{00F4}i th\u{00EA}m c\u{00F4}ng d\u{1EE5}ng";
 
@@ -430,7 +430,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertTrue($result['valid']);
     }
 
-    public function test_validate_message_still_blocks_exact_blacklisted_token(): void
+    public function test_kiem_tra_tin_nhan_van_chan_dung_token_trong_danh_sach_cam(): void
     {
         $result = $this->chatbotService->validateMessage("m\u{00E0}y ngu");
 
@@ -438,7 +438,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertNotEmpty($result['reason']);
     }
 
-    public function test_process_message_uses_local_product_lookup_without_ai_provider(): void
+    public function test_xu_ly_tin_nhan_tra_cuu_san_pham_noi_bo_khong_dung_ai(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Giảm đau']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -458,7 +458,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('Paracetamol 500mg', $result['response']);
     }
 
-    public function test_process_message_uses_recent_image_product_for_demonstrative_follow_up(): void
+    public function test_xu_ly_tin_nhan_dung_san_pham_trong_anh_gan_day_cho_cau_hoi_chi_ro(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin']);
         $sanPham = SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -494,7 +494,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertTrue($result['debug']['resolved_from_recent_image_products'] ?? false);
     }
 
-    public function test_process_message_returns_symptom_guidance_without_product_lookup_for_general_symptom_question(): void
+    public function test_xu_ly_tin_nhan_tra_huong_dan_trieu_chung_khong_tra_cuu_san_pham_cho_cau_hoi_cho(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -507,7 +507,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('ORESOL', $result['response']);
     }
 
-    public function test_process_message_does_not_search_catalog_for_general_date_question(): void
+    public function test_xu_ly_tin_nhan_khong_quet_danh_muc_cho_cau_hoi_ngay_thang(): void
     {
         \Illuminate\Support\Carbon::setTestNow('2026-07-09 10:20:00');
 
@@ -527,7 +527,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertFalse($result['show_disclaimer']);
     }
 
-    public function test_process_message_answers_colloquial_diarrhea_question_without_catalog_fallback(): void
+    public function test_xu_ly_tin_nhan_tra_loi_cau_hoi_tieu_chay_xuc_kiem_khong_du_phong_danh_muc(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -542,7 +542,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('từ khóa', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_uses_previous_symptom_context_for_prolonged_abdominal_pain_follow_up(): void
+    public function test_xu_ly_tin_nhan_dung_ngu_canh_trieu_chung_truoc_cho_cau_hoi_dau_bung_keo_dai(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -572,7 +572,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('theo dõi diễn tiến trong ngắn hạn', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_blocks_catalog_lookup_for_urgent_medical_context(): void
+    public function test_xu_ly_tin_nhan_chan_tra_cuu_danh_muc_khi_gap_ngu_canh_y_te_khan_cap(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -590,7 +590,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('từ khóa', $result['response']);
     }
 
-    public function test_process_message_handles_dengue_fever_as_urgent_medical_context(): void
+    public function test_xu_ly_tin_nhan_xem_sot_xuat_huet_la_ngu_canh_khan_cap(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -605,7 +605,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('cấp cứu', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_answers_cause_question_for_diarrhea_and_stomach_pain(): void
+    public function test_xu_ly_tin_nhan_tra_loi_cau_hoi_nguyen_nhan_benh_tieu_chay_va_dau_bung(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -620,7 +620,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('đau dạ dày', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_blocks_generic_product_follow_up_after_dengue_context(): void
+    public function test_xu_ly_tin_nhan_chan_tiep_theo_san_pham_chung_sau_ngu_canh_sot_xuat_huet(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -645,7 +645,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('không nên tự chọn thuốc', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_blocks_generic_medicine_or_product_request_after_dengue_context(): void
+    public function test_xu_ly_tin_nhan_chan_yeu_cau_thuoc_hoac_san_pham_chung_sau_ngu_canh_sot_xuat_huet(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -672,7 +672,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('chưa thấy sản phẩm khớp', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_provider_failure_does_not_return_random_products(): void
+    public function test_xu_ly_tin_nhan_loi_nha_cung_cap_khong_tra_san_pham_lac_dau(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -696,7 +696,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('kết nối AI', $result['response']);
     }
 
-    public function test_process_message_returns_website_intro_without_product_search(): void
+    public function test_xu_ly_tin_nhan_tra_gioi_thieu_website_khong_quet_san_pham(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin',
             'mo_ta' => 'Nhóm sản phẩm bổ sung vitamin',
@@ -720,7 +720,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('website', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_answers_identity_question_locally_without_calling_ai_provider(): void
+    public function test_xu_ly_tin_nhan_tra_loi_cau_hoi_danh_tinh_noi_bo_khong_goi_ai(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -736,7 +736,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('mô hình ngôn ngữ lớn', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_answers_vendor_question_locally_without_confirming_vendor(): void
+    public function test_xu_ly_tin_nhan_tra_loi_cau_hoi_nha_cung_cap_noi_bo_khong_khang_dinh_nha_cung_cap(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -751,7 +751,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('Google', $result['response']);
     }
 
-    public function test_process_message_answers_internet_access_question_locally_without_calling_ai_provider(): void
+    public function test_xu_ly_tin_nhan_tra_loi_cau_hoi_truy_cap_mang_noi_bo_khong_goi_ai(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -765,7 +765,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('không tự truy cập internet', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_answers_google_maps_question_locally_without_calling_ai_provider(): void
+    public function test_xu_ly_tin_nhan_tra_loi_cau_hoi_ban_do_noi_bo_khong_goi_ai(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -778,7 +778,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('không tự truy cập internet', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_handles_website_intro_with_product_lookup(): void
+    public function test_xu_ly_tin_nhan_xu_ly_gioi_thieu_website_kem_tra_cuu_san_pham(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -800,7 +800,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('Smecta', $result['response']);
     }
 
-    public function test_process_message_handles_website_intro_with_product_usage_question(): void
+    public function test_xu_ly_tin_nhan_xu_ly_gioi_thieu_website_kem_cau_hoi_cach_dung(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -820,7 +820,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('tiêu chảy', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_category_lookup_response_returns_categories_without_ai_provider(): void
+    public function test_tra_cuu_danh_muc_tra_danh_muc_khong_dung_ai(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin',
             'mo_ta' => 'Nhóm sản phẩm hỗ trợ bổ sung vitamin',
@@ -846,7 +846,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('danh mục', $result['response']);
     }
 
-    public function test_process_message_uses_ai_provider_for_symptom_queries_and_returns_disclaimer(): void
+    public function test_xu_ly_tin_nhan_dung_ai_cho_truy_van_trieu_chung_va_tra_mien_tru(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Giảm đau']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -879,7 +879,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertArrayHasKey('show_disclaimer', $result);
     }
 
-    public function test_process_message_falls_back_to_symptom_keywords_when_generic_query_has_no_direct_match(): void
+    public function test_xu_ly_tin_nhan_du_phong_ve_tu_khoa_trieu_chung_khi_truy_van_cho_khong_khop_truc_tiep(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -914,7 +914,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertContains('Smecta', array_column($result['products'], 'name'));
     }
 
-    public function test_process_message_uses_previous_symptoms_for_generic_product_follow_up(): void
+    public function test_xu_ly_tin_nhan_dung_trieu_chung_truoc_cho_tiep_theo_san_pham_chung(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -964,7 +964,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertTrue($result['show_disclaimer']);
     }
 
-    public function test_process_message_extracts_multiple_health_goals_from_generic_question(): void
+    public function test_xu_ly_tin_nhan_trich_xuat_nhieu_muc_tieu_suc_khoe_tu_cau_hoi_cho(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Thực phẩm chức năng']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -991,7 +991,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertContains('Vitamin C Immunity', array_column($result['products'], 'name'));
     }
 
-    public function test_process_message_does_not_misclassify_ho_tro_giam_dau_as_capability_question(): void
+    public function test_xu_ly_tin_nhan_khong_do_nham_ho_tro_giam_dau_la_cau_hoi_kha_nang(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau - Hạ sốt']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -1027,7 +1027,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('em có thể hỗ trợ anh/chị tìm sản phẩm, gợi ý danh mục phù hợp', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_ignores_meaningless_catalog_query_and_does_not_return_random_products(): void
+    public function test_xu_ly_tin_nhan_bo_qua_truy_van_danh_muc_vo_nghia_va_khong_tra_san_pham_lac_dau(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tim mạch']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -1059,7 +1059,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('Isosorbide Dinitrate 5mg', $result['response']);
     }
 
-    public function test_process_message_keeps_greeting_only_provider_response_without_catalog_miss(): void
+    public function test_xu_ly_tin_nhan_giu_phan_hoi_chao_ban_khong_bat_loi_khop_danh_muc(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -1104,7 +1104,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('Xin Chao Ban 500mg', $result['response']);
     }
 
-    public function test_process_message_treats_general_non_catalog_questions_as_provider_only_without_catalog_miss(): void
+    public function test_xu_ly_tin_nhan_xem_cau_hoi_ngoai_danh_muc_la_chi_hoi_ai_khong_bat_loi_khop_danh_muc(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'General noise']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -1155,7 +1155,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('Hello World 500mg', $result['response']);
     }
 
-    public function test_process_message_answers_simple_arithmetic_locally_without_provider_or_latex(): void
+    public function test_xu_ly_tin_nhan_tra_loi_phep_tinh_don_gian_noi_bo_khong_dung_ai_hoac_latex(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Math noise']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -1191,7 +1191,7 @@ class ChatbotServiceTest extends TestCase
         }
     }
 
-    public function test_process_message_blocks_unsupported_image_and_file_generation_without_provider(): void
+    public function test_xu_ly_tin_nhan_chan_tao_anh_va_file_khong_ho_tro_khong_dung_ai(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Creative noise']);
         foreach (['Tao Anh 500mg', 'Tao File Pdf 500mg'] as $name) {
@@ -1228,7 +1228,7 @@ class ChatbotServiceTest extends TestCase
         }
     }
 
-    public function test_process_message_sanitizes_provider_latex_math_for_plain_text_chat(): void
+    public function test_xu_ly_tin_nhan_don_dep_cong_thuc_latex_tu_ai_cho_chat_van_ban_thuan(): void
     {
         $this->aiProviderService->expects($this->once())
             ->method('chat')
@@ -1263,7 +1263,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('\\)', $result['response']);
     }
 
-    public function test_process_message_answers_bot_name_question_locally_without_catalog_fallback(): void
+    public function test_xu_ly_tin_nhan_tra_loi_cau_hoi_ten_bot_noi_bo_khong_du_phong_danh_muc(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Identity noise']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -1297,7 +1297,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('Ban Ten La Gi 500mg', $result['response']);
     }
 
-    public function test_process_message_answers_current_chat_session_id_locally_without_provider(): void
+    public function test_xu_ly_tin_nhan_tra_loi_session_id_hien_tai_noi_bo_khong_dung_ai(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Session noise']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -1331,7 +1331,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('Phien Chat Ma Id 500mg', $result['response']);
     }
 
-    public function test_process_message_treats_social_chitchat_as_non_catalog_without_symptom_or_disclaimer(): void
+    public function test_xu_ly_tin_nhan_xem_tro_chuyen_xa_hoi_la_ngoai_danh_muc_khong_trieu_chung_va_mien_tru(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Social noise']);
         foreach (['Cam On Ban 500mg', 'Shop Oi 250mg', 'Test Thoi 100mg'] as $name) {
@@ -1393,7 +1393,7 @@ class ChatbotServiceTest extends TestCase
         }
     }
 
-    public function test_process_message_replaces_off_topic_provider_reply_for_social_chitchat(): void
+    public function test_xu_ly_tin_nhan_thay_the_loi_ai_lac_de_cho_tro_chuyen_xa_hoi(): void
     {
         $this->aiProviderService->expects($this->once())
             ->method('chat')
@@ -1430,7 +1430,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertNull($result['disclaimer']);
     }
 
-    public function test_process_message_replaces_off_topic_provider_reply_for_on_ko_chitchat(): void
+    public function test_xu_ly_tin_nhan_thay_the_loi_ai_lac_de_cho_tro_chuyen_on_ko(): void
     {
         $this->aiProviderService->expects($this->once())
             ->method('chat')
@@ -1467,7 +1467,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertNull($result['disclaimer']);
     }
 
-    public function test_process_message_preserves_cold_symptom_guidance_for_real_health_intent(): void
+    public function test_xu_ly_tin_nhan_giu_huong_dan_trieu_chung_cam_cho_y_dinh_suc_khoe_that(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -1481,7 +1481,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString("tri\u{1EC7}u ch\u{1EE9}ng", mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_preserves_cold_medicine_product_lookup_for_real_product_intent(): void
+    public function test_xu_ly_tin_nhan_giu_tra_cuu_thuoc_cam_cho_y_dinh_san_pham_that(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => "C\u{1EA3}m c\u{00FA}m"]);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -1521,7 +1521,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertTrue($result['show_disclaimer']);
     }
 
-    public function test_process_message_handles_self_introduction_without_catalog_fallback(): void
+    public function test_xu_ly_tin_nhan_xu_ly_gioi_thieu_ban_than_khong_du_phong_danh_muc(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tim mạch']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -1548,7 +1548,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('Isosorbide Dinitrate 5mg', $result['response']);
     }
 
-    public function test_process_message_preserves_diacritics_in_declared_name(): void
+    public function test_xu_ly_tin_nhan_giu_nguyen_dau_trong_ten_tu_gioi_thieu(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -1559,7 +1559,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('Bang', $result['response']);
     }
 
-    public function test_process_message_recalls_declared_name_from_history(): void
+    public function test_xu_ly_tin_nhan_nho_ten_tu_gioi_thieu_trong_lich_su(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -1586,7 +1586,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('chưa thấy sản phẩm', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_recalls_declared_name_from_session_memory_when_recent_context_drops_it(): void
+    public function test_xu_ly_tin_nhan_nho_ten_tu_bo_nho_phien_khi_ngu_canh_gan_day_bo_qua(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -1622,7 +1622,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('chua thay san pham', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_name_question_without_history_does_not_learn_gi_as_name(): void
+    public function test_xu_ly_tin_nhan_cau_hoi_ten_khong_lich_su_khong_nhoc_gi_la_ten(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -1637,7 +1637,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('chào Gi', $result['response']);
     }
 
-    public function test_process_message_treats_product_named_query_as_catalog_lookup_not_self_introduction(): void
+    public function test_xu_ly_tin_nhan_xem_truy_van_nhon_ten_san_pham_la_tra_cuu_danh_muc_chu_khong_phai_gioi_thieu(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -1658,7 +1658,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('tra cứu Vitamin C', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_handles_name_intro_with_product_lookup_intent(): void
+    public function test_xu_ly_tin_nhan_xu_ly_gioi_thieu_ten_kem_y_dinh_tra_cuu_san_pham(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -1689,7 +1689,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('Em có thể hỗ trợ Huy', $result['response']);
     }
 
-    public function test_process_message_trims_name_from_mixed_intro_history(): void
+    public function test_xu_ly_tin_nhan_cat_ten_tu_lich_su_gioi_thieu_lai_xen(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -1712,7 +1712,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('Muốn Tìm Vitamin', $result['response']);
     }
 
-    public function test_process_message_does_not_append_catalog_miss_for_product_safety_follow_up(): void
+    public function test_xu_ly_tin_nhan_khong_them_loi_khop_danh_muc_cho_tiep_theo_an_toan_san_pham(): void
     {
         $this->aiProviderService->expects($this->once())
             ->method('chat')
@@ -1748,7 +1748,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('từ khóa', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_does_not_append_catalog_miss_for_product_usage_timing_follow_up(): void
+    public function test_xu_ly_tin_nhan_khong_them_loi_khop_danh_muc_cho_tiep_theo_thoi_diem_dung_thuoc(): void
     {
         $this->aiProviderService->expects($this->once())
             ->method('chat')
@@ -1786,7 +1786,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('tu khoa', mb_strtolower($result['response'], 'UTF-8'));
         $this->assertStringNotContainsString('vay nen uong khi an khi', mb_strtolower($result['response'], 'UTF-8'));
     }
-    public function test_process_message_uses_declared_name_from_history_in_later_local_response(): void
+    public function test_xu_ly_tin_nhan_dung_ten_tu_lich_su_trong_phan_hoi_noi_bo_sau(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -1808,7 +1808,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('anh/chị', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_build_conversation_messages_includes_declared_name_context(): void
+    public function test_dung_mang_tin_nhan_chua_ngu_canh_ten_da_gioi_thieu(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('buildConversationMessages');
@@ -1836,7 +1836,7 @@ class ChatbotServiceTest extends TestCase
         ));
     }
 
-    public function test_process_message_personalizes_ai_response_with_declared_name_from_history(): void
+    public function test_xu_ly_tin_nhan_ca_nhan_hoa_loi_ai_voi_ten_tu_lich_su(): void
     {
         $this->aiProviderService->expects($this->once())
             ->method('chat')
@@ -1865,7 +1865,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('anh/chị', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_rewrites_identity_leakage_from_ai_provider_response(): void
+    public function test_xu_ly_tin_nhan_viet_lai_lo_ro_danh_tinh_trong_loi_ai(): void
     {
         $this->aiProviderService->expects($this->once())
             ->method('chat')
@@ -1890,7 +1890,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('mô hình ngôn ngữ lớn', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_with_url_only_returns_link_guidance_instead_of_symptom_advice(): void
+    public function test_xu_ly_tin_nhan_chua_url_tra_huong_dan_link_thay_loi_khuyen_trieu_chung(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -1908,7 +1908,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('nên nghỉ ngơi', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_food_request_stays_out_of_domain_without_catalog_miss(): void
+    public function test_xu_ly_tin_nhan_yeu_cau_do_an_ngoai_pham_vi_khong_bat_loi_khop_danh_muc(): void
     {
         $this->aiProviderService->expects($this->never())->method('chat');
 
@@ -1935,7 +1935,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('một trợ lý ảo', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_process_message_with_nearby_pharmacy_location_request_does_not_return_categories(): void
+    public function test_xu_ly_tin_nhan_yeu_cau_nha_thuoc_gan_khong_tra_danh_muc(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -1958,7 +1958,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('danh mục sau', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_recommend_by_symptoms_includes_disclaimer(): void
+    public function test_goi_y_theo_trieu_chung_co_mien_tru(): void
     {
         $this->aiProviderService->method('chat')->willReturn([
             'choices' => [
@@ -1978,7 +1978,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertNotEmpty($result['disclaimer']);
     }
 
-    public function test_recommend_by_symptoms_returns_products_and_explanations_from_function_call(): void
+    public function test_goi_y_theo_trieu_chung_tra_san_pham_va_giai_thich_tu_function_call(): void
     {
         $danhMuc = DanhMuc::factory()->create();
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -2008,7 +2008,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertTrue($result['show_disclaimer']);
     }
 
-    public function test_recommend_by_symptoms_handles_errors_gracefully(): void
+    public function test_goi_y_theo_trieu_chung_xu_ly_loi_lai_le_phoi(): void
     {
         $this->aiProviderService->method('chat')->willThrowException(new \Exception('API Error'));
 
@@ -2018,7 +2018,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertEmpty($result['products']);
         $this->assertTrue($result['show_disclaimer']);
     }
-    public function test_process_message_strips_internal_tool_narration_from_assistant_response(): void
+    public function test_xu_ly_tin_nhan_cat_lo_dan_ke_chuyen_cong_cu_noi_bo_khoi_loi_tro_ly(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Cảm cúm']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -2051,7 +2051,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('trong lúc chờ đợi', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_catalog_lookup_falls_back_to_products_in_matched_category(): void
+    public function test_tra_cuu_danh_muc_du_phong_ve_san_pham_trong_danh_muc_da_khop(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa',
             'mo_ta' => 'Thuốc điều trị các bệnh về đường tiêu hóa',
@@ -2087,7 +2087,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('chưa tìm thấy sản phẩm', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_catalog_lookup_does_not_suggest_category_products_without_a_query(): void
+    public function test_tra_cuu_danh_muc_khong_goi_y_san_pham_khi_khong_co_truy_van(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -2105,7 +2105,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertEmpty($result['products']);
     }
 
-    public function test_catalog_lookup_matches_category_from_multi_word_functional_query(): void
+    public function test_tra_cuu_danh_muc_khop_danh_muc_tu_truy_van_chuc_nang_nhieu_tu(): void
     {
         $digestive = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa',
             'mo_ta' => 'Thuốc điều trị các bệnh về đường tiêu hóa',
@@ -2145,7 +2145,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('chưa thấy sản phẩm', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_catalog_lookup_ignores_generic_words_when_resolving_a_category(): void
+    public function test_tra_cuu_danh_muc_bo_qua_tu_chung_khi_phan_giai_danh_muc(): void
     {
         foreach (['Thuốc tiêu hóa', 'Thuốc giảm đau - Hạ sốt', 'Thuốc tim mạch'] as $name) {
             $danhMuc = DanhMuc::factory()->create(['ten' => $name, 'mo_ta' => $name]);
@@ -2165,7 +2165,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertEmpty($result['products']);
     }
 
-    public function test_ai_history_drops_provider_failure_turns_and_collapses_retries(): void
+    public function test_lich_su_ai_bo_luot_loi_nha_cung_cap_va_gap_cac_lan_thu_lai(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('sanitizeHistoryForAi');
@@ -2214,7 +2214,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertSame('assistant', $history[3]['role']);
     }
 
-    public function test_ai_history_anchors_elliptical_follow_up_to_latest_topic(): void
+    public function test_lich_su_ai_gan_tiep_theo_khuyen_du_vao_chu_de_moi_nhat(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('buildConversationMessages');
@@ -2258,7 +2258,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertSame('assistant', $history[1]['role']);
     }
 
-    public function test_ai_history_does_not_anchor_a_message_that_has_its_own_topic(): void
+    public function test_lich_su_ai_khong_gan_tin_nhan_co_chu_de_rieng(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('buildConversationMessages');
@@ -2278,7 +2278,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertSame('assistant', $messages[count($messages) - 2]['role'] ?? null);
     }
 
-    public function test_illicit_substance_question_returns_safety_guidance_without_catalog_search(): void
+    public function test_cau_hoi_chat_chat_cam_tra_huong_dan_an_toan_khong_quet_danh_muc(): void
     {
         $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau']);
         SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
@@ -2300,7 +2300,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('chưa thấy sản phẩm', mb_strtolower($result['response'], 'UTF-8'));
     }
 
-    public function test_everyday_words_are_not_treated_as_illicit_substance_questions(): void
+    public function test_tu_ngay_thuong_khong_bi_do_la_cau_hoi_chat_chat_cam(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('isIllicitSubstanceIntent');
@@ -2332,7 +2332,7 @@ class ChatbotServiceTest extends TestCase
         }
     }
 
-    public function test_assistant_response_drops_a_disclaimer_repeated_inside_the_text(): void
+    public function test_loi_tro_ly_bo_mien_tru_bi_lap_lai_trong_van_ban(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('sanitizeAssistantResponse');
@@ -2355,7 +2355,7 @@ class ChatbotServiceTest extends TestCase
         }
     }
 
-    public function test_assistant_response_keeps_pharmacist_advice_that_carries_content(): void
+    public function test_loi_tro_ly_giu_loi_khuyen_duoc_si_co_noi_dung(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('sanitizeAssistantResponse');
@@ -2372,7 +2372,7 @@ class ChatbotServiceTest extends TestCase
         }
     }
 
-    public function test_product_search_narrows_a_multi_word_symptom_query(): void
+    public function test_tim_kiem_san_pham_thu_hep_truy_van_trieu_chung_nhieu_tu(): void
     {
         $digestive = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
         $painkillers = DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau - Hạ sốt']);
@@ -2404,7 +2404,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertNotContains('Paracetamol 500mg', $names);
     }
 
-    public function test_product_search_resolves_a_stomach_query_before_a_painkiller_one(): void
+    public function test_tim_kiem_san_pham_phan_giai_truy_van_bung_truoc_truy_van_giam_dau(): void
     {
         $digestive = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
         $painkillers = DanhMuc::factory()->create(['ten' => 'Thuốc giảm đau - Hạ sốt']);
@@ -2429,7 +2429,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertNotContains('Diclofenac 50mg', $names);
     }
 
-    public function test_product_search_does_not_answer_from_a_single_stray_token(): void
+    public function test_tim_kiem_san_pham_khong_tra_loi_chi_tu_mot_token_lac(): void
     {
         $vitamins = DanhMuc::factory()->create(['ten' => 'Vitamin và khoáng chất']);
         SanPham::factory()->create(['ma_dm' => $vitamins->ma_dm,
@@ -2445,7 +2445,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertEmpty($this->chatbotService->searchProducts('hỗ trợ tiêu hóa nhanh')->all());
     }
 
-    public function test_product_search_ignores_an_accent_blind_substring_hit(): void
+    public function test_tim_kiem_san_pham_bo_qua_khop_cong_du_khong_dau(): void
     {
         $vitamins = DanhMuc::factory()->create(['ten' => 'Thuốc bổ & vitamin']);
         SanPham::factory()->create(['ma_dm' => $vitamins->ma_dm,
@@ -2463,7 +2463,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertEmpty($this->chatbotService->searchProducts('thử thai')->all());
     }
 
-    public function test_product_search_drops_a_price_question_before_narrowing(): void
+    public function test_tim_kiem_san_pham_bo_cau_hoi_gia_truoc_khi_thu_hep(): void
     {
         $digestive = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
         SanPham::factory()->create(['ma_dm' => $digestive->ma_dm,
@@ -2485,7 +2485,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertNotContains('Biviantac', $names);
     }
 
-    public function test_match_verification_keeps_an_unaccented_query(): void
+    public function test_xac_minh_khop_giu_truy_van_khong_dau(): void
     {
         $method = new \ReflectionMethod($this->chatbotService, 'phraseOccursAsWord');
         $method->setAccessible(true);
@@ -2503,7 +2503,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertFalse($method->invoke($this->chatbotService, 'chống oxy hóa', 'hoa qua'));
     }
 
-    public function test_product_search_ignores_the_verb_a_customer_wraps_the_query_in(): void
+    public function test_tim_kiem_san_pham_bo_qua_dong_tu_bao_quanh_truy_van(): void
     {
         $respiratory = DanhMuc::factory()->create(['ten' => 'Thuốc ho - hô hấp']);
         $wanted = SanPham::factory()->create(['ma_dm' => $respiratory->ma_dm,
@@ -2528,7 +2528,7 @@ class ChatbotServiceTest extends TestCase
         }
     }
 
-    public function test_assistant_response_removes_foreign_script_words(): void
+    public function test_loi_tro_ly_bo_tu_viet_bang_chu_cai_water(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('sanitizeAssistantResponse');
@@ -2555,7 +2555,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertSame($intact, $method->invoke($this->chatbotService, $intact));
     }
 
-    public function test_ai_answer_is_not_followed_by_a_no_match_catalog_block(): void
+    public function test_loi_ai_khong_bi_theo_boi_khoi_khong_khop_danh_muc(): void
     {
         $this->aiProviderService->expects($this->once())
             ->method('chat')
@@ -2578,7 +2578,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringNotContainsString('từ khóa `', $result['response']);
     }
 
-    public function test_response_intro_does_not_echo_a_noisy_query(): void
+    public function test_loi_dan_khong_nga_lai_truy_van_la_cai(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('buildCategoryResponseText');
@@ -2602,7 +2602,7 @@ class ChatbotServiceTest extends TestCase
         $this->assertStringContainsString('`vitamin`', $clean);
     }
 
-    public function test_grounded_response_drops_links_duplicating_a_category_card(): void
+    public function test_loi_co_so_bo_link_trung_the_danh_muc(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('stripDuplicateCategoryCardLinks');
@@ -2628,7 +2628,7 @@ class ChatbotServiceTest extends TestCase
      * shipped raw to the widget — without double-linking one that is already markdown.
      * The label must be the exact string the widget promotes to a button.
      */
-    public function test_raw_product_urls_become_the_product_button_in_every_written_shape(): void
+    public function test_url_san_pham_thanh_nut_san_pham_trong_moi_dang_trinh_bay(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);
         $method = $reflection->getMethod('formatFriendlyProductLinks');

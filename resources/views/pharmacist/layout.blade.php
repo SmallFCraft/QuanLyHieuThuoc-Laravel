@@ -143,12 +143,12 @@
                     <i class="bi bi-prescription2 fs-5" aria-hidden="true"></i>
                     {{ __('messages.pharmacist.area_name') }}
                 </span>
-                <a href="{{ route('pharmacist.triage.index') }}"
+                <a href="{{ route('duoc-si.sang-loc.index') }}"
                    class="rx-nav-link"
-                   @if(request()->routeIs('pharmacist.triage.*')) aria-current="page" @endif>
+                   @if(request()->routeIs('duoc-si.sang-loc.*')) aria-current="page" @endif>
                     <i class="bi bi-inboxes-fill" aria-hidden="true"></i>{{ __('messages.pharmacist.nav_queue') }}
                 </a>
-                <a href="{{ route('home') }}" class="rx-nav-link">
+                <a href="{{ route('trang-chu') }}" class="rx-nav-link">
                     <i class="bi bi-house-door" aria-hidden="true"></i>{{ __('messages.pharmacist.nav_home') }}
                 </a>
             </div>

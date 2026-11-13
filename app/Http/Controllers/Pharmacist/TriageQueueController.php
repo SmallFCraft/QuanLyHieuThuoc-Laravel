@@ -7,8 +7,8 @@ use App\Models\TinNhanChat;
 use App\Models\TrieuChungYTe;
 use App\Models\PhienSangLoc;
 use App\Models\HoSoSucKhoe;
-use App\Services\AuditLogService;
-use App\Services\Triage\Ai\TriageAiDraftService;
+use App\Services\NhatKyKiemToanService;
+use App\Services\Triage\Ai\SangLocAiSoanLoiService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -64,7 +64,7 @@ class TriageQueueController extends Controller
         ]);
     }
 
-    public function show(int $MaSL, TriageAiDraftService $draftService): View
+    public function show(int $MaSL, SangLocAiSoanLoiService $draftService): View
     {
         // Only cases that actually entered the queue. Without this filter any
         // pharmacist could walk MaSL=1..N and read the health profile of every
@@ -78,7 +78,7 @@ class TriageQueueController extends Controller
 
         // Reading someone's health data is auditable every single time, not once.
         if ($hoSo) {
-            app(AuditLogService::class)->log(
+            app(NhatKyKiemToanService::class)->ghi(
                 action: 'health_profile_accessed',
                 modelType: HoSoSucKhoe::class,
                 modelId: $hoSo->ma_hs,
@@ -107,7 +107,7 @@ class TriageQueueController extends Controller
             'age' => $phien->nguoiDung?->ageInYears(),
             'profile' => $hoSo,
             'isPending' => $phien->status === 'pending_pharmacist',
-            'aiDraftEnabled' => $draftService->isEnabled(),
+            'aiDraftEnabled' => $draftService->daBat(),
         ]);
     }
 
@@ -150,7 +150,7 @@ class TriageQueueController extends Controller
                 ]);
             }
 
-            app(AuditLogService::class)->log(
+            app(NhatKyKiemToanService::class)->ghi(
                 action: 'triage_pharmacist_replied',
                 modelType: PhienSangLoc::class,
                 modelId: $phien->ma_sl,
@@ -208,7 +208,7 @@ class TriageQueueController extends Controller
                 ]);
             }
 
-            app(AuditLogService::class)->log(
+            app(NhatKyKiemToanService::class)->ghi(
                 action: 'triage_escalated',
                 modelType: PhienSangLoc::class,
                 modelId: $phien->ma_sl,
@@ -244,7 +244,7 @@ class TriageQueueController extends Controller
             $phien->pharmacist_id = $pharmacistId;
             $phien->save();
 
-            app(AuditLogService::class)->log(
+            app(NhatKyKiemToanService::class)->ghi(
                 action: 'triage_claimed',
                 modelType: PhienSangLoc::class,
                 modelId: $phien->ma_sl,
@@ -266,9 +266,9 @@ class TriageQueueController extends Controller
      * to read, edit and submit it. `validatedNote()` stays the only trust boundary.
      * GET would also write a `health_profile_accessed` audit row on every click.
      */
-    public function draft(Request $request, int $MaSL, TriageAiDraftService $draftService): RedirectResponse
+    public function draft(Request $request, int $MaSL, SangLocAiSoanLoiService $draftService): RedirectResponse
     {
-        if (!$draftService->isEnabled()) {
+        if (!$draftService->daBat()) {
             return $this->draftError($MaSL, __('messages.pharmacist.ai_draft_disabled'));
         }
 
@@ -288,14 +288,14 @@ class TriageQueueController extends Controller
             return $this->draftError($MaSL, __('messages.pharmacist.error_claimed_by_other'));
         }
 
-        $draft = $draftService->draftReply($phien, $this->symptomNames($phien));
+        $draft = $draftService->soanLoiTraLoi($phien, $this->symptomNames($phien));
 
         if ($draft === null) {
             return $this->draftError($MaSL, __('messages.pharmacist.ai_draft_failed'));
         }
 
         return redirect()
-            ->route('pharmacist.triage.show', $MaSL)
+            ->route('duoc-si.sang-loc.show', $MaSL)
             ->withInput(['pharmacist_note' => $draft])
             ->with('success', __('messages.pharmacist.ai_draft_success'));
     }
@@ -303,7 +303,7 @@ class TriageQueueController extends Controller
     protected function draftError(int $MaSL, string $message): RedirectResponse
     {
         return redirect()
-            ->route('pharmacist.triage.show', $MaSL)
+            ->route('duoc-si.sang-loc.show', $MaSL)
             ->withErrors(['pharmacist_note' => $message]);
     }
 
@@ -323,11 +323,11 @@ class TriageQueueController extends Controller
     {
         if ($error !== null) {
             return redirect()
-                ->route('pharmacist.triage.show', $MaSL)
+                ->route('duoc-si.sang-loc.show', $MaSL)
                 ->withErrors(['pharmacist_note' => $error]);
         }
 
-        return redirect()->route('pharmacist.triage.index')->with('success', $success);
+        return redirect()->route('duoc-si.sang-loc.index')->with('success', $success);
     }
 
     /**

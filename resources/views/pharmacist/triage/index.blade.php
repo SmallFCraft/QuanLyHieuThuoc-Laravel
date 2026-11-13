@@ -118,7 +118,7 @@
                                 @endif
                             </td>
                             <td class="text-end">
-                                <a href="{{ route('pharmacist.triage.show', $item->ma_sl) }}"
+                                <a href="{{ route('duoc-si.sang-loc.show', $item->ma_sl) }}"
                                    class="rx-btn rx-btn-primary"
                                    aria-label="{{ __('messages.pharmacist.btn_view_aria', ['id' => $item->ma_sl]) }}">
                                     <i class="bi bi-eye" aria-hidden="true"></i>{{ __('messages.pharmacist.btn_view') }}

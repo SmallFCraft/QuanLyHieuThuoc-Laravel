@@ -3,8 +3,8 @@
 namespace App\Support;
 
 /**
- * The session cart is stored as `[ma_sp => quantity]`, but DrugSafetyService and
- * CheckoutService expect rows. Keeping the transform here means the shape is
+ * The session cart is stored as `[ma_sp => quantity]`, but AnToanThuocService and
+ * ThanhToanService expect rows. Keeping the transform here means the shape is
  * defined once instead of in every controller that touches the cart.
  */
 final class CartLine

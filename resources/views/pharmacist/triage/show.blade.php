@@ -29,7 +29,7 @@
         <h1 class="h3 fw-bold text-gray-900 mb-1">{{ __('messages.pharmacist.detail_title', ['id' => $session->ma_sl]) }}</h1>
         <p class="text-gray-600 mb-0">{{ __('messages.pharmacist.detail_subtitle') }}</p>
     </div>
-    <a href="{{ route('pharmacist.triage.index') }}" class="rx-btn rx-btn-ghost">
+    <a href="{{ route('duoc-si.sang-loc.index') }}" class="rx-btn rx-btn-ghost">
         <i class="bi bi-arrow-left" aria-hidden="true"></i>{{ __('messages.pharmacist.btn_back_queue') }}
     </a>
 </div>
@@ -291,7 +291,7 @@
                         : __('messages.pharmacist.claimed_by', ['name' => $session->pharmacist?->ho_ten ?? '']) }}
                 </p>
             @else
-                <form method="POST" action="{{ route('pharmacist.triage.claim', $session->ma_sl) }}" class="mb-4">
+                <form method="POST" action="{{ route('duoc-si.sang-loc.claim', $session->ma_sl) }}" class="mb-4">
                     @csrf
                     <button type="submit" class="rx-btn rx-btn-ghost">
                         <i class="bi bi-hand-index-thumb" aria-hidden="true"></i>{{ __('messages.pharmacist.btn_claim') }}
@@ -309,7 +309,7 @@
                      separate route that only prefills the textarea via old(), so nothing
                      machine-written is ever persisted or sent to the customer. --}}
                 @if ($aiDraftEnabled)
-                    <form method="POST" action="{{ route('pharmacist.triage.draft', $session->ma_sl) }}" class="mb-3">
+                    <form method="POST" action="{{ route('duoc-si.sang-loc.draft', $session->ma_sl) }}" class="mb-3">
                         @csrf
                         <button type="submit" class="rx-btn rx-btn-ghost">
                             <i class="bi bi-stars" aria-hidden="true"></i>{{ __('messages.pharmacist.btn_ai_draft') }}
@@ -326,7 +326,7 @@
                     @endif
                 @endif
 
-                <form method="POST" action="{{ route('pharmacist.triage.reply', $session->ma_sl) }}">
+                <form method="POST" action="{{ route('duoc-si.sang-loc.reply', $session->ma_sl) }}">
                     @csrf
                     <label for="pharmacist_note" class="form-label fw-medium">{{ __('messages.pharmacist.reply_label') }}</label>
                     <textarea id="pharmacist_note"
@@ -355,7 +355,7 @@
                 </h2>
                 <p class="small mb-3" style="color: #78350F;">{{ __('messages.pharmacist.escalate_hint') }}</p>
 
-                <form method="POST" action="{{ route('pharmacist.triage.escalate', $session->ma_sl) }}">
+                <form method="POST" action="{{ route('duoc-si.sang-loc.escalate', $session->ma_sl) }}">
                     @csrf
                     <label for="escalate_note" class="form-label fw-medium" style="color: #78350F;">
                         {{ __('messages.pharmacist.escalate_label') }}

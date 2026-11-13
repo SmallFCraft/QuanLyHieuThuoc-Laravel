@@ -1,0 +1,136 @@
+<?php
+
+namespace App\Services\Triage\Ai;
+
+use App\Models\PhienSangLoc;
+use App\Services\NhatKyKiemToanService;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+
+/**
+ * AI-drafted reply for the pharmacist review queue.
+ *
+ * The draft is never persisted and never reaches the customer on its own: the
+ * controller only prefills the reply textarea, so a pharmacist still reads,
+ * edits and submits it under their own name. That makes the human the validator.
+ *
+ * Health profile data only reaches the provider through SangLocAiNguCanhService,
+ * which gates it on explicit AI consent. The controller's fixed-outcome prompt
+ * remains the safety authority; this context is supporting information only.
+ */
+class SangLocAiSoanLoiService extends SangLocAiService
+{
+    private const MAX_DRAFT_LENGTH = 2000;
+
+    /**
+     * Constructor injection mirrors SangLocAiTomTatService. Safe here for the same
+     * reason as there: nothing resolves this seam before its config flag is on, and
+     * SangLocAiNguCanhService itself has no throwing constructor — AiProviderService,
+     * which throws without AI config, is resolved per call and stays untouched.
+     */
+    public function __construct(
+        protected NhatKyKiemToanService $nhatKyKiemToanService,
+        protected SangLocAiNguCanhService $contextService,
+    ) {
+        parent::__construct($nhatKyKiemToanService);
+    }
+
+    protected function configFlag(): string
+    {
+        return 'pharmacist_draft';
+    }
+
+    /**
+     * May run inside the pharmacist's form POST, so it keeps the fail-fast budget.
+     */
+    protected function timeoutSeconds(): int
+    {
+        return (int) config('chatbot.ai.triage.timeout', 30);
+    }
+
+    /**
+     * A Vietnamese reply draft, or null when the provider is unavailable or the
+     * output fails the length check.
+     *
+     * @param  array<int, string>  $cacTenTrieuChung  Vietnamese symptom names, already resolved
+     */
+    public function soanLoiTraLoi(PhienSangLoc $phien, array $cacTenTrieuChung): ?string
+    {
+        if (! $this->daBat()) {
+            return null;
+        }
+
+        $startedAt = microtime(true);
+
+        try {
+            $provider = $this->provider();
+
+            $response = $this->callProvider($provider, [
+                ['role' => 'system', 'content' => $this->systemPrompt()],
+                ['role' => 'user', 'content' => $this->buildPrompt($phien, $cacTenTrieuChung)],
+            ]);
+
+            $draft = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
+            $draft = $this->stripMarkdown($draft);
+
+            if ($draft === '') {
+                return null;
+            }
+
+            $draft = Str::limit($draft, self::MAX_DRAFT_LENGTH, '');
+
+            $this->auditProvenance(
+                $phien,
+                'triage_ai_draft',
+                $provider->describeLastProvider(),
+                (microtime(true) - $startedAt) * 1000,
+                ['ai_status' => 'ok']
+            );
+
+            return $draft;
+        } catch (\Throwable $exception) {
+            Log::warning('Triage AI draft failed', [
+                'ma_sl' => $phien->ma_sl,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    protected function systemPrompt(): string
+    {
+        return implode("\n", [
+            'Bạn soạn bản nháp câu trả lời cho dược sĩ tại nhà thuốc Việt Nam.',
+            'Người đọc cuối là khách hàng, nên viết ngôi "em", gọi khách là "anh/chị".',
+            'Chỉ dùng dữ liệu được cung cấp. KHÔNG thêm chẩn đoán, không thêm tên thuốc,',
+            'không thay đổi kết luận của hệ thống, không hứa hẹn kết quả điều trị.',
+            'Luôn giữ lại ngưỡng cần đi khám nếu dữ liệu có nêu.',
+            'Trả về văn bản thuần, không markdown, không JSON, tối đa 250 từ.',
+        ]);
+    }
+
+    /**
+     * Rule-derived material, symptom/red-flag names, and optional patient context
+     * (age, consented health profile, and fenced recent triage history).
+     */
+    protected function buildPrompt(PhienSangLoc $phien, array $cacTenTrieuChung): string
+    {
+        $redFlags = collect($phien->triggered_red_flags ?? [])
+            ->map(fn ($flag) => is_array($flag) ? ($flag['name_vi'] ?? $flag['code'] ?? null) : $flag)
+            ->filter()
+            ->implode(', ');
+        $context = $this->contextService->dungNguCanh($phien);
+
+        return implode("\n", array_filter([
+            $context !== '' ? "Ngữ cảnh bệnh nhân & lịch sử:\n".$context : null,
+            'Kết luận của hệ thống: '.($phien->outcome ?? 'chưa có'),
+            $cacTenTrieuChung !== [] ? 'Triệu chứng hệ thống khớp: '.implode(', ', $cacTenTrieuChung) : null,
+            $redFlags !== '' ? 'Dấu hiệu cảnh báo: '.$redFlags : null,
+            $phien->advice_given ? "Lời khuyên hệ thống đã đưa:\n".$phien->advice_given : null,
+            $phien->safety_net ? "Ngưỡng cần đi khám:\n".$phien->safety_net : null,
+            '',
+            'Soạn bản nháp trả lời khách dựa đúng trên các thông tin trên.',
+        ]));
+    }
+}

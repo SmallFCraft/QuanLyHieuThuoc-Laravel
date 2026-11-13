@@ -84,7 +84,7 @@
 
 <div class="container-fluid px-0">
     <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
-        <a class="btn btn-outline-secondary align-self-start" href="{{ route('admin.chatSessions.index') }}">
+        <a class="btn btn-outline-secondary align-self-start" href="{{ route('admin.phien-chat.index') }}">
             <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Quay lại danh sách
         </a>
         <div class="admin-session-code">

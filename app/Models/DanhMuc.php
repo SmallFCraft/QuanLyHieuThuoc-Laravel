@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Support\ProductCodeGenerator;
+use App\Support\TaoMaSanPham;
 use App\Support\VietnameseText;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,9 +21,9 @@ class DanhMuc extends Model
     public const FILTER_CACHE_KEY = 'catalog.filter_categories';
 
     /**
-     * Sản phẩm xem nhiều ở panel tìm kiếm. Sống ở đây, cạnh ba key kia, vì cùng được
-     * ProductObserver xoá qua flushCategoryCaches() — một observer không thể biết
-     * hằng số nằm trên service provider.
+     * San pham xem nhieu o panel tim kiem. Song o day, canh ba key kia, vi cung duoc
+     * ProductObserver xoa qua flushCategoryCaches() — mot observer khong the biet
+     * hang so nam tren service provider.
      */
     public const SEARCH_PANEL_PRODUCTS_CACHE_KEY = 'search.panel_products';
 
@@ -43,8 +43,8 @@ class DanhMuc extends Model
     protected static function booted(): void
     {
         static::saving(function (DanhMuc $danhMuc): void {
-            $danhMuc->ma_danh_muc = ProductCodeGenerator::normalizeCategoryCode($danhMuc->ma_danh_muc)
-                ?: ProductCodeGenerator::uniqueCategoryCode($danhMuc->ten, $danhMuc->exists ? $danhMuc->getKey() : null);
+            $danhMuc->ma_danh_muc = TaoMaSanPham::chuanHoaMaDanhMuc($danhMuc->ma_danh_muc)
+                ?: TaoMaSanPham::maDanhMucDuyNhat($danhMuc->ten, $danhMuc->exists ? $danhMuc->getKey() : null);
 
             // Kept in sync here rather than at the call sites so a category created by
             // the crawler, the admin form or a factory folds the same way.
@@ -68,8 +68,8 @@ class DanhMuc extends Model
      *
      * Shared by the header dropdown and the catalog filter so the two cannot disagree
      * on which categories exist or in what order. The crawl produces 50 of them, and
-     * alphabetical order led with "Chăm sóc cá nhân" (2 products) while burying
-     * "Dụng cụ y tế" (263).
+     * alphabetical order led with "Cham soc ca nhan" (2 products) while burying
+     * "Dung cu y te" (263).
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -80,10 +80,8 @@ class DanhMuc extends Model
 
         return $query
             ->whereHas('sanPhams', $inStock)
-            // Alias withCount sinh san_phams_count; Blade (layouts, catalog, home)
-            // vẫn đọc products_count cho tới Task 7 nên giữ alias cũ qua as().
-            ->withCount(['sanPhams as products_count' => $inStock])
-            ->orderByDesc('products_count')
+            ->withCount(['sanPhams as so_san_pham' => $inStock])
+            ->orderByDesc('so_san_pham')
             ->orderBy('ten');
     }
 

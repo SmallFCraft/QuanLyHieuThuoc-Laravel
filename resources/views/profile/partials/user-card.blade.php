@@ -21,7 +21,7 @@
     {{-- Form ẩn: input file nằm ngoài luồng tab, nút camera ở trên mở nó.
          enctype bắt buộc, thiếu thì file không bao giờ tới server. --}}
     <form method="POST"
-          action="{{ route('profile.avatar.update') }}"
+          action="{{ route('ho-so.anh-dai-dien.update') }}"
           enctype="multipart/form-data"
           class="d-none"
           data-avatar-form>
@@ -44,7 +44,7 @@
     @enderror
 
     @if($user->anh_dai_dien)
-        <form method="POST" action="{{ route('profile.avatar.destroy') }}" class="mt-2" data-avatar-remove-form>
+        <form method="POST" action="{{ route('ho-so.anh-dai-dien.destroy') }}" class="mt-2" data-avatar-remove-form>
             @csrf
             @method('delete')
             <button type="submit"
