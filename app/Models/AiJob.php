@@ -14,21 +14,21 @@ class AiJob extends Model
     public const KIND_TRIAGE_BRIEFING = 'triage_briefing';
 
     /**
-     * Never picked up by a worker after this long means no worker is coming.
+     * Khong duoc worker nao nhan sau thoi gian nay nghia la se khong co worker nao den.
      *
-     * Measured against pickup, not execution: a worker claims a job and flips it to
-     * `running`, and `isStranded()` returns false for anything not `queued`. The
-     * threshold must exceed the worker's pickup latency: a daemon worker claims within
-     * a second, but the cron-per-minute worker on shared hosting (`queue:work
-     * --stop-when-empty`) can only claim a job at its next tick — up to 60s away plus
-     * boot time. A 12s value made every job lose that race: the result page abandoned
-     * the job and deleted its queue entry seconds before the tick.
+     * Do theo thoi diem nhan, khong phai thoi gian chay: worker nhan cong viec va danh
+     * dau thanh `running`, con `isStranded()` tra ve false cho moi thu khong phai
+     * `queued`. Nguong phai vuot qua do tre nhan cua worker: worker daemon nhan trong
+     * vong mot giay, nhung worker cron moi phut tren hosting chia se (`queue:work
+     * --stop-when-empty`) chi nhan duoc cong viec o tick ke tiep — cach toi 60s cong
+     * thoi gian khoi dong. Gia tri 12s lam moi cong viec thua cuoc dua nay: trang ket
+     * qua bo cuoc cong viec va xoa khoi hang doi vai giay truoc tick.
      */
     public const SYNC_FALLBACK_SECONDS = 75;
 
     /**
-     * A `running` job older than this lost its worker, so it stops counting as proof
-     * that one is alive. Matches XuLyTinNhanChatbot::$timeout.
+     * Cong viec `running` gio hon thoi gian nay da mat worker, nen khong con tinh la
+     * bang chung co worker dang song. Khop voi XuLyTinNhanChatbot::$timeout.
      */
     public const WORKER_ALIVE_SECONDS = 120;
 
@@ -66,15 +66,15 @@ class AiJob extends Model
     }
 
     /**
-     * Still queued long enough that no worker can be running. A `running` job is
-     * simply a slow AI call and must not be duplicated.
+     * Van nam trong hang doi dai den muc khong the co worker nao dang chay. Cong viec
+     * `running` chi don gian la mot loi goi AI cham va khong duoc nhan ban lai.
      *
-     * The age test alone is not enough: with one worker and a 45s+45s provider budget,
-     * a job can legitimately wait behind the one in flight for far longer than
-     * SYNC_FALLBACK_SECONDS. So a job queued behind a worker that is demonstrably
-     * alive — another job of this customer's is `running` and younger than
-     * WORKER_ALIVE_SECONDS — is waiting, not stranded, and running it inline would
-     * block the single-process dev server for nothing.
+     * Rieng bai test do tuoi la khong du: voi mot worker va ngan sach 45s+45s cua
+     * nha cung cap, mot cong viec co the hop le nam doi sau cong viec dang chay lau
+     * hon nhieu so voi SYNC_FALLBACK_SECONDS. Vi vay cong viec nam doi sau mot worker
+     * ro rang con song — cong viec khac cua cung khach dang `running` va moi hon
+     * WORKER_ALIVE_SECONDS — la dang cho, khong phai bi bo roi, va chay no inline chi
+     * chan dev server mot tien trinh vo van.
      */
     public function isStranded(): bool
     {
@@ -90,9 +90,9 @@ class AiJob extends Model
     }
 
     /**
-     * Evidence that a worker is consuming the queue right now: a job that reached
-     * `running` recently. Scoped to this customer, so one stalled tenant cannot
-     * keep another's job pinned in "waiting".
+     * Bang chung mot worker dang tieu thu hang doi luc nay: cong viec vua dat trang
+     * thai `running` gan day. Gioi han trong pham vi khach nay, de mot tenant bi ket
+     * khong the giu cong viec cua khach khac nam trong trang thai "waiting".
      */
     protected function hasLiveWorker(): bool
     {

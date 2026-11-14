@@ -20,7 +20,7 @@ class ThanhToanController extends Controller
     }
 
     /**
-     * Display the checkout page.
+     * Hien thi trang checkout.
      */
     public function index(AnToanThuocService $anToanThuoc)
     {
@@ -30,7 +30,7 @@ class ThanhToanController extends Controller
             return redirect()->route('gio-hang.index')->with('error', 'Giỏ hàng trống.');
         }
 
-        // OPTIMIZED: Load all products in 1 query instead of N+1
+        // TOI UU: Tai moi san pham trong 1 truy van thay vi N+1
         $productIds = array_keys($cart);
         $sanPhams = SanPham::whereIn('ma_sp', $productIds)
             ->notExpired()
@@ -54,8 +54,8 @@ class ThanhToanController extends Controller
             }
         }
 
-        // Informational only: the customer already confirmed any blocking warning when
-        // the item was added, so checkout is never blocked here.
+        // Chi mang tinh thong tin: khach da xac nhan moi canh bao chan khi san pham
+        // duoc them vao, nen checkout khong bao gio bi chan tai day.
         $canhBaoThuoc = $anToanThuoc->kiemTraGioHang(
             CartLine::rowsFrom($cart),
             (int) auth()->id()
@@ -65,7 +65,7 @@ class ThanhToanController extends Controller
     }
 
     /**
-     * Process the checkout.
+     * Xu ly checkout.
      */
     public function process(Request $request)
     {
@@ -135,7 +135,7 @@ class ThanhToanController extends Controller
     }
 
     /**
-     * Display order success page.
+     * Hien thi trang thanh cong cua don hang.
      */
     public function success($MaDH)
     {

@@ -9,8 +9,8 @@ use Illuminate\Foundation\Http\FormRequest;
 class HoSoSucKhoeRequest extends FormRequest
 {
     /**
-     * Tag lists must stay item-per-entry: AnToanThuocService matches each item
-     * separately, so blank rows and stray whitespace would create dead terms.
+     * Danh sach tag phai giu moi muc tren mot dong: AnToanThuocService so khop tung
+     * muc rieng le, nen dong trong hoac khoang trang lai tao ra cac tu khoa chet.
      */
     protected const TAG_FIELDS = ['allergies', 'chronic_conditions', 'current_medications'];
 

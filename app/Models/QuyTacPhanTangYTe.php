@@ -45,7 +45,7 @@ class QuyTacPhanTangYTe extends Model
     }
 
     /**
-     * More specific rules carry a higher priority and must win over generic ones.
+     * Luat cu the hon mang do uu tien cao hon va phai thang qua cac luat chung.
      */
     public function scopeMostSpecificFirst($query)
     {

@@ -16,14 +16,14 @@ class NguoiDung extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * The primary key associated with the table.
+     * Khoa chinh gan voi bang nay.
      *
      * @var string
      */
     protected $primaryKey = 'ma_nd';
 
     /**
-     * The attributes that are mass assignable.
+     * Cac thuoc tinh cho phep gan hang loat.
      *
      * @var list<string>
      */
@@ -41,7 +41,7 @@ class NguoiDung extends Authenticatable
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * Cac thuoc tinh nen an khi serializing.
      *
      * @var list<string>
      */
@@ -51,7 +51,7 @@ class NguoiDung extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * Cac thuoc tinh nen ep kieu.
      *
      * @return array<string, string>
      */
@@ -85,7 +85,7 @@ class NguoiDung extends Authenticatable
     }
 
     /**
-     * Check if user is an administrator
+     * Kiem tra nguoi dung co phai quan tri vien
      *
      * @return bool
      */
@@ -95,7 +95,7 @@ class NguoiDung extends Authenticatable
     }
 
     /**
-     * Check if user is a pharmacist (handles the triage review queue)
+     * Kiem tra nguoi dung co phai duoc si (xu ly hang cho sang loc)
      *
      * @return bool
      */
@@ -105,7 +105,7 @@ class NguoiDung extends Authenticatable
     }
 
     /**
-     * Check if user account is active
+     * Kiem tra tai khoan nguoi dung con hoat dong
      *
      * @return bool
      */
@@ -115,7 +115,7 @@ class NguoiDung extends Authenticatable
     }
 
     /**
-     * Get orders for this user
+     * Cac don hang cua nguoi dung nay
      */
     public function donHangs()
     {
@@ -123,7 +123,7 @@ class NguoiDung extends Authenticatable
     }
 
     /**
-     * Get the health profile for this user
+     * Ho so suc khoe cua nguoi dung nay
      */
     public function hoSoSucKhoe()
     {
@@ -131,8 +131,8 @@ class NguoiDung extends Authenticatable
     }
 
     /**
-     * Age in whole years, or null when birth_date was never filled in.
-     * Triage rules treat a null age as unknown, not as an adult.
+     * Tuoi theo so nam tron, hoac null khi ngay_sinh chua duoc dien.
+     * Luat sang loc coi tuoi null la chua biet, khong phai nguoi lon.
      */
     public function ageInYears(): ?int
     {

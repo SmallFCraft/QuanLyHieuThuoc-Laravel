@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Display the login view.
+     * Hien thi view dang nhap.
      */
     public function create(): View
     {
@@ -20,7 +20,7 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Handle an incoming authentication request.
+     * Xu ly mot request xac thuc den.
      */
     public function store(DangNhapRequest $request): RedirectResponse
     {
@@ -34,7 +34,7 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Destroy an authenticated session.
+     * Huy mot phien lam viec da xac thuc.
      */
     public function destroy(Request $request): RedirectResponse
     {

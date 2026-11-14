@@ -8,25 +8,25 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * AI-drafted reply for the pharmacist review queue.
+ * Ban tra loi do AI soan cho hang doi xem lai cua duoc si.
  *
- * The draft is never persisted and never reaches the customer on its own: the
- * controller only prefills the reply textarea, so a pharmacist still reads,
- * edits and submits it under their own name. That makes the human the validator.
+ * Ban soan khong bao gio duoc luu va khong bao gio tu toi khach hang: controller
+ * chi dien truoc o tra loi, nen duoc si van phai doc,
+ * sua va gui duoi ten chinh ho. Nguoi do la nguoi kiem tra.
  *
- * Health profile data only reaches the provider through SangLocAiNguCanhService,
- * which gates it on explicit AI consent. The controller's fixed-outcome prompt
- * remains the safety authority; this context is supporting information only.
+ * Du lieu ho so suc khoe chi den nha cung cap qua SangLocAiNguCanhService,
+ * ham gat no tren dong y AI ro rang. Prompt ket qua co dinh cua controller
+ * van la quan quyen an toan; ngu canh nay chi la thong tin bo tro.
  */
 class SangLocAiSoanLoiService extends SangLocAiService
 {
     private const MAX_DRAFT_LENGTH = 2000;
 
     /**
-     * Constructor injection mirrors SangLocAiTomTatService. Safe here for the same
-     * reason as there: nothing resolves this seam before its config flag is on, and
-     * SangLocAiNguCanhService itself has no throwing constructor — AiProviderService,
-     * which throws without AI config, is resolved per call and stays untouched.
+     * Constructor injection giong SangLocAiTomTatService. An toan o day vi cung
+     * ly do nhu ben do: khong gi giai seam nay truoc khi co cau hinh bat, va
+     * chinh SangLocAiNguCanhService khong co constructor nem loi — AiProviderService,
+     * ham nem khi khong co cau hinh AI, duoc giai moi lan goi va giu nguyen.
      */
     public function __construct(
         protected NhatKyKiemToanService $nhatKyKiemToanService,
@@ -41,7 +41,7 @@ class SangLocAiSoanLoiService extends SangLocAiService
     }
 
     /**
-     * May run inside the pharmacist's form POST, so it keeps the fail-fast budget.
+     * Co the chay trong form POST cua duoc si, nen giu ngan sach fail-fast.
      */
     protected function timeoutSeconds(): int
     {
@@ -49,10 +49,10 @@ class SangLocAiSoanLoiService extends SangLocAiService
     }
 
     /**
-     * A Vietnamese reply draft, or null when the provider is unavailable or the
-     * output fails the length check.
+     * Ban tra loi tieng Viet, hoac null khi nha cung cap khong kha dung hoac
+     * output khong qua kiem tra do dai.
      *
-     * @param  array<int, string>  $cacTenTrieuChung  Vietnamese symptom names, already resolved
+     * @param  array<int, string>  $cacTenTrieuChung  Ten trieu chung tieng Viet, da duoc giai
      */
     public function soanLoiTraLoi(PhienSangLoc $phien, array $cacTenTrieuChung): ?string
     {
@@ -111,8 +111,8 @@ class SangLocAiSoanLoiService extends SangLocAiService
     }
 
     /**
-     * Rule-derived material, symptom/red-flag names, and optional patient context
-     * (age, consented health profile, and fenced recent triage history).
+     * Du lieu suy tu quy tac, ten trieu chung/co do, va ngu canh benh nhan tuy chon
+     * (tuoi, ho so suc khoe dong y, va lich su sang loc gan day trong hang rao).
      */
     protected function buildPrompt(PhienSangLoc $phien, array $cacTenTrieuChung): string
     {

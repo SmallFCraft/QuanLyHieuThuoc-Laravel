@@ -16,7 +16,7 @@ class LoSanPham extends Model
     protected $primaryKey = 'ma_lo';
 
     /**
-     * The attributes that are mass assignable.
+     * Cac thuoc tinh cho phep gan hang loat.
      *
      * @var array<int, string>
      */
@@ -29,7 +29,7 @@ class LoSanPham extends Model
     ];
 
     /**
-     * The attributes that should be cast.
+     * Cac thuoc tinh nen ep kieu.
      *
      * @var array<string, string>
      */
@@ -40,7 +40,7 @@ class LoSanPham extends Model
     ];
 
     /**
-     * Get the product that owns the batch.
+     * San pham ma lo nay thuoc ve.
      */
     public function sanPham()
     {
@@ -48,7 +48,7 @@ class LoSanPham extends Model
     }
 
     /**
-     * Get the order items for this batch.
+     * Cac chi tiet don hang dung lo san pham nay.
      */
     public function chiTietDonHangs()
     {
@@ -56,7 +56,7 @@ class LoSanPham extends Model
     }
 
     /**
-     * Check if the batch is expired.
+     * Kiem tra lo san pham da het han.
      *
      * @return bool
      */
@@ -66,7 +66,7 @@ class LoSanPham extends Model
     }
 
     /**
-     * Check if the batch is expiring soon.
+     * Kiem tra lo san pham sap het han.
      *
      * @param int $days
      * @return bool
@@ -77,13 +77,13 @@ class LoSanPham extends Model
             return false;
         }
 
-        // Carbon 3 returns a signed difference, so calling diffInDays() on the later
-        // date yields a negative number and `<= $days` matched every future date.
+        // Carbon 3 tra ve hieu co dau, nen goi diffInDays() tren ngay muon hon se cho
+        // ket qua am va `<= $days` khop voi moi ngay tuong lai.
         return Carbon::now()->diffInDays($this->ngay_het_han, true) <= $days;
     }
 
     /**
-     * Check if the batch has low stock.
+     * Kiem tra lo san pham co ton kho thap.
      *
      * @return bool
      */
@@ -93,7 +93,7 @@ class LoSanPham extends Model
     }
 
     /**
-     * Scope a query to only include non-expired batches.
+     * Gioi han truy van chi lay cac lo san pham chua het han.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -104,7 +104,7 @@ class LoSanPham extends Model
     }
 
     /**
-     * Scope a query to only include batches with stock.
+     * Gioi han truy van chi lay cac lo san pham con ton kho.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -115,7 +115,7 @@ class LoSanPham extends Model
     }
 
     /**
-     * Scope a query to order by FEFO (First Expired, First Out).
+     * Sap xep truy van theo FEFO (First Expired, First Out — het han truoc xuat truoc).
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder

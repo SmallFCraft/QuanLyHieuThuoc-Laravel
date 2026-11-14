@@ -23,11 +23,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 /**
- * Symptom triage wizard.
+ * Wizard sang loc y te.
  *
- * Works without JavaScript: each step is a real form POST that redirects to the
- * next step. The JS layer only avoids the full page reload. A health tool must
- * keep working when scripts fail.
+ * Chay duoc khi khong co JavaScript: moi buoc la mot form POST that dan sang buoc
+ * ke tiep. Tang JS chi de tranh tai lai toan trang. Mot cong cu suc khoe phai
+ * van chay duoc khi script gap loi.
  */
 class SangLocController extends Controller
 {
@@ -40,36 +40,36 @@ class SangLocController extends Controller
     }
 
     /**
-     * Decide the outcome — in a worker when one is available, inline when not.
+     * Quyet dinh ket qua — trong worker neu co, truc tiep neu khong.
      *
-     * `evaluate()` makes the AI fact-extraction call, and that call was measured at
-     * 11-30s against the configured provider while the synchronous budget was 8s. It
-     * therefore almost always timed out, and a timeout does not just cost latency: it
-     * drops the extracted facts, so a stated duration of "may nam nay" scored as one
-     * day, and the follow-up round never appeared because shouldAskClarify() had no AI
-     * result to read. That is the "vong 1/3 then straight to the result" bug.
+     * `evaluate()` goi AI trich xuat chi tiet, va qua trinh do measured tai
+     * 11-30s tren nha cung cap da cau hinh trong khi ngan sach dong bo la 8s. Vi vay
+     * no gan nhu luon bi timeout, va mat ket noi khong chi ton do tre: no
+     * lam mat chi tiet da trich xuat, nen moc thoi luong "may nam nay" duoc cham nhu
+     * mot ngay, va vong hoi lam ro khong bao gio xuat hien vi shouldAskClarify() khong co
+     * ket qua AI de doc. Do la bug "vong 1/3 roi nhay thang den ket qua".
      *
-     * Deferring is safe here — unlike deferring it after finalize() would be — because
-     * the patient waits: nothing is shown until the job has decided, so the conclusion
-     * is never revised after they have read it.
+     * Tri hoan an toan o day — khac voi tri hoan sau finalize() — vi
+     * benh nhan cho: khong gi duoc hien cho den khi job quyet dinh xong, nen ket luan
+     * khong bao gio duoc sua sau khi ho da doc.
      *
-     * Emergencies are excluded and decided inline: that outcome needs no AI at all.
+     * Truong hop khan cap duoc loai tru va quyet dinh truc tiep: ket qua do khong can AI.
      *
-     * On the `sync` queue driver the job has already finished when dispatch returns,
-     * which is why the test suite and a worker-less install behave as before.
+     * Tren queue driver `sync`, job da chay xong khi dispatch tra ve,
+     * vi vay suite test va cau hinh khong co worker van hanh nhu truoc.
      */
     protected function decideOutcome(Request $request, PhienSangLoc $phien): RedirectResponse|JsonResponse
     {
-        // Emergency never queues. The red flag is found in plain PHP with no AI, and
-        // somebody describing chest pain must see the 115 number in this response —
-        // not after a worker picks the job up.
+        // Khan cap khong bao gio vao hang doi. Co do duoc tim bang PHP thuan, khong AI, va
+        // nguoi mo ta dau nguc phai thay so 115 trong phan hoi nay —
+        // khong phai sau khi nhan job.
         if ($this->triageService->coCapCuuCuu($phien, $this->profileFor((int) $phien->ma_nd))) {
             return $this->decideOutcomeInline($request, $phien);
         }
 
-        // A previous attempt for this session was already retired for want of a worker.
-        // Queueing again would loop: strand, retire, queue, strand — 12s per cycle,
-        // forever. One failed attempt is enough evidence that nobody is consuming.
+        // Mot lan thu truoc cua phien nay da bi rui vi khong co worker.
+        // Dua vao hang doi them lan nua se lap vo han: tre, rui, vao hang doi, tre — 12s moi chu ky,
+        // mai mai. Mot lan that bai la du bang chung rang khong ai tieu thu job.
         if ($this->hasAbandonedEvaluation($phien)) {
             return $this->decideOutcomeInline($request, $phien);
         }
@@ -77,7 +77,7 @@ class SangLocController extends Controller
         try {
             $job = $this->aiJobs->dispatchEvaluation($phien);
         } catch (\Throwable $exception) {
-            // An unavailable queue must never strand a finished questionnaire.
+            // Hang doi khong kha dung khong duoc de bo tron cau hoi da hoan thanh.
             Log::warning('Triage evaluation queue unavailable, deciding inline', [
                 'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
@@ -98,7 +98,7 @@ class SangLocController extends Controller
     }
 
     /**
-     * Run the decision in this request. Used when there is no worker to take it.
+     * Chay quyet dinh ngay trong request nay. Dung khi khong co worker nhan viec.
      */
     protected function decideOutcomeInline(Request $request, PhienSangLoc $phien): RedirectResponse|JsonResponse
     {
@@ -127,14 +127,14 @@ class SangLocController extends Controller
     }
 
     /**
-     * Finalise a session and queue the two post-decision AI seams.
+     * Chot phien va dua hai seam AI sau quyet dinh vao hang doi.
      *
-     * Both start *after* finalize(), write only their own `ai_*` columns, and cannot
-     * change the outcome — so unlike the decision above they may land while the
-     * patient is already reading, and the result page polls for them.
+     * Ca hai bat dau *sau* finalize(), chi ghi cot `ai_*` cua chung, va khong the
+     * thay doi ket qua — nen khac voi quyet dinh phia tren, chung co the den khi
+     * benh nhan dang doc, va trang ket qua tu poll lay chung.
      *
      * @param array<string, mixed> $result Already-computed evaluate() output, so the
-     *                                     rules (and any AI extraction) run once.
+     *                                     quy tac (va buoc trich xuat AI neu co) chi chay mot lan.
      */
     protected function finalizeSession(PhienSangLoc $phien, array $result): PhienSangLoc
     {
@@ -147,8 +147,8 @@ class SangLocController extends Controller
     }
 
     /**
-     * The view data the wizard stage needs, whether it is rendered as a full page or
-     * swapped in over AJAX.
+     * Du lieu view ma buoc wizard can, du duoc render thanh trang day du hay
+     * hoan doi qua AJAX.
      *
      * @param array<string, mixed>|null $question
      * @return array<string, mixed>
@@ -158,7 +158,7 @@ class SangLocController extends Controller
         return [
             'session' => $phien,
             'question' => $question,
-            // Pre-fill so going back shows the user's own words, not a blank box.
+            //  Dien truoc de quay lai thay van ban cua nguoi dung, khong phai o trong.
             'previousAnswer' => $question
                 ? $this->triageService->cauTraLoiBaiTruoc($phien, (int) $question['step'])
                 : '',
@@ -166,20 +166,20 @@ class SangLocController extends Controller
             'clarifyQuestions' => $clarifyQuestions,
             'clarifyRound' => (int) $phien->ai_clarify_rounds,
             'clarifyMaxRounds' => PhienSangLoc::MAX_CLARIFY_ROUNDS,
-            // Non-null while a worker is deciding: the stage shows a waiting state and
-            // polls, instead of holding the request open for the 11-30s AI call.
+            // Khac null khi worker dang quyet dinh: buoc hien trang thai cho va
+            // tu poll, thay vi giu request mo cho qua trinh goi AI 11-30s.
             'pendingJobId' => $pendingJob?->uuid,
             'answeredSteps' => $this->answeredSteps($phien),
         ];
     }
 
     /**
-     * The stage markup for whatever the session is currently on.
+     * Markup cua buoc ma phien dang o buoc do.
      *
-     * The AJAX layer receives HTML rather than a JSON model on purpose: rebuilding the
-     * question, the follow-up round and the waiting copy in JavaScript would duplicate
-     * every Vietnamese string — and the medical labels among them — into the client,
-     * which is exactly what the "no medical content outside the server" rule forbids.
+     * Tang AJAX nhan HTML chu khong phai model JSON la co chu y: dung lai cau hoi,
+     * vong hoi lam roi van ban cho trong JavaScript se nhan ban
+     * moi chuoi tieng Viet — gom cac nhan y — sang phia client,
+     * dieu ma quy tac "khong co noi dung y khoa ben ngoai server" cam.
      */
     protected function renderStage(PhienSangLoc $phien): string
     {
@@ -198,11 +198,11 @@ class SangLocController extends Controller
     }
 
     /**
-     * Current step of the open session, or the first question of a new one.
+     * Buoc hien tai cua phien dang mo, hoac cau hoi dau tien cua phien moi.
      *
-     * When there is nothing left to ask — the profile answered everything, or an
-     * emergency red flag ended questioning early — the decision is taken here rather
-     * than showing a dead-end page.
+     * Khi khong con gi de hoi — ho so suc khoe da tra loi het, hoac mot
+     * co do khan cap da dung cau hoi som — quyet dinh duoc dua ra tai day thay vi
+     * hien mot trang kep cua.
      */
     public function index(Request $request): View|RedirectResponse
     {
@@ -213,9 +213,9 @@ class SangLocController extends Controller
         $clarifyQuestions = $this->pendingClarifyQuestions($phien);
         $pendingJob = $this->pendingEvaluationJob($phien);
 
-        // Checked before deciding: a pending round means the questions are already
-        // stored, and a running job means the decision is already under way — either
-        // way, re-evaluating here would spend a second provider call.
+        // Kiem tra truoc khi quyet dinh: vong dang cho nghia la cau hoi da
+        // da luu, va job dang chay nghia la quyet dinh dang tien hanh — hoac
+        // cach do, danh gia lai o day se ton them mot lan goi nha cung cap.
         if ($question === null
             && $clarifyQuestions === []
             && $pendingJob === null
@@ -227,9 +227,9 @@ class SangLocController extends Controller
             $pendingJob = $this->pendingEvaluationJob($phien);
             $clarifyQuestions = $this->pendingClarifyQuestions($phien);
 
-            // Only a finished decision is a real navigation. A queued job renders the
-            // waiting state below and a fresh follow-up round renders its form — both
-            // without bouncing through a redirect back to this same action.
+            // Chi quyet dinh hoan thanh moi la mot lan dieu huong that. Job trong hang doi render
+            // trang thai cho phia duoi va mot vong hoi moi render form cua no — ca hai
+            // ma khong phai qua redirect quay lai chinh action nay.
             if ($pendingJob === null && $clarifyQuestions === []) {
                 return $decision;
             }
@@ -239,24 +239,24 @@ class SangLocController extends Controller
             $this->stageData($phien, $question, $clarifyQuestions, $pendingJob, $hoSo),
             [
                 'disclaimer' => SangLocYTeService::DISCLAIMER,
-                // Terminal return only. The early `return $decision` above and stageData()
-                // — shared with renderStage() — stay untouched, so no AJAX stage swap can
-                // re-render the popup mid-wizard.
+                // Chi return cuoi cung. `return $decision` som o tren va stageData()
+                // — chia se voi renderStage() — giu nguyen, nen khong lan hoan doi buoc AJAX nao co the
+                // render lai popup giua chung wizard.
                 'showDisclaimerPopup' => $this->disclaimerPopupDue($request, $userId),
             ]
         ));
     }
 
     /**
-     * The evaluation job still deciding this session's outcome, if any.
+     * Job danh gia van dang quyet dinh ket qua phien nay, neu co.
      *
-     * Scoped to `in_progress`: once the session is finalised the job is history, and a
-     * stale row must not make the waiting state reappear.
+     * Gioi han trong `in_progress`: mot khi phien da chot, job la lich su, va
+     * row cu khong duoc lam trang thai cho xuat hien tro lai.
      *
-     * A stranded job — still `queued` long after it was created, so no worker ever
-     * picked it up — is retired here and reported as "nothing pending". Without that
-     * the page loops: reload finds the queued job, renders the waiting state, the
-     * client polls, sees `stranded`, reloads, and finds the same job again.
+     * Job bi tre — van `queued` lau sau khi tao, nghia la khong worker nao tung
+     * nhan no — duoc rui o day va bao cao la "khong co gi dang cho". Neu khong lam vay
+     * trang se lap: tai lai thay job trong hang doi, render trang thai cho,
+     * client poll, thay `stranded`, tai lai trang, roi lai thay cung job do.
      */
     protected function pendingEvaluationJob(PhienSangLoc $phien): ?AiJob
     {
@@ -281,7 +281,7 @@ class SangLocController extends Controller
     }
 
     /**
-     * A decision for this session was already given up on for want of a worker.
+     * Quyet dinh cho phien nay da bi bo cu vi khong co worker.
      */
     protected function hasAbandonedEvaluation(PhienSangLoc $phien): bool
     {
@@ -293,11 +293,11 @@ class SangLocController extends Controller
     }
 
     /**
-     * The answers given so far, newest last, for the evidence trail above the current
+     * Cac cau tra loi da trinh bay, moi nhat o cuoi, cho duong dang chung minh phia tren
      * question.
      *
-     * Reads only what the customer typed — no rule output, no AI output — so the
-     * wizard never previews a conclusion it has not reached.
+     * Chi doc nhung gi khach hang go — khong output quy tac, khong output AI — nen
+     * wizard khong bao gio xem truoc ket luan ma no chua dat den.
      *
      * @return array<int, array{step: int, label: string, answer: string, skipped: bool}>
      */
@@ -339,7 +339,7 @@ class SangLocController extends Controller
     }
 
     /**
-     * Questions the AI asked that the customer has not answered or skipped yet.
+     * Cac cau hoi AI da hoi ma khach hang chua tra loi hoac bo qua.
      *
      * @return array<int, string>
      */
@@ -349,13 +349,13 @@ class SangLocController extends Controller
             return [];
         }
 
-        // recordClarifyAnswers() clears the list once the round is answered, so a
-        // non-empty list here always means "this round is still open".
+        // recordClarifyAnswers() xoa danh sach khi vong duoc tra loi, nen
+        // danh sach khac rong o day luon co nghia "vong nay van dang mo".
         return $phien->pendingClarifyQuestions();
     }
 
     /**
-     * Record one answer, then either ask the next question or finalise.
+     * Ghi mot cau tra loi, roi hoac hoi cau tiep hoac chot phien.
      */
     public function answer(Request $request): RedirectResponse|JsonResponse
     {
@@ -379,17 +379,17 @@ class SangLocController extends Controller
             return $this->respondExpired($request);
         }
 
-        // Cast explicitly: the `integer` rule validates the type but does not coerce,
-        // so $validated['step'] arrives as a string and would fail === against the
+        // Ep kieu tuong minh: quy tac `integer` xac minh kieu nhung khong tu chuyen doi,
+        // nen $validated['step'] den la string va se that bai === voi
         // STEP_* constants.
         $step = (int) $validated['step'];
         $hoSo = $this->profileFor($userId);
 
-        // The answer must belong to the question the session is actually on. Without
-        // this a single crafted POST (step=5) finalises the triage with no symptom or
-        // duration recorded, and every guard rule falls through to self-care. Compared
-        // against nextQuestion rather than current_step because a profile-covered step
-        // is skipped, so the rendered step can be ahead of the counter.
+        // Cau tra loi phai thuoc cau hoi ma phien dang o buoc do. Neu khong co
+        // mot POST gia mau (step=5) se chot sang loc ma khong ghi trieu chung hay
+        // thoi luong, va moi quy tac bao ve deu roi vao tu cham soc. So sanh voi
+        // nextQuestion thay vi current_step vi buoc du ho so suc khoe che khuat
+        // se bi bo qua, nen buoc da render co the dung truoc bien dem.
         $expected = $this->triageService->cauHoiTiep($phien, $hoSo);
 
         if ($expected === null || $step !== (int) $expected['step']) {
@@ -397,22 +397,22 @@ class SangLocController extends Controller
         }
 
         $skipped = (bool) ($validated['skipped'] ?? false);
-        // A clicked quick-pick option wins over the box, which Back pre-fills with the
-        // stored answer — so the click must be able to replace it.
+        // Lua chon quick-pick duoc nhan thang voi o nhap, ma nut Back dien truoc theo
+        // cau tra loi da luu — nen lan nhan phai thay duoc no.
         //
-        // That only holds because `option_answer` is now present ONLY on a deliberate
-        // click: the stage template puts an unnamed default submit button first, so
-        // HTML implicit submission (Enter in the text box) no longer activates a
-        // quick-pick option. Before that, Enter posted `option_answer=<first option>`
-        // together with the typed text and the option won — the patient typed one
-        // complaint and the wizard recorded another.
-        // TriageTypedAnswerTest asserts that markup invariant; do not add a named
-        // submit button ahead of it.
+        // Dieu do chi dung vi `option_answer` gio chi xuat hien KHI co mot lan nhan chu dich
+        // chon: template buoc dat nut submit mac dinh khong ten len truoc, nen
+        // submit ngam cua HTML (Enter trong o nhap) khong con kich hoat lua chon
+        // quick-pick. Truoc do, Enter gui `option_answer=<lua chon dau>`
+        // kem voi van ban go va lua chon thang — benh nhan da go mot
+        // loi phan nan va wizard lai ghi them mot lan nua.
+        // TriageTypedAnswerTest khang dinh bat bien do markup do; khong them mot nut
+        // nut submit truoc no.
         $answer = trim((string) ($validated['option_answer'] ?? '')) !== ''
             ? trim((string) $validated['option_answer'])
             : trim((string) ($validated['answer'] ?? ''));
 
-        // Step 1 is the only mandatory answer: without a symptom there is nothing to triage.
+        // Buoc 1 la cau tra loi bat buoc duy nhat: khong co trieu chung thi khong co gi de sang loc.
         if (!$skipped && $answer === '') {
             if ($step === SangLocYTeService::STEP_SYMPTOM) {
                 return $this->respondValidationError(
@@ -432,8 +432,8 @@ class SangLocController extends Controller
                 return $this->respondQuestion($request, $phien, $question);
             }
 
-            // Questionnaire complete. The decision — including the AI hop — runs in a
-            // worker, and the patient waits on it.
+            // Cau hoi hoan thanh. Quyet dinh — gom ca buoc AI — chay trong mot
+            // worker, va benh nhan cho ket qua tu no.
             return $this->decideOutcome($request, $phien);
         } catch (\Throwable $exception) {
             Log::error('Triage answer processing failed', [
@@ -450,11 +450,11 @@ class SangLocController extends Controller
     }
 
     /**
-     * Answer (or skip) one AI follow-up round, then either ask the next round or
+     * Tra loi (hoac bo qua) mot vong hoi lam ro AI, roi hoac hoi vong tiep hoac
      * finalise.
      *
-     * Separate actions rather than extra wizard steps: TOTAL_STEPS stays 5, the
-     * progress bar keeps its meaning, and every round is skippable.
+     * Cac action rieng chu khong phai buoc wizard them: TOTAL_STEPS giu nguyen 5,
+     * thanh tien do giu dung y nghia, va moi vong deu co the bo qua.
      */
     public function clarify(Request $request): RedirectResponse|JsonResponse
     {
@@ -475,7 +475,7 @@ class SangLocController extends Controller
             return $this->respondExpired($request);
         }
 
-        // Only reachable while a round is actually open.
+        // Chi cham duoc khi mot vong thuc su dang mo.
         if ($phien->pendingClarifyQuestions() === []) {
             return $this->respondStepMismatch($request);
         }
@@ -484,7 +484,7 @@ class SangLocController extends Controller
 
         try {
             if ($skipped) {
-                // Declining ends the conversation: no further round may be offered.
+                // Tu choi la ket thuc cuoc tro chuyen: khong vong nao duoc de nghi tiep.
                 $phien = $this->triageService->boQuaCauHoiLamRo($phien);
 
                 return $this->decideOutcome($request, $phien);
@@ -495,8 +495,8 @@ class SangLocController extends Controller
                 (array) ($validated['clarify'] ?? [])
             );
 
-            // The answers may have raised new gaps — or closed them. The model decides
-            // via needs_more_info, within the round ceiling, inside the job.
+            // Cau tra loi co the mo ra khoang truc moi — hoac dong lai chung. Model quyet dinh
+            // qua needs_more_info, trong tran vong hoi, ben trong job.
             return $this->decideOutcome($request, $phien);
         } catch (\Throwable $exception) {
             Log::error('Triage clarify processing failed', [
@@ -512,10 +512,10 @@ class SangLocController extends Controller
     }
 
     /**
-     * Ask a pharmacist to look at a finished session.
+     * Moi duoc si xem mot phien da hoan thanh.
      *
-     * Opt-in side channel: the AI/rule answer is the primary result, and a human is
-     * brought in only when the customer asks for one.
+     * Kenhd phu tuy chon: cau tra loi AI/quy tac la ket qua chinh, chi dua nguoi vao khi
+     * khach hang chu dong yeu cau.
      */
     public function requestPharmacist(Request $request, int $MaSL): RedirectResponse
     {
@@ -535,7 +535,7 @@ class SangLocController extends Controller
     }
 
     /**
-     * Go back one step without losing the stored answers.
+     * Quay lai mot buoc ma khong mat cau tra loi da luu.
      */
     public function back(Request $request): RedirectResponse
     {
@@ -557,7 +557,7 @@ class SangLocController extends Controller
     }
 
     /**
-     * A finished session has its own URL so it can be shared, bookmarked and printed.
+     * Phien hoan thanh co URL rieng de chia se, danh dau va in.
      */
     public function result(Request $request, int $MaSL): View
     {
@@ -570,34 +570,34 @@ class SangLocController extends Controller
 
         $hoSo = $this->profileFor($userId);
 
-        // Before reading the AI columns: on the `sync` queue driver the job this call
-        // may dispatch has already finished and written them, and $phien would
-        // otherwise still hold the pre-dispatch row.
+        // Doc cot AI truoc: tren queue driver `sync`, job ma qua trinh goi nay
+        // co the dispatch da chay xong va ghi cot, nen $phien neu khong lam lai
+        // van giu row truoc khi dispatch.
         $briefingJob = $this->ensureBriefingJob($phien);
         $phien = $phien->refresh();
 
         return view('health.result', [
             'session' => $phien,
             'disclaimer' => SangLocYTeService::DISCLAIMER,
-            // Non-null while the rewrite is still being written. Looked up rather than
-            // flashed, because the decision may have been taken by a worker, which has
-            // no session to flash into.
+            // Khac null khi ban viet lai van dang duoc ghi. Tra cuu thay vi
+            // flash, vi quyet dinh co the do worker thuc hien, ma worker
+            // khong co session de flash vao.
             'aiJobId' => $this->pendingAdviceJob($phien)?->uuid,
-            // Same idea for the detailed briefing, which is a much slower call and so
-            // is polled separately: the advice can land minutes before it.
+            // Cung y tuong cho briefing chi tiet, qua trinh goi cham hon nhieu nen
+            // duoc poll rieng: loi khuyen co the den truod minutes truoc no.
             'briefingJobId' => $briefingJob?->uuid,
             'briefing' => $this->briefingFor($phien),
-            // Whether this session should have a briefing at all, so the page can tell
-            // "none was ever due" (emergency) from "it was attempted and produced
-            // nothing" without re-deriving the eligibility rule in Blade.
+            // Phien nay co du dieu kien co briefing khong, de trang phan biet
+            // "khong bao gio due" (khan cap) voi "da thu nhung khong ra
+            // gi" ma khong phai suy lai quy tac dieu kien trong Blade.
             'briefingExpected' => app(SangLocAiTomTatService::class)->duDieuKien($phien),
-            // Same reason as the briefing list: the stored row cannot hold a usable
-            // image URL, so it is resolved here from the live product.
+            // Cung ly do voi danh sach briefing: row da luu khong the giu URL anh
+            // dung duoc, nen duoc giai o day tu san pham con song.
             'suggestedProducts' => $this->suggestedProductsFor($phien),
-            // Never in front of an emergency outcome: the tel:115 button is the only
-            // action on that page and must not share the viewport with a dismissible
-            // notice. The compact notice itself still renders — but in its inline form,
-            // since with the popup suppressed there is nothing for "Xem lai" to reopen.
+            // Khong bao gio truoc ket qua khan cap: nut tel:115 la hanh dong duy nhat
+            // cua trang do va khong duoc chia man hinh voi popup co the bo qua,
+            // thong bao. Thong bao gon van render — nhung dang inline,
+            // vi khi popup da bi an thi "Xem lai" khong con gi de mo lai.
             'showDisclaimerPopup' => !$phien->isEmergency() && $this->disclaimerPopupDue($request, $userId),
             'disclaimerReviewable' => !$phien->isEmergency(),
             'hasProfile' => $hoSo !== null,
@@ -608,18 +608,18 @@ class SangLocController extends Controller
     }
 
     /**
-     * The result page's numeric analysis block: a rule-based risk score with its
+     * Khoi phan tich so tren trang ket qua: diem nguy co theo quy tac kem
      * per-factor contribution bars.
      *
-     * Computed from persisted columns only — the chart must be able to render with
-     * no AI at all, and every number the briefing's `data_analysis` writes is checked
-     * against this same table.
+     * Tinh chi tu cot da luu — bieu do phai render duoc
+     * hoan toan khong AI, va moi con so briefing ghi qua `data_analysis` deu duoc kiem tra
+     * voi cung bang nay.
      *
-     * The score is a scoring rule, not a probability: the outcome's own band anchors
-     * it (self-care 0-24 … emergency 75-100), so the number can never contradict the
-     * conclusion banner, and the label says so. Contributions are the weights the
-     * factors actually carried — this is the only place on the page those numbers
-     * exist.
+     * Diem la quy tac cham diem, khong phai xac suat: dai cua chinh ket qua lam moc
+     * no (tu cham soc 0-24 … khan cap 75-100), nen con so khong bao gio tra loi nguoc voi
+     * banner ket luan, va nhan van ban cung noi ro. Dong gop la trong so ma quy tac
+     * yeu to thuc su mang — day la cho duy nhat tren trang ma nhung con so do
+     * ton tai.
      *
      * @return array<string, mixed>|null null when the session has no outcome yet
      */
@@ -631,8 +631,8 @@ class SangLocController extends Controller
             return null;
         }
 
-        // Band anchor + weights are one deliberate scale, kept next to the code that
-        // applies it. Raising a weight is a clinical decision, not a tweak.
+        // Moc dai + trong so la mot thang do chu dich, dat ngay can code ap dung no.
+        // Nang mot trong so la quyet dinh lam sang, khong phai chinh sua nho.
         $bandBase = [0, 25, 50, 75][$rank];
         $bandTop = $bandBase + 24;
         $bandWidth = $bandTop - $bandBase + 1;
@@ -654,9 +654,9 @@ class SangLocController extends Controller
         ];
         $factorTotal = array_sum(array_column($contributions, 'points'));
 
-        // Everything above the base came from measurable factors, so the position in
-        // the band is proportional to what those factors actually carried. The label
-        // shows the anchor reading: a self-care case reads low whatever the spread.
+        // Moi thu tren diem nen deu den tu yeu to do duoc, nen vi tri trong dai
+        // ti le voi phan ma cac yeu to do thuc su mang. Nhan van ban
+        // hien diem moc: truong hop tu cham soc doc thap du dieu kien con lai the nao.
         $score = $bandBase + (int) round($factorTotal / 75 * ($bandWidth - 1));
         $score = min($bandTop, $score);
 
@@ -671,23 +671,23 @@ class SangLocController extends Controller
             'band_base' => $bandBase,
             'band_top' => $bandTop,
             'level_label' => __('messages.health.outcome_' . $phien->outcome),
-            // Bars for everything: a factor that read zero shows as an empty track,
-            // because "co do = 0" IS a measured result, not an absence of data.
+            // Thanh cho moi thu: yeu to do ra 0 hien thanh track rong,
+            // vi "co do = 0" LA mot ket qua do duoc, chu khong phai thieu du lieu.
             'contributions' => $contributions,
             'zero_contributions' => array_values(array_filter($contributions, fn (array $bar) => $bar['points'] === 0)),
         ];
     }
 
     /**
-     * The briefing panel on its own, for the result page to swap in when the job lands.
+     * Panel briefing rieng, de trang ket qua hoan doi vao khi job hoan thanh.
      *
-     * 202 while the worker is still writing, so the poller keeps waiting; 200 with the
-     * panel once it is written, or once it has definitively failed. Emergency sessions
-     * are never due a briefing and get 404, and an unfinished session has no result
-     * page to be a pane of.
+     * 202 trong khi worker van dang ghi, nen poller tiep tuc cho; 200 kem
+     * panel sau khi ghi xong, hoac khi that bai ro rang. Phien khan cap
+     * khong bao gio due briefing va nhan 404, va phien chua chot khong co trang ket qua
+     * de lam pane cua no.
      *
-     * The care grid rides along in a <template>: the briefing's own product picks are
-     * unknown when the page first paints, so the tab would otherwise keep showing the
+     * Luoi cham soc di kem trong <template>: lua chon san pham cua briefing
+     * chua biet khi trang moi ve lan dau, nen tab se giu hien
      * rule engine's list alone until a reload.
      */
     public function briefingPane(int $MaSL): Response
@@ -702,10 +702,10 @@ class SangLocController extends Controller
 
         $briefing = $this->briefingFor($phien);
 
-        // A finished job is not pending, whatever the columns say. A worker that died
-        // before recording its status leaves both null while the job is `done`; reading
-        // pending off the columns alone answered 202 to every poll tick from then on,
-        // and the poller looped to its 90-attempt cap before showing the notice.
+        // Job hoan thanh khong phai dang cho, du cot ghi gi. Worker chet
+        // truoc khi ghi trang thai de ca hai null trong khi job la `done`; doc
+        // pending chi dua vao cot se tra 202 cho moi lan poll tu do ve sau,
+        // va poller lap den gioi han 90 lan thu truoc khi hien thong bao.
         $jobFinished = AiJob::where('ma_nd', $userId)
             ->where('kind', AiJob::KIND_TRIAGE_BRIEFING)
             ->where('payload->ma_sl', $MaSL)
@@ -714,9 +714,9 @@ class SangLocController extends Controller
 
         $pending = $briefing === null && $phien->ai_briefing_status === null && ! $jobFinished;
 
-        // Care products only render when the briefing actually arrived: a pending
-        // poll discards the 202 body, and a failed attempt drops to the unavailable
-        // notice. Calculating the snapshot for every poll tick would re-run the rule
+        // San pham cham soc chi render khi briefing thuc su den: lan poll
+        // dang cho bo body 202, va lan that bai roi vao thong bao khong kha dung.
+        // Tinh snapshot cho moi lan poll se chay lai bo quy tac
         // picks 60+ times while waiting.
         $hoSo = $briefing !== null ? $this->profileFor($userId) : null;
 
@@ -733,19 +733,19 @@ class SangLocController extends Controller
     }
 
     /**
-     * The suggested products of the outcome, with their image resolved here.
+     * Cac san pham goi y cua ket qua, voi anh duoc giai o day.
      *
-     * Only the image is refreshed: what the customer sees in this list is the
-     * snapshot the triage took, and re-reading stock or price would silently change
-     * a stored decision. The image cannot be part of that snapshot because the rule
-     * engine may run in a worker, where an asset URL would bake in APP_URL's host.
+     * Chi lam moi anh: phan khach hang thay trong danh sach nay la
+     * snapshot ma sang loc da chup, va doc lai ton hoac gia se thay lam
+     * mot quyet dinh da luu. Anh khong the nam trong snapshot do vi bo quy tac
+     * co the chay trong worker, noi URL asset se cam host cua APP_URL vao row.
      *
      * @return array<int, array<string, mixed>>
      */
     protected function suggestedProductsFor(PhienSangLoc $phien): array
     {
-        // Closure, not the 'is_array' string: Collection::filter passes ($value, $key)
-        // and is_array() takes exactly one argument, so the string form is a 500.
+        // Closure chu khong phai chuoi 'is_array': Collection::filter truyen ($value, $key)
+        // va is_array() nhan dung mot doi so, nen dang chuoi la 500.
         $sanPhams = collect($phien->suggested_products ?? [])->filter(fn ($row) => is_array($row));
 
         if ($sanPhams->isEmpty()) {
@@ -765,18 +765,18 @@ class SangLocController extends Controller
     }
 
     /**
-     * The briefing job to poll, queueing one if this session never got one.
+     * Job briefing de poll, dua vao hang doi neu phien nay chua co.
      *
-     * Sessions finalised before the feature existed, and sessions whose dispatch hit
-     * a dead queue, have no job and no briefing — so the first view of the result
-     * page queues it. Guarded on "no briefing job row exists for this session at
-     * all", not on "none is running": a stranded or failed attempt must not be
-     * retried on every reload.
+     * Cac phien chot truoc khi tinh nang ra doi, va phien ma lan dispatch gap
+     * hang doi chet, khong job khong briefing — nen lan xem dau trang ket qua
+     * trang dua no vao hang doi. Guard tren "khong ton tai row job briefing nao cho phien nay
+     * ca", chu khong phai "khong ai dang chay": mot lan tre hoac that bai khong duoc
+     * thu lai tai moi lan tai lai trang.
      */
     protected function ensureBriefingJob(PhienSangLoc $phien): ?AiJob
     {
-        // Success never reruns. A failed attempt is retried once if the previous job
-        // completed without producing a usable briefing.
+        // Thanh cong khong bao gio chay lai. Lan that bai duoc thu lai mot lan neu job truoc
+        // hoan thanh ma khong sinh briefing dung duoc.
         if ($phien->ai_briefing_status === 'ok') {
             return null;
         }
@@ -796,7 +796,7 @@ class SangLocController extends Controller
             ->latest('ma_aj')
             ->first();
 
-        // Previous job finished with failure and we have not exhausted retries.
+        // Job truoc ket thuc voi that bai va chua het so lan thu lai.
         if ($job !== null && $job->isFinished() && $phien->ai_briefing_status === 'failed' && $briefingAttempts < 2) {
             $phien->forceFill(['ai_briefing_status' => null])->save();
             $job = $this->aiJobs->dispatchBriefingIfEligible($phien);
@@ -804,22 +804,22 @@ class SangLocController extends Controller
             $job = $this->aiJobs->dispatchBriefingIfEligible($phien);
         }
 
-        // A queued job nobody picked up: no worker is running, so polling it would
-        // only produce the "not available this time" notice. Write the briefing in
-        // this request instead — the result page already loads once and reloads when
-        // a job lands, so the cost is the first paint, not a second round trip.
+        // Job trong hang doi khong ai nhan: khong worker dang chay, nen poll no chi
+        // ra thong bao "hien chua kha dung". Viet briefing ngay
+        // request nay thay the — trang ket qua da tai mot lan va tai lai khi
+        // job den, nen chi phi nam o lan ve dau tien, chu khong phai mot lan luot them.
         if ($job !== null && $job->isStranded()) {
-            // Retire, never generate here. This runs inside the result-page request on a
-            // single-process dev server with no queue worker, so an inline generate()
-            // holds every other request for the ~90s provider budget. The page renders
-            // without a briefing and the pane shows the unavailable notice; the poller
-            // still swaps one in when a worker does land.
+            // Rui chu khong sinh o day. Chay ben trong request trang ket qua tren
+            // dev server mot process khong co worker, nen generate() truc tiep se
+            // giu moi request khac trong ~90s ngan sach nha cung cap. Trang render
+            // khong co briefing va pane hien thong bao khong kha dung; poller
+            // van hoan doi vao khi worker thuc su den.
             $this->aiJobs->abandon($job, 'no worker picked the briefing up; result page loaded without it');
 
-            // Record the attempt as failed, not leave the column null: the retry gate
-            // above only opens on a non-null status, so an abandoned attempt with a
-            // null column never reached it — the session was stranded forever with a
-            // retry still in budget.
+            // Ghi lan thu la that bai, chu khong de cot null: cua thu lai
+            // phia tren chi mo khi trang thai khac null, nen lan thu bo cu voi
+            // cot null khong bao gio cham den no — phien bi tre mai mai voi
+            // so lan thu lai con ngan sach.
             if (app(SangLocAiTomTatService::class)->duDieuKien($phien)) {
                 $phien->forceFill(['ai_briefing_status' => 'failed'])->save();
             }
@@ -827,19 +827,19 @@ class SangLocController extends Controller
             return null;
         }
 
-        // A finished job with a null status means it died before recording one; a
-        // stranded one means nobody is consuming. Neither is worth polling.
+        // Job hoan thanh voi trang thai null nghia la no chet truoc khi ghi; job
+        // tre nghia la khong ai tieu thu. Ca hai khong dang poll.
         return $job !== null && !$job->isFinished() && !$job->isStranded() ? $job : null;
     }
 
     /**
-     * The briefing to render, with its suggested products re-checked against the
-     * catalogue and their links built here.
+     * Briefing de render, voi san pham goi y kiem tra lai voi
+     * danh muc va link duoc dung o day.
      *
-     * Re-read rather than trusted from the column: a product can sell out or expire
-     * between the worker writing the briefing and the page being opened, and the
-     * worker has no incoming request, so it cannot build a product URL without
-     * baking APP_URL's host into the stored row.
+     * Doc lai thay vi tin cot: san pham co the het hang hoac het han
+     * giu lan worker ghi briefing va lan trang duoc mo, va worker
+     * khong co request den, nen khong the dung URL san pham ma khong
+     * cam host APP_URL vao row da luu.
      *
      * @return array<string, mixed>|null
      */
@@ -882,17 +882,17 @@ class SangLocController extends Controller
     }
 
     /**
-     * The rewrite job still working on this session, if any.
+     * Job viet lai van dang lam viec voi phien nay, neu co.
      *
-     * `ai_status` stays null until the rewrite finishes, so a still-queued job is the
-     * only signal that something is coming. Bookmarking or reloading after it lands
-     * finds no pending job and renders the finished page.
+     * `ai_status` van null cho den khi ban viet lai xong, nen job con trong hang doi la
+     * tin hieu duy nhat rang co gi dang den. Danh dau hoac tai lai sau khi no den
+     * se khong thay job dang cho va render trang da hoan thanh.
      *
-     * A job nobody picked up is retired here and rewritten in this request, the same
-     * way the briefing does it. Both halves are needed together: the result page
-     * reloads when it sees `stranded`, so leaving this job queued would reload
-     * forever, and leaving it to the poller would keep showing the waiting banner for
-     * a worker that is never coming.
+     * Job khong ai nhan duoc rui o day va viet lai ngay trong request nay, cung
+     * cach briefing lam. Ca hai nua phai di cung nhau: trang ket qua
+     * tai lai khi thay `stranded`, nen de job nay nam trong hang doi se tai lai
+     * mai mai, va giao cho poller se giu banner cho mai cho mot worker
+     * khong bao gio den.
      */
     protected function pendingAdviceJob(PhienSangLoc $phien): ?AiJob
     {
@@ -924,20 +924,20 @@ class SangLocController extends Controller
             return $job !== null && in_array($job->status, ['queued', 'running'], true) ? $job : null;
         }
 
-        // Same rule as the briefing: retire, never rewrite here. Running the provider
-        // call inside this request holds the single-process dev server for its whole
-        // timeout, so the page renders the pharmacist's text and stops polling.
+        // Cung quy tac voi briefing: rui chu khong viet lai o day. Chay nha cung cap
+        // ngay trong request nay giu dev server mot process cho toan bo
+        // timeout, nen trang render van ban cua duoc si va ngung poll.
         $this->aiJobs->abandon($job, 'no worker picked the advice rewrite up; result page loaded without it');
 
         return null;
     }
 
     /**
-     * The facts the rule engine actually used, for a "why this conclusion" block.
+     * Cac chi tiet bo quy tac thuc su dung, cho khoi "vi sao co ket luan nay".
      *
-     * Reads only what is already persisted — no new medical content, no second
-     * evaluation. Symptom codes are resolved to their Vietnamese names because a
-     * customer cannot read `headache`.
+     * Chi doc nhung gi da luu san — khong noi dung y khoa moi, khong lan goi
+     * danh gia. Ma trieu chung duoc giai sang ten tieng Viet vi mot
+     * khach hang khong doc duoc `headache`.
      *
      * @return array<string, mixed>
      */
@@ -957,16 +957,16 @@ class SangLocController extends Controller
     }
 
     /**
-     * Run every suggested medicine through the same drug-safety check the cart runs.
+     * Cho moi thuoc duoc goi y qua cung kiem tra an toan thuoc gio hang dang chay.
      *
-     * The wizard could recommend a product the customer's own profile contraindicates
-     * — ibuprofen during pregnancy, an aspirin allergy — while the cart blocked that
-     * exact product one click later. Checking here means the warning appears where the
-     * suggestion is made.
+     * Wizard co the goi y san pham ma ho so suc khoe cua chinh khach hang chi dinh
+     * — ibuprofen khi mang thai, di ung aspirin — trong khi gio hang chan dung thu do
+     * dung san pham do mot lan nhan sau. Kiem tra o day nghia la canh bao xuat hien noi
+     * duoc goi y.
      *
-     * Covers the AI briefing's picks as well as the rule engine's: the model chooses
-     * from the catalogue and knows nothing about this customer's profile, so its
-     * suggestions need the check more, not less.
+     * Phu ca lua chon cua briefing AI cung nhu bo quy tac: model chon tu
+     * danh muc va khong biet gi ve ho so cua khach hang nay, nen goi y cua no
+     * can kiem tra hon, chu khong phai it hon.
      *
      * @return array{warnings: array<int, array<string, mixed>>, flagged: array<int, int>}
      */
@@ -986,8 +986,8 @@ class SangLocController extends Controller
         $warnings = [];
         $flagged = [];
 
-        // One query for the set, then an in-memory check per product: DrugSafetyService
-        // indexes the contraindication and interaction tables once per request.
+        // Mot truy van cho ca bo, roi kiem tra trong bo nho cho moi san pham: AnToanThuocService
+        // index bang chung chi dinh dinh thuoc va tuong tac mot lan moi request.
         foreach (SanPham::whereIn('ma_sp', $productIds)->get() as $sanPham) {
             $result = $this->anToanThuoc->kiemTraSanPham($sanPham, $hoSo, $phien->nguoiDung);
 
@@ -1000,7 +1000,7 @@ class SangLocController extends Controller
         }
 
         return [
-            // Same warning may come from two products sharing an ingredient.
+            // Cung mot canh bao co the den tu hai san pham dung chung hoat chat.
             'warnings' => collect($warnings)->unique(fn (array $w) => ($w['title'] ?? '') . '|' . ($w['message'] ?? ''))->values()->all(),
             'flagged' => $flagged,
         ];
@@ -1019,7 +1019,7 @@ class SangLocController extends Controller
     }
 
     /**
-     * Abandon the open session and start over.
+     * Bo phien dang mo va bat dau lai.
      */
     public function restart(Request $request): RedirectResponse
     {
@@ -1029,44 +1029,44 @@ class SangLocController extends Controller
     }
 
     /**
-     * Stop repeating the scope notice as a popup for the rest of the calendar day.
+     * Khong lap lai thong bao pham vi dang popup cho phan con lai cua ngay lich.
      *
-     * Cache, not a column: this hides the *emphasis*, not the notice — the compact
-     * `role="note"` block still carries the full disclaimer text on every triage page —
-     * so it has no compliance weight and does not justify schema. Cache is also the
-     * house store for per-user transient keys (CheckoutController's completed-checkout
-     * key). An evicted key re-shows the popup, which is the safe direction to fail.
+     * Cache chu khong phai cot: viec nay an phan *nhan manh*, chu khong phai thong bao — khoi
+     * `role="note"` van giu toan bo van ban mien tru tren moi trang sang loc —
+     * nen no khong mang trong so tuan thu va khong du ly do de them schema. Cache cung la
+     * noi luu chung cua ung dung cho key tam thoi theo nguoi dung (key completed-checkout cua CheckoutController
+     * bi day ra thi popup hien lai, do la huong an toan khi loi.
      *
-     * Per-user rather than a cookie or localStorage: on a shared in-store tablet one
-     * customer's dismissal must not suppress the notice for the next person's login.
+     * Theo nguoi dung chu khong phai cookie hay localStorage: tren tablet dung chung tai cua hang,
+     * viec mot khach dong thong bao khong duoc an thong bao cua nguoi dang nhap tiep theo.
      */
     public function ackDisclaimer(Request $request): RedirectResponse
     {
-        // min:1 and a cast at the boundary: `route('sang-loc.ket-qua', 0)` and `-5` generate
-        // URLs that only 404 on arrival, and `integer` accepts '+1' (filter_var parses the
-        // sign) without coercing it, which would build /health-check/result/+1. An empty
-        // string never reaches here — the global ConvertEmptyStringsToNull middleware makes
-        // it null, so a stray hidden input takes the "no MaSL" branch.
+        // min:1 va ep kieu tai ranh gioi: `route('sang-loc.ket-qua', 0)` va `-5` tao
+        // URL chi 404 khi cham den, va `integer` nhan '+1' (filter_var doc dau
+        // dau) ma khong chuyen doi, dieu do se tao /health-check/result/+1. Chuoi rong
+        // chuoi khong bao gio cham den day — middleware ConvertEmptyStringsToNull toan cuc bien
+        // thanh null, nen mot hidden input lac dau lam roi vhanh "khong co MaSL".
         $validated = $request->validate([
             'ma_sl' => ['nullable', 'integer', 'min:1'],
         ]);
 
         Cache::put($this->disclaimerAckKey((int) auth()->id()), true, now()->addHours(25));
 
-        // A named route plus an integer, never a submitted URL: no open-redirect surface,
-        // and result() re-checks ownership with firstOrFail() so a forged id 404s.
+        // Route co ten cong mot so nguyen, khong bao gio URL do len: khong co cho mo cho open-redirect,
+        // va result() kiem tra lai quyen so huu bang firstOrFail() nen id gia mau 404.
         return isset($validated['ma_sl'])
             ? redirect()->route('sang-loc.ket-qua', (int) $validated['ma_sl'])
             : redirect()->route('sang-loc.kiem-tra');
     }
 
     /**
-     * The calendar day lives in the key, not in the TTL.
+     * Ngay lich nam trong key, chu khong nam trong TTL.
      *
-     * "Once a day" then survives a wrong TTL, and there is no expiry arithmetic to get
-     * wrong near midnight — Cache::put with an already-past endOfDay returns false. The
-     * 25h TTL is garbage collection only, one hour past the longest a key can matter.
-     * today() is Asia/Ho_Chi_Minh per config/app.php.
+     * "Mot lan mot ngay" nhu vay song sot qua TTL sai, va khong co phep tinh han su dung de
+     * sai gan nua dem — Cache::put voi endOfDay da qua se tra false. Nho vay
+     * TTL 25h chi la viec don rac, mot gio qua thoi gian dai nhat ma key con co y nghia.
+     * today() dung Asia/Ho_Chi_Minh theo config/app.php.
      */
     protected function disclaimerAckKey(int $userId): string
     {
@@ -1074,17 +1074,17 @@ class SangLocController extends Controller
     }
 
     /**
-     * Whether to render the popup.
+     * Co render popup hay khong.
      *
-     * Three inputs, in order: an explicit `?disclaimer=1` (the "Xem lai" link) forces it
-     * open; an explicit `?disclaimer=0` suppresses it for this URL only; otherwise it is
-     * due once per calendar day.
+     * Ba dau vao, theo thu tu: `?disclaimer=1` ro rang (link "Xem lai") ep mo;
+     * `?disclaimer=0` ro rang an no chi cho URL nay; con lai no do moi
+     * m lan theo ngay lich.
      *
-     * The `0` case exists because Escape and a scrim click mean "not now", not
-     * "understood", so they must not write the daily flag — but the result page reloads
-     * itself when a polled AI job lands, and triage.js navigates on its own too. Without
-     * a marker in the URL those reloads would re-open the dialog and re-steal focus from
-     * somebody who had just closed it. A fresh visit carries no marker and asks again.
+     * Truong hop `0` ton tai vi Escape va bam scrim co nghia "de sau", chu khong phai
+     * "da hieu", nen ho khong duoc ghi co ngay — nhung trang ket qua tai lai
+     * chinh no khi mot job AI poll den, va triage.js tu dieu huong nua. Neu khong co
+     * marker trong URL, nhung lan tai lai do se mo lai hop thoai va lay lai focus tu
+     * nguoi vua dong no. Lan truy cap moi khong co marker nen hoi lai.
      */
     protected function disclaimerPopupDue(Request $request, int $userId): bool
     {
@@ -1101,8 +1101,8 @@ class SangLocController extends Controller
     }
 
     /**
-     * A worker is deciding. Tell the client to wait rather than holding the request
-     * open for the 11-30s provider call.
+     * Worker dang quyet dinh. Bao client cho thay vi giu request mo cho qua trinh goi
+     * nha cung cap 11-30s.
      */
     protected function respondPending(Request $request, PhienSangLoc $phien, AiJob $job): RedirectResponse|JsonResponse
     {
@@ -1125,9 +1125,9 @@ class SangLocController extends Controller
     }
 
     /**
-     * Progress of the decision, for the waiting state to poll.
+     * Tien do cua quyet dinh, de trang thai cho poll.
      *
-     * Scoped to the signed-in customer: the uuid is a public identifier, not a
+     * Gioi han trong khach hang da dang nhap: uuid la dinh danh cong khai, khong phai
      * capability token.
      */
     public function decision(Request $request, string $uuid): JsonResponse
@@ -1145,8 +1145,8 @@ class SangLocController extends Controller
         if ($job->status === 'done') {
             $target = ($job->result['next'] ?? null) === 'clarify' || empty($job->result['ma_sl'])
                 ? route('sang-loc.kiem-tra')
-                // Built here, not in the worker: route() inside a job has no incoming
-                // request and would resolve the host from APP_URL.
+                // Dung o day, chu khong phai trong worker: route() trong job khong co request den
+                // va se giai host tu APP_URL.
                 : route('sang-loc.ket-qua', $job->result['ma_sl']);
 
             return response()->json([
@@ -1158,7 +1158,7 @@ class SangLocController extends Controller
         }
 
         if ($job->status === 'failed') {
-            // The client reloads /health-check, which decides inline.
+            // Client tai lai /health-check, trang nay quyet dinh truc tiep.
             return response()->json([
                 'success' => false,
                 'status' => 'failed',
@@ -1167,8 +1167,8 @@ class SangLocController extends Controller
         }
 
         if ($job->isStranded()) {
-            // Retired here as well as in pendingEvaluationJob(): whichever the client
-            // hits first must break the loop, or the reload finds the same queued job.
+            // Rui o day cung nhu trong pendingEvaluationJob(): phia nao client
+            // cham truoc cung phai dut vong lap, neu lan tai lai lai thay cung job trong hang doi.
             $this->aiJobs->abandon($job, 'no worker picked the decision up, decided in the request');
 
             return response()->json([
@@ -1194,8 +1194,8 @@ class SangLocController extends Controller
                 'mode' => 'question',
                 'stage' => $this->renderStage($phien),
                 'triage_question' => $question,
-                // Server-side truth: a profile-covered step means the rendered step can
-                // run ahead of current_step, so the client must not derive this itself.
+                // Chuan tu phia server: buoc du ho so che khuat nghia la buoc da render co the
+                // chay truoc current_step, nen client khong duoc tu suy dien cai nay.
                 'allow_back' => (int) $phien->current_step > 1,
                 'previous_answer' => $this->triageService->cauTraLoiBaiTruoc($phien, (int) $question['step']),
                 'answered_steps' => $this->answeredSteps($phien),
@@ -1214,9 +1214,9 @@ class SangLocController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                // The result page is a real navigation, not a stage swap: rendering it
-                // client-side would move the outcome map, the drug-safety check and the
-                // product cards into JavaScript.
+                // Trang ket qua la mot lan dieu huong that, chu khong phai hoan doi buoc: render no
+                // phan client se dan den phan do ket qua tuong tac, kiem tra an toan thuoc va
+                // the san pham vao JavaScript.
                 'mode' => 'result',
                 'triage_session_id' => $phien->ma_sl,
                 'triage_result' => [
@@ -1237,8 +1237,8 @@ class SangLocController extends Controller
     }
 
     /**
-     * The AI follow-up round is offered on the wizard page itself, so the plain
-     * redirect keeps the no-JS form flow intact.
+     * Vong hoi lam ro AI duoc de nghi ngay tren trang wizard, nen redirect
+     * redirect giu nguyen luong form khong JavaScript.
      */
     protected function respondClarify(Request $request, PhienSangLoc $phien): RedirectResponse|JsonResponse
     {
@@ -1268,8 +1268,8 @@ class SangLocController extends Controller
             return response()->json([
                 'success' => false,
                 'error' => $tinNhan,
-                // Matches the shape $request->validate() emits, so the client has one
-                // code path for both kinds of 422.
+                // Khop dung dang ma $request->validate() tra ve, nen client chi co mot
+                // duong code cho ca hai loai 422.
                 'errors' => ['answer' => [$tinNhan]],
             ], 422);
         }
@@ -1285,7 +1285,7 @@ class SangLocController extends Controller
             return response()->json([
                 'success' => false,
                 'error' => $tinNhan,
-                // Nothing left to re-render in place: the client reloads the wizard.
+                // Khong con gi de render lai tai cho: client tai lai wizard.
                 'redirect_url' => route('sang-loc.kiem-tra'),
             ], 410);
         }
@@ -1294,9 +1294,9 @@ class SangLocController extends Controller
     }
 
     /**
-     * The submitted step is not the one being asked — a stale tab, a resubmitted
-     * form, or a crafted request. Send the user back to the real current question
-     * instead of recording the answer under the wrong key.
+     * Buoc do len khong phai buoc dang hoi — tab cu, submit lai
+     * form, hoac request gia mau. Dua nguoi dung quay ve cau hoi hien tai thuc su
+     * thay vi ghi cau tra loi duoi sai key.
      */
     protected function respondStepMismatch(Request $request): RedirectResponse|JsonResponse
     {

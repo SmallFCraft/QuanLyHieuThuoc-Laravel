@@ -14,8 +14,8 @@ class BaoCaoSangLocService
     public const OUTCOMES = ['emergency', 'refer_doctor', 'pharmacist_review', 'self_care'];
 
     /**
-     * Palette measured for contrast in resources/views/health/partials/styles.blade.php.
-     * Kept here so the chart endpoints and the views never re-derive colours.
+     * Bang mau duoc do tuong phan trong resources/views/health/partials/styles.blade.php.
+     * Giu tai day de endpoint bieu do va view khong bao gio suy lai mau.
      */
     public const OUTCOME_STYLES = [
         'emergency' => ['color' => '#B91C1C', 'bg' => '#FEF2F2', 'icon' => 'bi-exclamation-octagon-fill'],
@@ -33,8 +33,8 @@ class BaoCaoSangLocService
 
         $referred = $outcomes['refer_doctor'] + $outcomes['emergency'];
 
-        // Aggregate in SQL: loading every reviewed row to average two timestamps in
-        // PHP grows unbounded with the table.
+        // Tong hop trong SQL: tai moi row da xem de trung binh hai moc thoi gian trong
+        // PHP se lon vo han theo bang.
         $wait = $this->applyFilters(PhienSangLoc::query(), $filters)
             ->where('status', 'reviewed')
             ->whereNotNull('reviewed_at')
@@ -56,8 +56,8 @@ class BaoCaoSangLocService
     }
 
     /**
-     * Minutes between created_at and reviewed_at, in the driver's own dialect.
-     * MySQL in production, SQLite in the test suite.
+     * So phut giua created_at va reviewed_at, viet theo phuong ngu cua driver.
+     * MySQL tren production, SQLite trong suite test.
      */
     protected function waitMinutesExpression(): string
     {
@@ -87,8 +87,8 @@ class BaoCaoSangLocService
 
     public function layPhanBoKetQua(array $filters = []): array
     {
-        // Only the outcome tally, not the whole summary: the chart endpoint would
-        // otherwise re-run the total, pending and wait-time queries it never reads.
+        // Chi so luong ket qua, chu khong phai toan bo tong hop: endpoint bieu do neu khong
+        // se chay lai cac truy van tong, dang cho va thoi gian cho ma no khong bao gio doc.
         $counts = $this->outcomeCounts($filters);
 
         $rows = [];
@@ -111,9 +111,9 @@ class BaoCaoSangLocService
     }
 
     /**
-     * @param  array  $filters  same filters as the rest of the report; the trend must
-     *                          agree with the metric cards instead of always showing
-     *                          every outcome.
+     * @param  array  $filters  cung bo loc voi phan con lai cua bao cao; xu huong phai
+     *                          khop voi cac the chi so thay vi luon hien
+     *                          moi ket qua.
      */
     public function layXuHuongNgay(int $days = 30, array $filters = []): array
     {
@@ -130,7 +130,7 @@ class BaoCaoSangLocService
             ->pluck('aggregate', 'date')
             ->toArray();
 
-        // Days without a session must still occupy a slot, otherwise the x axis lies.
+        // Ngay khong co phien van phai chiem mot slot, neu truc x noi loi.
         $labels = [];
         $data = [];
         for ($i = $days - 1; $i >= 0; $i--) {
@@ -248,8 +248,8 @@ class BaoCaoSangLocService
     }
 
     /**
-     * Every report query funnels through here so the filter semantics stay identical
-     * across metrics, charts and the Excel export.
+     * Moi truy van bao cao di qua day nen ngung nghia bo loc giu nguyen
+     * giua cac chi so, bieu do va file xuat Excel.
      */
     protected function applyFilters(Builder $query, array $filters): Builder
     {
@@ -268,8 +268,8 @@ class BaoCaoSangLocService
             $query->where('entry_point', $entryPoint);
         }
 
-        // Dates come straight from the query string, so an unparseable value must be
-        // ignored rather than 500 the whole report page.
+        // Ngay den tu query string, nen gia tri khong doc duoc phai
+        // bo qua thay vi lam 500 ca trang bao cao.
         $dateFrom = $this->parseDate($filters['date_from'] ?? null);
         if ($dateFrom) {
             $query->where('created_at', '>=', $dateFrom->startOfDay());

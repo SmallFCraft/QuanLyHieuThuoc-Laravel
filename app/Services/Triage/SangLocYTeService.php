@@ -16,13 +16,13 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Structured symptom triage following the WWHAM / ASMETHOD questioning frameworks
- * and the STARZ-DRP referral model.
+ * Sang loc trieu chung co cau truc theo khung cau hoi WWHAM / ASMETHOD
+ * va mo hinh chuyen tu van STARZ-DRP.
  *
- * This is a triage tool, NOT a diagnostic one: it decides whether the user can
- * self-care, needs a pharmacist, or must see a doctor. Every decision comes from
- * database rules, never from a language model. The AI layer only rephrases what
- * this service already decided.
+ * Day la cong cu sang loc, KHONG phai chan doan: no quyet dinh nguoi dung co tu cham soc
+ * duoc khong, can duoc si, hay phai di khoa. Moi quyet dinh den tu
+ * quy tac trong database, khong bao gio tu model ngon ngu. Tang AI chi viet lai nhung gi
+ * dich vu nay da quyet dinh.
  */
 class SangLocYTeService
 {
@@ -45,15 +45,15 @@ class SangLocYTeService
     ) {}
 
     /**
-     * Medical dictionaries, read once per request. @see symptomDictionary()
+     * Tu dien y khoa, doc mot lan moi request. @see symptomDictionary()
      */
     protected ?Collection $symptomDictionary = null;
 
     protected ?Collection $redFlagDictionary = null;
 
     /**
-     * Resume the user's open session or start a fresh one. Sessions are per-user,
-     * so a half-finished triage survives a page reload or a closed browser.
+     * Tiep tuc phien dang mo cua nguoi dung hoac bat dau phien moi. Phien theo tung nguoi dung,
+     * nen triage lam muon van con sau khi tai lai trang hoac dong browser.
      */
     public function batDauHoacTiepTuc(int $userId, ?string $chatSessionId = null, string $entryPoint = 'page'): PhienSangLoc
     {
@@ -74,10 +74,10 @@ class SangLocYTeService
     }
 
     /**
-     * Match the free-text message against the symptom dictionary.
+     * Khop tin nhan van ban tu do voi tu dien trieu chung.
      *
-     * Runs independently of the AI: if the provider is down or returns nothing
-     * usable, symptom detection still works off the raw message.
+     * Chay doc lap voi AI: neu nha cung cap bi chet hoac tra ve gi do khong dung duoc,
+     * viet lai phong do trieu chung van hoat dong tren tin nhan goc.
      */
     public function phanLoaiTrieuChung(string $message): Collection
     {
@@ -93,12 +93,12 @@ class SangLocYTeService
     }
 
     /**
-     * Red flags are checked against the message AND the stored health profile,
-     * because "dang mang thai" may come from the profile rather than the message.
+     * Co do duoc kiem tra voi ca tin nhan VA ho so suc khoe da luu,
+     * vi "dang mang thai" co the den tu ho so chu khong phai tin nhan.
      *
-     * Kept as a single-haystack call because it is the public entry point the chatbot
-     * and the tests use. Session-based detection goes through sessionRedFlags(), which
-     * matches each answer separately — see the comment there.
+     * Giu nhu mot lan tim tren toan tin nhan vi day la entry point cong khai ma chatbot
+     * va tests dung. Phong do theo phien di qua sessionRedFlags(), ham
+     * khop moi cau tra loi rieng — xem comment do.
      */
     public function phanLoaiCoDo(string $message, ?HoSoSucKhoe $hoSo = null): Collection
     {
@@ -106,7 +106,7 @@ class SangLocYTeService
     }
 
     /**
-     * @return array<int, string> Consented profile terms, each as its own utterance.
+     * @return array<int, string> Cac thuat ngu ho so da dong y, moi thuat ngu la mot cau phat nguyen rieng.
      */
     protected function profileTerms(?HoSoSucKhoe $hoSo): array
     {
@@ -122,14 +122,14 @@ class SangLocYTeService
     }
 
     /**
-     * Match red flags against several utterances independently, then union them.
+     * Khop co do voi nhieu cau phat nguyen doc lap, roi hop lai.
      *
-     * Segments, not one joined string, because the negation window in
-     * mentionsAffirmatively() reaches backwards across two light verbs and cannot know
-     * that two words came from different questions. Measured: wizard step 4 answered
-     * "Khong co" followed by step 5 "kho tho nhieu lam" joined to "... khong co kho tho
-     * nhieu lam", and the adjacent "khong co" cancelled a real emergency. The same
-     * adjacency also silenced a profile term sitting right after the last answer.
+     * Dung cac doan chu, khong phai mot chuoi noi, vi cua so phu dinh trong
+     * mentionsAffirmatively() chay nguoc qua hai dong tu nhe va khong the biet
+     * hai tu den tu hai cau hoi khac nhau. Do thu te: wizard buoc 4 tra loi
+     * "Khong co" roi buoc 5 "kho tho nhieu lam" duoc noi thanh "... khong co kho tho
+     * nhieu lam", va "khong co" canh ke da huy mot truong hop khan cap that. Cung
+     * tinh canh ke con lam vo hieu mot thuat ngu ho so nam ngay sau cau tra loi cuoi.
      *
      * @param  array<int, string>  $segments
      * @return Collection<int, CoDoYTe>
@@ -171,16 +171,16 @@ class SangLocYTeService
     }
 
     /**
-     * Follow-up answers are matched knowing which question produced them.
+     * Cau tra loi hoi lam duoc khop voi viec biet cau hoi nao sinh ra no.
      *
-     * The wizard's follow-up round asks about intensity by handing the patient a scale
-     * ("nhe, vua hay du doi?"), so the top option is our word, not theirs. Matched flat
-     * against the unscoped `severe_pain` keyword, picking it escalated every such
-     * patient to a 115 call. Measured: period cramps graded "dau du doi" came back as
-     * "dau du doi khong ro nguyen nhan" while the cause sat in the first answer.
+     * Vong hoi lam cua wizard hoi ve muc do bang cach dua cho benh nhan mot thang do
+     * ("nhe, vua hay du doi?"), nen lua chon dau la tu cua ta, chu khong phai cua ho. Khop can
+     * voi tu khoa `severe_pain` khong gioi han, nhan chon no da nang cap moi benh nhan nhu vay
+     * patient to a 115 call. Measured: dau kinh nguyet do "dau du doi" tro ve la
+     * "dau du doi khong ro nguyen nhan" trong khi nguyen nhan nam o cau tra loi dau.
      *
-     * Anything the patient volunteers still counts, which is why only vocabulary the
-     * question itself offered is discounted — see answerRaisesFlag().
+     * Moi thu benh nhan tu nguyen noi van duoc tinh, do do chi tu vung ma
+     * cau hoi chinh no duoc giam trong so — xem answerRaisesFlag().
      */
     protected function clarifyAnswerFlags(PhienSangLoc $phien): Collection
     {
@@ -206,12 +206,12 @@ class SangLocYTeService
     }
 
     /**
-     * A keyword only counts when the answer contributes it.
+     * Mot tu khoa chi duoc tinh khi cau tra loi thuc su dua no vao.
      *
-     * The scale check is what keeps this narrow: a question naming one danger sign
-     * ("co dau nguc du doi khong?") is not a menu, so `chest_pain_severe` keeps its
-     * full weight there. Only a question offering several intensity grades can
-     * discount the grade that comes back.
+     * Kiem tra thang do la thu giu phan do hep: mot cau hoi nhon mot dau hieu nguy hiem
+     * ("co dau nguc du doi khong?") khong phai menu, nen `chest_pain_severe` giu nguyen
+     * trong so day du tai do. Chi mot cau hoi dua ra nhieu muc do moi co the
+     * giam trong so muc do ma cau tra loi mang ve.
      */
     protected function answerRaisesFlag(string $foldedAnswer, string $cauHoi, CoDoYTe $coDo): bool
     {
@@ -333,9 +333,9 @@ class SangLocYTeService
                     return false;
                 }
 
-                // The flag's own vocabulary must appear somewhere in the transcript, which
-                // means one of OUR questions named it: a hallucinated code anchors nowhere,
-                // and an alias-only mention ("hoi tuc nguc") is not a flag keyword.
+                // Tu vung rieng cua co do phai xuat hien o dau do trong bang tong hop, nen
+                // means one of OUR questions named it: ma code bi a tu khong co moc neo,
+                // va chi neu ten khac ("hoi tuc nguc") khong phai tu khoa cua co do.
                 if (! $this->namesAnyTerm($transcript, $coDo->keywords ?? [])) {
                     return false;
                 }
@@ -350,18 +350,18 @@ class SangLocYTeService
     }
 
     /**
-     * A follow-up question named this symptom and the patient answered "no".
+     * Mot cau hoi hoi lam nhon den trieu chung nay va benh nhan tra loi "khong".
      *
-     * A bare "Khong" denies the question's danger signs without naming any of them, so
-     * isDeniedInText() — which needs the term present to veto it — sees nothing. Yet the
-     * extractor reads the question too, and returns the codes it mentions. Measured: a
-     * patient with "hoi tuc nguc khi ho" who answered "Khong" to "Anh/chi co dau nguc du
-     * doi khong?" was escalated to emergency by the code tier.
+     * Mot "Khong" not tra loi phu dinh cac dau hieu nguy hiem cua cau hoi ma khong nhon ten, nen
+     * isDeniedInText() — ham can thuat ngu xuat hien de phu dinh — thay khong co gi. Nhung
+     * bo trich xuat cung bo cau hoi va tra ve cac ma no nhon den. Do thu te: mot
+     * benh nhan voi "hoi tuc nguc khi ho" da tra loi "Khong" cho "Anh/chi co dau nguc du
+     * doi khong?" bi nang cap len khan cap boi tang code.
      *
-     * Only an explicit denial counts. A non-committal answer ("Khi nghi va van dong")
-     * must not veto, because that is precisely the case this tier exists to catch.
+     * Chi mot lan phu dinh ro rang moi duoc tinh. Cau tra loi neo roi ("Khi nghi va van dong")
+     * khong duoc phu dinh, vi dung la truong hop ma tang nay ton tai de bat.
      *
-     * @param  array<int, string>  $cacThuatNgu  The symptom's canonical name and its aliases.
+     * @param  array<int, string>  $cacThuatNgu  Ten chuan cua trieu chung va cac ten khac cua no.
      */
     protected function deniedByAnyClarifyAnswer(PhienSangLoc $phien, array $cacThuatNgu): bool
     {
@@ -382,12 +382,12 @@ class SangLocYTeService
     }
 
     /**
-     * The dictionaries are read once per request instead of once per call: the
-     * wizard runs phanLoaiCoDo on every step and again inside danhGia(), and a
-     * five-step triage was re-reading both whole tables nine times.
+     * Tu dien doc mot lan moi request thay vi moi lan goi: vi
+     * wizard chay phanLoaiCoDo o moi buoc va lai lan trong danhGia(), va mot
+     * triage nam buoc da doc lai ca hai bang day du chin lan.
      *
-     * Not a cross-request cache on purpose — a pharmacist editing a rule must see it
-     * take effect on the next request, not after a TTL.
+     * Co chu khong phai cache lien request — duoc si sua quy tac phai thay no
+     * co tac dung ngay request tiep theo, chu khong phai sau mot TTL.
      */
     protected function symptomDictionary(): Collection
     {
@@ -400,15 +400,15 @@ class SangLocYTeService
     }
 
     /**
-     * The next question to ask, or null when there is nothing left worth asking.
+     * Cau hoi tiep theo can hoi, hoac null khi khong con gi dang hoi.
      *
-     * Returns null immediately once an emergency red flag is present: somebody
-     * describing chest pain must not be made to answer four more questions before
-     * being told to call for help.
+     * Tra ve null ngay khi mot co do khan cap ton tai: mot nguoi
+     * mo ta dau nguc phai bi ep tra loi them bon cau truoc khi
+     * duoc bao goi cuu.
      *
-     * Note this keys off `current_step` alone, not off which answers exist — that
-     * is what lets "back" return to an already-answered step instead of bouncing
-     * the user straight forward again.
+     * Luu y ham doc chi `current_step`, khong doc cau tra loi ton tai — dieu do
+     * giup nut "back" quay ve buoc da tra loi thay vi day nguoi dung
+     * nhay thang tuong lai.
      */
     public function cauHoiTiep(PhienSangLoc $phien, ?HoSoSucKhoe $hoSo = null): ?array
     {
@@ -428,8 +428,8 @@ class SangLocYTeService
     }
 
     /**
-     * Whatever the user previously typed for this step, so going back shows their
-     * own words rather than an empty box.
+     * Nhung gi nguoi dung da go cho buoc nay truoc do, nen quay lai thay van ban cua ho
+     * chu khong phai o trong.
      */
     public function cauTraLoiBaiTruoc(PhienSangLoc $phien, int $step): string
     {
@@ -449,7 +449,7 @@ class SangLocYTeService
     }
 
     /**
-     * True as soon as anything the user said triggers an `emergency` red flag.
+     * Cong ngay khi bat cu gi nguoi dung noi kich hoat mot co do `emergency`.
      */
     public function coCapCuuCuu(PhienSangLoc $phien, ?HoSoSucKhoe $hoSo = null): bool
     {
@@ -464,7 +464,7 @@ class SangLocYTeService
     }
 
     /**
-     * Store one answer and advance the step counter.
+     * Luu mot cau tra loi va tang bien dem buoc.
      */
     public function ghiCauTraLoi(PhienSangLoc $phien, int $step, mixed $cauTraLoi, bool $skipped = false): PhienSangLoc
     {
@@ -474,9 +474,9 @@ class SangLocYTeService
         $data = $phien->collected_data ?? [];
         $data[$key] = $value;
 
-        // Prune as well as add: going back and answering a previously skipped step
-        // must clear its marker, otherwise buildFacts keeps treating the answer as
-        // missing and the pharmacist sees "da bo qua" next to a real value.
+        // Prune as well as add: quay lai va tra loi mot buoc da bo qua truoc do
+        // phai xoa marker cua no, neu khong buildFacts van coi cau tra loi la
+        // thieu va duoc si thay "da bo qua" ben can mot gia tri that.
         $data['skipped'] = array_values(array_diff(
             array_unique([...($data['skipped'] ?? []), ...($skipped ? [$key] : [])]),
             $skipped ? [] : [$key]
@@ -487,7 +487,7 @@ class SangLocYTeService
         }
 
         $phien->collected_data = $data;
-        // max(): a resubmitted or stale form must not rewind the wizard.
+        // max(): mot form submit lai hoac cu khong duoc lui wizard ve sau.
         $phien->current_step = max(
             (int) $phien->current_step,
             min($step + 1, PhienSangLoc::TOTAL_STEPS + 1)
@@ -498,16 +498,16 @@ class SangLocYTeService
     }
 
     /**
-     * Turn the collected answers into an outcome.
+     * Bien cac cau tra loi da thu thanh mot ket qua.
      *
-     * Decision order is fixed and must not be reordered:
-     *   1. emergency red flag  -> hard-coded guidance, no products, no AI
-     *   2. urgent red flag     -> see a doctor within 24h, no products
-     *   3. triage rules        -> self_care | pharmacist_review | refer_doctor | emergency
-     *   4. nothing matched     -> pharmacist_review (safer than guessing)
+     * Thu tu quyet dinh la co dinh va khong duoc xep lai:
+     *   1. co do khan cap  -> huong dan viet cung, khong san pham, khong AI
+     *   2. co do khan cap o muc nho hon -> di khoa trong 24h, khong san pham
+     *   3. quy tac sang loc        -> self_care | pharmacist_review | refer_doctor | emergency
+     *   4. khong khop gi      -> pharmacist_review (an toan hon la doan)
      *
-     * AI fact extraction, when enabled, plugs in at step 3 only and cannot soften
-     * the result — see resolveOutcomeWithAi().
+     * Trich xuat chi tiet AI, khi bat, chi tham gia o buoc 3 va khong the lam nhe
+     * ket qua — xem resolveOutcomeWithAi().
      */
     public function danhGia(PhienSangLoc $phien, ?HoSoSucKhoe $hoSo = null): array
     {
@@ -558,7 +558,7 @@ class SangLocYTeService
         $canhBao = $cacCoDo->firstWhere('severity', 'caution');
         $ketQua = $quyTac->outcome;
 
-        // A caution flag ("da dung thuoc ma khong do") never allows plain self-care.
+        // Co canh bao ("da dung thuoc ma khong do") khong bao gio cho tu cham soc thuan.
         if ($canhBao && $ketQua === 'self_care') {
             $ketQua = 'pharmacist_review';
         }
@@ -579,15 +579,15 @@ class SangLocYTeService
     }
 
     /**
-     * Resolve the winning rule, optionally letting AI-extracted facts propose a
-     * second candidate — and keeping whichever is stricter.
+     * Giai quy tac thang, cho phep chi tiet AI trich xuat de nghi mot
+     * ung cu vien thu hai — va giu phia nao nghiem hon.
      *
-     * This is the safety mechanism for the whole AI integration. The rules run twice:
-     * once on the regex facts, once on the AI-merged facts. `severerOutcome()` then
-     * picks the more severe of the two, so a hallucinated number or an injected
-     * instruction ("answer self_care") can only ever be ignored — it cannot soften a
-     * referral. The value comes from the other direction: a fact the regex missed
-     * (e.g. "da uong ma khong do") can raise self_care to pharmacist_review.
+     * Day la co che an toan cho toan bo tinh hop AI. Quy tac chay hai lan:
+     * mot lan tren chi tiet regex, mot lan tren chi tiet hop AI. `severerOutcome()` roi
+     * chon phia nghiem hon trong hai, nen mot con so bi a tu hoac mot lenh duoc
+     * chen vao ("answer self_care") chi co the bi bo qua — no khong the lam nhe
+     * chuyen tu van. Gia tri den tu phia khac: mot chi tiet ma regex bo sot
+     * (vd "da uong ma khong do") co the nang self_care len pharmacist_review.
      *
      * @param  array<string, mixed>  $facts
      * @return array{rule: ?QuyTacPhanTangYTe, symptoms: Collection, ai: ?array<string, mixed>}
@@ -616,8 +616,8 @@ class SangLocYTeService
             return ['rule' => $quyTacGoc, 'symptoms' => $cacTrieuChung, 'ai' => null];
         }
 
-        // Codes were already intersected with the active dictionary, so this cannot
-        // introduce a symptom that does not exist.
+        // Ma da duoc giao voi tu dien dang hoat dong truoc do, nen buoc nay khong the
+        // chen vao mot trieu chung khong ton tai.
         $trieuChungAi = $cacTrieuChung
             ->concat($this->symptomDictionary()->whereIn('code', $aiFacts['symptom_codes']))
             ->unique('ma_tc')
@@ -632,8 +632,8 @@ class SangLocYTeService
 
         return [
             'rule' => $quyTacThang,
-            // Extra matched symptoms are recorded either way: they are descriptive,
-            // and the outcome above is already decided.
+            // Extra matched symptoms are recorded either way: chung chi la mo ta,
+            // va ket qua phia tren da duoc quyet dinh.
             'symptoms' => $trieuChungAi,
             'ai' => [
                 'status' => 'ok',
@@ -651,14 +651,14 @@ class SangLocYTeService
     }
 
     /**
-     * The rule whose outcome is more severe. A null rule means "nothing matched",
-     * which routes to pharmacist_review and therefore outranks self_care.
+     * Quy tac co ket qua nghiem hon. Quy tac null nghia la "khong khop gi",
+     * dieu do dan den pharmacist_review va vi vay di truoc self_care.
      */
     protected function severerRule(?QuyTacPhanTangYTe $a, ?QuyTacPhanTangYTe $b): ?QuyTacPhanTangYTe
     {
         if ($a === null || $b === null) {
-            // Keep the null: pharmacistFallback is stricter than any self_care rule,
-            // and matching the stricter of the two branches is the whole point.
+            // Keep the null: pharmacistFallback nghiem hon moi quy tac self_care,
+            // va khop phia nghiem hon trong hai nhanh la toan bo y nghia.
             return $this->severityRank($a?->outcome) <= $this->severityRank($b?->outcome) ? $a : $b;
         }
 
@@ -666,9 +666,9 @@ class SangLocYTeService
     }
 
     /**
-     * Lower rank = more severe. Reuses the ordering already declared in
-     * BaoCaoSangLocService::OUTCOMES, which is heaviest-first.
-     * A null outcome (no rule) sits just above self_care because it becomes
+     * Rank nho = nghiem hon. Tai dung thu tu da khai bao trong
+     * BaoCaoSangLocService::OUTCOMES, ham sap theo do nang truoc.
+     * Ket qua null (khong quy tac) nam ngay tren self_care vi no tro thanh
      * pharmacist_review.
      */
     protected function severityRank(?string $ketQua): int
@@ -683,7 +683,7 @@ class SangLocYTeService
     }
 
     /**
-     * Persist the outcome, write the audit trail, and schedule follow-up.
+     * Luu ket qua, ghi nhat ky kiem toan, va len lich theo doi sau sang loc.
      */
     public function hoanTat(PhienSangLoc $phien, array $result): PhienSangLoc
     {
@@ -698,19 +698,19 @@ class SangLocYTeService
             'advice_given' => $result['advice_given'] ?? null,
             'safety_net' => $result['safety_net'] ?? null,
             'suggested_products' => $result['suggested_products'] ?? [],
-            // The pharmacist queue is an opt-in side channel, not the default
-            // destination: a `pharmacist_review` outcome still means "the rules could
-            // not decide", but the customer gets the AI answer first and asks for a
-            // human only if they want one. yeuCauDuyetDacSi() moves it.
+            // Hang doi duoc si la kenh phu tuy chon, chu khong phai mac dinh
+            // destination: ket qua `pharmacist_review` van co nghia "bo quy tac khong
+            // quyet dinh duoc", nhung khach hang nhan cau tra loi AI truoc va chi moi nguoi
+            // khi ho muon. yeuCauDuyetDacSi() chuyen phien sang hang doi.
             'status' => 'completed',
             'follow_up_at' => $ketQua === 'self_care'
                 ? now()->addDays(self::FOLLOW_UP_DAYS)->setTime(9, 0)
                 : null,
-            // AI provenance in its own column. `ai_meta` records what the model
-            // proposed AND which branch won, so a later review can tell whether the
-            // AI changed the outcome. `advice_given` above is untouched by it.
-            // clarify_questions is dropped: it is round state for an open session, and
-            // keeping unasked questions on a finished one is misleading.
+            // Nguon goc AI nam trong cot rieng. `ai_meta` ghi lai model de nghi gi
+            // VA nhanh nao thang, nen mot lan xem lai co the biet AI co thay doi
+            // ket qua hay khong. `advice_given` phia tren khong bi no dong den.
+            // clarify_questions is dropped: no la trang thai vong cho phien dang mo, va
+            // giu cau hoi chua hoi tren phien da chot la loi dan dau.
             'ai_status' => $ai === null ? null : ($ai['status'] ?? 'ok'),
             'ai_meta' => $ai === null
                 ? null
@@ -725,11 +725,11 @@ class SangLocYTeService
     }
 
     /**
-     * Move a finished session into the pharmacist queue at the customer's request.
+     * Chuyen phien da chot vao hang doi duoc si theo yeu cau cua khach hang.
      *
-     * The queue is a side channel: the AI answer is the primary result, and a human
-     * is brought in only when the customer asks. Idempotent, and never applied to an
-     * emergency — that outcome tells the customer to call 115, not to wait for a reply.
+     * The queue is a side channel: cau tra loi AI la ket qua chinh, chi moi nguoi vao
+     * khi khach hang yeu cau. Idempotent, va khong bao gio ap dung cho
+     * khan cap — ket qua do bao khach hang goi 115, chu khong phai cho tra loi.
      */
     public function yeuCauDuyetDacSi(PhienSangLoc $phien): bool
     {
@@ -739,8 +739,8 @@ class SangLocYTeService
 
         $phien->forceFill([
             'status' => 'pending_pharmacist',
-            // A queued case is waiting on a human, so the automated 3-day check-in
-            // would collide with the pharmacist's own answer.
+            // Ca dang cho la cho nguoi, nen kiem tra tu dong sau 3 ngay
+            // se va vao cau tra loi rieng cua duoc si.
             'follow_up_at' => null,
         ])->save();
 
@@ -768,8 +768,8 @@ class SangLocYTeService
     }
 
     /**
-     * Audit records store matched symptom CODES, never the user's own words —
-     * health complaints must not end up in plain text logs.
+     * Ban ghi kiem toan luu CODE trieu chung da khop, khong bao gio la loi nguoi dung —
+     * loi ban than suc khoe khong duoc roi vao log van ban thuan.
      */
     protected function logTriage(PhienSangLoc $phien, array $result): void
     {
@@ -787,8 +787,8 @@ class SangLocYTeService
                     'rule_id' => $result['rule_id'] ?? null,
                     'entry_point' => $phien->entry_point,
                     'products_suggested' => count($result['suggested_products'] ?? []),
-                    // Which branch decided, so a review can separate rule outcomes
-                    // from AI-raised ones. Codes and enums only.
+                    // Nhanh nao quyet dinh, nen mot lan xem lai co the tach ket qua quy tac
+                    // khoi ket qua AI nang len. Chi ma va enum.
                     'ai_status' => $phien->ai_status,
                     'ai_regex_outcome' => $result['ai']['regex_outcome'] ?? null,
                     'ai_proposed_outcome' => $result['ai']['ai_outcome'] ?? null,
@@ -804,8 +804,8 @@ class SangLocYTeService
     }
 
     /**
-     * Accent-insensitive matching, same approach as ChatbotService::normalizeIntentText
-     * so both layers agree on what "sot cao" means.
+     * Khop khong can dau, cung cach lam voi ChatbotService::normalizeIntentText
+     * nen hai tang dong y ve nghia "sot cao".
      */
     protected function normalize(string $text): string
     {
@@ -813,15 +813,15 @@ class SangLocYTeService
     }
 
     /**
-     * Word-boundary matching, not substring: "ho" must not fire on "hong".
+     * Word-boundary matching, not substring: "ho" khong duoc kich hoat khi gap "hong".
      *
-     * Also negation-aware. The follow-up round asks about danger signs by name
-     * ("anh/chi co kem sot, non hay cung co khong a?"), so the natural answer —
-     * "khong sot, khong non, khong cung co" — contains every keyword. Substring
-     * matching read that as meningitis and told a tension-headache patient to call
-     * 115, which destroys trust in the tool. The negation window is deliberately
-     * narrow (see VietnameseText::mentionsAffirmatively): missing a real red flag is
-     * far worse than firing one, so only an adjacent denial counts.
+     * Co nhan phu dinh nua. Vong hoi lam hoi dau hieu nguy hiem bang ten
+     * ("anh/chi co kem sot, non hay cung co khong a?"), nen cau tra loi tu nhien —
+     * "khong sot, khong non, khong cung co" — chua moi tu khoa. Khop con
+     * doc cau do la viem nao va bao benh nhan dau dau do kich goi 115,
+     * dieu do pha hai long tin vao cong cu. Cua so phu dinh duoc thiet ke chu dich
+     * narrow (see VietnameseText::mentionsAffirmatively): bo sot mot co do that la
+     * xau hon nhieu so voi bat mot co do nham, nen chi phu dinh canh ke moi duoc tinh.
      */
     protected function matchesAnyAlias(string $normalizedHaystack, array $aliases): bool
     {
@@ -856,8 +856,8 @@ class SangLocYTeService
     }
 
     /**
-     * Every step answered or deliberately skipped — used to decide whether an
-     * abandoned session has enough in it to evaluate.
+     * Moi buoc da tra loi hoac bo qua co chu dich — dung de quyet dinh phien
+     * bo giua chung co du de danh gia hay khong.
      */
     public function daHoanThanh(PhienSangLoc $phien, ?HoSoSucKhoe $hoSo = null): bool
     {
@@ -871,8 +871,8 @@ class SangLocYTeService
     }
 
     /**
-     * Step 4 asks about chronic conditions, allergies and current medication.
-     * A consented profile already answers all of it, so asking again is noise.
+     * Buoc 4 hoi ve benh man tinh, di ung va thuoc dang dung.
+     * Ho so da dong y da tra loi het phan do, nen hoi lai la am thanh gian doan.
      */
     protected function isStepCoveredByProfile(int $step, ?HoSoSucKhoe $hoSo): bool
     {
@@ -944,9 +944,9 @@ class SangLocYTeService
     }
 
     /**
-     * Duration comes in as prose ("2–3 ngay", "hon 1 tuan") and must become a number
-     * the rules can compare. Ranges resolve to the upper bound so a 2–3 day answer
-     * is treated as 3 days — erring toward referral.
+     * Thoi luong den duoi dang van ban ("2–3 ngay", "hon 1 tuan") va phai thanh con so
+     * bo quy tac co the so sanh. Khoang gia tri giai ve bien tren nen cau tra loi 2–3 ngay
+     * duoc coi la 3 ngay — co nang huong chuyen tu van.
      */
     protected function parseAnswer(int $step, mixed $cauTraLoi): mixed
     {
@@ -975,7 +975,7 @@ class SangLocYTeService
             return 30;
         }
 
-        // "4 7 ngay" after normalisation — take the largest number present.
+        // "4 7 ngay" sau khi chuan hoa — lay con so lon nhat xuat hien.
         preg_match_all('/(\d+)/', $normalized, $numbers);
 
         if (! empty($numbers[1])) {
@@ -986,18 +986,18 @@ class SangLocYTeService
     }
 
     /**
-     * Whether to show another bounded AI follow-up round before finalising.
+     * Co nen mo them mot vong hoi lam AI co gioi han truoc khi chot phien khong.
      *
-     * Guards, all of which must hold:
-     *  - the feature is on;
-     *  - the model says it still needs something AND named what;
-     *  - the session has rounds left (MAX_CLARIFY_ROUNDS is a hard stop, so the model
-     *    cannot keep a patient answering forever);
-     *  - the outcome is not an emergency — somebody describing chest pain must not
-     *    be made to answer more questions before being told to call for help,
-     *    same rule as cauHoiTiep().
+     * Cac dieu kien, tat ca deu phai dung:
+     *  - tinh nang dang bat;
+     *  - model noi no van can them thong tin VA nhon duoc can gi;
+     *  - phien con du vong hoi (MAX_CLARIFY_ROUNDS la nut dung cung, nen model
+     *    khong the giu benh nhan tra loi mai mai);
+     *  - ket qua khong phai khan cap — nguoi mo ta dau nguc khong duoc
+     *    bi ep tra loi them cau truoc khi duoc bao goi cuu,
+     *    cung quy tac voi cauHoiTiep().
      *
-     * @param  array<string, mixed>  $result  danhGia() output
+     * @param  array<string, mixed>  $result  ket qua tra ve cua danhGia()
      */
     public function canHoiLamRo(PhienSangLoc $phien, array $result): bool
     {
@@ -1013,8 +1013,8 @@ class SangLocYTeService
             return false;
         }
 
-        // The model stops itself when it has enough: needs_more_info false means the
-        // consultation is complete, even if it listed questions out of habit.
+        // Model tu dung khi du thong tin: needs_more_info false co nghia la
+        // buoc tu van da xong, du model co liet ke cau hoi theo thong quen.
         if (($result['ai']['needs_more_info'] ?? true) === false) {
             return false;
         }
@@ -1023,8 +1023,8 @@ class SangLocYTeService
     }
 
     /**
-     * Persist the round's questions and advance the counter. The session stays
-     * `in_progress`, so the wizard page renders the extra form instead of a step.
+     * Luu cau hoi cua vong va tang bien dem. Phien van giu
+     * `in_progress`, nen trang wizard render form them thay vi mot buoc.
      *
      * @param  array<string, mixed>  $result
      */
@@ -1041,13 +1041,13 @@ class SangLocYTeService
     }
 
     /**
-     * Append this round's answers to the ones already collected.
+     * Noi cau tra loi cua vong nay vao nhung gi da thu.
      *
-     * They land under their own key and are appended to collectedText(), so they
-     * feed symptom and red-flag matching exactly like a wizard answer does. The
-     * `round` marker lets the next prompt show the model what it already asked.
+     * Chung nam duoi key rieng va duoc noi vao collectedText(), nen chung
+     * duoc dua vao khop trieu chung va co do dung nhu mot cau tra loi wizard. Marker
+     * `round` giup prompt sau cho model thay no da hoi gi.
      *
-     * @param  array<int, string>  $answers
+     * @param  array<int, string>  $cac cau tra loi
      */
     public function ghiCacChamLamRo(PhienSangLoc $phien, array $answers): PhienSangLoc
     {
@@ -1074,8 +1074,8 @@ class SangLocYTeService
         $data['ai_clarify_answers'] = $cacCapDoi;
 
         $phien->collected_data = $data;
-        // Consumed: the stored questions belong to the round just answered, so
-        // leaving them would re-render the same form after the redirect.
+        // Consumed: cau hoi da luu thuoc ve vong vua tra loi, nen
+        // de yen chung se render lai dung form do sau redirect.
         $phien->ai_meta = array_merge((array) $phien->ai_meta, ['clarify_questions' => []]);
         $phien->save();
 
@@ -1083,7 +1083,7 @@ class SangLocYTeService
     }
 
     /**
-     * The customer declined to answer, so no further round may be offered.
+     * Khach hang tu choi tra loi, nen khong vong nao duoc de nghi tiep.
      */
     public function boQuaCauHoiLamRo(PhienSangLoc $phien): PhienSangLoc
     {
@@ -1096,10 +1096,10 @@ class SangLocYTeService
     }
 
     /**
-     * Everything the user told us, flattened for symptom matching and for the prompt.
+     * Moi thu nguoi dung da noi, lam phang cho khop trieu chung va cho prompt.
      *
-     * One string is right for symptom detection, which has no negation window, and for
-     * the AI prompt. Red-flag matching uses collectedSegments() instead.
+     * Mot chuoi dung cho phong do trieu chung, ham khong co cua so phu dinh, va cho
+     * prompt AI. Khop co do dung collectedSegments() thay the.
      */
     protected function collectedText(PhienSangLoc $phien): string
     {
@@ -1107,14 +1107,14 @@ class SangLocYTeService
     }
 
     /**
-     * The same content, one utterance per element.
+     * Cung noi dung, moi phan tu la mot cau phat nguyen.
      *
-     * Each wizard answer and each follow-up answer is a separate reply to a separate
-     * question, so a negation in one must not reach across into the next.
+     * Moi cau tra loi wizard va moi cau tra loi hoi lam la mot cau tra loi cho mot cau hoi
+     * rieng, nen phu dinh trong mot cau khong duoc lan sang cau ke tiep.
      *
-     * Red-flag matching does NOT use this: it needs the wizard answers and the
-     * follow-up answers apart, because only the latter have a question attached that
-     * may have supplied the words. See sessionRedFlags().
+     * Khop co do KHONG dung ham nay: ham can tach cau tra loi wizard va
+     * cau tra loi hoi lam thanh hai phan, vi chi phia sau co cau hoi kem theo ma
+     * co the da cung tu ngu. Xem sessionRedFlags().
      *
      * @return array<int, string>
      */
@@ -1200,9 +1200,9 @@ class SangLocYTeService
     }
 
     /**
-     * Facts the rule conditions are evaluated against.
-     * Age is null when birth_date was never filled in — rules treat unknown age
-     * as unknown, never as adult.
+     * Cac chi tiet ma dieu kien quy tac duoc danh gia tren do.
+     * Tuoi la null khi birth_date chua duoc dien — quy tac coi tuoi khong biet
+     * la khong biet, chu khong phai nguoi lon.
      */
     protected function buildFacts(PhienSangLoc $phien, ?NguoiDung $nguoiDung, ?HoSoSucKhoe $hoSo): array
     {
@@ -1230,16 +1230,16 @@ class SangLocYTeService
     }
 
     /**
-     * A stated patient age (asking on behalf of a child) beats the account owner's
-     * own birth date.
+     * Tuoi benh nhan duoc noi ro (hoi cho tre con) uu tien hon ngay sinh
+     * cua chu tai khoan.
      */
     protected function resolveAge(array $data, ?NguoiDung $nguoiDung): ?int
     {
         $text = $this->normalize($this->flatten($data['raw_symptom_text'] ?? '').' '.$this->flatten($data['history'] ?? ''));
 
-        // "N thang" only means an age when the sentence is about a person. Bare
-        // "3 thang roi" is a duration, and reading it as 0 months turns an adult
-        // into a newborn and routes them to paediatric advice.
+        // "N thang" chi co nghia la tuoi khi cau noi ve mot nguoi. Tho
+        // "3 thang roi" la thoi luong, va doc no thanh 0 thang bien nguoi lon
+        // thanh so sinh va dan ho sang loi khuyen nhi khoa.
         if (preg_match('/(?:be|con|em|tre|chau|thang be|thang tuoi)\D{0,12}(\d{1,2})\s*thang(?!\s*nay)/', $text) === 1
             || preg_match('/(\d{1,2})\s*thang\s*tuoi/', $text) === 1) {
             return 0;
@@ -1261,9 +1261,9 @@ class SangLocYTeService
     }
 
     /**
-     * Highest-priority matching rule wins. Rules whose conditions reference a fact
-     * the user skipped are treated as non-matching, so skipping pushes the result
-     * toward the generic (lower priority) rule or the pharmacist fallback.
+     * Quy tac khop co uu tien cao nhat thang. Quy tac co dieu kien tham chieu
+     * mot chi tiet nguoi dung da bo qua duoc coi la khong khop, nen bo qua day ket qua
+     * ve phia quy tac chung (uu tien thap hon) hoac pha du phong duoc si.
      */
     protected function resolveRule(Collection $cacTrieuChung, array $facts): ?QuyTacPhanTangYTe
     {
@@ -1279,11 +1279,11 @@ class SangLocYTeService
     }
 
     /**
-     * Conditions are a small JSON DSL:
-     *   {"age": {"<": 2}}              -> age below 2
-     *   {"duration_days": {">=": 3}}   -> 3 days or longer
-     *   {"pregnant": true}             -> boolean fact must be true
-     * A null condition set matches everything (the catch-all rule).
+     * Dieu kien la mot JSON DSL nho:
+     *   {"age": {"<": 2}}              -> tuoi duoi 2
+     *   {"duration_days": {">=": 3}}   -> 3 ngay tro len
+     *   {"pregnant": true}             -> chi tiet boolean phai la true
+     * Bo dieu kien null khop moi thu (quy tac chot tat ca).
      */
     protected function matchesConditions(?array $conditions, array $facts): bool
     {
@@ -1310,7 +1310,7 @@ class SangLocYTeService
                 continue;
             }
 
-            // Unknown value cannot satisfy a numeric comparison.
+            // Gia tri khong biet khong the dap ung mot phep so sanh so hoc.
             if ($actual === null) {
                 return false;
             }
@@ -1339,8 +1339,8 @@ class SangLocYTeService
     }
 
     /**
-     * Emergency and urgent outcomes return the pharmacist-written guidance verbatim.
-     * No AI, no products, no condition guessing.
+     * Ket qua khan cap va can thiet tra ve huong dan duoc si viet nguyen van.
+     * Khong AI, khong san pham, khong doan chan doan.
      */
     protected function redFlagOutcome(
         CoDoYTe $coDo,
@@ -1363,8 +1363,8 @@ class SangLocYTeService
     }
 
     /**
-     * Nothing matched, or matched too weakly. Routing to a human is the safe default —
-     * guessing an outcome here is exactly what this service must not do.
+     * Khong khop gi, hoac khop qua yeu. Dan sang nguoi la mac dinh an toan —
+     * doan ket qua tai day dung la dieu dich vu nay khong duoc lam.
      */
     protected function pharmacistFallback(Collection $cacCoDo, Collection $cacTrieuChung, ?array $ai = null): array
     {
@@ -1391,8 +1391,8 @@ class SangLocYTeService
     }
 
     /**
-     * Condition groups are broad categories with a pharmacist-assigned confidence,
-     * never a specific diagnosis. Referral outcomes get none at all.
+     * Nhom benh la cac nhom rong voi do tin cai do duoc si gan,
+     * khong bao gio la chan doan cu the. Ket qua chuyen tu van khong co gi het.
      */
     protected function conditionGroups(QuyTacPhanTangYTe $quyTac, string $ketQua): array
     {
@@ -1421,23 +1421,23 @@ class SangLocYTeService
     }
 
     /**
-     * Only reached for self_care. Products come from the catalog with the same
-     * availability rules as the rest of the site: in stock and not expired.
+     * Chi cham den cho self_care. San pham den tu danh muc voi cung
+     * availability rules as the rest of the site: con hang va chua het han.
      */
     /**
-     * Over-the-counter products that actually match the symptom.
+     * San pham ban tu do thuc su khop voi trieu chung.
      *
-     * Scores per WORD, not per phrase. `catalog_query` values are natural phrases
-     * ("giam dau dau") and no product description contains them verbatim, so the old
-     * `LIKE %phrase%` matched nothing for all 22 symptoms and every self-care case
-     * silently fell back to "the four highest-stock items in the category". That is
-     * how a headache ended up being offered Aspirin 100mg, whose stored usage is
-     * "Phong ngua dot quy, nhoi mau co tim" — and why an itch was offered aspirin,
-     * which makes hives worse.
+     * Cham diem theo TU, khong phai theo cum. Gia tri `catalog_query` la cum tu nhien
+     * ("giam dau dau") va khong mo ta san pham nao chua dung chinh xac chung, nen cach
+     * `LIKE %phrase%` cu khop gi cho ca 22 trieu chung va moi truong hop tu cham soc
+     * lan im lang ve "bon san pham co ton cao nhat trong danh muc". Vi vay
+     * mo truong hop dau dau lai duoc goi y Aspirin 100mg, co cach dung luu la
+     * "Phong ngua dot quy, nhoi mau co tim" — va vi sao benh ngo da duoc goi y aspirin,
+     * thu lam ngo ton hai hon.
      *
-     * A word must match BOTH the accent-folded and the accented text: folding alone
-     * lets "mat ngu" hit "mat nuoc" through "mat". Zero matches now returns nothing
-     * at all; the page says so rather than inventing a suggestion.
+     * Mot tu phai khop CA dua khong dau va ban ban co dau: khong dau don le
+     * de "mat ngu" trung "mat nuoc" qua "mat". Khop bang khong tra ve gi het
+     * trong nay; trang noi ro thay vi bia ra mot goi y.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -1450,9 +1450,9 @@ class SangLocYTeService
             return [];
         }
 
-        // A single-concept query ("ha sot" -> sot) can only ever score 1, so one hit is
-        // the whole match. A two-concept query must hit both: "mat ngu" and "mat nuoc"
-        // share the word "mat", and one shared word is not a match.
+        // Truy van mot khai niem ("ha sot" -> sot) chi cham toi da diem 1, nen mot trung la
+        // toan bo khop. Truy van hai khai niem phai trung ca hai: "mat ngu" va "mat nuoc"
+        // dung chung tu "mat", va mot tu dung chung khong phai la khop.
         $required = min(2, count(array_unique(array_values($cacThuatNgu))));
 
         $ungVien = SanPham::with('danhMuc')
@@ -1467,8 +1467,8 @@ class SangLocYTeService
                 'score' => $this->relevanceScore($sanPham, $cacThuatNgu),
             ])
             ->filter(fn (array $hang) => $hang['score'] >= $required)
-            // Relevance first, then stock, so a well-matched item that is running low
-            // still beats a barely-related one sitting on a full shelf.
+            // Lien quan truoc, roi ton, nen san pham khop tot sap het van
+            // thang san pham lien quan yeu nhung ton day ke.
             ->sortByDesc(fn (array $hang) => [$hang['score'], $hang['sanPham']->so_luong_ton])
             ->take(4)
             ->map(fn (array $hang) => $this->presentProduct($hang['sanPham']))
@@ -1477,15 +1477,15 @@ class SangLocYTeService
     }
 
     /**
-     * Meaningful words of a `catalog_query`, keyed by the accented form so a match
-     * can be confirmed against both spellings.
+     * Cac tu co nghia cua `catalog_query`, key la dang co dau de khop
+     * duoc xac nhan tren ca hai dang viet.
      *
-     * @return array<string, string> accented word => folded word
+     * @return array<string, string> tu co dau => tu khong dau
      */
     protected function catalogTerms(?string $query): array
     {
-        // Verbs and generic nouns appear in almost every usage line, so matching them
-        // would rank the whole catalogue equally.
+        // Dong tu va danh tu chung xuat hien trong gan moi dong cach dung, nen khop chung
+        // se lam ca danh muc cung xep hang.
         $stopWords = ['giam', 'tri', 'chong', 'dieu', 'thuoc', 'va', 'cho', 'bi', 'ha', 'bu'];
         $cacThuatNgu = [];
 

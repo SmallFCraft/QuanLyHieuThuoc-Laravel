@@ -21,23 +21,23 @@ class ChatbotService
     protected NhatKyKiemToanService $nhatKyKiemToanService;
 
     /**
-     * The widget turns a markdown link into a button only on an exact label match —
-     * see detailLinkPattern in components/chatbot-markdown-renderer.blade.php. Every
-     * product link must use this string verbatim or it renders as plain inline text.
+     * Widget chi bien markdown link thanh nut bam khi nhan khop dung chinh xac nhan
+     * — xem detailLinkPattern trong components/chatbot-markdown-renderer.blade.php.
+     * Moi link san pham phai dung dung chuoi nay, neu khong se hien nhu van ban thuong.
      */
     protected const PRODUCT_LINK_LABEL = 'Mở sản phẩm';
 
     /**
-     * Medical knowledge is read from the database once per request.
+     * Kien thuc y khoa duoc doc tu database mot lan moi request.
      */
     protected ?array $urgentKeywordsCache = null;
     protected ?array $symptomMapCache = null;
 
     /**
-     * Used only when `medical_red_flags` cannot be read. Mirrors the seeded
-     * chat_short_circuit rows so a database problem degrades urgent detection to
-     * the same decisions rather than a different set. Bare 'ngat' and 'nguy hiem'
-     * are deliberately absent: they fire on "ngat loi", "viec nay nguy hiem khong".
+     * Chi dung khi khong doc duoc `medical_red_flags`. Doi xung voi cac dong
+     * chat_short_circuit da seed de khi database co van de, phat hien cap cuu
+     * van ra quyet dinh giong nhu cu chu khong phai mot bo khac. 'ngat' va
+     * 'nguy hiem' duoc bo chuoc: chung kich hoat tren "ngat loi", "viec nay nguy hiem khong".
      */
     protected const URGENT_KEYWORDS_FALLBACK = [
         'ung thu', 'giai doan cuoi', 'cap cuu', 'nguy kich', 'rat nguy hiem', 'khan cap',
@@ -50,7 +50,7 @@ class ChatbotService
     ];
 
     /**
-     * Same rationale as URGENT_KEYWORDS_FALLBACK, for `medical_symptoms`.
+     * Cung ly do voi URGENT_KEYWORDS_FALLBACK, ap dung cho `medical_symptoms`.
      */
     protected const SYMPTOM_MAP_FALLBACK = [
         'sot xuat huyet' => 'sốt xuất huyết',
@@ -70,8 +70,8 @@ class ChatbotService
     ];
 
     /**
-     * Fallback guard words, used only when `medical_symptoms` cannot be read.
-     * The live values come from `medical_symptoms.guard_words`.
+     * Tu canh bao du phong, chi dung khi khong doc duoc `medical_symptoms`.
+     * Gia tri that lay tu `medical_symptoms.guard_words`.
      */
     protected const AMBIGUOUS_ALIAS_GUARDS = [
         'sot' => ['nuoc', 'banh', 'mi', 'hu', 'chai', 'lo', 'goi', 'tuong', 'thit', 'nong', 'ruot'],
@@ -79,8 +79,8 @@ class ChatbotService
     ];
 
     /**
-     * System prompt for AI assistant in Vietnamese.
-     * Defines the role, responsibilities, and behavior of the pharmacy assistant.
+     * System prompt cho tro ly AI, viet bang tieng Viet.
+     * Dinh nghia vai tro, nhiem vu va hanh vi cua tro ly nha thuoc.
      */
     protected const SYSTEM_PROMPT = <<<'PROMPT'
 Bạn là trợ lý AI của nhà thuốc Medicare Pharmacy.
@@ -119,14 +119,14 @@ PROMPT;
 
 
     /**
-     * Verbs and framing a customer wraps a catalog search in. Stripped before the
-     * keyword tiers run, because whatever survives is LIKE-matched against product
-     * text as one phrase: "kiem thuoc ho" found nothing while "thuoc ho" finds five.
+     * Cac dong tu khung cau khach hang bao quanh mot lan tim tren danh muc san pham.
+     * Bo truoc khi cac tang tu khoa chay, vi phan con lai duoc LIKE khop nhu mot
+     * cum tu duy nhat: "kiem thuoc ho" khong ra gi trong khi "thuoc ho" ra nam.
      *
-     * Accent-free spellings are listed only where they cannot collide with real
-     * catalog vocabulary. "tim" is absent even though "tim" belongs here — it is also
-     * the heart, and the catalog has cardiac products; same for "tiem" ("tiem",
-     * injectable) as a folding of "tiem".
+     * Cach viet khong dau chi duoc liet ke khi no khong the trung voi tu vung
+     * danh muc that. "tim" khong co mat du thuoc day — no cung la "tim" ( trai tim),
+     * va danh muc co san pham ve tim mach; tuong tu "tiem" ( tiem, thuoc tiem)
+     * khi fold tu "tiem".
      */
     protected const SEARCH_STOP_WORDS = [
         'cho tôi hỏi', 'cho mình hỏi', 'tôi muốn tìm', 'tôi muốn mua', 'tôi cần tìm', 'tôi cần mua',
@@ -184,7 +184,7 @@ PROMPT;
     ];
 
     /**
-     * Competing pharmacy chains. Their stock is not visible to this assistant.
+     * Cac chuoi nha thuoc canh tranh. Ton kho cua ho khong hien voi tro ly nay.
      */
     protected const OTHER_PHARMACY_KEYWORDS = [
         'long chau', 'pharmacity', 'phano', 'eco pharma', 'nha thuoc viet',
@@ -192,8 +192,8 @@ PROMPT;
     ];
 
     /**
-     * Chain names that double as everyday Vietnamese words ("an khang thinh
-     * vuong"), so they only count next to a pharmacy word.
+     * Ten chuoi vua trung voi tu Viet thong thuong ("an khang thinh vuong"),
+     * nen chi duoc tinh khi co tu nha thuoc dung canh.
      */
     protected const OTHER_PHARMACY_AMBIGUOUS_KEYWORDS = [
         'an khang', 'trung son', 'guardian', 'my chau', 'vinh loi', 'phuc an khang',
@@ -204,8 +204,8 @@ PROMPT;
     ];
 
     /**
-     * Common Vietnamese place names, used to spot "nha thuoc ... tai Da Nang"
-     * style questions that are about a location rather than a product.
+     * Ten dia danh Viet thong dung, dung de nhan dang cac cau hoi kieu
+     * "nha thuoc ... tai Da Nang" la hoi ve dia diem chu khong phai san pham.
      */
     protected const VIETNAM_PLACE_KEYWORDS = [
         'da nang', 'ha noi', 'sai gon', 'ho chi minh', 'tphcm', 'hcm', 'hue', 'hoi an',
@@ -221,9 +221,8 @@ PROMPT;
     ];
 
     /**
-     * Wording that, on its own, only repeats the disclaimer box. Subtracted from a
-     * sentence by isBoilerplateDisclaimerSentence(): whatever is left decides
-     * whether the sentence carries real content.
+     * Cach dien dat khi dung mot minh chi lap lai o disclaimer. isBoilerplateDisclaimerSentence()
+     * tru chung nay ra khoi cau: phan con lai quyet dinh cau do co noi dung that hay khong.
      */
     protected const DISCLAIMER_BOILERPLATE_FRAGMENTS = [
         'noi dung do ai tao ra co the khong chinh xac',
@@ -244,40 +243,40 @@ PROMPT;
     ];
 
     /**
-     * Tokens that carry no topic. A message made only of these ("co on khong?",
-     * "vay duoc khong?") can only be understood against the previous turn.
+     * Cac token khong mang chu de nao. Mot tin nhan chi gom chung ("co on khong?",
+     * "vay duoc khong?") chi co the hieu duoc khi dua vao luot truoc.
      */
     protected const ELLIPTICAL_FOLLOW_UP_TOKENS = [
         'co', 'khong', 'ko', 'hong', 'k', 'on', 'sao', 'vay', 'the', 'nao', 'gi',
         'duoc', 'chu', 'nhi', 'nhe', 'nha', 'a', 'ha', 'u', 'uh', 'oke', 'ok',
         'roi', 'thi', 'ma', 'day', 'do', 'nua', 'that', 'toi', 'minh', 'em',
         'anh', 'chi', 'ban', 'ai', 'la',
-        // "cho xem link san pham di" / "xem chi tiet di" name no product of their
-        // own: they point at whatever the previous turn listed. Without these the
-        // message was searched as the literal query "cho link san pham di", found
-        // nothing, and the model invented product links instead.
+        // "cho xem link san pham di" / "xem chi tiet di" khong neu ten san pham nao
+        // cua rieng chung: chung chi den phan luot truoc da liet ke. Khong co chung,
+        // tin nhan da duoc tim nhu truy van nguyen van "cho link san pham di",
+        // ra khong gi, va model da tu bia cac link san pham thay vao.
         'link', 'xem', 'xin', 'chi', 'tiet', 'them', 'gui', 'cho', 'dua', 'di',
-        // A request to change the presentation of what was just listed: "tom tat lai
-        // theo dang table", "tom tat lai thanh bang". Without these the message was
-        // searched as the query "tom tat", which matched unrelated products.
+        // Mot yeu cau doi cach trinh bay phan vua duoc liet ke: "tom tat lai
+        // theo dang table", "tom tat lai thanh bang". Khong co chung, tin nhan da
+        // duoc tim nhu truy van "tom tat", va khop voi nhung san pham khong lien quan.
         'tom', 'tat', 'lai', 'table', 'bang', 'dang', 'giup', 'nhé', 'theo', 'thanh',
     ];
 
     /**
-     * Scripts the assistant never writes in: CJK ideographs and punctuation, kana,
-     * Hangul, halfwidth/fullwidth forms, Cyrillic, Thai, Arabic, Hebrew, Devanagari.
-     * Latin punctuation, "×", "µ" and Vietnamese diacritics stay outside these
-     * ranges, so normal answers are untouched.
+     * Cac bang chu tro ly khong bao gio viet: chu tu han va dau cau CJK, kana,
+     * Hangul, dang halfwidth/fullwidth, Cyrillic, Thai, Arabic, Hebrew, Devanagari.
+     * Dau cau Latin, "×", "µ" va dau tieng Viet nam ngoai cac khoang nay,
+     * nen cau tra loi binh thuong khong bi anh huong.
      */
     protected const FOREIGN_SCRIPT_CLASS = '[\x{3000}-\x{30FF}\x{3400}-\x{4DBF}\x{4E00}-\x{9FFF}\x{F900}-\x{FAFF}\x{1100}-\x{11FF}\x{AC00}-\x{D7AF}\x{FF00}-\x{FFEF}\x{0400}-\x{04FF}\x{0E00}-\x{0E7F}\x{0600}-\x{06FF}\x{0590}-\x{05FF}\x{0900}-\x{097F}]';
 
     /**
-     * Filler words that must not drive a match on their own. "thuoc"/"san pham" are
-     * here because they appear in most category and product names at once.
+     * Tu xoa (filler) khong duoc phep tu no tu keo mot ket qua khop. "thuoc"/"san pham"
+     * nam o day vi chung xuat hien dong thoi trong ten phan lon danh muc va san pham.
      *
-     * Accent-free spellings are listed only where they cannot collide with a
-     * meaningful word: "ho" (cough) and "tim" (heart) are left out even though "ho"
-     * and "tim" are filler, because folding makes the two indistinguishable.
+     * Cach viet khong dau chi duoc liet ke khi khong the trung voi mot tu co nghia:
+     * "ho" ( ho) va "tim" ( trai tim) bi bo ra du la filler, vi fold lam hai tu
+     * khong the phan biet.
      */
     protected const QUERY_NOISE_TOKENS = [
         'có', 'co', 'không', 'khong', 'ko', 'gì', 'gi', 'nào', 'nao',
@@ -293,13 +292,13 @@ PROMPT;
     ];
 
     /**
-     * Price questions, stripped as whole phrases before the narrowing windows are
-     * built. "que thu thai gia bao nhieu" searched on "bao nhieu", which matched
-     * "can trung hoa luong acid dich vi bao nhieu" in an antacid's usage text and
-     * answered a pregnancy-test question with a stomach medicine.
+     * Cac cau hoi ve gia, duoc bo nguyen cum truoc khi xay dung cac cua so thu hep.
+     * "que thu thai gia bao nhieu" da tim tren "bao nhieu", trung voi
+     * "can trung hoa luong acid dich vi bao nhieu" trong cach dung cua thuoc tham vi,
+     * va da tra loi cau hoi que thu thai bang thuoc da day.
      *
-     * Phrases, not tokens: "bao" alone is meaningful ("bao cao su"), "gia" folds
-     * together with "gia" ("nuoc oxy gia"). Longest first so the whole phrase goes.
+     * Dung cum tu, khong dung token le: "bao" mot minh co nghia ("bao cao su"),
+     * "gia" fold trung voi "gia" ("nuoc oxy gia"). Dat dai nhat truoc de nguyen cum duoc bo.
      */
     protected const QUERY_PRICE_PHRASES = [
         'gia bao nhieu', 'het bao nhieu', 'gia ca bao nhieu',
@@ -307,15 +306,15 @@ PROMPT;
     ];
 
     /**
-     * Rows fetched per keyword tier before keepGenuineMatches() throws away the
-     * accent-blind LIKE hits. Larger than the 5 shown so a handful of false matches
-     * cannot starve a tier that does hold real ones.
+     * So dong fetch moi tang tu khoa truoc khi keepGenuineMatches() loai cac ket qua
+     * LIKE mo tim khong dau. Lon hon con 5 hien thi de mot vai ket qua sai khong the
+     * lam chet doi mot tang tu that co ket qua.
      */
     protected const QUERY_MATCH_FETCH_LIMIT = 25;
 
     /**
-     * Fallback replies that only say the AI provider is unavailable. They are shown
-     * to the customer but excluded from the AI-facing history by
+     * Cac cau tra loi du phong chi noi nha cung cap AI khong kha dung. Chung duoc
+     * hien cho khach nhung bi loai khoi lich su cung cap cho AI boi
      * sanitizeHistoryForAi().
      */
     protected const UNINFORMATIVE_FALLBACK_TYPES = [
@@ -323,8 +322,8 @@ PROMPT;
     ];
 
     /**
-     * Function schema for AI provider tool calling.
-     * Defines the search_products function for structured product queries.
+     * Schema function cho tool calling cua nha cung cap AI.
+     * Dinh nghia function search_products cho cac truy van san pham co cau truc.
      *
      * @return array
      */
@@ -426,7 +425,7 @@ PROMPT;
     }
 
     /**
-     * Get the system prompt for AI assistant.
+     * Lay system prompt cua tro ly AI.
      *
      * @return string
      */
@@ -436,7 +435,7 @@ PROMPT;
     }
 
     /**
-     * Initialize ChatbotService with dependency injection.
+     * Khoi tao ChatbotService bang dependency injection.
      *
      * @param TonKhoService $tonKhoService
      * @param ThanhToanService $thanhToanService
@@ -455,10 +454,10 @@ PROMPT;
     }
 
     /**
-     * Validate if message is meaningful enough to process.
+     * Kiem tra tin nhan co du y nghia de xu ly hay khong.
      *
-     * @param string $message User message
-     * @return array Validation result with success flag and reason
+     * @param string $message Tin nhan cua nguoi dung
+     * @return array Ket qua kiem tra voi co success va ly do
      */
     public function validateMessage(string $message): array
     {
@@ -472,7 +471,7 @@ PROMPT;
             ];
         }
         
-        // Spam/repeated characters detection
+        // Phat hien spam/ky tu lap lai
         if (preg_match('/^([a-zA-Z0-9À-ỹ])\1{4,}$/u', $trimmed)) {
             return [
                 'valid' => false,
@@ -480,7 +479,7 @@ PROMPT;
             ];
         }
         
-        // Contains only special characters
+        // Chi gom ky tu dac biet
         if (preg_match('/^[^a-zA-ZÀ-ỹ0-9\s]+$/', $trimmed)) {
             return [
                 'valid' => false,
@@ -488,7 +487,7 @@ PROMPT;
             ];
         }
         
-        // Bad words detection from config
+        // Phat hien tu xau tu config
         $badWords = config('blacklists.chatbot', []);
         if (!empty($badWords) && $this->containsBlacklistedTerm($trimmed, $badWords)) {
             return [
@@ -566,12 +565,12 @@ PROMPT;
     }
 
     /**
-     * Process user message and generate AI response.
+     * Xu ly tin nhan nguoi dung va tao cau tra loi AI.
      *
-     * @param string $message User message content
-     * @param int $userId User ID
-     * @param array $context Conversation context
-     * @return array Response with AI message and metadata
+     * @param string $message Noi dung tin nhan nguoi dung
+     * @param int $userId ID nguoi dung
+     * @param array $context Ngu canh cuoc tro chuyen
+     * @return array Cau tra loi gom tin nhan AI va metadata
      * @throws \Exception
      */
     public function processMessage(string $message, int $userId, array $context): array
@@ -883,8 +882,8 @@ PROMPT;
                     $hasCatalogData = !empty($sanPhams) || !empty($danhMucs);
 
                     if (!$hasCatalogData) {
-                        // The lookup found nothing, so its "chua thay san pham" block
-                        // would contradict a reply that already stands on its own.
+                        // Luc tra khong ra gi nen khoi "chua thay san pham" cua no
+                        // se moc lac voi cau tra loi da tu dung duoc san.
                         $responseText = $assistantText !== ''
                             ? $assistantText
                             : $catalogResponse['response'];
@@ -917,9 +916,9 @@ PROMPT;
             $responseText = $this->enforceMetaResponsePolicy($workingMessage, $responseText);
             $responseText = $this->formatFriendlyProductLinks($responseText, $sanPhams);
 
-            // A turn that retrieved nothing has no product link to offer. Anything the
-            // model wrote in that shape came from its memory of an earlier turn, with a
-            // host and a label it made up.
+            // Luot khong tra duoc gi thi khong co link san pham de de xuat. Bat cu
+            // gi model viet theo hinh dang do deu den tu nho cua no ve mot luot truoc,
+            // kem ca host va nhan tu do no bia ra.
             if (empty($sanPhams)) {
                 $responseText = $this->stripInventedProductLinks($responseText);
             }
@@ -1107,8 +1106,8 @@ PROMPT;
     }
 
     /**
-     * Provider metadata of the provider that actually served the reply, so the
-     * admin trace stays accurate after a failover.
+     * Metadata nha cung cap da thuc su phuc vu cau tra loi, de vet dung
+     * phia quan tri van chinh xac sau khi failover.
      */
     protected function describeAiProviderForDebug(): array
     {
@@ -1125,8 +1124,8 @@ PROMPT;
     {
         $message = $this->normalizeIntentText($exception->getMessage());
 
-        // Gateway/upstream failures often contain the word "forbidden" in the body,
-        // so they must be matched before the auth keywords below.
+        // Loi gateway/upstream thuong chua tu "forbidden" trong body,
+        // nen phai khop truoc cac tu khoa auth phia duoi.
         if ($this->containsAnyKeyword($message, [
             'user location is not supported',
             'location is not supported',
@@ -1150,10 +1149,10 @@ PROMPT;
             return 'provider_upstream_error';
         }
 
-        // Before the auth block: a rate-limit body routinely names the credential
-        // ("your api key has exceeded its quota"), and the loose `api key` token below
-        // would otherwise tell the customer their access was revoked when the provider
-        // is merely overloaded.
+        // Dat truoc khoi auth: body gioi han ty le thuong de cap den credential
+        // ("your api key has exceeded its quota"), va token `api key` long leo phia
+        // duoi neu khong se bao khach rang quyen truy cap bi thu hoi trong khi
+        // nha cung cap chi la qua tai.
         if ($this->containsAnyKeyword($message, [
             'high demand',
             'quota',
@@ -1208,15 +1207,15 @@ PROMPT;
     }
 
     /**
-     * Rewrite product URLs the model printed as prose, leaving markdown links alone.
+     * Viet lai cac URL san pham model in nhu van ban thuong, giu nguyen markdown link.
      *
-     * Two alternatives, because a model asked for a link writes both `(url)` and a bare
-     * `url`, and neither may touch an existing `[label](url)`:
-     *   1. `(url)` whose opening paren is not the `](` of a markdown link
-     *   2. a bare url not preceded by `](`
+     * Hai phuong an, vi model duoc yeu cau dua link se viet ca `(url)` va `url` tran,
+     * va ca hai deu khong duoc cham vao `[label](url)` co san:
+     *   1. `(url)` co dau mo ngoac khong phai la `](` cua mot markdown link
+     *   2. url tran khong dung truoc boi `](`
      *
-     * The previous version anchored on `(?!\))` alone, so a paren-wrapped URL — the
-     * common case — was skipped entirely and shipped to the widget raw.
+     * Phien ban truoc chi neo tren `(?!\))`, nen URL boc ngoac — truong hop pho
+     * bien nhat — bi bo qua hoan toan va gui widget nguyen ban.
      *
      * @param array<int, string> $urls
      */
@@ -1234,7 +1233,7 @@ PROMPT;
             $responseText = preg_replace($pattern, $replacement, $responseText) ?? $responseText;
         }
 
-        // Tidy the punctuation a stripped URL leaves behind: " , con 300 ." and doubled spaces.
+        // Don lai dau cau ma viec go bo URL de lai: " , con 300 ." va khoang trang kep.
         $responseText = preg_replace('/[ \t]+([,;.])/u', '$1', $responseText) ?? $responseText;
         $responseText = preg_replace('/[ \t]{2,}/u', ' ', $responseText) ?? $responseText;
 
@@ -1254,9 +1253,9 @@ PROMPT;
                 continue;
             }
 
-            // self::PRODUCT_LINK_LABEL, not the product name: the widget promotes a link
-            // to a button on an exact label match, so "Xem chi tiet Smecta" stayed a
-            // plain inline link.
+            // self::PRODUCT_LINK_LABEL, khong phai ten san pham: widget chi nang
+            // link len thanh nut bam khi nhan khop dung nhan, nen "Xem chi tiet Smecta"
+            // truoc day van la link inline thuong.
             $responseText = $this->replaceRawProductUrls(
                 $responseText,
                 [$url],
@@ -1268,16 +1267,15 @@ PROMPT;
     }
 
     /**
-     * Remove product links the model wrote on its own.
+     * Go bo cac link san pham model tu viet.
      *
-     * A turn that never called the catalogue tool gets an empty product list, but the
-     * model still remembers ids from earlier turns and writes its own links:
-     * "[San pham 322](http://localhost/products/322)" — a host without the dev port,
-     * a label that is an id rather than a name, and a product this answer never
-     * looked up. Only real product cards carry a link, and they are rendered from
-     * `$sanPhams` after this runs.
+     * Luot khong goi tool danh muc se nhan danh sach san pham rong, nhung model van
+     * nho id tu cac luot truoc va tu viet link: "[San pham 322](http://localhost/products/322)"
+     * — mot host thieu port dev, mot nhan la id chu khong phai ten, va mot san pham
+     * ma cau tra loi nay chua bao gio tra cuu. Chi card san pham that moi co link,
+     * va chung duoc render tu `$sanPhams` sau khi buoc nay chay.
      *
-     * A `/products?category=` listing URL is not a product and is left alone.
+     * URL listing dang `/products?category=` khong phai san pham va duoc de nguyen.
      */
     protected function stripInventedProductLinks(string $responseText): string
     {
@@ -1285,21 +1283,21 @@ PROMPT;
             return $responseText;
         }
 
-        // Markdown link whose target is a single product: drop the whole link.
+        // Markdown link ma dich den la mot san pham don le: bo ca link.
         $responseText = preg_replace(
             '/\[([^\]]*)\]\((?:https?:\/\/[^\s)]*)?\/products\/\d+[^\s)]*\)/u',
             '',
             $responseText
         ) ?? $responseText;
 
-        // Bare or parenthesised product URL the model printed as plain text.
+        // URL san pham tran hoac boc ngoac ma model in nhu van ban thuong.
         $responseText = preg_replace(
             '/\(?\s*(?:https?:\/\/[^\s)]*)?\/products\/\d+[^\s)]*\s*\)?/u',
             '',
             $responseText
         ) ?? $responseText;
 
-        // Tidy what the removal left behind: empty bullets, doubled spaces, blank runs.
+        // Don nhung gi viec go bo de lai: bullet rong, khoang trang kep, khoang trong lien tiep.
         $responseText = preg_replace('/^[ \t]*[-*•]\s*$/mu', '', $responseText) ?? $responseText;
         $responseText = preg_replace('/[ \t]{2,}/u', ' ', $responseText) ?? $responseText;
         $responseText = preg_replace('/[ \t]+\n/u', "\n", $responseText) ?? $responseText;
@@ -1337,10 +1335,9 @@ PROMPT;
     }
 
     /**
-     * Words containing a script the assistant never answers in. The provider mixes
-     * in Chinese, Korean or Cyrillic fragments now and then ("tha酸", "중풍"), and
-     * half a word is not worth keeping, so the whole word goes and the punctuation
-     * it leaves behind is tidied up.
+     * Cac tu chua bang chu tro ly khong bao gio tra loi. Nha cung cap thinh tho
+     * tron vao doan Trung, Han hoang Cyrillic ("tha酸", "중풍"), va nua tu khong dang
+     * giu nen ca tu bi go, phan dau cau de lai duoc don lai.
      */
     protected function stripForeignScriptArtifacts(string $responseText): string
     {
@@ -1362,19 +1359,19 @@ PROMPT;
     }
 
     /**
-     * The widget already renders one disclaimer box per conversation from
-     * `show_disclaimer`, so a "tham khao y kien duoc si/bac si" tail in the text
-     * itself says the same thing twice - and unlike the box it repeats on every
-     * answer. The prompt asks the provider not to add it; this removes it when the
-     * provider does anyway.
+     * Widget da render mot o disclaimer moi cuoc tro chuyen tu `show_disclaimer`,
+     * nen phan duoi cau "tham khao y kien duoc si/bac si" trong ban than van ban
+     * lap lai dung dieu do hai lan — va khac voi o disclaimer, no lap lai tren
+     * moi cau tra loi. Prompt da yeu cau nha cung cap khong them vao; buoc nay
+     * go bo khi nha cung cap van them.
      */
     protected function stripRedundantDisclaimer(string $responseText): string
     {
         $original = $responseText;
         $responseText = rtrim($responseText);
 
-        // Two passes: the reminder arrives either as its own trailing line or as the
-        // last sentence of the closing paragraph.
+        // Chay hai luot: loi nhac den hoac nhu mot dong rieng o cuoi, hoac nhu
+        // cau cuoi cung cua doan ket.
         for ($pass = 0; $pass < 2; $pass++) {
             $lines = preg_split('/\R/u', $responseText) ?: [];
             $lastIndex = null;
@@ -1410,16 +1407,16 @@ PROMPT;
             $responseText = rtrim(implode("\n", $lines));
         }
 
-        // Never strip the entire answer down to nothing.
+        // Khong bao gio go sach ca cau tra loi den trang trong.
         return trim($responseText) === '' ? $original : $responseText;
     }
 
     /**
-     * True only when the sentence is nothing but the boilerplate: every known
-     * fragment is subtracted and nothing substantive is left. Conditional advice
-     * ("neu co benh nen thi nen hoi duoc si") and real warnings ("co canh bao o muc
-     * nghiem trong, nen hoi duoc si") keep words that are not on the list, so they
-     * survive.
+     * Chi dung khi cau do khong con gi ngoai boilerplate: tru het moi fragment
+     * da biet va khong con noi dung that nao lai. Loi khuyen co dieu kien
+     * ("neu co benh nen thi nen hoi duoc si") va canh bao that ("co canh bao o muc
+     * nghiem trong, nen hoi duoc si") giu nhung tu khong nam trong danh sach,
+     * nen duoc giu lai.
      */
     protected function isBoilerplateDisclaimerSentence(string $sentence): bool
     {
@@ -1765,11 +1762,11 @@ PROMPT;
             return null;
         }
 
-        // A follow-up ("tom tat lai theo dang table") names a format, not a product.
-        // Resolved as a query it became "tom tat", which the catalogue's substring
-        // search matched against seven unrelated products, and this builder answered
-        // in PHP before the model was ever reached — so a request for a table came
-        // back as a numbered list. Hand it to the model instead.
+        // Mot luot hoi theo ("tom tat lai theo dang table") n dinh dang, khong phai
+        // ten san pham. Xu ly nhu mot truy van thi no tro thanh "tom tat", ma tim kiem
+        // substring cua danh muc lai khop voi bay san pham lien quan gi, va builder
+        // nay tra loi bang PHP truoc khi model duoc den — nen yeu cau mot bang
+        // lai ve duoi dang danh sach so. Chuyen no cho model thay.
         if (!$this->isSymptomRelatedQuery($message) && !$this->isEllipticalFollowUpMessage($message)) {
             $query = $this->resolveCatalogQuery($message);
 
@@ -1982,12 +1979,13 @@ PROMPT;
                 }
             }
 
-            // A therapeutic-area query ("ho tro tieu hoa") matches a category but no
-            // product name/ingredient/usage, so the keyword search comes back empty
-            // while the matched category is full of relevant stock. Answer with that
-            // stock instead of telling the customer nothing was found. Requires an
-            // unambiguous match: an empty query returns the top categories by volume,
-            // and several matches make "products of the first one" an arbitrary pick.
+            // Mot truy van linh dieu tri ("ho tro tieu hoa") khop mot danh muc nhung
+            // khong khop ten/hoat chat/cach dung san pham nao, nen tim kiem tu khoa
+            // ra rong trong khi danh muc khop lai day san pham lien quan. Tra loi
+            // bang ton kho do thay vi bao khach khong tim thay. Yeu cau mot khop
+            // khong nhieu nghia: truy van rong tra ve cac danh muc nhieu ton kho nhat,
+            // va nhieu danh muc khop cung luc se lam "san pham cua danh muc dau tien"
+            // thanh mot lua chon tuy y.
             $categoryProducts = $categoryQuery !== '' && count($danhMucs) === 1
                 ? $this->getFeaturedProductsForCategory((int) $danhMucs[0]['id'])
                 : collect();
@@ -2130,9 +2128,9 @@ PROMPT;
     }
 
     /**
-     * Every category in the payload is rendered as a clickable card under the
-     * message, so a link to the same URL inside the text is a duplicate. A line
-     * that was only that link is dropped; elsewhere the label stays as plain text.
+     * Moi danh muc trong payload duoc render nhu mot card bam duoc duoi tin nhan,
+     * nen link den cung URL trong van ban la trung lap. Dong chi gom link do bi
+     * bo; o cho khac nhan giu nguyen nhu van ban thuong.
      */
     protected function stripDuplicateCategoryCardLinks(string $responseText, array $danhMucs): string
     {
@@ -2182,15 +2180,14 @@ PROMPT;
     }
 
     /**
-     * Answer the question that accompanied an uploaded image, grounded on what
-     * the vision step read plus the catalog lookup result. Returns an empty
-     * response when the AI provider is unavailable so the caller can fall back
-     * to its deterministic summary.
+     * Tra loi cau hoi di kem anh tai len, dua tren ket qua buoc doc anh (vision)
+     * cong voi ket qua tra cuu danh muc. Tra ve response rong khi nha cung cap AI
+     * khong kha dung de caller co the du phong bang phan tom tat xac dinh cua no.
      *
-     * @param string $question Caption typed with the image (may be empty)
-     * @param string $imageDescription Vision description of the image
-     * @param array $parsedProducts Raw products the vision step extracted
-     * @param array $recognizedProducts Catalog match result from NhanDienHinhAnhService
+     * @param string $question Caption nhap kem anh (co the trong)
+     * @param string $imageDescription Mo ta anh tu buoc vision
+     * @param array $parsedProducts San pham tho buoc vision trich xuat duoc
+     * @param array $recognizedProducts Ket qua khop danh muc tu NhanDienHinhAnhService
      */
     public function answerImageQuestion(
         string $question,
@@ -2252,13 +2249,13 @@ PROMPT;
                 return $empty;
             }
 
-            // Same block the text path renders, appended rather than asked for: the model
-            // used to be handed product URLs and format them itself, which produced raw
-            // links no repair regex could reliably turn back into a button.
+            // Cung khoi ma duong xu ly van ban render, duoc ghe them chu khong hoi:
+            // truoc day model duoc dua URL san pham va tu format, de ra nhung link
+            // tran ma khong regex nao sua kip loi de bien thanh nut bam.
             $productBlock = $this->renderRecognizedProductBlock($recognizedProducts);
             if ($productBlock !== '') {
-                // The prompt forbids links, but a model that ignores that must not leak a
-                // bare URL past the block that already carries the button.
+                // Prompt cam link, nhung model mac bo qua thi khong duoc de lo URL
+                // tran qua khoi da co san nut bam.
                 $responseText = $this->replaceRawProductUrls(
                     $responseText,
                     $this->recognizedProductUrls($recognizedProducts),
@@ -2334,8 +2331,8 @@ PROMPT;
             }
 
             if (($item['matched'] ?? false) === true && is_array($item['product'] ?? null)) {
-                // Deliberately no url: the model cannot mis-format a link it never
-                // receives, and renderProductDetailLines() appends the real one.
+                // Co y khong co url: model khong the lam roi format mot link ma no
+                // khong bao gio nhan, va renderProductDetailLines() se ghe link that vao.
                 $inStock[] = [
                     'name' => $item['product']['name'] ?? '',
                     'price' => $item['product']['price'] ?? null,
@@ -2367,8 +2364,8 @@ PROMPT;
     }
 
     /**
-     * SanPham URLs for the rows the image matched, so a model that ignored the
-     * "no links" rule can have them stripped before the shared block is appended.
+     * URL SanPham cho cac dong ma anh khop duoc, de vo gan cho model bo qua
+     * quy tac "khong dua link" van duoc go bo truoc khi khoi dung chung duoc ghe vao.
      *
      * @param array<int, mixed> $recognizedProducts khopSanPham() output
      * @return array<int, string>
@@ -2392,12 +2389,12 @@ PROMPT;
     }
 
     /**
-     * The catalog block for products the image matched, rendered by the same method the
-     * text path uses so both replies carry an identical "Mo san pham" button.
+     * Khoi danh muc cho cac san pham anh khop duoc, render bang cung method ma
+     * duong xu ly van ban dung de ca hai cau tra loi deu co nut "Mo san pham" giong nhau.
      *
-     * Empty string when the image matched nothing in stock.
+     * Chuoi rong khi anh khong khop duoc gi con trong kho.
      *
-     * @param array<int, mixed> $recognizedProducts khopSanPham() output
+     * @param array<int, mixed> $recognizedProducts ket qua cua khopSanPham()
      */
     protected function renderRecognizedProductBlock(array $recognizedProducts): string
     {
@@ -2419,8 +2416,8 @@ PROMPT;
             return '';
         }
 
-        // Re-read the rows: category and usage drive two lines of the shared block and
-        // are not part of the recognition payload.
+        // Doc lai cac dong: danh muc va cach dung chi dieu hai dong cua khoi dung
+        // chung va khong nam trong payload nhan dang.
         $sanPhams = SanPham::with('danhMuc')
             ->whereIn('ma_sp', $ids)
             ->FEFO()
@@ -2568,7 +2565,7 @@ PROMPT;
                     'processing_time_ms' => $processingTimeMs,
                     'show_disclaimer' => $showDisclaimer
                 ],
-                // Runs in a queue worker, where there is no authenticated guard.
+                // Chay trong queue worker, cho khong co guard xac thuc nao.
                 userId: $userId
             );
         } catch (\Throwable $exception) {
@@ -2616,11 +2613,11 @@ PROMPT;
     }
 
     /**
-     * DanhMuc lookup for functional queries. searchCategories() LIKE-matches the
-     * whole phrase, so "ho tro tieu hoa nhanh" misses the "Thuoc tieu hoa" category
-     * that holds every product being asked for. Matching runs in PHP over folded
-     * name + description: the table is tiny, and the collation cannot be trusted to
-     * ignore Vietnamese accents (MySQL utf8mb4_unicode_ci does, SQLite does not).
+     * Tra cuu DanhMuc cho cac truy van theo cong dung. searchCategories() LIKE khop
+     * nguyen cum, nen "ho tro tieu hoa nhanh" khong ra danh muc "Thuoc tieu hoa"
+     * dang giu moi san pham can hoi. Viec khop chay trong PHP tren ten + mo ta
+     * da fold: bang rat nho, va khong the tin collation de bo qua dau tieng Viet
+     * (MySQL utf8mb4_unicode_ci lam duoc, SQLite thi khong).
      *
      * @param array<int, string> $queries Ordered by preference
      */
@@ -2655,8 +2652,8 @@ PROMPT;
                 $candidate
             ))->values();
 
-            // Matching more than a handful means the candidate is a generic word
-            // ("thuoc"), not a therapeutic area.
+            // Khop qua mot vai dong nghia la ung cu vien la tu chung ("thuoc"),
+            // chu khong phai mot linh dieu tri.
             if ($matched->isNotEmpty() && $matched->count() <= $limit) {
                 return $matched->take($limit);
             }
@@ -2666,23 +2663,22 @@ PROMPT;
     }
 
     /**
-     * Folded n-grams of the query, longest first, with filler words dropped so
-     * "ho tro tieu hoa nhanh" gets tried as "tieu hoa". Single tokens shorter than
-     * 4 characters are skipped: they match far too much to identify a category.
+     * Cac n-gram fold cua truy van, dai nhat truoc, da bo tu xoa de
+     * "ho tro tieu hoa nhanh" duoc thu nhu "tieu hoa". Token don ngan hon
+     * 4 ky tu bi bo qua: chung khop qua nhieu de xac dinh mot danh muc.
      *
-     * Diacritics are kept, because the product variant of this lookup feeds SQL
-     * LIKE: MySQL's utf8mb4_unicode_ci ignores accents but SQLite does not, so
-     * folding here would make tests and production disagree.
+     * Dau tieng Viet duoc giu, vi bien the tim san pham cua buoc tra nay nap vao
+     * SQL LIKE: utf8mb4_unicode_ci cua MySQL bo qua dau nhung SQLite thi khong,
+     * nen fold o day se lam test va production khac nhau.
      *
-     * Within one length the rightmost n-gram comes first, because a Vietnamese noun
-     * phrase carries its topic at the end: "giam dau da day" must resolve through
-     * "da day" (antacids) and not through "giam dau", which would offer NSAIDs -
-     * the one class of painkiller that makes a stomach complaint worse.
+     * Trong cung mot do dai, n-gram ben phai dung truoc, vi mot cum danh tu
+     * tieng Viet de chu de o cuoi: "giam dau da day" phai di qua "da day" ( thuoc
+     * tham vi) chu khong phai "giam dau" — se de xuat NSAID, dung nhom thuoc
+     * giam dau lam dau day to hon.
      *
-     * A multi-word query is never reduced to a single token: "tieu hoa" narrowed to
-     * "hoa" matched "chong oxy hoa" and offered vitamin E for indigestion. Below two
-     * tokens the query is better answered as "not found", which lets the category
-     * lookup take over.
+     * Truy van nhieu tu khong bao gio bi rut con ve mot token: "tieu hoa" hep
+     * xuong "hoa" da khop "chong oxy hoa" va de xuat vitamin E cho benh tieu hoa.
+     * Duoi hai token, nen tra "khong tim thay" de buoc tra danh muc lam viec.
      *
      * @return array<int, string>
      */
@@ -2727,11 +2723,11 @@ PROMPT;
     }
 
     /**
-     * Drop "gia bao nhieu" and friends from an already-normalized query.
+     * Bo "gia bao nhieu" va cac bien the khoi truy van da normalize.
      *
-     * Matched on the folded text so "gia"/"gia" and "nhieu"/"nhieu" are one rule, but
-     * cut out of the original by word position: the candidates are searched with LIKE
-     * against real product text, which keeps its diacritics.
+     * Khop tren van ban da fold de "gia"/"giá" va "nhieu"/"nhiều" la mot quy tac,
+     * nhung cat ra khoi ban goc theo vi tri tu: cac ung cu vien duoc tim bang LIKE
+     * tren van ban san pham that, van giu dau tieng Viet.
      */
     protected function stripPricePhrases(string $normalized): string
     {
@@ -2761,9 +2757,9 @@ PROMPT;
     }
 
     /**
-     * Whether the query is clean enough to quote back to the customer. What reaches
-     * the response builders is often a stripped fragment of the question ("hien tai
-     * o website trang danh muc khong"), which reads like a bug when echoed.
+     * Truy van co du sach de trich dan lai cho khach. Cai den tay cac response
+     * builder thuong la mot doan rut ra khoi cau hoi ("hien tai o website trang
+     * danh muc khong"), doc se nhu mot bug khi duoc echo lai.
      */
     protected function isPresentableQuery(string $query): bool
     {
@@ -2843,11 +2839,10 @@ PROMPT;
     }
 
     /**
-     * Products found through the category that matched the query, after the keyword
-     * search over product name/ingredients/usage came back empty. The raw query is
-     * deliberately not echoed: it reaches here as a stripped fragment of the
-     * question ("gi ho tro tieu hoa nhanh khong"), and the category name already
-     * says what was matched.
+     * San pham tim duoc qua danh muc khop voi truy van, khi tim kiem tu khoa tren
+     * ten/hoat chat/cach dung da ra rong. Truy van goc co y khong duoc echo lai:
+     * no den day nhu mot doan rut ra khoi cau hoi ("gi ho tro tieu hoa nhanh khong"),
+     * va ten danh muc da noi ro cai gi da duoc khop.
      */
     protected function buildCategoryProductFallbackResponseText(
         array $danhMuc,
@@ -3006,8 +3001,8 @@ PROMPT;
 
     protected function buildSymptomGuidanceResponse(string $message, ?int $userAge = null): array
     {
-        // The account already knows the age, so asking for it again makes the bot
-        // look like it ignores the profile it holds.
+        // Tai khoan da biet tuoi roi, nen hoi lai se lam bot nhu bo qua ho so
+        // ma no dang giu.
         $ageKnown = $userAge !== null;
         $normalizedMessage = $this->normalizeIntentText($message);
         $isDiarrheaMessage = Str::contains($normalizedMessage, ['tieu chay', 'ia chay']);
@@ -3278,11 +3273,11 @@ PROMPT;
     }
 
     /**
-     * Questions about recreational or illegal drug use. Matched on whole tokens
-     * only, and the list deliberately leaves out Vietnamese slang that doubles as
-     * an everyday word ("da", "co", "ke", "bong da"), plus controlled substances
-     * that are legitimate medicines ("morphin", "methadone", "fentanyl") - a
-     * customer asking about those needs a pharmacist answer, not this guardrail.
+     * Cac cau hoi ve chat lai hoac chat cam. Chi khop tren nguyen token, va danh
+     * sach co y bo qua tieng long Viet vua la tu thong thuong ("da", "co", "ke",
+     * "bong da"), cung nhu cac chat kiem soat ma van la thuoc hop phap ("morphin",
+     * "methadone", "fentanyl") — khach hoi ve chung can cau tra loi tu duoc si,
+     * chu khong phai hang rao nay.
      */
     protected const ILLICIT_SUBSTANCE_KEYWORDS = [
         'ma tuy', 'can sa', 'heroin', 'cocaine', 'cocain', 'crack',
@@ -3343,13 +3338,13 @@ PROMPT;
     }
 
     /**
-     * Red flags live in `medical_red_flags` so a pharmacist can add a warning sign
-     * without a code change. Only emergency/urgent rows flagged `chat_short_circuit`
-     * reach here — patient-context rows ("dang mang thai", "be 1 tuoi") and `caution`
-     * rows ("keo dai", "benh nen") are handled further down the ladder, otherwise an
-     * ordinary product question would be answered with emergency guidance.
+     * Red flags nam trong `medical_red_flags` de duoc si co the them dau hieu canh
+     * bao ma khong can sua code. Chi cac dong emergency/urgent co co `chat_short_circuit`
+     * den duoc day — cac dong ngu canh benh nhan ("dang mang thai", "be 1 tuoi") va
+     * cac dong `caution` ("keo dai", "benh nen") duoc xu ly thap hon trong bac thang,
+     * neu khong mot cau hoi san pham thuong se duoc tra loi bang huong dan cap cuu.
      *
-     * Cached per request: this runs on every inbound message.
+     * Cache theo tung request: buoc nay chay tren moi tin nhan den.
      *
      * @return array<int, string>
      */
@@ -3370,7 +3365,7 @@ PROMPT;
                 ->values()
                 ->all();
         } catch (\Throwable $exception) {
-            // A missing table or a dead connection must not silence urgent detection.
+            // Table thieu hoac ket noi chet khong duoc phep tat phat hien cap cuu.
             Log::warning('Falling back to built-in urgent keywords', [
                 'error' => $exception->getMessage(),
             ]);
@@ -3378,18 +3373,18 @@ PROMPT;
             $keywords = [];
         }
 
-        // An empty table means the knowledge base was never seeded, not that
-        // nothing is dangerous. Never let that turn urgent detection off.
+        // Table rong nghia la co so kien thuc chua duoc seed, chu khong phai
+        // khong co gi nguy hiem. Khong bao gio de dieu do tat phat hien cap cuu.
         $this->urgentKeywordsCache = $keywords !== [] ? $keywords : self::URGENT_KEYWORDS_FALLBACK;
 
         return $this->urgentKeywordsCache;
     }
 
     /**
-     * Tier 2.5: hand a real screening case over to the dedicated /health-check page.
+     * Tang 2.5: chuyen mot case sang loc that su sang trang /health-check rieng.
      *
-     * The chat frame is too narrow for the 5-step wizard, so the widget only
-     * recognises the case and offers a link. No AI call, no catalog lookup.
+     * Khung chat qua hep cho wizard 5 buoc, nen widget chi nhan dien case va dua
+     * ra mot link. Khong goi AI, khong tra danh muc.
      */
     protected function tryTriageHandoffResponse(string $message, array $context): ?array
     {
@@ -3397,12 +3392,12 @@ PROMPT;
             return null;
         }
 
-        // Explicit product hunting ("co thuoc dau dau khong") is a catalog job.
+        // Tim san pham ro rang ("co thuoc dau dau khong") la viec cua danh muc.
         if ($this->wantsProductSuggestionForSymptom($message)) {
             return null;
         }
 
-        // Follow-up turns already have their own curated guidance downstream.
+        // Cac luot hoi theo da co huong dan bien soan rieng o phia duoi.
         if ($this->isHealthFollowUpMessage($message) || $this->isCauseQuestion($message)) {
             return null;
         }
@@ -3419,8 +3414,8 @@ PROMPT;
     }
 
     /**
-     * A stated duration or several symptoms at once is what the wizard actually
-     * needs to grade severity, so those are the cases worth handing over.
+     * Mot thoi gian duoc neu ra hoac nhieu trieu chung cung luc la nhung gi wizard
+     * thuc su can de xep muc do, nen do la nhung case dang duoc chuyen giao.
      */
     protected function needsStructuredTriage(string $message): bool
     {
@@ -3455,7 +3450,7 @@ PROMPT;
     }
 
     /**
-     * PHP owns every match and decision here; the AI only extracted the name.
+     * PHP giu toan bo viec khop va quyet dinh; AI chi trich xuat ten.
      */
     protected function buildDrugSafetyCheckResponse(string $productName, int $userId): array
     {
@@ -3473,7 +3468,7 @@ PROMPT;
             ];
         }
 
-        // Health profile data is personal, so it is only read once consent is on record.
+        // Du lieu ho so suc khoe la du lieu ca nhan, nen chi doc khi da co dong y tren ho so.
         $nguoiDung = NguoiDung::with('hoSoSucKhoe')->find($userId);
         $profile = $nguoiDung?->hoSoSucKhoe?->hasConsented() ? $nguoiDung->hoSoSucKhoe : null;
 
@@ -4588,9 +4583,9 @@ PROMPT;
     }
 
     /**
-     * Travel and leisure questions ("di Da Nang choi thi nen di dau?") are out of
-     * scope; catching them locally avoids an AI round trip for an answer the
-     * assistant is not allowed to give anyway.
+     * Cac cau hoi du lich giai tri ("di Da Nang choi thi nen di dau?") nam ngoai
+     * pham vi; bat chung tai day tranh mot luot goi AI cho mot cau tra loi ma
+     * tro ly cung khong duoc phep tra loi.
      */
     protected function isLeisureTravelIntent(string $message): bool
     {
@@ -4609,7 +4604,7 @@ PROMPT;
         $tokens = preg_split('/\s+/', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
         foreach ($tokens as $index => $token) {
-            // Bare "choi" is leisure unless it is part of a product ("do choi").
+            // "choi" doc lap la giai tri, tru khi la mot phan cua san pham ("do choi").
             if ($token === 'choi' && !in_array($tokens[$index - 1] ?? '', ['do', 'dung', 'bo'], true)) {
                 return true;
             }
@@ -4640,9 +4635,9 @@ PROMPT;
     }
 
     /**
-     * "tim thuoc o nha thuoc Long Chau tai Da Nang" - the assistant cannot look
-     * inside a competitor's catalog, and treating the whole sentence as a product
-     * keyword produced nonsense searches like `nha long chau tai da nang`.
+     * "tim thuoc o nha thuoc Long Chau tai Da Nang" - tro ly khong the nhin vao
+     * catalog cua doi thu, va viec coi ca cau la tu khoa san pham da tao ra cac
+     * tim kiem vo nghia nhu `nha long chau tai da nang`.
      */
     protected function isOtherPharmacyIntent(string $message): bool
     {
@@ -4693,8 +4688,8 @@ PROMPT;
     }
 
     /**
-     * Keep only the product part of a competitor question, so "tim paracetamol o
-     * nha thuoc Long Chau Da Nang" still searches for "paracetamol".
+     * Giu lai phan san pham cua mot cau hoi ve nha thuoc khac, de "tim paracetamol o
+     * nha thuoc Long Chau Da Nang" van tim tren "paracetamol".
      */
     protected function resolveOtherPharmacyProductQuery(string $message): string
     {
@@ -4714,8 +4709,8 @@ PROMPT;
     }
 
     /**
-     * Drop filler words left at the edges of an extracted query so the reply
-     * shows `paracetamol` instead of `paracetamol o`.
+     * Bo cac tu xoa con lai o hai dau cua truy van da trich xuat de cau tra loi
+     * hien `paracetamol` chu khong phai `paracetamol o`.
      */
     protected function trimQueryFillerWords(string $query): string
     {
@@ -4745,8 +4740,8 @@ PROMPT;
     }
 
     /**
-     * Remove competitor names, pharmacy words and place names while keeping the
-     * original accents, so the remaining text still reads like a product query.
+     * Go bo ten doi thu, tu nha thuoc va ten dia danh ma van giu dau goc,
+     * de phan van ban con lai van doc nhu mot truy van san pham.
      */
     protected function stripPharmacyLocationNoise(string $text): string
     {
@@ -4961,9 +4956,10 @@ PROMPT;
             $name = preg_replace('/\s+/u', ' ', (string) $name);
             $name = trim((string) $name);
 
-            // "toi la nam hay nu?" is a question about gender, not a self-introduction:
-            // the capture is the whole clause and must not become a name. Same for a
-            // bare gender word, an occupation, or a question the customer asked.
+            // "toi la nam hay nu?" la cau hoi ve gioi tinh, chu khong phai tu gioi
+            // thieu: doan bat duoc la nguyen menh de va khong duoc tro thanh ten.
+            // Tuong tu voi mot tu gioi tinh doc lap, mot nghe nghiep, hay cau hoi
+            // khach da hoi.
             if ($this->isNotAPersonName($name)) {
                 $name = '';
                 continue;
@@ -5007,26 +5003,26 @@ PROMPT;
     }
 
     /**
-     * Reject captures that are clearly not a customer's personal name.
+     * Loai bo cac doan bat duoc ro rang khong phai ten ca nhan cua khach.
      *
-     * "toi la nam hay nu?" matches `(?:toi la)\s+(.+)` and captures `nam hay nu?`.
-     * Without this check, "nam" was extracted as the customer's name, so the assistant
-     * addressed them as "Nam" from then on. Same for occupations and questions.
+     * "toi la nam hay nu?" khop voi `(?:toi la)\s+(.+)` va bat duoc `nam hay nu?`.
+     * Khong co buoc kiem tra nay, "nam" da bi trich xuat lam ten khach, va tro ly
+     * goi ho la "Nam" tu luc do. Tuong tu voi nghe nghiep va cau hoi.
      */
     protected function isNotAPersonName(string $name): bool
     {
         $normalized = $this->normalizeIntentText($name);
-        // Trailing particles ("nu a", "nam nhe") are politeness, not part of the word.
+        // Cac trung tu cuoi cau ("nu a", "nam nhe") la su lich su, chu khong phai phan cua tu.
         $trimmed = trim(preg_replace('/\s+(?:a|ạ|à|nhe|nhé|nha|da|dạ|vay|vậy)$/u', '', $normalized) ?? $normalized);
 
         if ($trimmed === '') {
             return true;
         }
 
-        // A question mark is decisive. So is a question word — but "hay" is NOT one:
-        // folding turns the imperative "hay cho minh biet" into "hay cho minh biet",
-        // and a name capture that contains it would be dropped for the wrong reason.
-        // Gender questions are matched as the whole phrase instead.
+        // Dau hoi quyet dinh. Tu hoi cung vay — nhung "hay" KHONG phai tu hoi:
+        // fold lam cau menh lenh "hay cho minh biet" van giu nguyen, va mot ten
+        // bat duoc chua no se bi bo vi mot ly do sai.
+        // Cac cau hoi gioi tinh duoc khop nhu nguyen cum thay.
         if (str_contains($name, '?')
             || preg_match('/\b(?:ai|gi|sao|khong|phai khong|dung khong)\b/u', $trimmed) === 1
         ) {
@@ -5037,8 +5033,8 @@ PROMPT;
             return true;
         }
 
-        // Occupations, roles and pure-gender terms that are not common given names.
-        // "nu" (nu) is blocked; "nam" is allowed because it is a very common given name.
+        // Cac nghe nghiep, vai tro va tu gioi tinh thuan tuy khong phai ten thuong dung.
+        // "nu" ( nu) bi chan; "nam" duoc phep vi la ten rat pho bien.
         $occupations = [
             'nu', 'gioi tinh',
             'bac si', 'duoc si', 'y ta', 'dieu duong', 'nhan vien', 'sinh vien',
@@ -5156,8 +5152,9 @@ PROMPT;
     }
 
     /**
-     * Age from the customer's own profile, or null when unknown (guest, or no
-     * birth_date on file). Triage rules treat null as unknown, not as an adult.
+     * Tuoi tu ho so cua chinh khach, hoac null khi khong biet (khach vang lai,
+     * hoac khong co birth_date). Cac quy tac sang loc coi null la chua biet,
+     * chu khong phai nguoi lon.
      */
     protected function resolveUserAge(int $userId): ?int
     {
@@ -5402,7 +5399,7 @@ PROMPT;
         $queries = [];
 
         foreach ($this->symptomMapFromDatabase() as $needle => $entry) {
-            // Word-boundary, not substring: a short alias must not fire mid-word.
+            // Khop theo tu hoan chinh, khong phai substring: alias ngan khong duoc kich hoat giua mot tu.
             if (!VietnameseText::containsWord($normalized, $needle)) {
                 continue;
             }
@@ -5418,11 +5415,11 @@ PROMPT;
     }
 
     /**
-     * Some aliases collide with everyday Vietnamese once diacritics are stripped:
-     * "nuoc sot" is a sauce, "sot ruot" is impatience, "con ngua" is a horse. Decide
-     * by the words on either side of the alias. Guard words come from
-     * `medical_symptoms.guard_words`, so a pharmacist adding an ambiguous alias can
-     * guard it without a code change.
+     * Mot so alias trung voi tieng Viet thong thuong sau khi dau da duoc go:
+     * "nuoc sot" la mot loai sot cham, "sot ruot" la su nong tat, "con ngua" la
+     * con ngua. Quyet dinh bang cac tu o hai ben cua alias. Guard words lay tu
+     * `medical_symptoms.guard_words`, nen duoc si them mot alias trung nghia
+     * co the tu canh bao no ma khong can sua code.
      *
      * @param array<int, string> $guards
      */
@@ -5451,21 +5448,21 @@ PROMPT;
             $before = $tokens[$index - 1] ?? '';
             $after = $tokens[$index + $length] ?? '';
 
-            // One occurrence with no guard on either side means the alias really is
-            // being used in its medical sense here.
+            // Mot lan xuat hien ma khong co guard nao o hai ben nghia la alias thuc su
+            // dang duoc dung theo nghia y khoa tai day.
             if (!in_array($before, $guards, true) && !in_array($after, $guards, true)) {
                 return false;
             }
         }
 
-        // Matched only via the regex (e.g. inside a longer token) — treat as everyday.
+        // Chi khop qua regex (vi du ben trong mot token dai hon) — coi nhu la nghia thong thuong.
         return $found;
     }
 
     /**
-     * Symptom aliases live in `medical_symptoms`, keyed by accent-free alias so a
-     * pharmacist can teach the bot a new spelling without touching code.
-     * Falls back to `catalog_query` when set, otherwise the Vietnamese name.
+     * Cac alias trieu chung nam trong `medical_symptoms`, khoa boi alias khong dau
+     * de duoc si day cho bot mot cach viet moi ma khong phai sua code.
+     * Du phong ve `catalog_query` khi co gia tri, khong thi dung ten tieng Viet.
      *
      * @return array<string, array{query: string, guards: array<int, string>}>
      */
@@ -5502,7 +5499,7 @@ PROMPT;
             $map = [];
         }
 
-        // Unseeded table must not silently disable symptom detection.
+        // Table chua seed khong duoc im lang tat phat hien trieu chung.
         $this->symptomMapCache = $map !== [] ? $map : $this->fallbackSymptomMap();
 
         return $this->symptomMapCache;
@@ -5526,11 +5523,11 @@ PROMPT;
     }
 
     /**
-     * Build conversation messages array for the AI provider.
+     * Xay dung mang tin nhan cuoc tro chuyen cho nha cung cap AI.
      *
-     * @param string $currentMessage Current user message
-     * @param array $context Conversation context with previous messages
-     * @return array Array of message objects
+     * @param string $currentMessage Tin nhan hien tai cua nguoi dung
+     * @param array $context Ngu canh cuoc tro chuyen kem cac tin nhan truoc
+     * @return array Mang cac object tin nhan
      */
     protected function buildConversationMessages(string $currentMessage, array $context): array
     {
@@ -5566,17 +5563,17 @@ PROMPT;
             $history = $this->sanitizeHistoryForAi($context['previous_messages']);
             $latestTopic = $this->findLatestUserTopic($history);
 
-            // Only for a message that carries no topic of its own. Anchoring every
-            // turn would fight the customer whenever they change subject.
+            // Chi ap dung cho tin nhan khong mang chu de rieng nao. Ghim chu de cho
+            // moi luot se mac khach moi khi ho doi chu de.
             $isElliptical = $latestTopic !== '' && $this->isEllipticalFollowUpMessage($currentMessage);
 
             if ($isElliptical) {
-                // Telling the provider which topic to use is not enough: with the
-                // reported transcript in context it kept answering the older drug
-                // question even when the instruction named the newer topic and the
-                // user turn carried the resolved reference. So the older topics are
-                // withheld for this turn - a contentless message can only mean the
-                // exchange right above it, and what is absent cannot be answered.
+                // Chi bao nha cung cap dung chu de nao la chua du: voi doan hoi thoai
+                // da bao cao nam trong ngu canh, no van tra loi cau hoi ve thuoc cu
+                // du khi lenh da goi ten chu de moi va luot nguoi dung da mang tham
+                // chieu da giai quyet. Vi vay cac chu de cu bi giu lai trong luot nay
+                // — tin nhan khong co noi dung chi co the chi den doan hoi thoai ngay
+                // phia tren, va phan khong co mat thi khong the tra loi.
                 $history = $this->keepLatestExchange($history);
             }
 
@@ -5605,13 +5602,13 @@ PROMPT;
     }
 
     /**
-     * Conversation history as the provider should see it.
+     * Lich su cuoc tro chuyen theo cai nha cung cap nen thay.
      *
-     * Two kinds of noise made the model answer the wrong question: the "AI provider
-     * is unavailable" notices (no content, yet they leave the question they replaced
-     * looking unanswered) and the identical retries a customer sends after one, which
-     * can fill most of the window with an abandoned topic. Both are kept in the
-     * database and in the UI - they are only dropped from the AI-facing window.
+     * Hai loai nhieu da lam model tra loi sai cau hoi: cac thong bao "nha cung cap
+     * AI khong kha dung" (khong co noi dung, nhung de lai cau hoi bi thay duong nhu
+     * chua duoc tra loi) va cac lan gui lai giong het ma khach gui sau do, co the
+     * chiem phan lon cua so bang mot chu de da bo cuoc. Ca hai van duoc giu trong
+     * database va tren UI - chung chi bi bo khoi cua so dua cho AI.
      *
      * @param array<int, mixed> $previousMessages
      * @return array<int, array{role: string, content: string}>
@@ -5639,8 +5636,8 @@ PROMPT;
                 continue;
             }
 
-            // Collapse a run of same-role turns down to the newest phrasing. This also
-            // keeps roles alternating, which the Anthropic messages mode requires.
+            // Rut cac luot cung role lien tiep xuong thanh cach dien dat moi nhat.
+            // Dieu nay cung giu cac role xen ke, dieu che do Anthropic messages can.
             $lastIndex = count($history) - 1;
             if ($lastIndex >= 0 && $history[$lastIndex]['role'] === $role) {
                 $history[$lastIndex]['content'] = $content;
@@ -5660,9 +5657,9 @@ PROMPT;
     }
 
     /**
-     * Assistant turns that only apologise for an unavailable provider. Other
-     * fallback types (catalog lookup after a provider error, urgent-medical
-     * guardrail) carry real content and stay in the window.
+     * Cac luot tro ly chi xin loi vi nha cung cap khong kha dung. Cac loai du phong
+     * khac (tra danh muc sau loi nha cung cap, hang rao y khoa cap cuu) co noi dung
+     * that va duoc giu lai trong cua so.
      */
     protected function isUninformativeFallbackTurn(array $message): bool
     {
@@ -5684,10 +5681,10 @@ PROMPT;
     }
 
     /**
-     * Latest topic the customer raised, used to resolve elliptical follow-ups
-     * ("co on khong?") which the model otherwise attaches to whichever older topic
-     * looks unanswered - the reported case answered a drug question from four turns
-     * earlier instead of the medicine list right above it.
+     * Chu de moi nhat khach da neu ra, dung de giai quyet cac cau hoi rut gon
+     * ("co on khong?") ma neu khong model se gan vao bat ky chu de cu nao trong
+     * nhu chua duoc tra loi — case da bao cao da tra loi mot cau hoi ve thuoc tu
+     * bon luot truoc thay vi danh sach thuoc ngay phia tren.
      *
      * @param array<int, array{role: string, content: string}> $history
      */
@@ -5710,8 +5707,8 @@ PROMPT;
     }
 
     /**
-     * The trailing user/assistant pair, which is the only context an elliptical
-     * follow-up can refer to.
+     * Cap user/assistant cuoi cung, la ngu canh duy nhat ma mot cau hoi rut gon
+     * co the chi den.
      *
      * @param array<int, array{role: string, content: string}> $history
      * @return array<int, array{role: string, content: string}>
@@ -5728,14 +5725,14 @@ PROMPT;
     }
 
     /**
-     * A short message that carries no topic of its own once filler is removed, so
-     * it can only be read against the previous turn.
+     * Mot tin nhan ngan khong mang chu de rieng nao sau khi tu xoa da bo,
+     * nen chi co the doc dua vao luot truoc.
      */
     /**
-     * QUERY_NOISE_TOKENS folded, so a token list compared against folded text matches.
+     * QUERY_NOISE_TOKENS da fold, de danh sach token so sanh voi van ban fold se khop.
      *
-     * The constant holds accented and unaccented spellings; tokenizeNormalizedIntentText
-     * folds, so "san"/"pham" arrive as "san"/"pham" and would never match the raw entry.
+     * Hang so giu ca cach viet co dau va khong dau; tokenizeNormalizedIntentText fold,
+     * nen "san"/"pham" den dang "san"/"pham" va khong bao gio khop voi ban ghi goc.
      *
      * @return array<int, string>
      */
@@ -5755,17 +5752,17 @@ PROMPT;
         }
 
         $tokens = $this->tokenizeNormalizedIntentText($normalized);
-        // Ten, not six: a politely phrased follow-up ("tom tat lai theo dang table
-        // giup toi nhe") carries eight tokens, every one of them topic-free. The
-        // allow-list below is what actually decides, so the cap only guards against
-        // scanning a long paragraph.
+        // Muoi, chu khong phai sau: mot cau hoi rut gon dien dat lich su
+        // ("tom tat lai theo dang table giup toi nhe") mang tam token, va khong token
+        // nao co chu de. Danh sach cho phep phia duoi moi la thu quyet dinh that,
+        // nen gioi han nay chi de chan viec quet mot doan van dai.
         if (empty($tokens) || count($tokens) > 10) {
             return false;
         }
 
-        // Noise words ("san pham", "cho", "xem") carry no topic either, and are already
-        // excluded from search queries for the same reason. Allowed here so
-        // "cho xem link san pham di" resolves as the follow-up it is.
+        // Cac tu nhieu ("san pham", "cho", "xem") cung khong mang chu de, va da bi
+        // loai khoi truy van tim kiem vi cung ly do. Cho phep o day de
+        // "cho xem link san pham di" duoc giai quyet dung nhu mot cau hoi rut gon.
         return $this->onlyContainsTokens(
             $tokens,
             array_merge(self::ELLIPTICAL_FOLLOW_UP_TOKENS, $this->normalizedNoiseTokens())
@@ -5773,7 +5770,7 @@ PROMPT;
     }
 
     /**
-     * Check if query is symptom-related.
+     * Kiem tra truy van co lien quan den trieu chung hay khong.
      */
     protected function isSymptomRelatedQuery(string $query): bool
     {
@@ -5797,9 +5794,9 @@ PROMPT;
     }
 
     /**
-     * "dau", "cam", "om" and "ho" collide with everyday words once diacritics are
-     * stripped ("o dau", "nuoc cam", "cam on", "ho"), so they are matched here
-     * instead of through the accent-insensitive keyword list.
+     * "dau", "cam", "om" va "ho" trung voi cac tu thong thuong sau khi dau bi go
+     * ("o dau", "nuoc cam", "cam on", "ho"), nen chung duoc khop tai day
+     * thay vi qua danh sach tu khoa khong phan biet dau.
      */
     protected function containsAmbiguousSymptomWord(string $query): bool
     {
@@ -5808,7 +5805,7 @@ PROMPT;
             return false;
         }
 
-        // When the user typed diacritics, the accented spelling is authoritative.
+        // Khi nguoi dung go co dau, cach viet co dau la chuan.
         if ($lower !== Str::lower(Str::ascii($lower))) {
             return preg_match('/(?<!\p{L})(?:đau|ốm|ho)(?!\p{L})/u', $lower) === 1
                 || preg_match('/(?<!\p{L})cảm(?!\p{L})(?!\s+(?:ơn|thấy|nhận|giác|tình|xúc|ứng))/u', $lower) === 1;
@@ -5818,8 +5815,8 @@ PROMPT;
     }
 
     /**
-     * Accent-free typing keeps the ambiguity, so each candidate word is accepted
-     * only when its neighbours do not mark the non-symptom meaning.
+     * Cach viet khong dau van giu su nhieu nghia, nen moi tu ung cu vien chi duoc
+     * chap nhan khi cac tu xung quanh khong danh dau nghia khong phai trieu chung.
      */
     protected function containsUnaccentedSymptomWord(string $normalizedMessage): bool
     {
@@ -5885,7 +5882,7 @@ PROMPT;
             return true;
         }
 
-        // Raw URL-like payload without additional sentence context.
+        // Payload dang URL tran, khong kem ngu canh cau van ben canh.
         if (preg_match('/^(https?:\/\/|www\.)\S+$/iu', $trimmed) === 1) {
             return true;
         }
@@ -5894,7 +5891,7 @@ PROMPT;
     }
 
     /**
-     * Check if response contains medical advice.
+     * Kiem tra cau tra loi co chua loi khuyen y khoa hay khong.
      */
     protected function containsMedicalAdvice(string $response): bool
     {
@@ -5915,7 +5912,7 @@ PROMPT;
     }
 
     /**
-     * Search products based on query string.
+     * Tim san pham dua tren chuoi truy van.
      */
     public function searchProducts(string $query): Collection
     {
@@ -6029,12 +6026,12 @@ PROMPT;
     }
 
     /**
-     * Last resort before fuzzy name scoring: retry the keyword search on
-     * progressively shorter parts of the query, longest first.
+     * Phuong an cuoi truoc khi cham diem ten fuzzy: thu lai tim kiem tu khoa tren
+     * cac phan ngan dan cua truy van, dai nhat truoc.
      *
-     * The tiers above match the whole phrase, so one extra word sinks the search -
-     * "da day" finds four medicines while "dau da day" found none, even though the
-     * stock that answers it is the same.
+     * Cac tang o tren khop nguyen cum, nen mot tu thua lam chim tim kiem -
+     * "da day" tim ra bon loai thuoc trong khi "dau da day" ra khong gi,
+     * du ton kho tra loi cho ca hai la nhu nhau.
      */
     protected function searchProductsByNarrowingQuery(string $query): Collection
     {
@@ -6068,16 +6065,16 @@ PROMPT;
     }
 
     /**
-     * Keep only the rows where the phrase really occurs as a whole word.
+     * Chi giu lai cac dong ma cum tu thuc su xuat hien nhu mot tu hoan chinh.
      *
-     * LIKE decides accent sensitivity by collation, and MySQL's utf8mb4_unicode_ci
-     * ignores Vietnamese diacritics entirely, so `%thu thai%` matched "hap thu thai
-     * tru" inside an antacid's pharmacology text — a pregnancy-test question answered
-     * with a stomach medicine. Substring matching is the other half of it: "bao nhieu"
-     * hit "trung hoa luong acid dich vi bao nhieu".
+     * LIKE quyet dinh do nhay dau qua collation, va utf8mb4_unicode_ci cua MySQL
+     * bo qua hoan toan dau tieng Viet, nen `%thu thai%` da khop "hap thu thai tru"
+     * trong van ban duoc hoc cua thuoc tham vi — cau hoi ve que thu thai tra loi
+     * bang thuoc da day. Khop substring la nua con lai: "bao nhieu" trung
+     * "trung hoa luong acid dich vi bao nhieu".
      *
-     * Diacritics are enforced only when the customer typed them, so "dau da day" keeps
-     * finding "dau da day" while "thu thai" no longer matches "thu thai".
+     * Dau tieng Viet chi duoc ep buat khi khach tu go co dau, nen "dau da day"
+     * van tim ra "dau da day" trong khi "thu thai" khong con trung "thu thai" nua.
      */
     protected function keepGenuineMatches(Collection $sanPhams, string $phrase): Collection
     {
@@ -6108,8 +6105,8 @@ PROMPT;
             return false;
         }
 
-        // Typed without diacritics: fold both sides, which is what lets a customer
-        // search "dau da day". Typed with them: they have to survive the match.
+        // Go khong dau: fold ca hai ben, chinh dieu nay cho phep khach tim
+        // "dau da day". Go co dau: dau phai song sot qua buoc khop.
         if ($this->normalizeIntentText($phrase) === mb_strtolower($phrase, 'UTF-8')) {
             return VietnameseText::containsWord($this->normalizeIntentText($haystack), $phrase);
         }
@@ -6121,7 +6118,7 @@ PROMPT;
     }
 
     /**
-     * Recommend products based on symptoms.
+     * Goi y san pham dua tren trieu chung.
      */
     public function recommendBySymptoms(string $symptoms): array
     {
@@ -6191,11 +6188,11 @@ PROMPT;
     }
 
     /**
-     * Create draft order from recognized products.
+     * Tao don hang nhap tu cac san pham da nhan dien.
      *
-     * @param array $sanPhams Array of products with quantities
-     * @param int $userId User ID
-     * @return array Draft order data with validation results
+     * @param array $sanPhams Mang san pham kem so luong
+     * @param int $userId ID nguoi dung
+     * @return array Du lieu don nhap kem ket qua kiem tra
      * @throws \Exception
      */
     public function createDraftOrder(array $sanPhams, int $userId): array

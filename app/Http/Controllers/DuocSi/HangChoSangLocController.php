@@ -15,10 +15,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
- * Review queue for triage sessions the rules engine could not close on its own.
+ * Hang doi xem lai cho cac phien sang loc bo quy tac khong tu chot duoc.
  *
- * Every write goes through a locked read of the session so two pharmacists
- * cannot answer the same customer twice.
+ * Moi lan ghi di qua mot lan doc co khoa cua phien nen hai duoc si
+ * khong the tra loi cung mot khach hang hai lan.
  */
 class HangChoSangLocController extends Controller
 {
@@ -32,9 +32,9 @@ class HangChoSangLocController extends Controller
     ];
 
     /**
-     * Statuses that mean "this case was handed to the pharmacist team". Anything
-     * else (in_progress, completed self-care) was never referred, so its health
-     * profile is not ours to read.
+     * Cac trang thai co nghia "ca nay da duoc dua cho doi duoc si". Bat ky
+     * trang thai khac (in_progress, tu cham soc hoan thanh) chua tung duoc chuyen tu van, nen ho so
+     * suc khoe khong phai cua ta doc.
      */
     private const REVIEWABLE_STATUSES = ['pending_pharmacist', 'reviewed'];
 
@@ -66,9 +66,9 @@ class HangChoSangLocController extends Controller
 
     public function show(int $MaSL, SangLocAiSoanLoiService $draftService): View
     {
-        // Only cases that actually entered the queue. Without this filter any
-        // pharmacist could walk MaSL=1..N and read the health profile of every
-        // customer, including sessions still being filled in.
+        // Chi nhung ca thuc su da vao hang doi. Neu khong co bo loc nay, bat ky
+        // duoc si nao cung duyet duoc MaSL=1..N va doc ho so suc khoe cua moi
+        // khach hang, gom ca phien van dang dien.
         $phien = PhienSangLoc::with(['nguoiDung', 'pharmacist'])
             ->whereIn('status', self::REVIEWABLE_STATUSES)
             ->where('ma_sl', $MaSL)
@@ -76,7 +76,7 @@ class HangChoSangLocController extends Controller
 
         $hoSo = HoSoSucKhoe::consentedFor((int) $phien->ma_nd);
 
-        // Reading someone's health data is auditable every single time, not once.
+        // Doc du lieu suc khoe cua nguoi khac phai kiem toan moi lan, chu khong phai mot lan.
         if ($hoSo) {
             app(NhatKyKiemToanService::class)->ghi(
                 action: 'health_profile_accessed',
@@ -87,8 +87,8 @@ class HangChoSangLocController extends Controller
             );
         }
 
-        // Same REVIEWABLE_STATUSES as the current case: a session still in progress
-        // was never handed to the pharmacist team, so it is not ours to read here.
+        // Cung REVIEWABLE_STATUSES voi ca hien tai: phien con dang lam
+        // chua tung duoc dua cho doi duoc si, nen khong phai cua ta doc tai day.
         $pastSessions = $phien->ma_nd
             ? PhienSangLoc::where('ma_nd', $phien->ma_nd)
                 ->where('ma_sl', '!=', $phien->ma_sl)
@@ -134,7 +134,7 @@ class HangChoSangLocController extends Controller
                 'status' => 'reviewed',
             ])->save();
 
-            // Mirror the answer into the chat thread so the customer sees a human replied.
+            // Chep cau tra loi sang phien chat de khach hang thay co nguoi tra loi.
             if ($phien->session_id) {
                 TinNhanChat::create([
                     'ma_nd' => $phien->ma_nd,
@@ -188,7 +188,7 @@ class HangChoSangLocController extends Controller
                 'reviewed_at' => now(),
                 'status' => 'reviewed',
                 'outcome' => 'refer_doctor',
-                // Referred cases must not carry a shopping list.
+                // Ca da chuyen tu van khong duoc kem danh sach mua sam.
                 'suggested_products' => [],
             ])->save();
 
@@ -223,8 +223,8 @@ class HangChoSangLocController extends Controller
     }
 
     /**
-     * Take ownership before writing an answer, so a second pharmacist opening the
-     * same case is told it is taken instead of duplicating the reply.
+     * Nhan phan cong truoc khi viet cau tra loi, nen duoc si thu hai mo cung
+     * ca se duoc bao la da co nguoi nhan thay vi tra loi trung.
      */
     public function claim(int $MaSL): RedirectResponse
     {
@@ -259,12 +259,12 @@ class HangChoSangLocController extends Controller
     }
 
     /**
-     * Prefill the reply textarea with an AI draft.
+     * Dien truoc o tra loi bang ban soan AI.
      *
-     * POST-only and never persisted: the draft comes back through `withInput()`, so
-     * `old('pharmacist_note')` fills the existing form and the pharmacist still has
-     * to read, edit and submit it. `validatedNote()` stays the only trust boundary.
-     * GET would also write a `health_profile_accessed` audit row on every click.
+     * Chi POST va khong bao gio luu: ban soan tro ve qua `withInput()`, nen
+     * `old('pharmacist_note')` dien form hien co va duoc si van phai
+     * doc, sua va gui no. `validatedNote()` van la ranh gioi tin duy nhat.
+     * GET con ghi row kiem toan `health_profile_accessed` moi lan click.
      */
     public function draft(Request $request, int $MaSL, SangLocAiSoanLoiService $draftService): RedirectResponse
     {
@@ -278,8 +278,8 @@ class HangChoSangLocController extends Controller
             ->where('ma_sl', $MaSL)
             ->firstOrFail();
 
-        // Same gates as reply(): an already-answered or someone else's case must not
-        // burn a provider call.
+        // Cung gate voi reply(): ca da tra loi hoac cua nguoi khac khong duoc
+        // ton mot lan goi nha cung cap.
         if ($phien->status !== 'pending_pharmacist') {
             return $this->draftError($MaSL, __('messages.pharmacist.error_already_reviewed'));
         }
@@ -331,7 +331,7 @@ class HangChoSangLocController extends Controller
     }
 
     /**
-     * @return array<string, string> Vietnamese label => readable answer
+     * @return array<string, string> nhan tieng Viet => cau tra loi doc duoc
      */
     protected function labelledAnswers(PhienSangLoc $phien): array
     {
@@ -368,7 +368,7 @@ class HangChoSangLocController extends Controller
     }
 
     /**
-     * Matched symptoms are stored as codes; the pharmacist needs the Vietnamese names.
+     * Trieu chung da khop duoc luu duoi dang ma; duoc si can ten tieng Viet.
      */
     protected function symptomNames(PhienSangLoc $phien): array
     {

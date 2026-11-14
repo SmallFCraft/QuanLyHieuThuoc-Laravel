@@ -412,7 +412,7 @@ class ChuanHoaTimKiemGiongNoi
      * de "khau trang y te" (0 san pham co ca 4 tu trong TEN) van tim duoc qua
      * ingredients_folded. Cong nay chi quyet dinh CO, khong quyet dinh chuoi tra ve.
      *
-     * Do tren catalog that 2026-09-02: lies 33 -> 14, confident-ma-catalog-rong
+     * Do tren catalog that 2026-09-02: ket qua sai 33 -> 14, confident-ma-catalog-rong
      * 15 -> 1, coverage giu nguyen 55/94, 4 ca dung bi ha co oan.
      */
     private function tuCungXuatHien(string $term): bool

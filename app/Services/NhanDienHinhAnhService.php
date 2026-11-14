@@ -15,19 +15,20 @@ use Intervention\Image\ImageManager;
 class NhanDienHinhAnhService
 {
     /**
-     * Minimum identifying evidence before a catalog product may be reported as
-     * the product on the image.
+     * Luong bang chung nhan dien toi thieu truoc khi mot san pham trong danh muc
+     * duoc bao la san pham tren anh.
      */
     protected const IDENTITY_MATCH_MIN_SCORE = 30;
 
     /**
-     * Required score gap over the best differently-named rival, so a coin-flip
-     * between two products is reported as "not found" instead of a guess.
+     * Khoang cach diem bat buoc so voi doi thu ten khac tot nhat, de mot lua chon
+     * 50/50 giua hai san pham duoc bao la "khong tim thay" chu khong phai doan.
      */
     protected const IDENTITY_MATCH_MIN_MARGIN = 12;
 
     /**
-     * Tokens that appear across most catalog rows, so they never identify a product.
+     * Cac token xuat hien trong phan lon dong danh muc, nen chung khong bao gio
+     * xac dinh duoc mot san pham.
      */
     protected const WEAK_IDENTITY_TOKENS = [
         'vitamin', 'vitamins', 'thuoc', 'duoc', 'pham', 'san', 'hang', 'khoang', 'chat',
@@ -39,19 +40,19 @@ class NhanDienHinhAnhService
     protected AiProviderService $aiProviderService;
 
     /**
-     * MaAnh of the row luuAnh() just wrote, so the caller can link the chat turn
-     * to the bytes on disk. Chat history needs that link to re-render the upload after
-     * a reload — the live bubble uses a blob: URL that dies with the page.
+     * MaAnh cua dong luuAnh() vua ghi, de caller co the lien ket luot chat
+     * voi cac byte tren dia. Lich su chat can lien ket nay de render lai anh tai
+     * len sau khi tai lai trang — bubble truc tiep dung blob: URL chet theo trang.
      */
     protected ?int $maAnhLuuCuoi = null;
 
     /**
-     * MaAnh of the row luuAnh() just wrote, so the caller can link the chat turn
-     * to the bytes on disk. Chat history needs that link to re-render the upload after
-     * a reload — the live bubble uses a blob: URL that dies with the page.
+     * MaAnh cua dong luuAnh() vua ghi, de caller co the lien ket luot chat
+     * voi cac byte tren dia. Lich su chat can lien ket nay de render lai anh tai
+     * len sau khi tai lai trang — bubble truc tiep dung blob: URL chet theo trang.
      *
-     * Read it after ANY outcome: the file is stored before analysis runs, so a rejected
-     * or unreadable image still has something to show.
+     * Doc no SAU MOI ket qua: file duoc luu truoc khi phan tich chay, nen mot anh
+     * bi tu choi hoac khong doc duoc van co cai gi do de hien thi.
      */
     public function maAnhLuuCuoi(): ?int
     {
@@ -72,7 +73,7 @@ class NhanDienHinhAnhService
     }
 
     /**
-     * Process a prescription image using the configured AI provider.
+     * Xu ly anh don thuoc bang nha cung cap AI da cau hinh.
      *
      * @param UploadedFile $anh
      * @param int $userId
@@ -105,7 +106,7 @@ class NhanDienHinhAnhService
             $processingTime = (microtime(true) - $startTime) * 1000;
             $this->markLatestImageAnalysisResult($userId, 'prescription', $analysisResult, $matched);
             
-            // Log audit
+            // Ghi nhat ky kiem toan
             $this->nhatKyKiemToanService->ghi(
                 action: 'chatbot_image_processed',
                 modelType: AnhChatbot::class,
@@ -165,7 +166,7 @@ class NhanDienHinhAnhService
     }
 
     /**
-     * Process a receipt image using the configured AI provider.
+     * Xu ly anh hoa don bang nha cung cap AI da cau hinh.
      *
      * @param UploadedFile $anh
      * @param int $userId
@@ -198,7 +199,7 @@ class NhanDienHinhAnhService
             $processingTime = (microtime(true) - $startTime) * 1000;
             $this->markLatestImageAnalysisResult($userId, 'receipt', $analysisResult, $matched);
             
-            // Log audit
+            // Ghi nhat ky kiem toan
             $this->nhatKyKiemToanService->ghi(
                 action: 'chatbot_image_processed',
                 modelType: AnhChatbot::class,
@@ -258,11 +259,11 @@ class NhanDienHinhAnhService
     }
 
     /**
-     * Analyze image using the configured AI provider.
+     * Phan tich anh bang nha cung cap AI da cau hinh.
      *
-     * @param string $imagePath Absolute path to the image file
-     * @param string $type Image type (prescription or receipt)
-     * @return array Analysis result with 'products' and 'description'
+     * @param string $imagePath Duong dan tuyet doi den file anh
+     * @param string $type Loai anh (prescription hoac receipt)
+     * @return array Ket qua phan tich gom 'products' va 'description'
      * @throws \Exception
      */
     protected function analyzeImageWithProvider(string $imagePath, string $type): array
@@ -313,7 +314,7 @@ class NhanDienHinhAnhService
         }
     }
     /**
-     * Build prompt for provider vision based on image type.
+     * Xay dung prompt cho vision cua nha cung cap theo loai anh.
      *
      * @param string $type
      * @return string
@@ -386,22 +387,22 @@ PROMPT;
     }
 
     /**
-     * Parse provider vision response text into structured data.
+     * Phan tich van ban tra loi cua provider vision thanh du lieu co cau truc.
      *
      * @param string $responseText
      * @return array
      */
     protected function parseVisionProviderResponse(string $responseText): array
     {
-        // Try to extract JSON from the response
+        // Co thu trich xuat JSON tu cau tra loi
         $jsonText = trim($responseText);
-        
-        // Remove markdown code blocks if present
+
+        // Go bo cac markdown code block neu co
         if (preg_match('/```(?:json)?\s*([\s\S]*?)```/', $jsonText, $matches)) {
             $jsonText = trim($matches[1]);
         }
-        
-        // Try direct JSON parse
+
+        // Co thu parse JSON truc tiep
         $parsed = json_decode($jsonText, true);
         
         if (json_last_error() === JSON_ERROR_NONE && is_array($parsed)) {
@@ -414,7 +415,7 @@ PROMPT;
             ];
         }
         
-        // Try to find JSON object in the text
+        // Co thu tim object JSON trong van ban
         if (preg_match('/\{[\s\S]*\}/', $jsonText, $jsonMatch)) {
             $parsed = json_decode($jsonMatch[0], true);
             
@@ -442,7 +443,7 @@ PROMPT;
     }
 
     /**
-     * Resize and normalize the image before sending it to the AI provider.
+     * Resize va chuan hoa anh truoc khi gui cho nha cung cap AI.
      *
      * @param string $imagePath
      * @return array{0: string, 1: string}
@@ -481,12 +482,12 @@ PROMPT;
     }
 
     /**
-     * Store uploaded image to local disk.
+     * Luu anh tai len vao local disk.
      *
      * @param UploadedFile $anh
      * @param int $userId
      * @param string $type
-     * @return string Absolute path to stored image
+     * @return string Duong dan tuyet doi den anh da luu
      */
     protected function luuAnh(UploadedFile $anh, int $userId, string $type): string
     {
@@ -517,9 +518,9 @@ PROMPT;
 
         $this->maAnhLuuCuoi = (int) $stored->ma_anh;
 
-        // Resolve through the disk rather than storage_path(): the hardcoded root
-        // duplicated filesystems.local and made Storage::fake() unusable, so every
-        // upload test wrote into the real storage directory.
+        // Resolve qua disk thay vi storage_path(): root hardcode trung lap voi
+        // filesystems.local va lam Storage::fake() vo dung, nen moi test upload
+        // deu ghi vao thu muc storage that.
         return Storage::disk('local')->path($path);
     }
 
@@ -583,7 +584,7 @@ PROMPT;
     }
 
     /**
-     * Match parsed products against the database.
+     * Khop cac san pham da parse voi database.
      *
      * @param array $parsedProducts
      * @return array
@@ -591,15 +592,15 @@ PROMPT;
     public function khopSanPham(array $parsedProducts): array
     {
         $matched = [];
-        
+
         foreach ($parsedProducts as $parsedProduct) {
             $productName = $parsedProduct['name'] ?? '';
-            
+
             if (empty($productName)) {
                 continue;
             }
-            
-            // Search for product in database with provider-extracted context.
+
+            // Tim san pham trong database kem ngu canh provider da trich xuat.
             $sanPham = $this->findProductByParsedData($parsedProduct);
             
             if ($sanPham) {
@@ -621,7 +622,7 @@ PROMPT;
                     'confidence' => $this->calculateMatchConfidenceFromParsedData($parsedProduct, $sanPham)
                 ];
             } else {
-                // SanPham not found
+                // Khong tim thay SanPham
                 $matched[] = [
                     'parsed_name' => $productName,
                     'matched' => false,
@@ -638,9 +639,9 @@ PROMPT;
     }
     
     /**
-     * Find product by name with fuzzy matching.
+     * Tim san pham theo ten voi fuzzy matching.
      *
-     * @param string $name SanPham name to search
+     * @param string $name Ten SanPham can tim
      * @return \App\Models\SanPham|null
      */
     protected function findProductByParsedData(array $parsedProduct): ?SanPham
@@ -650,21 +651,21 @@ PROMPT;
             return null;
         }
 
-        // Clean the name: remove brand names, dosage, common words
+        // Don ten: bo ten thuong mai, lieu luong, tu thong thuong
         $cleanName = $this->cleanProductName($name);
-        
-        // Try exact match first
+
+        // Co thu khop chinh xac truoc
         $sanPham = SanPham::notExpired()
             ->where('so_luong_ton', '>', 0)
             ->where('ten', 'LIKE', $name)
             ->FEFO()
             ->first();
-            
+
         if ($sanPham) {
             return $sanPham;
         }
-        
-        // Try partial match with cleaned name
+
+        // Co thu khop mot phan voi ten da don
         $sanPham = SanPham::notExpired()
             ->where('so_luong_ton', '>', 0)
             ->where(function($query) use ($name, $cleanName) {
@@ -675,8 +676,8 @@ PROMPT;
             ->FEFO()
             ->first();
 
-        // "Vitamin A" must not settle for "Vitamin C 1000mg" just because the
-        // cleaned name is a substring of it.
+        // "Vitamin A" khong duoc an xong voi "Vitamin C 1000mg" chi vi ten da don
+        // la mot substring cua no.
         if ($sanPham && !$this->conflictsWithParsedProduct($parsedProduct, $sanPham)) {
             return $sanPham;
         }
@@ -686,11 +687,11 @@ PROMPT;
             return $scoredProduct;
         }
         
-        // Try word-by-word matching with cleaned name.
-        // Require at least 2 meaningful words (>2 chars) so we don't return
-        // a generic match when the differentiating tokens are too short
-        // (e.g. "Vitamin A-D" -> ["vitamin", "a", "d"] should NOT match any
-        // "Vitamin *" product just because of the shared "vitamin" word).
+        // Co thu khop tung tu voi ten da don.
+        // Yeu cau it nhat 2 tu co nghia (>2 ky tu) de khong tra ve mot khop
+        // chung chung khi cac token phan biet qua ngan
+        // (vi du "Vitamin A-D" -> ["vitamin", "a", "d"] KHONG duoc khop bat ky
+        // san pham "Vitamin *" nao chi vi tu "vitamin" dung chung).
         $words = explode(' ', $cleanName);
         $meaningfulWords = array_values(array_filter(
             $words,
@@ -717,7 +718,7 @@ PROMPT;
     }
 
     /**
-     * True when the catalog row clearly is not what the image shows.
+     * Dung khi dong danh muc ro rang khong phai san pham ma anh the hien.
      */
     protected function conflictsWithParsedProduct(array $parsedProduct, SanPham $sanPham): bool
     {
@@ -757,10 +758,10 @@ PROMPT;
             return null;
         }
 
-        // A near-tie between two different products means the image data does not
-        // identify either of them. Reporting one as "found in stock" would be a
-        // guess, so leave it unmatched and let the caller offer suggestions.
-        // Same-name rows (different batches) are not rivals - FEFO already picked one.
+        // Gan nhu hoa nhau giua hai san pham khac nhau nghia la du lieu anh khong
+        // xac dinh duoc san pham nao trong hai san pham. Bao mot trong hai la "con
+        // trong kho" se la mot doan doan, nen de no khop va de caller dua ra goi y.
+        // Cac dong cung ten (lo khac nhau) khong phai doi thu - FEFO da chon mot dong.
         $bestName = $this->normalizeProductText($best['product']->ten);
         $rival = $candidates
             ->first(fn (array $candidate): bool => $this->normalizeProductText($candidate['product']->ten) !== $bestName);
@@ -781,7 +782,7 @@ PROMPT;
     }
 
     /**
-     * Fields that identify which product the image shows.
+     * Cac truong xac dinh san pham ma anh the hien.
      */
     protected function buildProviderIdentityText(array $parsedProduct): string
     {
@@ -789,9 +790,9 @@ PROMPT;
     }
 
     /**
-     * Fields that only describe the product's purpose. Useful for suggestions,
-     * but far too generic to prove identity - every supplement in the catalog
-     * shares wording like "bo sung", "tang cuong mien dich" or "uong 1 vien moi ngay".
+     * Cac truong chi mo ta cong dung cua san pham. Huu ich cho goi y, nhung qua
+     * chung chung de chung minh danh tinh — moi vi bo sung trong danh muc deu
+     * chia se cach dien dat nhu "bo sung", "tang cuong mien dich" hay "uong 1 vien moi ngay".
      */
     protected function buildProviderContextText(array $parsedProduct): string
     {
@@ -843,8 +844,8 @@ PROMPT;
     }
 
     /**
-     * Score a candidate on identifying evidence only. Returns 0 when the image
-     * and the product clearly describe different things.
+     * Cham diem ung cu vien chi tren bang chung nhan dien. Tra ve 0 khi anh va
+     * san pham ro rang mo ta hai thu khac nhau.
      */
     protected function scoreProductIdentity(array $parsedProduct, array $identityTokens, SanPham $sanPham): int
     {
@@ -900,8 +901,8 @@ PROMPT;
     }
 
     /**
-     * "Vitamin A" and "Vitamin C 1000mg" are different products; a shared word
-     * "vitamin" must never make them match.
+     * "Vitamin A" va "Vitamin C 1000mg" la hai san pham khac nhau; tu chung
+     * "vitamin" khong bao gio duoc lam chung khop nhau.
      */
     protected function hasVitaminLetterConflict(string $normalizedIdentityText, string $normalizedProductText): bool
     {
@@ -926,9 +927,10 @@ PROMPT;
     }
 
     /**
-     * Loose score used for "similar product" suggestions only. Identity evidence
-     * dominates, purpose/category overlap breaks ties, and products from the same
-     * family (e.g. another vitamin) outrank unrelated supplements.
+     * Diem long dung cho cac goi y "san pham tuong tu" thoi. Bang chung nhan dien
+     * uu tien cao nhat, phan cong dung/danh muc trung lap dung de phan thang thua,
+     * va cac san pham cung ho (vi du mot vitamin khac) xep tren cac vi bo sung
+     * khong lien quan.
      */
     protected function scoreProductCandidate(array $parsedProduct, string $queryText, array $queryTokens, SanPham $sanPham): int
     {
@@ -944,9 +946,9 @@ PROMPT;
             $sanPham->danhMuc?->ten,
         ])));
 
-        // Family affinity is judged on name/ingredients only: every supplement in
-        // the catalog shares the category name "Vitamin va khoang chat", so using
-        // the category here would give the bonus to all of them equally.
+        // Do than thiety cung ho duoc cham tren ten/hoat chat thoi: moi vi bo sung
+        // trong danh muc deu chia se ten danh muc "Vitamin va khoang chat", nen dung
+        // danh muc tai day se tra thuong cho tat ca nhu nhau.
         $productIdentityText = $this->normalizeProductText(implode(' ', array_filter([
             $sanPham->ten,
             $sanPham->thanh_phan,
@@ -980,8 +982,8 @@ PROMPT;
     {
         $text = mb_strtolower($text, 'UTF-8');
         $text = str_replace(['đ', 'Đ'], ['d', 'd'], $text);
-        // Fold diacritics so "Bo sung kem" and "bo sung kem" compare equal on
-        // both the parsed and the catalog side.
+        // Fold dau de "Bo sung kem" va "bo sung kem" so sanh bang nhau tren
+        // ca hai ben: phan da phan tich va phan catalog.
         $text = Str::ascii($text);
         $text = preg_replace('/(\d+)\s*(mg|g|ml|mcg|iu)\b/u', '$1 $2', $text) ?? $text;
         $text = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $text) ?? $text;
@@ -1016,37 +1018,37 @@ PROMPT;
     }
     
     /**
-     * Clean product name by removing brand names, dosage, and common words.
+     * Lam sach ten san pham bang cach bo ten thuong hieu, lieu luong va cac tu pho bien.
      *
      * @param string $name
      * @return string
      */
     protected function cleanProductName(string $name): string
     {
-        // Convert to lowercase for processing
+        // Chuyen ve chu thuong de xu ly
         $cleaned = mb_strtolower($name, 'UTF-8');
 
-        // Normalize separators (hyphen, en-dash, em-dash, ampersand, plus, slash)
-        // to spaces so "Vitamin A-D", "Vitamin A&D", "Vitamin A+D" tokenize
-        // consistently.
+        // Chuan hoa cac ky tu phan cach (gach noi, en-dash, em-dash, dau &, dau cong, gach cheo)
+        // thanh khoang trang de "Vitamin A-D", "Vitamin A&D", "Vitamin A+D" duoc tach token
+        // nhat quan.
         $cleaned = preg_replace('/[-–—&+\/]/u', ' ', $cleaned);
 
-        // Remove common brand names
+        // Bo cac ten thuong hieu pho bien
         $brands = ['mylan', 'teva', 'pfizer', 'novartis', 'roche', 'sanofi', 'glaxo', 'bayer'];
         foreach ($brands as $brand) {
             $cleaned = str_replace($brand, '', $cleaned);
         }
         
-        // Remove dosage patterns (50mg, 500mg, 10ml, etc.)
+        // Bo cac mau lieu luong (50mg, 500mg, 10ml, v.v.)
         $cleaned = preg_replace('/\d+\s*(mg|g|ml|mcg|iu|%)/i', '', $cleaned);
-        
-        // Remove common words
+
+        // Bo cac tu pho bien
         $commonWords = ['tablets', 'tablet', 'viên', 'vỉ', 'hộp', 'box', 'pack'];
         foreach ($commonWords as $word) {
             $cleaned = str_replace($word, '', $cleaned);
         }
         
-        // Remove extra spaces
+        // Bo khoang trang thua
         $cleaned = preg_replace('/\s+/', ' ', $cleaned);
         $cleaned = trim($cleaned);
         
@@ -1054,11 +1056,11 @@ PROMPT;
     }
     
     /**
-     * Calculate match confidence score.
+     * Tinh diem confidence cua viec khop.
      *
-     * @param string $parsedName Parsed product name
-     * @param string $actualName Actual product name from database
-     * @return float Confidence score (0-1)
+     * @param string $parsedName Ten san pham da phan tich
+     * @param string $actualName Ten san pham that tu database
+     * @return float Diem confidence (0-1)
      */
     protected function calculateMatchConfidenceFromParsedData(array $parsedProduct, SanPham $sanPham): float
     {
@@ -1077,17 +1079,17 @@ PROMPT;
         $parsedLower = mb_strtolower($parsedName, 'UTF-8');
         $actualLower = mb_strtolower($actualName, 'UTF-8');
         
-        // Exact match
+        // Khop chinh xac
         if ($parsedLower === $actualLower) {
             return 1.0;
         }
-        
-        // Contains match
+
+        // Khop chua ben trong
         if (strpos($actualLower, $parsedLower) !== false || strpos($parsedLower, $actualLower) !== false) {
             return 0.8;
         }
-        
-        // Word overlap
+
+        // Trung lap giua cac tu
         $parsedWords = explode(' ', $parsedLower);
         $actualWords = explode(' ', $actualLower);
         $commonWords = array_intersect($parsedWords, $actualWords);

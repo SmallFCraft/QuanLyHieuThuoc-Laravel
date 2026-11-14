@@ -13,7 +13,7 @@ use Illuminate\Support\ServiceProvider;
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Dang ky bat ky dich vu ung dung nao.
      */
     public function register(): void
     {
@@ -21,15 +21,15 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Bootstrap any application services.
+     * Khoi dong bat ky dich vu ung dung nao.
      */
     public function boot(): void
     {
         SanPham::observe(SanPhamObserver::class);
 
         View::composer(['layouts.app', 'layouts.guest'], function ($view) {
-            // browsable(): the dropdown used to list every category, including any
-            // with nothing in stock — those opened an empty product page.
+            // browsable(): dropdown truoc day liet ke moi danh muc, ke ca nhung
+            // danh muc khong con ton kho — chung mo ra trang san pham trong.
             $view->with('navCategories', Cache::remember(
                 DanhMuc::NAV_CACHE_KEY,
                 now()->addMinutes(10),

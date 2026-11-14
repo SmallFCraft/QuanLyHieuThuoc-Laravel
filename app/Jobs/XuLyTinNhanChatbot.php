@@ -11,29 +11,29 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Run one chatbot turn outside the web request.
+ * Chay mot luot chatbot ngoai web request.
  *
- * This is where the whole latency fix lives: the AI call can hold a PHP process
- * for AI_TIMEOUT plus the fallback provider, and `artisan serve` has exactly one
- * process, so doing it inline blocks every other page for the duration.
+ * Toan bo bản sửa do tre nam o day: loi goi AI co the giu mot tien trinh PHP trong
+ * AI_TIMEOUT cong nha cung cap du phong, con `artisan serve` chi co dung mot tien
+ * trinh, nen chay inline se chan moi trang khac trong suot thoi gian do.
  *
- * The job owns the complete turn — validation, the provider call, and writing the
- * `chat_messages` rows — so the HTTP layer has no branch of its own to keep in
- * sync. On the `sync` queue driver this runs inside dispatch(), which is why a
- * worker-less install and the test suite behave exactly as they did before.
+ * Cong viec so huu tron ven mot luot — kiem tra du lieu, loi goi nha cung cap, va
+ * ghi cac dong `chat_messages` — nen tang HTTP khong co nhanh rieng nao phai giu
+ * dong bo. Tren queue driver `sync`, viec nay chay ben trong dispatch(), do do mot
+ * cau hinh khong co worker va bo test hanh xu dung nhu truoc day.
  */
 class XuLyTinNhanChatbot implements ShouldQueue
 {
     use Queueable;
 
     /**
-     * One attempt on purpose. AiProviderService already retries across providers,
-     * and a queue-level retry would re-send the same message — risking a second
-     * assistant reply for one customer turn.
+     * Mot lan thu la co chu y. AiProviderService da retry qua cac nha cung cap,
+     * va retry cap hang doi se gui lai cung mot tin nhan — nguy co mot cau tra loi
+     * assistant thu hai cho cung mot luot khach.
      */
     public int $tries = 1;
 
-    /** Above the worst case of primary + fallback provider timeouts. */
+    /** Cao hon truong hop xau nhat cua timeout nha cung cap chinh + du phong. */
     public int $timeout = 120;
 
     public function __construct(public string $uuid)
@@ -58,15 +58,15 @@ class XuLyTinNhanChatbot implements ShouldQueue
         try {
             $response = $chatbot->processMessage($message, $userId, (array) ($payload['context'] ?? []));
 
-            // The customer pressed stop while the provider was answering. Storing the
-            // turn now would put a reply to a withdrawn question in the transcript, so
-            // the answer is dropped and the `cancelled` row is left as it is.
+            // Khach nhan dung trong luc nha cung cap dang tra loi. Luu luot bay gio se
+            // dua cau tra loi cho mot cau hoi da rut vao bang chuyen thoai, nen cau
+            // tra loi bi bo va dong `cancelled` duoc giu nguyen nhu vay.
             if ($job->fresh()?->status === 'cancelled') {
                 return;
             }
 
-            // A rejected message is not an error: nothing is stored, exactly as
-            // before, and the customer sees the reason.
+            // Mot tin nhan bi tu choi khong phai loi: khong luu gi, giong het
+            // nhu truoc, va khach thay ly do.
             if (!isset($response['validation_error'])) {
                 $this->storeTurn($userId, $sessionId, $message, $response);
             }
@@ -77,8 +77,8 @@ class XuLyTinNhanChatbot implements ShouldQueue
                 return;
             }
 
-            // The transcript must still show what the customer asked and that it
-            // failed, otherwise a support request is untraceable.
+            // Bang chuyen thoai van phai hien nhung gi khach da hoi va viec no that
+            // bai, neu khong mot yeu cau ho tro se khong the truy vet.
             $this->storeFailure($userId, $sessionId, $message);
 
             Log::error('Chatbot message processing failed', [
@@ -148,9 +148,9 @@ class XuLyTinNhanChatbot implements ShouldQueue
                 'role' => 'system',
                 'content' => 'Không thể xử lý tin nhắn do lỗi hệ thống.',
                 'products' => null,
-                // A reference, not the provider's words: the raw message carries the
-                // upstream request id and error envelope, and this row belongs to the
-                // customer. Log::error below records the full text against the same uuid.
+                // Mot tham chieu, chu khong phai loi cua nha cung cap: tin nhan tho mang
+                // request id upstream va error envelope, va dong nay thuoc ve
+                // khach. Log::error ben duoi ghi lai van ban day so voi cung uuid.
                 'metadata' => [
                     'error_code' => 'ai_job_failed',
                     'ai_job_uuid' => $this->uuid,

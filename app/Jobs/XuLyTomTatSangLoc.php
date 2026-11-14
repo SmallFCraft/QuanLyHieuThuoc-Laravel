@@ -11,14 +11,14 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Write the detailed result-page briefing outside the request.
+ * Viet briefing chi tiet cho trang ket qua ngoai web request.
  *
- * Deferred for the same reason as the advice rewrite: it runs after hoanTat() and
- * touches only `ai_briefing`/`ai_briefing_status`, so the conclusion the customer
- * reads cannot change once this lands. The page polls and reloads when it does.
+ * Tra lai cung ly do voi viec viet lai loi khuyen: no chay sau hoanTat() va
+ * chi cham vao `ai_briefing`/`ai_briefing_status`, nen ket luan ma khach doc
+ * khong the doi khi job nay hoan tat. Trang poll va tai lai khi dieu do xay ra.
  *
- * The timeout is generous because the call asks for six sections at once and was
- * measured well past the wizard's synchronous budget.
+ * Timeout khoang rong vi loi goi xin sau section mot luc va duoc do cham qua
+ * budget dong bo cua wizard.
  */
 class XuLyTomTatSangLoc implements ShouldQueue
 {
@@ -51,8 +51,8 @@ class XuLyTomTatSangLoc implements ShouldQueue
         }
 
         try {
-            // generate() never throws and records its own status, so this reports
-            // whether the seam ran, not whether the model was any good.
+            // generate() khong bao gio throw va tu ghi trang thai rieng, nen dieu nay bao
+            // cao viec seam co chay hay khong, chu khong phai model co tot hay khong.
             $briefing->sinhNoiDung($phien);
 
             $jobs->markDone($job, ['ai_briefing_status' => $phien->refresh()->ai_briefing_status]);

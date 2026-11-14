@@ -17,7 +17,7 @@ use Illuminate\View\View;
 class NewPasswordController extends Controller
 {
     /**
-     * Display the password reset view.
+     * Hien thi view dat lai mat khau.
      */
     public function create(Request $request): View
     {
@@ -25,7 +25,7 @@ class NewPasswordController extends Controller
     }
 
     /**
-     * Handle an incoming new password request.
+     * Xu ly mot request mat khau moi den.
      *
      * @throws ValidationException
      */
@@ -37,9 +37,9 @@ class NewPasswordController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
+        // Tai day se thu dat lai mat khau cua nguoi dung. Neu thanh cong se
+        // cap nhat mat khau tren model NguoiDung that va luu vao
+        // database. Neu khong se phan tich loi va tra ve response.
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (NguoiDung $nguoiDung) use ($request) {
@@ -52,9 +52,9 @@ class NewPasswordController extends Controller
             }
         );
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
+        // Neu mat khau duoc dat lai thanh cong, se redirect nguoi dung ve
+        // view trang chu da xac thuc cua app. Neu co loi co the
+        // redirect ho ve cho ho den voi thong bao loi cua ho.
         return $status == Password::PASSWORD_RESET
                     ? redirect()->route('login')->with('status', __($status))
                     : back()->withInput($request->only('email'))

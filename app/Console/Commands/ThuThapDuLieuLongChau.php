@@ -82,7 +82,7 @@ class ThuThapDuLieuLongChau extends Command
                         $importer->nhap($product);
                         $written++;
                     } catch (Throwable $e) {
-                        // A single bad row must not end a run of thousands.
+                        // Mot dong loi duy nhat khong duoc ket thuc mot lan chay cua hang nghin dong.
                         $writeErrors++;
 
                         Log::warning('Long Châu product could not be imported', [
@@ -100,8 +100,8 @@ class ThuThapDuLieuLongChau extends Command
 
             return self::FAILURE;
         } finally {
-            // The progress bar only advances on usable products, so it lands short
-            // of the total whenever pages are skipped.
+            // Progress bar chi tien khi co san pham dung duoc, nen no luon dung truoc
+            // tong so khi co trang bi bo qua.
             $bar->finish();
             $this->newLine(2);
         }
@@ -146,10 +146,10 @@ class ThuThapDuLieuLongChau extends Command
     }
 
     /**
-     * Categories the run had to create. Long Chau spells the same section differently
-     * between branches ("Co - xuong - khop" under Thuoc, "Co xuong khop" under Thuc
-     * pham chuc nang); folding catches those, but a genuinely new section still needs
-     * a human to decide whether it belongs on the storefront as its own entry.
+     * Danh muc ma lan chay phai tao. Long Chau viet cung mot section khac nhau
+     * giua cac chi nhanh ("Co - xuong - khop" thuoc Thuoc, "Co xuong khop" thuoc Thuc
+     * pham chuc nang); fold bat duoc nhung truong hop do, nhung mot section hoan toan
+     * moi van can nguoi quyet dinh no co nam tren storefront nhu mot entry rieng hay khong.
      */
     private function reportNewCategories(NhapSanPhamService $importer, bool $dryRun): void
     {

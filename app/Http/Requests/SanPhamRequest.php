@@ -8,7 +8,7 @@ use Illuminate\Validation\Rule;
 class SanPhamRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Xac dinh nguoi dung co duoc phep thuc hien request nay.
      */
     public function authorize(): bool
     {
@@ -16,7 +16,7 @@ class SanPhamRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Cac luat kiem tra ap dung cho request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -51,7 +51,7 @@ class SanPhamRequest extends FormRequest
     }
 
     /**
-     * Get custom messages for validator errors.
+     * Thong bao tuy chinh cho cac loi cua validator.
      *
      * @return array<string, string>
      */

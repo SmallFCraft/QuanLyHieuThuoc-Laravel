@@ -15,7 +15,7 @@ class SanPhamController extends Controller
     private const PER_PAGE = 10;
 
     /**
-     * Display the public product catalog.
+     * Hien thi catalog san pham cong khai.
      */
     public function index(Request $request)
     {
@@ -65,7 +65,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Display a single product detail page.
+     * Hien thi trang chi tiet mot san pham.
      */
     public function show($maSanPham)
     {
@@ -73,7 +73,7 @@ class SanPhamController extends Controller
             ->notExpired()
             ->findOrFail($maSanPham);
 
-        // Increment views count
+        // Tang luot xem
         $sanPham->increment('luot_xem');
 
         $sanPhamLienQuan = SanPham::with('danhMuc')
@@ -89,7 +89,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Display products by category.
+     * Hien thi san pham theo danh muc.
      */
     public function byCategory(Request $request, $maDanhMuc)
     {
@@ -113,7 +113,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Search products by name or active ingredient.
+     * Tim kiem san pham theo ten hoac hoat chat.
      */
     public function search(Request $request)
     {
@@ -176,14 +176,14 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Get search suggestions for autocomplete.
+     * Lay goi y tim kiem cho autocomplete.
      */
     public function suggestions(Request $request)
     {
         $term = trim((string) $request->input('q', ''));
 
-        // mb_strlen, not strlen: "d" is two bytes, so a byte-length gate let a
-        // single-letter query through and matched most of the catalog.
+        // mb_strlen chu khong phai strlen: "d" la hai byte, nen gate theo do dai byte
+        // da de mot truy van mot ky tu di qua va khop gan ca catalog.
         if (mb_strlen($term) < 2 || SanPham::searchWords($term) === []) {
             return response()->json(['products' => [], 'categories' => []]);
         }
@@ -199,9 +199,9 @@ class SanPhamController extends Controller
 
         $folded = VietnameseText::fold($term);
 
-        // Filtered in PHP: category names need the same folding as products, and
-        // there are only a few dozen of them behind a cache, so a query per
-        // keystroke buys nothing.
+        // Loc trong PHP: ten danh muc can cung cach fold voi san pham, va chi co vai
+        // chuc danh muc phia sau mot cache, nen mot truy van moi lan go phim khong
+        // mua duoc gi.
         $danhMucs = $this->getFilterCategories()
             ->filter(fn ($danhMuc) => str_contains(VietnameseText::fold($danhMuc->ten), $folded))
             ->take(3)
@@ -229,10 +229,10 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Get cached categories for the public catalog filter.
+     * Lay danh muc tu cache cho bo loc catalog cong khai.
      *
-     * DanhMuc::scopeBrowsable() is shared with the header dropdown, so the sidebar
-     * and the nav always list the same categories in the same order.
+     * DanhMuc::scopeBrowsable() dung chung voi dropdown tren header, nen sidebar
+     * va nav luon liet ke cung cac danh muc cung thu tu.
      */
     protected function getFilterCategories()
     {

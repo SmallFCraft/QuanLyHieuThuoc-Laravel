@@ -20,7 +20,7 @@ class TonKhoController extends Controller
     }
 
     /**
-     * Display inventory list with FEFO sorting and expiration highlighting.
+     * Hien thi danh sach ton kho voi sap xep FEFO va lam noi bat ngay het han.
      */
     public function index(Request $request)
     {
@@ -28,9 +28,9 @@ class TonKhoController extends Controller
         $soNgay = min(max($request->integer('days', 30), 1), 365);
         $tuKhoa = $request->filled('q') ? $request->string('q')->trim()->toString() : null;
 
-        // Searching and filtering both run in SQL over the whole table, so the export
-        // (which does the same) returns exactly the rows the screen shows. A
-        // client-side DataTables search would only ever see the current page.
+        // Tim kiem va loc deu chay trong SQL tren ca bang, nen file xuat (lam cung mot
+        // dieu do) tra ve dung nhung dong ma man hinh hien. Mot tim kiem DataTables
+        // phia client chi bao gio thay trang hien tai.
         $sanPhams = SanPham::with('danhMuc')
             ->inventoryStatus($trangThai, $soNgay)
             ->search($tuKhoa)
@@ -44,7 +44,7 @@ class TonKhoController extends Controller
     }
 
     /**
-     * Display low stock products.
+     * Hien thi san pham ton kho thap.
      */
     public function lowStock()
     {
@@ -52,7 +52,7 @@ class TonKhoController extends Controller
     }
 
     /**
-     * Display products expiring soon.
+     * Hien thi san pham sap het han.
      */
     public function expiring(Request $request)
     {
@@ -79,7 +79,7 @@ class TonKhoController extends Controller
     }
 
     /**
-     * Process inventory adjustment.
+     * Xu ly dieu chinh ton kho.
      */
     public function adjust(Request $request)
     {

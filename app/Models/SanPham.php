@@ -21,7 +21,7 @@ class SanPham extends Model
     protected $primaryKey = 'ma_sp';
 
     /**
-     * The attributes that are mass assignable.
+     * Cac thuoc tinh cho phep gan hang loat.
      *
      * @var array<int, string>
      */
@@ -44,7 +44,7 @@ class SanPham extends Model
     ];
 
     /**
-     * The attributes that should be cast.
+     * Cac thuoc tinh nen ep kieu.
      *
      * @var array<string, string>
      */
@@ -70,9 +70,8 @@ class SanPham extends Model
             }
         });
 
-        // Kept in sync on every write rather than at the call sites, so a product
-        // created by the crawler, the admin form or a factory is searchable the
-        // same way.
+        // Giu dong bo o moi lan ghi thay vi tung noi goi, de san pham tao boi crawler,
+        // form quan tri hay factory deu duoc tim kiem cung mot cach.
         static::saving(function (SanPham $sanPham): void {
             if ($sanPham->isDirty('ten')) {
                 $sanPham->ten_khong_dau = VietnameseText::fold((string) $sanPham->ten);
@@ -85,7 +84,7 @@ class SanPham extends Model
     }
 
     /**
-     * Get the category that owns the product.
+     * Danh muc ma san pham thuoc ve.
      */
     public function danhMuc()
     {
@@ -93,7 +92,7 @@ class SanPham extends Model
     }
 
     /**
-     * Get the order items for the product.
+     * Cac chi tiet don hang chua san pham nay.
      */
     public function chiTietDonHangs()
     {
@@ -101,7 +100,7 @@ class SanPham extends Model
     }
 
     /**
-     * Get the batches for the product.
+     * Cac lo san pham cua san pham nay.
      */
     public function cacLo()
     {
@@ -109,8 +108,8 @@ class SanPham extends Model
     }
 
     /**
-     * Return stock from the synced column by default.
-     * If batches were already eager-loaded, prefer the in-memory aggregate.
+     * Tra ve ton kho tu cot da dong bo theo mac dinh.
+     * Neu cac lo da duoc eager-loaded, uu tong hop trong bo nho.
      *
      * @param mixed $value
      * @return int
@@ -125,7 +124,7 @@ class SanPham extends Model
     }
 
     /**
-     * Check if the product is expired.
+     * Kiem tra san pham da het han.
      *
      * @return bool
      */
@@ -135,9 +134,9 @@ class SanPham extends Model
     }
 
     /**
-     * Check if the product is expiring soon (within specified days).
+     * Kiem tra san pham sap het han (trong so ngay chi dinh).
      *
-     * @param int $days Number of days threshold (default: 180 days / 6 months)
+     * @param int $days Nguong so ngay (mac dinh: 180 ngay / 6 thang)
      * @return bool
      */
     public function isExpiringSoon(int $days = 180): bool
@@ -146,13 +145,13 @@ class SanPham extends Model
             return false;
         }
 
-        // Carbon 3 returns a signed difference, so calling diffInDays() on the later
-        // date yields a negative number and `<= $days` matched every future date.
+        // Carbon 3 tra ve hieu co dau, nen goi diffInDays() tren ngay muon hon se cho
+        // ket qua am va `<= $days` khop voi moi ngay tuong lai.
         return Carbon::now()->diffInDays($this->ngay_het_han, true) <= $days;
     }
 
     /**
-     * Check if the product has low stock.
+     * Kiem tra san pham co ton kho thap.
      *
      * @return bool
      */
@@ -162,7 +161,7 @@ class SanPham extends Model
     }
 
     /**
-     * Get the product price as whole Vietnamese dong.
+     * Gia san pham theo so dong Viet Nam nguyen.
      */
     public function getPriceVndAttribute(): int
     {
@@ -170,7 +169,7 @@ class SanPham extends Model
     }
 
     /**
-     * Store prices as whole Vietnamese dong to avoid fractional VND totals.
+     * Luu gia theo so dong Viet Nam nguyen de tranh tong VND co phan le.
      */
     public function setPriceAttribute($value): void
     {
@@ -178,7 +177,7 @@ class SanPham extends Model
     }
 
     /**
-     * Get formatted price in Vietnamese currency format.
+     * Gia da dinh dang theo dinh dang tien te Viet Nam.
      *
      * @return string
      */
@@ -188,7 +187,7 @@ class SanPham extends Model
     }
 
     /**
-     * Get formatted expiration date in Vietnamese format (dd/MM/yyyy).
+     * Ngay het han da dinh dang theo dinh dang Viet Nam (dd/MM/yyyy).
      *
      * @return string
      */
@@ -203,10 +202,10 @@ class SanPham extends Model
     }
 
     /**
-     * Shelf life for the storefront, the way pharmacy chains state it: "36 thang"
-     * from the date of manufacture. Kept in the unit the manufacturer published —
-     * rewriting 36 months as "3 nam" would no longer match the source label.
-     * Null when none was published, so callers hide the row instead of guessing.
+     * Han dung hien tren giao dien ban le, theo cach cac chui nha thuoc thuong ghi:
+     * "36 thang" ke tu ngay san xuat. Giu nguyen don vi nha san xuat cong bo — viet
+     * lai 36 thang thanh "3 nam" se khong con khop voi nhan goc. Null khi khong cong
+     * bo, nen noi goi an dong nay thay vi doan.
      */
     public function getShelfLifeTextAttribute(): ?string
     {
@@ -216,7 +215,7 @@ class SanPham extends Model
     }
 
     /**
-     * Get the product image URL.
+     * URL hinh anh san pham.
      *
      * @return string|null
      */
@@ -240,7 +239,7 @@ class SanPham extends Model
     }
 
     /**
-     * Scope a query to only include non-expired products.
+     * Gioi han truy van chi lay cac san pham chua het han.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -251,7 +250,7 @@ class SanPham extends Model
     }
 
     /**
-     * Scope a query to only include products expiring soon.
+     * Gioi han truy van chi lay cac san pham sap het han.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @param int $days
@@ -266,7 +265,7 @@ class SanPham extends Model
     }
 
     /**
-     * Scope a query to only include low stock products.
+     * Gioi han truy van chi lay cac san pham ton kho thap.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -277,7 +276,7 @@ class SanPham extends Model
     }
 
     /**
-     * Scope a query to order by FEFO (First Expired, First Out).
+     * Sap xep truy van theo FEFO (First Expired, First Out — het han truoc xuat truoc).
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -288,17 +287,16 @@ class SanPham extends Model
     }
 
     /**
-     * The customer-facing product search. Shared by the catalog screen, the search
-     * results page and the autocomplete endpoint so all three answer a query the
-     * same way.
+     * Tim kiem san pham phia khach hang. Chung bo trang catalog, trang ket qua tim
+     * kiem va endpoint autocomplete dung, de ca ba tra loi mot truy van cung mot cach.
      *
-     * Every word must match (AND, not OR). With a crawled catalog of thousands of
-     * rows, ORing the words of "thuoc ho cho tre" matched 2,875 of 3,132 products —
-     * a result set that size is indistinguishable from no filter at all.
+     * Moi tu phai khop (AND, khong phai OR). Voi catalog crawl nghin dong, OR cac tu
+     * cua "thuoc ho cho tre" khop 2.875 trong 3.132 san pham — bo ket qua dong den
+     * vay khong khac gi khong co bo loc.
      *
-     * Matching runs on the folded columns so an accent-free query works: the MySQL
-     * collation folds tone marks but not "d", so "dau dau" found nothing while
-     * "dau dau" found 30.
+     * So khop chay tren cac cot da fold de truy van khong dau van hoat dong: collation
+     * cua MySQL fold dau thanh nhung khong fold "d", nen "dau dau" khong ra gi trong
+     * khi "dau dau" ra 30 ket qua.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -311,9 +309,9 @@ class SanPham extends Model
             return $query;
         }
 
-        // Repeating a LIKE for a repeated word adds nothing, so the conditions are
-        // de-duplicated here rather than in searchWords() — the ranking below needs
-        // the phrase intact.
+        // Lap lai LIKE cho mot tu bi lap lai khong them gi, nen cac dieu kien duoc
+        // loai trung tai day thay vi trong searchWords() — bo xep hang ben duoi can
+        // nguyen cau tron ven.
         foreach (array_unique($words) as $word) {
             $like = '%' . self::escapeLike($word) . '%';
 
@@ -327,12 +325,12 @@ class SanPham extends Model
     }
 
     /**
-     * Rank a storefront search: whole phrase in the name first, then all words in
-     * the name, then anything left (an ingredient match).
+     * Xep hang ket qua tim kiem ban le: cu ca cum tu trong ten dau tien, roi moi tu
+     * trong ten, roi moi thu con lai (mot thanh phan khop).
      *
-     * Without this, "paracetamol" led with six products that never name it —
-     * they merely list it deep in their usage text — while the actual paracetamol
-     * products sat further down the page.
+     * Khong co dieu nay, "paracetamol" dan dau boi sau san pham khong he ghi ten no —
+     * chi neu no sau trong phan huong dan su dung — trong khi dung cac san pham
+     * paracetamol nam sat xuong duoi trang.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -347,9 +345,8 @@ class SanPham extends Model
 
         $phrase = self::escapeLike(implode(' ', $words));
 
-        // Starting with the phrase beats merely containing it: a search for
-        // "panadol" should open with "Panadol Extra", not a combination product
-        // that mentions it mid-name.
+        // Mo dau bang cum tu thang viec chi chua trong do: tim "panadol" phai mo dau
+        // bang "Panadol Extra", khong phai mot san pham ket hop chi nhac ten no o giua.
         $sql = 'CASE WHEN ten_khong_dau LIKE ? THEN 3 WHEN ten_khong_dau LIKE ? THEN 2 ';
         $bindings = [$phrase . '%', '%' . $phrase . '%'];
 
@@ -368,11 +365,11 @@ class SanPham extends Model
     }
 
     /**
-     * Folded query words, in the order typed. Single characters are dropped: one
-     * letter matches most of the catalog and says nothing about intent.
+     * Cac tu truy van da fold, theo thu tu nguoi go. Ky tu don bi loai: mot chu cai
+     * khop gan ca catalog va khong noi gi ve y dinh.
      *
-     * Repeats are kept — "dau dau" folds to "dau dau", and collapsing that to a
-     * single word would lose the phrase the ranking scores against.
+     * Tu lap lai duoc giu nguyen — "dau dau" fold ra van la "dau dau", va gop no ve
+     * mot tu duy nhat se mat cau ma bo xep hang dung de tinh diem.
      *
      * @return array<string>
      */
@@ -391,8 +388,8 @@ class SanPham extends Model
     }
 
     /**
-     * Neutralise LIKE wildcards typed by the customer. A bare "%" was matching the
-     * entire catalog and reading as a broken search.
+     * Vo hieu hoa cac ky tu dai dien LIKE ma khach go vao. Mot dau "%" tran chi
+     * khop ca catalog va doc nhu mot tim kiem bi loi.
      */
     private static function escapeLike(string $value): string
     {
@@ -400,9 +397,9 @@ class SanPham extends Model
     }
 
     /**
-     * The admin product search. Shared by the DataTables endpoint, the products
-     * export and the inventory screen/export so a searchable column added here
-     * cannot go missing from one of them.
+     * Tim kiem san pham phia quan tri. Chung bo endpoint DataTables, xuat san pham
+     * va man hinh ton kho cung xuat cua no, de mot cot tim kiem duoc them vao day
+     * khong the mat mat o mot trong nhung cho do.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -426,7 +423,7 @@ class SanPham extends Model
     }
 
     /**
-     * The inventory status filter, shared by the inventory screen and its export.
+     * Bo loc trang thai ton kho, chung bo man hinh ton kho va xuat cua no.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder

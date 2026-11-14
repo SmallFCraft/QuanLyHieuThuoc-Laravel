@@ -10,7 +10,7 @@ use Carbon\Carbon;
 class DonDepAnhMoCoi extends Command
 {
     /**
-     * The name and signature of the console command.
+     * Ten va chu ky cua lenh console.
      *
      * @var string
      */
@@ -24,7 +24,7 @@ class DonDepAnhMoCoi extends Command
     protected $description = 'Clean up orphaned product images from soft-deleted products';
 
     /**
-     * Execute the console command.
+     * Thuc thi lenh console.
      */
     public function handle(): int
     {

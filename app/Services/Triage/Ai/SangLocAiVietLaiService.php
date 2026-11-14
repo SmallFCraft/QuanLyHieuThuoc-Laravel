@@ -7,25 +7,25 @@ use App\Services\AiProviderService;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Rephrase the pharmacist-written advice into friendlier Vietnamese.
+ * Viet lai loi khuyen duoc si ban thanh tieng Viet than thien hon.
  *
- * The rewrite is stored in its own columns and rendered as a separate, labelled
- * block. `advice_given` and `safety_net` are never overwritten, so the
- * deterministic record stays reconstructible from `rule_id`.
+ * Ban viet lai duoc luu trong cot rieng va render thanh mot khoi rieng co nhan,
+ * va `advice_given` va `safety_net` khong bao gio bi ghi de, nen ban ghi xac dinh
+ * duoc phuc hoi tu `rule_id`.
  *
- * Emergency and urgent outcomes are excluded: those return pharmacist-written
- * guidance verbatim (the 115 number, the "no aspirin for suspected dengue" line),
- * and every word is load-bearing.
+ * Ket qua khan cap va can thiet bi loai tru: chung tra ve huong dan duoc si viet
+ * nguyen van (so 115, dong "khong aspirin khi nghi sot xuat huet"),
+ * va moi tu deu mang trong so.
  *
- * Neither the customer's free text nor any health-profile field is sent, which
- * makes prompt injection structurally unreachable here rather than merely unlikely.
+ * Khong gui van ban tu do cua khach hang hay mot truong ho so nao, dieu do
+ * lam prompt injection vo giai phap ve cau truc chu khong chi it kha nang xay ra.
  */
 class SangLocAiVietLaiService extends SangLocAiService
 {
     /**
-     * Outcomes whose advice must reach the customer exactly as the pharmacist wrote
-     * it. `pharmacist_review` is eligible: the customer now reads the AI answer first
-     * and asks for a human only if they want one, so that text is what they see.
+     * Ket qua co loi khuyen phai toi khach hang dung nhu duoc si da viet
+     * No. `pharmacist_review` du dieu kien: khach hang gio doc cau tra loi AI truoc
+     * va chi moi nguoi khi muon, nen van ban do la nhung gi ho thay.
      */
     private const VERBATIM_OUTCOMES = ['emergency', 'refer_doctor'];
 
@@ -37,8 +37,8 @@ class SangLocAiVietLaiService extends SangLocAiService
     }
 
     /**
-     * Its own budget, not the wizard's fail-fast one: this call always runs in a
-     * worker after the outcome is final, so a slow answer is still worth waiting for.
+     * Ngan sach rieng, chu khong phai fail-fast cua wizard: qua trinh goi nay luon chay trong
+     * worker sau khi ket qua chot, nen cau tra loi cham van dang cho.
      */
     protected function timeoutSeconds(): int
     {
@@ -46,10 +46,10 @@ class SangLocAiVietLaiService extends SangLocAiService
     }
 
     /**
-     * Whether this session's advice may be rephrased at all.
+     * Loi khuyen cua phien nay co duoc viet lai khong.
      *
-     * Public so the result page can tell "the rewrite is still coming" from "there
-     * will never be one", instead of re-deriving the rule from the outcome enum.
+     * Public de trang ket qua phan biet "ban viet lai van dang den" voi "se khong bao gio
+     * co", thay vi suy lai quy tac tu enum ket qua.
      */
     public function duDieuKien(PhienSangLoc $phien): bool
     {
@@ -59,10 +59,10 @@ class SangLocAiVietLaiService extends SangLocAiService
     }
 
     /**
-     * Write `ai_advice` / `ai_safety_net` / `ai_status` on the session.
+     * Ghi `ai_advice` / `ai_safety_net` / `ai_status` len phien.
      *
-     * Never throws: a failure leaves the columns null and the result page renders
-     * exactly as it does with the feature off.
+     * Khong bao gio nem loi: that bai de cot null va trang ket qua render
+     * dung nhu khi tinh nang off.
      */
     public function vietLai(PhienSangLoc $phien): void
     {
@@ -128,7 +128,7 @@ class SangLocAiVietLaiService extends SangLocAiService
     }
 
     /**
-     * Only rule-derived strings plus the outcome enum. No free text, no profile.
+     * Chi chuoi suy tu quy tac cong enum ket qua. Khong van ban tu do, khong ho so.
      */
     protected function buildPrompt(PhienSangLoc $phien): string
     {
@@ -152,8 +152,8 @@ class SangLocAiVietLaiService extends SangLocAiService
     }
 
     /**
-     * Enum -> plain Vietnamese, so the model knows the register without being told
-     * the outcome is negotiable. Reuses the label the result page already shows.
+     * Enum -> tieng Viet thuan, nen model biet phong cach chu khong duoc bao
+     * ket qua la co the danh gia lai. Tai dung nhan trang ket qua dang hien.
      */
     protected function outcomeLabel(?string $outcome): string
     {
@@ -172,12 +172,12 @@ class SangLocAiVietLaiService extends SangLocAiService
         $parts = preg_split('/NGƯỠNG CẦN ĐI KHÁM\s*:?/u', $rewrite, 2);
         $advice = $parts[0] ?? '';
 
-        // Everything before the LOI KHUYEN label is preamble the model echoed back —
-        // in practice the "Ket luan he thong:" line from the prompt, which then showed
-        // up verbatim on the result page. Anchoring at the start of the string was not
-        // enough, so drop whatever precedes the label wherever it appears.
-        // Byte offsets from PREG_OFFSET_CAPTURE, hence substr: the cut lands on a
-        // match boundary, so no multi-byte character is split.
+        // Moi thu truoc nhan LOI KHUYEN la phan dau model nga lai —
+        // thuc te la dong "Ket luan he thong:" tu prompt, no roi xuat hien
+        // nguyen van tren trang ket qua. Neo tai dau chuoi khong du,
+        // nen bo moi thu truoc nhan bat ke no xuat hien o dau.
+        // Offset byte tu PREG_OFFSET_CAPTURE, nen dung substr: lan cat cham dung
+        // bien khop, nen khong ky tu da byte nao bi cat doi.
         if (preg_match('/LỜI KHUYÊN\s*:?/u', $advice, $match, PREG_OFFSET_CAPTURE) === 1) {
             $advice = substr($advice, $match[0][1] + strlen($match[0][0]));
         }
@@ -189,8 +189,8 @@ class SangLocAiVietLaiService extends SangLocAiService
     }
 
     /**
-     * @param  array<int, string>  $expected  Source strings the rewrite must preserve
-     * @param  array<int, string>  $produced  Rewritten sections
+     * @param  array<int, string>  $expected  Chuoi nguoi ma ban viet lai phai giu
+     * @param  array<int, string>  $produced  Cac khoi da viet lai
      */
     protected function passesSafetyChecks(string $rewrite, array $expected, array $produced): bool
     {
@@ -202,19 +202,19 @@ class SangLocAiVietLaiService extends SangLocAiService
             return false;
         }
 
-        // A JSON answer means the model was steered off the task.
+        // Cau tra loi JSON co nghia model bi dan lo nhiem vu.
         if (json_decode($rewrite, true) !== null) {
             return false;
         }
 
-        // Markdown would render as literal characters: every display site uses
-        // {{ }} with white-space: pre-line and no markdown renderer.
+        // Markdown se render thanh ky tu nghien van ban: moi noi hien thi dung
+        // {{ }} voi white-space: pre-line va khong co bo render markdown.
         if (preg_match('/(\*\*|__|`|^\s{0,3}#{1,6}\s|\[[^\]]*\]\([^)]*\))/mu', $rewrite) === 1) {
             return false;
         }
 
-        // Every number in the source must survive. Dropping "39" or "3 ngay" silently
-        // removes the safety threshold, which is the whole point of the block.
+        // Moi con so trong nguoi phai song sot. Bo "39" hoac "3 ngay" mot cach im lang
+        // la mat nguong an toan, dung la toan bo y nghia cua khoi.
         return $this->numbersPreserved(implode(' ', $expected), implode(' ', $produced));
     }
 
@@ -260,8 +260,8 @@ class SangLocAiVietLaiService extends SangLocAiService
             $durationMs
         );
 
-        // Status and provenance only: never the prompt, never either version of the
-        // advice text.
+        // Chi trang thai va nguon goc: khong bao gio prompt, khong bao gio bat ky ban nao cua
+        // van ban loi khuyen.
         $this->auditProvenance($phien, 'triage_ai_advice', $described, $durationMs, [
             'ai_status' => $status,
         ]);

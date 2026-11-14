@@ -10,11 +10,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Safety-netting: every self-care outcome is re-checked after a few days.
+ * Luoi an toan: moi ket qua tu cham soc duoc kiem tra lai sau vai ngay.
  *
- * If the symptom has not improved the answer is always "see a doctor". No
- * product is ever returned on that branch — a triage tool that upsells medicine
- * to someone who did not get better is doing harm, not care.
+ * Neu trieu chung khong cai thien, cau tra loi luon la "di khoa". Khong
+ * san pham nao tra ve tren nhanh do — mot cong cu sang loc ban them thuoc
+ * cho nguoi khong bot di la lam hai, chu khong phai cham soc.
  */
 class TheoDoiSangLocService
 {
@@ -23,7 +23,7 @@ class TheoDoiSangLocService
     ) {}
 
     /**
-     * Ask every due session whether the symptom improved.
+     * Hoi moi phien den han trieu chung co bot khong.
      */
     public function guiDungHan(): int
     {
@@ -43,11 +43,11 @@ class TheoDoiSangLocService
     }
 
     /**
-     * Record the customer's answer.
+     * Ghi cau tra loi cua khach hang.
      *
-     * Idempotent: the follow-up link travels by email and can be opened more than
-     * once (mail scanners and prefetchers open it unattended), so a second answer
-     * returns the first one instead of writing again.
+     * Idempotent: link hoi lam di qua email va co the duoc mo hon
+     * mot lan (mail scanner va prefetcher mo no tu dong), nen cau tra loi thu hai
+     * tra ve cau dau tien thay vi ghi lai.
      *
      * @return array{improved: bool, message: string, products: array<int, mixed>, refer_doctor: bool, already_answered: bool}
      */
@@ -77,9 +77,9 @@ class TheoDoiSangLocService
             'follow_up_improved' => $improved,
         ];
 
-        // Only a self-care outcome may be escalated here. An emergency or a
-        // pharmacist decision already sits above refer_doctor, so overwriting it
-        // would downgrade the advice the patient was given.
+        // Chi ket qua tu cham soc duoc nang cap o day. Ket qua khan cap hoac
+        // quyet dinh duoc si nam tren refer_doctor roi, nen ghi de se
+        // ha cap loi khuyen benh nhan da nhan.
         if (! $improved && $phien->outcome === 'self_care') {
             $attributes['outcome'] = 'refer_doctor';
         }
@@ -106,7 +106,7 @@ class TheoDoiSangLocService
         return [
             'improved' => $improved,
             'message' => $message,
-            // Hard empty on both branches: follow-up is care, not a sales channel.
+            // Rong tuyet doi ca hai nhanh: hoi lam la cham soc, chu khong phai kenh ban hang.
             'products' => [],
             'refer_doctor' => ! $improved,
             'already_answered' => false,
@@ -114,7 +114,7 @@ class TheoDoiSangLocService
     }
 
     /**
-     * @return bool whether the question actually went out
+     * @return bool cau hoi co thuc su duoc gui khong
      */
     private function askOne(PhienSangLoc $phien): bool
     {
@@ -122,9 +122,9 @@ class TheoDoiSangLocService
             try {
                 Mail::to($phien->nguoiDung->email)->send(new TheoDoiSauSangLocMail($phien));
             } catch (\Throwable $e) {
-                // Keep follow_up_at so the next tick retries. Clearing it here would
-                // silently drop the safety net for a self-care case, which is the one
-                // mechanism that catches a triage decision that got it wrong.
+                // Giu follow_up_at de lan tick sau thu lai. Xoa no tai day se
+                // bo lui luoi an toan cho truong hop tu cham soc mot cach im lang, do la
+                // co che duy nai bat mot quyet dinh sang loc sai.
                 Log::warning('Triage follow-up mail failed, will retry', [
                     'ma_sl' => $phien->ma_sl,
                     'error' => $e->getMessage(),
@@ -139,8 +139,8 @@ class TheoDoiSangLocService
             'ma_sl' => $phien->ma_sl,
         ]);
 
-        // Clearing the due date is what stops the same question being asked
-        // again on the next scheduler tick.
+        // Xoa ngay den han la thu ngan cung cau hoi bi hoi
+        // them lan nua o tick scheduler ke tiep.
         $phien->update(['follow_up_at' => null]);
 
         $this->audit('triage_follow_up_sent', $phien, [
@@ -152,8 +152,8 @@ class TheoDoiSangLocService
     }
 
     /**
-     * Follow-up chatter only exists for sessions that came from (or can reach)
-     * a chat thread; chat_messages.session_id is not nullable.
+     * Tro chuyen hoi lam chi ton tai cho phien den tu (hoac co the cham den)
+     * mot phien chat; chat_messages.session_id khong cho phep null.
      */
     private function writeChatMessage(PhienSangLoc $phien, string $content, array $metadata): void
     {

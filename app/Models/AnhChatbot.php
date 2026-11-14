@@ -15,7 +15,7 @@ class AnhChatbot extends Model
     protected $primaryKey = 'ma_anh';
 
     /**
-     * The attributes that are mass assignable.
+     * Cac thuoc tinh cho phep gan hang loat.
      *
      * @var array<string>
      */
@@ -36,7 +36,7 @@ class AnhChatbot extends Model
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * Cac thuoc tinh nen ep kieu.
      *
      * @return array<string, string>
      */
@@ -50,7 +50,7 @@ class AnhChatbot extends Model
     }
 
     /**
-     * Get the user that owns the chatbot image.
+     * Nguoi dung so huu anh chatbot.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */

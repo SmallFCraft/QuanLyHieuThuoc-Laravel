@@ -9,31 +9,30 @@ use App\Support\VietnameseText;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Writes crawled catalog data into san_phams and danh_mucs.
+ * Ghi du lieu catalog crawled vao san_phams va danh_mucs.
  *
- * Two data layers meet here. Catalog fields (name, price, ingredients, usage,
- * image, category) belong to the source and are refreshed on every crawl. Stock
- * fields (batch, expiry, quantities) belong to the pharmacy: the first import
- * seeds a placeholder so the row is complete, and later imports leave whatever
- * staff entered alone.
+ * Hai lop du lieu gap nhau tai day. Cac field catalog (ten, gia, thanh phan, cach dung,
+ * anh, danh muc) thuoc ve nguon va duoc lam moi moi lan crawl. Cac field ton kho
+ * (so lo, han dung, so luong) thuoc ve nha thuoc: lan nhap dau tien seed mot gia tri
+ * cho de dong hoan chinh, va cac lan nhap sau de nguyen nhung gi nhan vien da nhap.
  */
 class NhapSanPhamService
 {
-    /** Placeholder stock, only ever written when a product is first created. */
+    /** Ton kho cho truoc, chi duoc ghi khi san pham duoc tao lan dau. */
     private const SEED_STOCK_MIN = 0;
     private const SEED_STOCK_MAX = 200;
     private const SEED_REORDER_MIN = 10;
     private const SEED_REORDER_MAX = 30;
 
-    /** @var array<string, int> folded category name => ma_dm, avoiding a lookup per product */
+    /** @var array<string, int> ten danh muc da fold => ma_dm, tranh mot lookup cho moi san pham */
     private array $maDanhMuc = [];
 
-    /** @var array<string> display names of the categories this run had to create */
+    /** @var array<string> ten hien thi cua cac danh muc lan chay nay phai tao */
     private array $danhMucMoi = [];
 
     /**
-     * Create or refresh one product. Safe to call repeatedly for the same source
-     * record: it resolves to the same row.
+     * Tao hoac lam moi mot san pham. An toan de goi nhieu lan cho cung ban ghi nguon:
+     * no phan giai ve cung mot dong.
      */
     public function nhap(LongChauProduct $source): SanPham
     {
@@ -52,8 +51,8 @@ class NhapSanPhamService
     }
 
     /**
-     * Reset the per-run category cache. Long crawls otherwise hold ids that an
-     * admin may have deleted mid-run.
+     * Reset cache danh muc theo tung lan chay. Cac lan crawl dai neu khong se giu
+     * nhung id ma quan tri vien co the da xoa giua lan chay.
      */
     public function quenDanhMuc(): void
     {
@@ -62,9 +61,9 @@ class NhapSanPhamService
     }
 
     /**
-     * Display names of the categories this run created, so the command can report
-     * them. A crawl that silently invents categories is how the catalog drifted into
-     * two "Co xuong khop" entries in the first place.
+     * Ten hien thi cua cac danh muc lan chay nay da tao, de lenh co the bao cao
+     * chung. Mot lan crawl am tham tao danh muc la nguyen nhan dau tien lam catalog
+     * drift thanh hai dong "Co xuong khop".
      *
      * @return array<string>
      */
@@ -75,8 +74,8 @@ class NhapSanPhamService
 
     private function tao(LongChauProduct $source, int $categoryId, string $batchNumber): SanPham
     {
-        // ProductObserver::created() reads so_lo and ngay_het_han to build
-        // the matching lo_san_phams row, so both must be set on insert.
+        // ProductObserver::created() doc so_lo va ngay_het_han de dung dong lo_san_phams
+        // tuong ung, nen ca hai phai duoc gan khi insert.
         return SanPham::create([
             'ma_dm' => $categoryId,
             'ten' => $source->name,
@@ -93,9 +92,9 @@ class NhapSanPhamService
     }
 
     /**
-     * Catalog fields only. Stock quantities, reorder points and expiry dates are
-     * left untouched because a pharmacist may have corrected them since the last
-     * crawl, and overwriting real stock with a random figure would corrupt FEFO.
+     * Chi cac field catalog. So luong ton kho, diem dat lai hang va ngay het han duoc
+     * de nguyen vi nha thuoc co the da sua chung tu lan crawl truoc, va ghi de ton kho
+     * that bang mot con so ngau nhien se lam hong FEFO.
      */
     private function lamMoi(SanPham $sanPham, LongChauProduct $source, int $categoryId): SanPham
     {
@@ -117,14 +116,14 @@ class NhapSanPhamService
     }
 
     /**
-     * Categories come from Long Chau's own breadcrumb. Matched on the folded name,
-     * not the raw one: the source publishes the same level-2 breadcrumb as both
-     * "Co - xuong - khop" (under Thuoc) and "Co xuong khop" (under Thuc pham chuc
-     * nang), and matching raw made the crawl create a category per spelling, which
-     * split 114 products across two storefront entries a customer reads as one.
+     * Danh muc den tu breadcrumb cua chinh Long Chau. Khop tren ten da fold, chu khong
+     * phai ten tho: nguon phat hanh cung breadcrumb cap 2 nhu ca hai "Co - xuong - khop"
+     * (thuoc Thuoc) va "Co xuong khop" (thuoc Thuc pham chuc
+     * nang), va khop theo ten tho da lam crawl tao mot danh muc cho moi cach viet, dieu
+     * do chia 114 san pham thanh hai dong tren storefront ma khach doc nhu mot.
      *
-     * The first spelling seen keeps the display name; DanhMuc::booted() fills in the
-     * code and the folded column.
+     * Cach viet dau tien duoc thay giu ten hien thi; DanhMuc::booted() dien ma
+     * va cot folded.
      */
     private function phanGiaiMaDanhMuc(string $name): int
     {

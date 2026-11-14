@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 class DonHangService
 {
     /**
-     * Update order status with validation.
+     * Cap nhat trang thai don hang kem kiem tra.
      *
      * @param int $orderId
      * @param string $newStatus
@@ -39,8 +39,8 @@ class DonHangService
                 'ma_nd' => $userId
             ]);
 
-            // Idempotent (updateOrCreate on ma_dh + ma_sp), so a replayed status
-            // change cannot duplicate a patient's medication schedule.
+            // Idempotent (updateOrCreate tren ma_dh + ma_sp), nen mot thay doi trang thai
+            // bi phat lai khong the nhan doi lich uong thuoc cua benh nhan.
             if ($newStatus === 'Completed' && $trangThaiCu !== 'Completed') {
                 app(NhacUongThuocService::class)->taoTuDonHang($donHang);
             }
@@ -50,7 +50,7 @@ class DonHangService
     }
 
     /**
-     * Cancel an order and restore inventory.
+     * Huy don hang va khoi phuc ton kho.
      *
      * @param int $orderId
      * @param int $userId
@@ -64,19 +64,19 @@ class DonHangService
         try {
             $donHang = DonHang::with('chiTietDonHangs')->lockForUpdate()->findOrFail($orderId);
 
-            // Only pending orders can be cancelled
+            // Chi don hang dang Pending moi duoc huy
             if ($donHang->trang_thai !== 'Pending') {
                 throw new \Exception('Chỉ có thể hủy đơn hàng ở trạng thái Pending.');
             }
 
             $cacMaSanPhamAnhHuong = [];
 
-            // Restore inventory for all order items (by batch)
+            // Khoi phuc ton kho cho moi item don hang (theo lo)
             foreach ($donHang->chiTietDonHangs as $item) {
                 $cacMaSanPhamAnhHuong[] = $item->ma_sp;
 
                 if ($item->ma_lo) {
-                    // Restore to specific batch
+                    // Khoi phuc vao lo cu the
                     $lo = LoSanPham::lockForUpdate()->find($item->ma_lo);
                     if ($lo) {
                         $lo->so_luong_ton += $item->so_luong;
@@ -117,7 +117,7 @@ class DonHangService
                 $sanPham->save();
             }
 
-            // Update order status
+            // Cap nhat trang thai don hang
             $donHang->trang_thai = 'Cancelled';
             $donHang->save();
 
@@ -144,7 +144,7 @@ class DonHangService
     }
 
     /**
-     * Validate if a status transition is allowed.
+     * Kiem tra chuyen trang thai co duoc phep hay khong.
      *
      * @param string $currentStatus
      * @param string $newStatus

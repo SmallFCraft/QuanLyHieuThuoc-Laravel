@@ -3,29 +3,29 @@
 namespace App\Support;
 
 /**
- * Phonetic keys for Vietnamese voice search.
+ * Key phien am cho tim kiem giong noi tieng Viet.
  *
- * Region-collapsing on purpose: a Southern speaker's "thuac ha soc" and the
- * catalog's "thuoc ha sot" have to produce the same key, or voice search only
- * works for the accent the browser's recogniser happened to be tuned on.
+ * Gop vung mien co chu y: nguoi noi mien Nam goi "thuac ha soc" va catalog co
+ * "thuoc ha sot" phai tao cung mot key, neu khong tim kiem giong noi chi hoat
+ * dong voi accent ma nhan dien cua browser dung den da duoc hieu chinh.
  */
 final class PhienAmTiengViet
 {
-    /** Flat keys longer than this never take part in near-matching. */
+    /** Key phang dai hon so nay khong bao gio tham gia vao viec khop gan dung. */
     private const MAX_BLOCK_LENGTH = 24;
 
     private const BLOCK_LENGTH = 2;
 
     /**
-     * A syllable this short carries the whole distinguishing sense of a phrase.
-     * Measured: any tolerance that lets one of them drift merges "vitamin C"
-     * with "vitamin D".
+     * Mot am tiet ngan nhu vay mang toan bo nghia phan biet cua mot cum tu.
+     * Da do luong: bat ky do dung chap nao cho phep mot trong chung lech se gop
+     * "vitamin C" voi "vitamin D".
      */
     private const ATOMIC_SYLLABLE = 2;
 
     /**
-     * Onsets, longest alternative first. Each anchors at the start and replaces
-     * once, so an uppercase marker already written blocks the later patterns.
+     * Van dau, phuong an dai nhat truoc. Moi quy tac neo tai dau tu va thay the
+     * mot lan, nen marker hoa da viet truoc se chan cac pattern phia sau.
      */
     private const ONSETS = [
         '/^(?:tr|ch)/' => 'C',
@@ -37,11 +37,11 @@ final class PhienAmTiengViet
     ];
 
     /**
-     * Diphthongs. Must run before the codas — see syllable().
+     * Van (am gop). Phai chay truoc cac am cuoi — xem syllable().
      *
-     * Order inside the table counts too, for the same reason: `uo` would eat the
-     * "uo" of "uoi" and leave an `i` that no rule claims, so "muoi" keyed `mUi`
-     * while "moi" keyed `mO` and the pair stopped matching. Longest rime first.
+     * Thu tu trong bang cung quan trong, cung ly do do: `uo` se an phan "uo"
+     * cua "uoi" va de lai mot `i` khong quy tac nao nhan, nen "muoi" tao key `mUi`
+     * trong khi "moi" tao `mO` va cap nay khong con khop. Van dai nhat truoc.
      */
     private const RIMES = [
         '/iee|ie|ye|ia/' => 'I',
@@ -55,8 +55,8 @@ final class PhienAmTiengViet
     ];
 
     /**
-     * The single-letter half of ONSETS, as a plain translation table — used by
-     * coarse() to re-apply the classes away from a word start.
+     * Nua ky tu don cua ONSETS, dang bang dich thuc don gian — dung boi coarse()
+     * de ap dung lai cac lop ky tu o nhung vi tri khong phai dau tu.
      */
     private const MID_WORD_ONSETS = [
         's' => 'S', 'x' => 'S',
@@ -85,24 +85,24 @@ final class PhienAmTiengViet
             $syllable = preg_replace($pattern, $marker, $syllable, 1) ?? $syllable;
         }
 
-        // Mid-word x reads as s: "canxi" and "can si" are one word spoken two ways.
+        // x o giua tu doc nhu s: "canxi" va "can si" la mot tu duoc doc hai cach.
         $syllable = str_replace('x', 'S', $syllable);
 
         foreach (self::RIMES as $pattern => $marker) {
             $syllable = preg_replace($pattern, $marker, $syllable) ?? $syllable;
         }
 
-        // After the rimes, never before: `t$ => T` would otherwise eat the final
-        // consonant of "uot", leaving "uo" unable to match its own rime.
+        // Sau cac van, khong bao gio truoc: `t$ => T` neu khong se an phan am cuoi
+        // cua "uot", de "uo" khong the khop voi van cua chinh no.
         foreach (self::CODAS as $pattern => $marker) {
             $syllable = preg_replace($pattern, $marker, $syllable) ?? $syllable;
         }
 
         $syllable = strtr($syllable, self::VOWELS);
 
-        // Letters only: a doubled letter is one sound ("oo" -> "o"), but a doubled
-        // digit is a dose. Collapsing digits made "500" and "50" the same key, and
-        // both are short enough that within() then accepts them as one product.
+        // Chi voi chu cai: mot ky tu lap lai la mot am ("oo" -> "o"), nhung chu so
+        // lap lai la lieu luong. Gop chu so da lam "500" va "50" cung mot key, va ca
+        // hai du ngan de within() sau do chap nhan chung la mot san pham.
         return preg_replace('/([^0-9])\1+/', '$1', $syllable) ?? $syllable;
     }
 
@@ -114,20 +114,20 @@ final class PhienAmTiengViet
             return null;
         }
 
-        // Case-folded on purpose, unlike phonetic_key: this is the coarse SQL
-        // filter, within() is the exact one. Measured: "tiu" keys `tiu` and
-        // "tieu" keys `tIu`, so a case-sensitive prefix put them in blocks 'ti'
-        // and 'tI' and the orWhereIn never loaded a candidate within() accepts.
-        // Folding only widens the candidate set; within() still rejects.
+        // Case-fold co chu y, khac voi phonetic_key: day la bo loc SQL tho, within()
+        // moi la bo loc chinh xac. Da do luong: "tiu" tao key `tiu` va
+        // "tieu" tao key `tIu`, nen prefix phan biet hoa thuong dua chung vao hai block
+        // 'ti' va 'tI' va orWhereIn khong bao gio nap ung cu vien ma within() chap nhan.
+        // Fold chi mo rong tap ung cu vien; within() van tu choi nhung ket qua khong dung.
         return strtolower(substr($flat, 0, self::BLOCK_LENGTH));
     }
 
     /**
-     * Two keys describe the same spoken phrase.
+     * Hai key mo ta cung mot cum tu duoc noi ra.
      *
-     * Compared syllable by syllable rather than as one string: a single distance
-     * budget over the whole key merged "vitamin C" with "vitamin D" at every
-     * threshold measured, and in a pharmacy that is the wrong way to be wrong.
+     * So sanh theo tung am tiet thay vi nhu mot chuoi: mot budget khoang cach duy nhat
+     * tren ca key da gop "vitamin C" voi "vitamin D" o moi nguong duoc do, va trong
+     * mot nha thuoc thi do la cach sai khong duoc phep.
      */
     public static function ganNhau(string $a, string $b): bool
     {
@@ -157,10 +157,10 @@ final class PhienAmTiengViet
                     return false;
                 }
 
-                // A digit is a quantity, not a pronunciation — no accent reads
-                // 500 as 50. Measured: "500mg" vs "50mg" is lev 1 against a
-                // budget of max(1, 5/4) = 1, so the two doses merged. The unit
-                // leaks the same way: "500mg" vs "500ml" is also lev 1.
+                // Chu so la so luong, khong phai phat am — khong accent nao doc
+                // 500 nhu 50. Da do luong: "500mg" so voi "50mg" la lev 1 tren mot
+                // budget max(1, 5/4) = 1, nen hai lieu luong da bi gop. Don vi
+                // roi vi cung cach: "500mg" so voi "500ml" cung la lev 1.
                 if (self::chuSo($syllable) !== '' || self::chuSo($other) !== '') {
                     return false;
                 }
@@ -171,14 +171,14 @@ final class PhienAmTiengViet
             return $distance <= max(1, intdiv(strlen(self::boKhoangTrang($a)), 4));
         }
 
-        // Different syllable counts: the speaker broke one word into several
-        // ("pa ra xe ta mon"), so only the flattened key is comparable.
+        // So am tiet khac nhau: nguoi noi da tach mot thanh vai tu
+        // ("pa ra xe ta mon"), nen chi key phang moi so sanh duoc.
         $flatA = self::boKhoangTrang($a);
 
-        // Splitting a syllable still may not cross doses: "500mg" read as
-        // "50 mg" is lev 1 on the flat key. Only enforced when both sides carry
-        // digits — "omega 3" vs "o me ga ba" spells the digit out as a word,
-        // and that pair has to keep matching.
+        // Tach mot am tiet van khong duoc xuyen qua lieu luong: "500mg" doc thanh
+        // "50 mg" la lev 1 tren key phang. Chi ap dung khi ca hai ben deu co
+        // chu so — "omega 3" so voi "o me ga ba" doc chu so ra thanh tu,
+        // va cap do phai tiep tuc khop.
         $digitsA = self::chuSo($a);
         $digitsB = self::chuSo($b);
 
@@ -190,19 +190,19 @@ final class PhienAmTiengViet
             return true;
         }
 
-        // Second pass on a coarser form. syllable() applies the §4.1 letter classes
-        // only at a word start, so a name read syllable by syllable collects them
-        // once per syllable while the joined catalog name collects them once in
-        // total: "pa na don" keys `pa La DoN` against `panadol`, lev 3 on a budget
-        // of 2. Re-applying the same classes at every position lines the two up and
-        // recovers "sa lon pat", "ni gio ran" and "con la gien" as well.
+        // Luot hai tren dang tho hon. syllable() chi ap dung cac lop ky tu §4.1
+        // tai dau tu, nen ten doc tung am tiet tich luy chung tung lan cho moi am tiet
+        // trong khi ten catalog da noi lai chi tich luy mot lan trong toan bo:
+        // "pa na don" tao key `pa La DoN` so voi `panadol`, lev 3 tren budget
+        // 2. Ap dung lai cung cac lop tai moi vi tri cho hai ben thang hang va
+        // cung phuc hoi "sa lon pat", "ni gio ran" va "con la gien".
         //
-        // Widening a distance budget cannot do this job: the closest distinct pair
-        // that must stay apart ("vitamin e" / "betadine") sits at lev 4 over 8,
-        // the same ratio as the brand readings that must match, so no threshold
-        // separates them. Measured on the coarse form instead: zero new merges
-        // across the 26 distinct product names, and one new pair over the whole
-        // built index — "Naturals" with "Nature's", one product line.
+        // Mo rong budget khoang cach khong lam duoc viec nay: cap phan biet gan nhat
+        // ma phai dung cach nhau ("vitamin e" / "betadine") nam o lev 4 tren 8,
+        // cung ty le voi cac cach doc thuong hieu phai khop, nen khong nguong nao
+        // phan biet duoc chung. Da do luong tren dang tho thay vi: khong co cap moi
+        // nao bi gop tren 26 ten san pham phan biet, va chi mot cap moi tren toan bo
+        // index da dung — "Naturals" voi "Nature's", mot dong san pham.
         $coarseA = self::dangTho($flatA);
 
         return levenshtein($coarseA, self::dangTho(self::boKhoangTrang($b)))
@@ -220,13 +220,13 @@ final class PhienAmTiengViet
     }
 
     /**
-     * The §4.1 letter classes re-applied at every position, not only at a word
-     * start. Only the lowercase leftovers move: an uppercase marker is a class
-     * syllable() already decided, and rewriting those would fold `C` into `K`
-     * and merge classes the table deliberately keeps apart.
+     * Cac lop ky tu §4.1 duoc ap dung lai tai moi vi tri, khong chi tai dau tu.
+     * Chi cac ky tu thuong con sot lai duoc bien doi: marker hoa la lop ma syllable()
+     * da quyet dinh, va viet lai chung se gop `C` vao `K` va gop cac lop ma bang
+     * co chu y giu rieng.
      *
-     * Comparison-only — never stored. `phonetic_key` and `block_key` keep their
-     * own shape, so this needs no index rebuild.
+     * Chi dung khi so sanh — khong bao gio luu tru. `phonetic_key` va `block_key`
+     * giu hinh dang rieng cua chung, nen viec nay khong can rebuild index.
      */
     private static function dangTho(string $flatKey): string
     {

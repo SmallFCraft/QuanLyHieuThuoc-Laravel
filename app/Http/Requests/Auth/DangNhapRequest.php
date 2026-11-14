@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 class DangNhapRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Xac dinh nguoi dung co duoc phep thuc hien request nay.
      */
     public function authorize(): bool
     {
@@ -22,7 +22,7 @@ class DangNhapRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Cac luat kiem tra ap dung cho request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -35,7 +35,7 @@ class DangNhapRequest extends FormRequest
     }
 
     /**
-     * Attempt to authenticate the request's credentials.
+     * Co gang xac thuc voi thong tin dang nhap cua request.
      *
      * @throws ValidationException
      */
@@ -60,7 +60,7 @@ class DangNhapRequest extends FormRequest
     }
 
     /**
-     * Ensure the login request is not rate limited.
+     * Dam bao request dang nhap khong bi gioi han tan suat.
      *
      * @throws ValidationException
      */
@@ -83,7 +83,7 @@ class DangNhapRequest extends FormRequest
     }
 
     /**
-     * Get the rate limiting throttle key for the request.
+     * Khoa throttle gioi han tan suat cho request nay.
      */
     public function throttleKey(): string
     {

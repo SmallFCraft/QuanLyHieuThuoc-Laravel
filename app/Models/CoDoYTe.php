@@ -38,8 +38,9 @@ class CoDoYTe extends Model
     }
 
     /**
-     * Rows the chatbot may use to abort its normal flow. Excludes patient-context
-     * rows (pregnancy, infant, chronic disease) which the triage wizard still reads.
+     * Cac dong chatbot co the dung de cat ngang luong binh thuong. Loai tru cac dong
+     * bo canh nguoi benh (co thai, tre so sinh, benh man tinh) ma tro ly sang loc
+     * van con doc.
      */
     public function scopeChatShortCircuit($query)
     {
@@ -47,9 +48,9 @@ class CoDoYTe extends Model
     }
 
     /**
-     * Emergency first, then urgent, then caution — callers rely on this order to
-     * stop at the most severe match. Ordered via CASE because FIELD() is MySQL-only
-     * and the test suite runs on SQLite.
+     * Cap cuu truoc, roi khan cap, roi canh bao — nguoi goi dua vao thu tu nay de
+     * dung lai o phien dang nhat trong nhat. Sap xep bang CASE vi FIELD() chi co tren
+     * MySQL con bo test chay tren SQLite.
      */
     public function scopeBySeverity($query)
     {

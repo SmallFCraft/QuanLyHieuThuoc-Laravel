@@ -3,9 +3,9 @@
 namespace App\Support;
 
 /**
- * The session cart is stored as `[ma_sp => quantity]`, but AnToanThuocService and
- * ThanhToanService expect rows. Keeping the transform here means the shape is
- * defined once instead of in every controller that touches the cart.
+ * Gio hang trong session duoc luu nhu `[ma_sp => quantity]`, nhung AnToanThuocService va
+ * ThanhToanService dung cac dong ban ghi. Giu phep chuyen doi tai day nghia la hinh dang
+ * duoc dinh nghia mot lan thay vi trong moi controller cham vao gio hang.
  */
 final class CartLine
 {

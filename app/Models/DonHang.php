@@ -16,7 +16,7 @@ class DonHang extends Model
     protected $primaryKey = 'ma_dh';
 
     /**
-     * The attributes that are mass assignable.
+     * Cac thuoc tinh cho phep gan hang loat.
      *
      * @var array<int, string>
      */
@@ -31,7 +31,7 @@ class DonHang extends Model
     ];
 
     /**
-     * The attributes that should be cast.
+     * Cac thuoc tinh nen ep kieu.
      *
      * @var array<string, string>
      */
@@ -40,7 +40,7 @@ class DonHang extends Model
     ];
 
     /**
-     * Get the user that owns the order.
+     * Nguoi dung so huu don hang.
      */
     public function nguoiDung()
     {
@@ -48,7 +48,7 @@ class DonHang extends Model
     }
 
     /**
-     * Get the order items for the order.
+     * Cac chi tiet don hang cua don hang nay.
      */
     public function chiTietDonHangs()
     {
@@ -56,7 +56,7 @@ class DonHang extends Model
     }
 
     /**
-     * Get formatted total amount in Vietnamese currency format.
+     * Tong tien da dinh dang theo dinh dang tien te Viet Nam.
      *
      * @return string
      */
@@ -66,7 +66,7 @@ class DonHang extends Model
     }
 
     /**
-     * Get formatted created date in Vietnamese format (dd/MM/yyyy).
+     * Ngay tao da dinh dang theo dinh dang Viet Nam (dd/MM/yyyy).
      *
      * @return string
      */

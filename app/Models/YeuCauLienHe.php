@@ -14,7 +14,7 @@ class YeuCauLienHe extends Model
     protected $primaryKey = 'ma_lh';
 
     /**
-     * The attributes that are mass assignable.
+     * Cac thuoc tinh cho phep gan hang loat.
      *
      * @var array<int, string>
      */
@@ -27,7 +27,7 @@ class YeuCauLienHe extends Model
     ];
 
     /**
-     * The attributes that should be cast.
+     * Cac thuoc tinh nen ep kieu.
      *
      * @var array<string, string>
      */

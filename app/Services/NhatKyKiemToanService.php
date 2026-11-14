@@ -6,15 +6,15 @@ use App\Models\NhatKyKiemToan;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Every method is an instance method on purpose: the service is injected into
- * ChatbotService, AiJobService and the triage services, and a static method cannot
- * be doubled by PHPUnit — a mocked static throws, the caller's catch swallows it,
- * and the audit write ends up covered by no test at all.
+ * Moi method la instance method co chu y: service duoc inject vao
+ * ChatbotService, AiJobService va cac service triage, va mot static method khong the
+ * duoc PHPUnit nhan ban (double) — mock static se throw, catch cua caller nuot no,
+ * va dong ghi kiam toan cuoi cung khong duoc test nao phu.
  */
 class NhatKyKiemToanService
 {
     /**
-     * Log an authentication attempt
+     * Ghi log mot lan dang nhap
      */
     public function ghiThuDangNhap(string $email, bool $thanhCong, ?string $lyDo = null)
     {
@@ -35,7 +35,7 @@ class NhatKyKiemToanService
     }
 
     /**
-     * Log a logout event
+     * Ghi log su kien dang xuat
      */
     public function ghiDangXuat()
     {
@@ -52,12 +52,12 @@ class NhatKyKiemToanService
     }
 
     /**
-     * Log a custom action
+     * Ghi log mot hanh dong tuy bien
      *
-     * @param int|null $userId Attribution for work that does not run in the customer's
-     *        request. Inside a queue worker there is no authenticated guard, so a
-     *        caller that already knows the owner must pass it or the row loses its
-     *        subject — this is a pharmacy audit trail, not a UX event log.
+     * @param int|null $userId Quy gan cho cong viec khong chay trong request cua khach.
+     *        Trong worker hang doi khong co guard da xac thuc, nen caller nao da biet
+     *        chu so huu phai truyen vao hoac dong ban ghi se mat chu the — day la
+     *        vet kiam toan nha thuoc, chu khong phai log su kien UX.
      */
     public function ghi(
         string $action,

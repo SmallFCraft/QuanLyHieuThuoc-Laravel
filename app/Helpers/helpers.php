@@ -4,7 +4,7 @@ use App\Helpers\VietnameseHelper;
 
 if (!function_exists('format_currency_vi')) {
     /**
-     * Format currency to Vietnamese format
+     * Dinh dang tien te theo dinh dang tieng Viet
      */
     function format_currency_vi($amount): string
     {
@@ -14,7 +14,7 @@ if (!function_exists('format_currency_vi')) {
 
 if (!function_exists('order_status_text')) {
     /**
-     * Get Vietnamese order status text
+     * Lay van ban trang thai don hang tieng Viet
      */
     function order_status_text(string $status): string
     {
@@ -24,7 +24,7 @@ if (!function_exists('order_status_text')) {
 
 if (!function_exists('role_text')) {
     /**
-     * Get Vietnamese role text
+     * Lay van ban vai tro tieng Viet
      */
     function role_text(string $role): string
     {

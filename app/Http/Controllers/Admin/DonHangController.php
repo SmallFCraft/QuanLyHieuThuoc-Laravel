@@ -25,7 +25,7 @@ class DonHangController extends Controller
     {
         $query = DonHang::with(['nguoiDung', 'chiTietDonHangs']);
 
-        // Filter by status if provided
+        // Loc theo trang thai neu co tham so
         if ($request->has('status') && $request->status) {
             $query->where('trang_thai', $request->status);
         }

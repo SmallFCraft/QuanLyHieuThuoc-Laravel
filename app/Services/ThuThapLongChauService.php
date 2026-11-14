@@ -13,11 +13,11 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
- * Fetches the Nha Thuoc Long Chau catalog.
+ * Tai catalog Nha Thuoc Long Chau.
  *
- * Long Chau serves rendered pages, so plain HTTP is enough — no browser and no AI
- * extraction. Sitemaps supply the URL list, and each page carries its product as
- * JSON, which LongChauProduct maps.
+ * Long Chau phat hanh cac trang da render, nen HTTP thuan la du — khong can browser va
+ * khong can AI trich xuat. Sitemaps cung danh sach URL, va moi trang mang san pham cua no
+ * duoi dang JSON, ma LongChauProduct anh xa.
  */
 class ThuThapLongChauService
 {
@@ -43,7 +43,7 @@ class ThuThapLongChauService
     }
 
     /**
-     * @return array<string> the sitemap keys accepted by danhSachUrlSanPham()
+     * @return array<string> cac sitemap key ma danhSachUrlSanPham() chap nhan
      */
     public function danhSachSiteMap(): array
     {
@@ -51,7 +51,7 @@ class ThuThapLongChauService
     }
 
     /**
-     * Product URLs from the named sitemaps, de-duplicated and in sitemap order.
+     * URL san pham tu cac sitemap duoc chi ten, da loai trung va giu thu tu sitemap.
      *
      * @param  array<string>  $keys
      * @return array<string>
@@ -94,11 +94,11 @@ class ThuThapLongChauService
     }
 
     /**
-     * Fetch each URL and hand every usable product to the callback.
+     * Tai tung URL va giao moi san pham dung duoc cho callback.
      *
-     * Pages are fetched in small concurrent batches with a pause in between. A page
-     * that fails is counted and skipped: one dead URL out of thousands must not end
-     * the run.
+     * Cac trang duoc tai theo cac batch dong thoi nho, co nghi giua cac batch. Trang
+     * that bai duoc dem va bo qua: mot URL chet trong hang nghin URL khong duoc ket
+     * thuc lan chay.
      *
      * @param  array<string>  $urls
      * @param  Closure(LongChauProduct, string): void  $onProduct
@@ -179,9 +179,9 @@ class ThuThapLongChauService
     }
 
     /**
-     * Isolated pages without __NEXT_DATA__ are dead URLs. A large share means Long
-     * Chau changed how it renders, and continuing would import nothing while
-     * reporting success — so the run stops and says so.
+     * Cac trang doc lap khong co __NEXT_DATA__ la URL chet. Mot ti le lon nghia la Long
+     * Chau da doi cach render, va tiep tuc se khong import gi trong khi van bao cao
+     * thanh cong — nen lan chay dung lai va noi ra dieu do.
      *
      * @param  array{fetched:int, no_json:int}  $stats
      */
@@ -257,8 +257,8 @@ class ThuThapLongChauService
     }
 
     /**
-     * Section landing pages such as /thuoc share the sitemap with products but hold
-     * no product payload, so they are filtered out before any page is fetched.
+     * Trang landing section nhu /thuoc chia se sitemap voi san pham nhung khong chua
+     * payload san pham, nen chung duoc loai truoc khi bat ky trang nao duoc tai.
      *
      * @return array<string>
      */

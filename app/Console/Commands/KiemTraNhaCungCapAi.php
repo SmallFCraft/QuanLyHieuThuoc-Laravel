@@ -9,7 +9,7 @@ use RuntimeException;
 class KiemTraNhaCungCapAi extends Command
 {
     /**
-     * The name and signature of the console command.
+     * Ten va chu ky cua lenh console.
      *
      * @var string
      */
@@ -23,7 +23,7 @@ class KiemTraNhaCungCapAi extends Command
     protected $description = 'Check every configured chatbot AI provider (primary and fallback) with a live request';
 
     /**
-     * Execute the console command.
+     * Thuc thi lenh console.
      */
     public function handle(): int
     {

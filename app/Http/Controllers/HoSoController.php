@@ -19,7 +19,7 @@ use Intervention\Image\ImageManager;
 class HoSoController extends Controller
 {
     /**
-     * Display the user's profile form.
+     * Hien thi form ho so cua nguoi dung.
      */
     public function edit(Request $request): View
     {
@@ -43,7 +43,7 @@ class HoSoController extends Controller
     }
 
     /**
-     * Update the user's profile information.
+     * Cap nhat thong tin ho so cua nguoi dung.
      */
     public function update(CapNhatHoSoRequest $request): RedirectResponse
     {
@@ -64,7 +64,7 @@ class HoSoController extends Controller
     }
 
     /**
-     * Replace the user's avatar.
+     * Thay the anh dai dien cua nguoi dung.
      *
      * Gioi han dung luong va dinh dang lay tu config('uploads.images') — cung nguon
      * voi anh chatbot, nen client va server khong the chan o hai nguong khac nhau.
@@ -122,7 +122,7 @@ class HoSoController extends Controller
     }
 
     /**
-     * Remove the user's avatar and fall back to the name initial.
+     * Xoa anh dai dien cua nguoi dung va quay ve chu cai dau cua ten.
      */
     public function destroyAvatar(Request $request): RedirectResponse
     {
@@ -138,7 +138,7 @@ class HoSoController extends Controller
     }
 
     /**
-     * Delete the user's account.
+     * Xoa tai khoan cua nguoi dung.
      */
     public function destroy(Request $request): RedirectResponse
     {

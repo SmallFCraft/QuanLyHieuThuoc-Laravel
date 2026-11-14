@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 class DonDepAnhChatbot extends Command
 {
     /**
-     * The name and signature of the console command.
+     * Ten va chu ky cua lenh console.
      *
      * @var string
      */
@@ -24,7 +24,7 @@ class DonDepAnhChatbot extends Command
     protected $description = 'Delete chatbot images older than specified hours (default: chatbot.images.cleanup_after)';
 
     /**
-     * Execute the console command.
+     * Thuc thi lenh console.
      */
     public function handle(): int
     {

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 class ThanhToanService
 {
     /**
-     * Process checkout with transaction safety.
+     * Xu ly checkout voi an toan transaction.
      *
      * @param array $cartItems
      * @param int $userId
@@ -22,13 +22,13 @@ class ThanhToanService
      */
     public function xuLyThanhToan(array $cartItems, int $userId, array $shippingInfo): DonHang
     {
-        // OPTIMIZED: Load all products in 1 query instead of N+1
+        // TOI UU: Tai moi san pham trong 1 truy van thay vi N+1
         $cacMaSanPham = array_column($cartItems, 'ma_sp');
         $sanPhams = SanPham::whereIn('ma_sp', $cacMaSanPham)
             ->get()
             ->keyBy('ma_sp');
 
-        // Quick validation BEFORE transaction (fail fast)
+        // Kiem tra nhanh TRUOC transaction (fail fast)
         $cacLoi = [];
         $tongTien = 0;
 
@@ -40,7 +40,7 @@ class ThanhToanService
                 continue;
             }
 
-            // Check total stock across all batches
+            // Kiem tra tong ton kho tren moi lo
             $tongTon = LoSanPham::where('ma_sp', $sanPham->ma_sp)
                 ->inStock()
                 ->notExpired()
@@ -71,7 +71,7 @@ class ThanhToanService
                 'ghi_chu' => $shippingInfo['notes'] ?? null,
             ]);
 
-            // Create order items and update inventory with FEFO strategy
+            // Tao chi tiet don hang va cap nhat ton kho theo chien luoc FEFO
             foreach ($cartItems as $item) {
                 $soLuongCon = $item['quantity'];
                 $maSanPham = $item['ma_sp'];
@@ -95,7 +95,7 @@ class ThanhToanService
 
                     $soLuongTru = min($soLuongCon, $lo->so_luong_ton);
 
-                    // Create order item for this batch
+                    // Tao chi tiet don hang cho lo nay
                     ChiTietDonHang::create([
                         'ma_dh' => $donHang->ma_dh,
                         'ma_sp' => $maSanPham,

@@ -9,36 +9,36 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Builds and dispatches medication reminders derived from completed orders.
+ * Dung va gui cac nhac uong thuoc dua tren don hang da hoan thanh.
  *
- * Dosage frequency is parsed from the free-text `products.usage` column written
- * by the pharmacy staff. When the text cannot be parsed the schedule falls back
- * to once a day — under-reminding is safe, guessing a higher frequency is not.
+ * Tan suat lieu luong duoc phan tich tu cot van ban tu do `products.usage` do nhan vien
+ * nha thuoc viet. Khi van ban khong the phan tich duoc, lich quay ve mot lan mot ngay —
+ * nhac it hon la an toan, doan mot tan suat cao hon thi khong.
  */
 class NhacUongThuocService
 {
-    /** Reminders only fire between these hours, matching NhacUongThuoc::advanceSchedule(). */
+    /** Nhac chi chay trong khoang gio nay, khop voi NhacUongThuoc::advanceSchedule(). */
     private const DAY_START_HOUR = 8;
     private const DAY_END_HOUR = 20;
 
-    /** Waking hours available for spacing doses. */
+    /** So gio thuc de phan bo cac lan lieu luong. */
     private const WAKING_HOURS = 12;
 
     private const MAX_TIMES_PER_DAY = 6;
     private const MAX_DURATION_DAYS = 30;
 
-    /** `medication_reminders.dosage_text` is a VARCHAR; `products.usage` is TEXT. */
+    /** `medication_reminders.dosage_text` la VARCHAR; `products.usage` la TEXT. */
     private const MAX_DOSAGE_TEXT = 255;
 
     /**
-     * Create (or refresh) one reminder per distinct product in the order.
+     * Tao (hoac lam moi) mot nhac uong cho moi san pham phan biet trong don hang.
      *
-     * Quantities are summed per product first: FEFO splits one purchase into one
-     * `order_items` row per batch, so iterating rows directly would overwrite the
-     * reminder and derive the course length from the last (smallest) batch.
+     * So luong duoc cong theo tung san pham truoc: FEFO tach mot lan mua thanh mot
+     * dong `order_items` cho moi lo, nen lap truc tiep cac dong se ghi de nhac uong
+     * va tinh do dai khoa dieu tri tu lo cuoi cung (nho nhat).
      *
-     * Idempotent: keyed on ma_dh + ma_sp so replaying a status change cannot
-     * duplicate a schedule.
+     * Idempotent: key theo ma_dh + ma_sp nen phat lai mot thay doi trang thai
+     * khong the nhan doi lich.
      */
     public function taoTuDonHang(DonHang $donHang): int
     {
@@ -82,9 +82,9 @@ class NhacUongThuocService
     }
 
     /**
-     * `san_phams.cach_dung` is free text written through a WYSIWYG editor, so it can be
-     * longer than the column and can carry markup. Truncate rather than let a
-     * strict-mode insert abort the order transaction.
+     * `san_phams.cach_dung` la van ban tu do viet qua trinh soan thao WYSIWYG, nen no co the
+     * dai hon cot va mang theo markup. Cat bot thay vi de mot insert strict-mode lam
+     * abort transaction cua don hang.
      */
     private function vanBanLieuLuong(\App\Models\SanPham $sanPham): string
     {
@@ -95,13 +95,13 @@ class NhacUongThuocService
     }
 
     /**
-     * Doses per day extracted from Vietnamese usage text.
+     * So lan lieu luong moi ngay trich tu van ban cach dung tieng Viet.
      *
-     * Recognised shapes, in priority order:
-     *   "x 2-3 lan/ngay"      -> upper bound (3)
-     *   "moi 4-6 gio"         -> waking hours / shortest interval (12/4 = 3)
-     *   "1 vien/ngay"         -> single daily dose (1)
-     * Anything else returns 1 rather than inventing a frequency.
+     * Cac dang duoc nhan dien, theo thu tu uu tien:
+     *   "x 2-3 lan/ngay"      -> tran (3)
+     *   "moi 4-6 gio"         -> gio thuc / khoang ngan nhat (12/4 = 3)
+     *   "1 vien/ngay"         -> mot lan lieu luong mot ngay (1)
+     * Bat ky dang khac tra ve 1 thay vi tu bia tan suat.
      */
     public function phanTichSoLanMotNgay(?string $cachDung): int
     {
@@ -118,14 +118,14 @@ class NhacUongThuocService
             return $this->gioiHanSoLan($soLan);
         }
 
-        // "moi 4-6 gio" — shortest stated interval spread over waking hours only
+        // "moi 4-6 gio" — khoang ngan nhat duoc neu ra, phan bo chi trong gio thuc
         if (preg_match('/mỗi\s*(\d+)\s*(?:-\s*(\d+))?\s*giờ/u', $vanBan, $khop)) {
             $soGoiGiuaCacLan = max(1, (int) $khop[1]);
 
             return $this->gioiHanSoLan((int) floor(self::WAKING_HOURS / $soGoiGiuaCacLan));
         }
 
-        // "1 vien/ngay", "15-30ml/ngay" — one dosing event per day
+        // "1 vien/ngay", "15-30ml/ngay" — mot lan lieu luong moi ngay
         if (preg_match('/\/\s*ngày/u', $vanBan)) {
             return 1;
         }
@@ -134,15 +134,15 @@ class NhacUongThuocService
     }
 
     /**
-     * Send every due reminder and roll its schedule forward.
+     * Gui moi nhac uong den han va keo lich cua no len phia truoc.
      */
     public function guiDungHan(): int
     {
         $daGui = 0;
 
         NhacUongThuoc::due()
-            // withTrashed on the product: a soft-deleted (discontinued) product is
-            // still a course the patient must finish, so it must not cancel the schedule.
+            // withTrashed tren san pham: san pham da soft-delete (ngung kinh doanh) van
+            // la mot khoa dieu tri benh nhan phai hoan thanh, nen khong duoc huy lich.
             ->with(['nguoiDung', 'sanPham' => fn ($query) => $query->withTrashed()])
             ->chunkById(100, function ($cacNhacUong) use (&$daGui) {
                 foreach ($cacNhacUong as $nhacUong) {
@@ -155,7 +155,7 @@ class NhacUongThuocService
                         Mail::to($nhacUong->nguoiDung->email)->send(new NhacUongThuocMail($nhacUong));
                         $daGui++;
                     } catch (\Throwable $e) {
-                        // A broken mailbox must not stall the rest of the batch.
+                        // Mot mailbox loi khong duoc lam stall phan con lai cua batch.
                         Log::warning('Medication reminder mail failed', [
                             'ma_nn' => $nhacUong->ma_nn,
                             'error' => $e->getMessage(),
@@ -170,9 +170,9 @@ class NhacUongThuocService
     }
 
     /**
-     * Stop one specific schedule. Keyed on the row, not the product: the same
-     * medicine can be on two courses from two orders, and cancelling one must not
-     * silently stop the other.
+     * Dung mot lich cu the. Key tren dong ban ghi, chu khong phai san pham: cung
+     * mot thuoc co the nam trong hai khoa tu hai don hang, va huy mot khoa
+     * khong duoc im lang dung khoa kia.
      */
     public function huyLichNhac(NhacUongThuoc $nhacUong): void
     {
@@ -187,7 +187,7 @@ class NhacUongThuocService
     }
 
     /**
-     * Stop reminding a specific user about a specific product, across every order.
+     * Dung nhac cho mot nguoi dung cu the ve mot san pham cu the, tren moi don hang.
      */
     public function huyTheoNguoiDung(int $maNguoiDung, int $maSp): void
     {
@@ -206,7 +206,7 @@ class NhacUongThuocService
     }
 
     /**
-     * How long the dispensed quantity lasts at the parsed frequency.
+     * So luong da xuat ton duoc bao lau voi tan suat da phan tich.
      */
     private function soNgaySuDung(int $soLuong, int $soLanMotNgay): int
     {

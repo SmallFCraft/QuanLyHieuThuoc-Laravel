@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 trait Auditable
 {
     /**
-     * Boot the auditable trait for a model.
+     * Boot trait auditable cho mot model.
      */
     public static function bootAuditable()
     {
@@ -26,7 +26,7 @@ trait Auditable
     }
 
     /**
-     * Log model creation
+     * Ghi log viec tao model
      */
     protected function auditCreated()
     {
@@ -34,7 +34,7 @@ trait Auditable
     }
 
     /**
-     * Log model update
+     * Ghi log viec cap nhat model
      */
     protected function auditUpdated()
     {
@@ -51,7 +51,7 @@ trait Auditable
     }
 
     /**
-     * Log model deletion
+     * Ghi log viec xoa model
      */
     protected function auditDeleted()
     {
@@ -59,7 +59,7 @@ trait Auditable
     }
 
     /**
-     * Create an audit log entry
+     * Tao mot dong nhat ky kiam toan
      */
     protected function createAuditLog(string $action, ?array $oldValues, ?array $newValues)
     {
@@ -76,13 +76,13 @@ trait Auditable
     }
 
     /**
-     * Get auditable attributes (excluding timestamps and sensitive data)
+     * Lay cac attribute co the audit (loai bo timestamp va du lieu nhay cam)
      */
     protected function getAuditableAttributes(): array
     {
         $attributes = $this->getAttributes();
-        
-        // Remove sensitive and non-auditable fields
+
+        // Bo cac field nhay cam va khong nen audit
         $exclude = ['password', 'remember_token', 'created_at', 'updated_at', 'deleted_at'];
         
         return array_diff_key($attributes, array_flip($exclude));

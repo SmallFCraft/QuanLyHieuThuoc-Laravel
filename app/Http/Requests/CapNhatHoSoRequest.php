@@ -36,7 +36,7 @@ class CapNhatHoSoRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Cac luat kiem tra ap dung cho request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */

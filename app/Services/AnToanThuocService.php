@@ -12,16 +12,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Drug interaction and contraindication checks.
+ * Kiem tra tuong tac thuoc va chong chi dinh.
  *
- * All knowledge lives in `drug_interactions` and `drug_contraindications`; nothing
- * here asks a language model. Ingredient names are matched after stripping dosage,
- * because `products.ingredients` stores strings like "Paracetamol 500mg".
+ * Toan bo kien thuc nam trong `drug_interactions` va `drug_contraindications`; khong
+ * cho nao o day hoi mot language model. Ten hoat chat duoc khop sau khi bo lieu luong,
+ * vi `products.ingredients` luu chuoi nhu "Paracetamol 500mg".
  */
 class AnToanThuocService
 {
     /**
-     * Words that appear inside ingredient strings but never identify a drug.
+     * Cac tu xuat hien trong chuoi thanh phan nhung khong bao gio xac dinh mot thuoc.
      */
     protected const NOISE_TOKENS = [
         'mg', 'g', 'ml', 'mcg', 'iu', 'vien', 'sui', 'hcl', 'sodium', 'potassium',
@@ -30,8 +30,8 @@ class AnToanThuocService
     ];
 
     /**
-     * Multi-word ingredient names must survive tokenisation, so they are matched
-     * as whole phrases before single tokens are considered.
+     * Ten hoat chat nhieu tu phai song sot qua buoc tach token, nen chung duoc khop
+     * nhu nguyen cum truoc khi xet den tung token don le.
      */
     protected const COMPOUND_INGREDIENTS = [
         'acid acetylsalicylic',
@@ -51,21 +51,21 @@ class AnToanThuocService
     }
 
     /**
-     * Interaction table indexed by ingredient pair, built once per request.
+     * Bang tuong tac index theo cap hoat chat, dung mot lan moi request.
      *
      * @var array<string, TuongTacThuoc>|null
      */
     protected ?array $chiMucTuongTac = null;
 
     /**
-     * Contraindication rows indexed by ingredient, built once per request.
+     * Cac dong chong chi dinh index theo hoat chat, dung mot lan moi request.
      *
      * @var array<string, array<int, ChungChiDinhThuoc>>|null
      */
     protected ?array $chiMucChongChiDinh = null;
 
     /**
-     * Every warning that applies to buying this product as this user.
+     * Moi canh bao ap dung cho viec mua san pham nay voi nguoi dung nay.
      *
      * @return array{warnings: array<int, array>, blocking: bool}
      */
@@ -90,7 +90,7 @@ class AnToanThuocService
     }
 
     /**
-     * Interaction between two raw ingredient strings (as stored on products).
+     * Tuong tac giua hai chuoi hoat chat thieu (nhu cach luu tren products).
      */
     public function kiemTraCapHoatChat(string $ingredientsA, string $ingredientsB): Collection
     {
@@ -121,11 +121,11 @@ class AnToanThuocService
     }
 
     /**
-     * One query per request instead of one per ingredient pair.
+     * Mot truy van moi request thay vi mot truy van cho moi cap hoat chat.
      *
-     * A cart of n products with k ingredients each produced O(n²k²) SELECTs — at the
-     * 100-item cart ceiling that was ~10k queries for a single checkout render. The
-     * curated interaction table is small enough to index in memory once.
+     * Gio hang n san pham moi san pham k hoat chat da tao ra O(n²k²) SELECT — o
+     * tran 100 san pham, do la ~10k truy van cho mot lan render checkout. Bang tuong tac
+     * duoc bien soan nho du de index trong bo nho mot lan.
      *
      * @return array<string, TuongTacThuoc>
      */
@@ -138,7 +138,7 @@ class AnToanThuocService
         $chiMuc = [];
 
         foreach (TuongTacThuoc::active()->get() as $tuongTac) {
-            // Stored once but symmetric, so index both directions.
+            // Luu mot lan nhung doi xung, nen index ca hai chieu.
             $chiMuc[$tuongTac->ingredient_a . '|' . $tuongTac->ingredient_b] = $tuongTac;
             $chiMuc[$tuongTac->ingredient_b . '|' . $tuongTac->ingredient_a] = $tuongTac;
         }
@@ -152,7 +152,7 @@ class AnToanThuocService
     }
 
     /**
-     * Same reason as chiMucTuongTac: one query instead of one per product.
+     * Cung ly do voi chiMucTuongTac: mot truy van thay vi mot truy van cho moi san pham.
      *
      * @return array<string, array<int, ChungChiDinhThuoc>>
      */
@@ -172,10 +172,10 @@ class AnToanThuocService
     }
 
     /**
-     * Scan the whole cart: every product against the user's profile, and every
-     * pair of products against each other.
+     * Quet ca gio hang: moi san pham doi chieu voi ho so nguoi dung, va moi cap
+     * san pham doi chieu voi nhau.
      *
-     * @param array $cartItems session cart rows, each with at least a MaSP key
+     * @param array $cartItems cac dong gio hang trong session, moi dong it nha co key MaSP
      * @return array{warnings: array<int, array>, blocking: bool}
      */
     public function kiemTraGioHang(array $cartItems, int $userId): array
@@ -216,7 +216,7 @@ class AnToanThuocService
     }
 
     /**
-     * Adding one product to a cart that already holds others.
+     * Them mot san pham vao gio hang da co san pham khac.
      *
      * @return array{warnings: array<int, array>, blocking: bool}
      */
@@ -252,11 +252,11 @@ class AnToanThuocService
     }
 
     /**
-     * Called when the user acknowledges a major warning and buys anyway.
-     * Recorded so the decision is traceable — this is a health record, not a UX event.
+     * Duoc goi khi nguoi dung xac nhan mot canh bao major va van mua.
+     * Ghi lai de quyet dinh co the truy vet — day la ban ghi suc khoe, khong phai su kien UX.
      *
-     * The write is best-effort: the safety decision itself has already been made, so a
-     * failing audit row must not turn the acknowledged add-to-cart into a 500.
+     * Viec ghi la best-effort: quyet dinh an toan da duoc dua ra, nen mot dong audit
+     * ghi that bai khong duoc bien viec them vao gio da xac nhan thanh loi 500.
      */
     public function ghiNhatKyBoQua(int $userId, SanPham $sanPham, array $warnings): void
     {
@@ -284,8 +284,8 @@ class AnToanThuocService
     }
 
     /**
-     * Profile is only readable once the user consented; without consent the checks
-     * fall back to product-level rules that need no personal data.
+     * Ho so chi duoc doc sau khi nguoi dung dong y; khong co dong y, cac kiem tra
+     * quay ve quy tac cap san pham khong can du lieu ca nhan.
      */
     protected function hoSoDaDongY(int $userId): ?HoSoSucKhoe
     {
@@ -307,7 +307,7 @@ class AnToanThuocService
 
         $timThay = [];
 
-        // Compound names first, then remove them so their parts are not re-matched.
+        // Ten gop truoc, roi xoa chung de cac phan cua chung khong bi khop lai.
         foreach (self::COMPOUND_INGREDIENTS as $compound) {
             if (str_contains($daChuanHoa, $compound)) {
                 $timThay[] = $compound;
@@ -325,15 +325,15 @@ class AnToanThuocService
     }
 
     /**
-     * Same folding rules as NhanDienHinhAnhService::normalizeProductText so both
-     * services agree on ingredient spelling.
+     * Cung quy tac fold voi NhanDienHinhAnhService::normalizeProductText de ca hai
+     * service dong nhat ve cach viet hoat chat.
      */
     protected function chuanHoaVanBanHoatChat(string $text): string
     {
         $text = mb_strtolower($text, 'UTF-8');
         $text = str_replace(['đ', 'Đ'], ['d', 'd'], $text);
         $text = Str::ascii($text);
-        // Drop the dosage entirely: it is not part of the drug identity.
+        // Bo hoan toan lieu luong: no khong thuoc ve danh tinh cua thuoc.
         $text = preg_replace('/\d+[.,]?\d*\s*(mg|mcg|g|ml|iu)\b/u', ' ', $text) ?? $text;
         $text = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $text) ?? $text;
         $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
@@ -349,7 +349,7 @@ class AnToanThuocService
     }
 
     /**
-     * Age, pregnancy, breastfeeding and chronic-disease contraindications.
+     * Chong chi dinh ve tuoi, mang thai, cho con bu va benh man tinh.
      *
      * @return array<int, array>
      */
@@ -397,7 +397,7 @@ class AnToanThuocService
         array $cacDiUng
     ): bool {
         return match ($dong->condition_type) {
-            // Unknown age must not silently pass an age guard.
+            // Tuoi khong biet khong duoc im lang vuot qua guard tuoi.
             'age_under' => $tuoi !== null && $tuoi < (int) $dong->condition_value,
             'age_over' => $tuoi !== null && $tuoi > (int) $dong->condition_value,
             'pregnancy' => (bool) ($hoSo?->hasConsented() && $hoSo->is_pregnant),
@@ -422,7 +422,7 @@ class AnToanThuocService
     }
 
     /**
-     * Interaction between the product being bought and what the user already takes.
+     * Tuong tac giua san pham dang mua va nhung gi nguoi dung dang dung.
      *
      * @return array<int, array>
      */
@@ -463,7 +463,7 @@ class AnToanThuocService
     }
 
     /**
-     * Direct allergy match. Always blocking: a declared allergy is not a suggestion.
+     * Khop dung dung vi di ung da khai. Luon chan: di ung da khai khong phai loi de xuat.
      *
      * @return array<int, array>
      */
@@ -480,9 +480,9 @@ class AnToanThuocService
             $diUngDaChuanHoa = $this->chuanHoaVanBanHoatChat((string) $diUng);
             $tenSanPham = $this->chuanHoaVanBanHoatChat($sanPham->ten);
 
-            // The name fallback needs the same length floor as laTokenCoNghia:
-            // an allergy typed as "C" or "ca" would otherwise substring-match nearly
-            // every product name and block the whole catalog as a major warning.
+            // Fallback theo ten can cung san do dai toi thieu voi laTokenCoNghia:
+            // mot di ung duoc go nhu "C" hoac "ca" neu khong se substring-khop gan
+            // moi ten san pham va chan ca catalog nhu mot canh bao major.
             $khopTheoTen = mb_strlen($diUngDaChuanHoa) >= 4
                 && preg_match('/(?<![a-z0-9])' . preg_quote($diUngDaChuanHoa, '/') . '/u', $tenSanPham) === 1;
 
@@ -550,8 +550,8 @@ class AnToanThuocService
     }
 
     /**
-     * Substring match in both directions: the user may write "benh da day" where
-     * the rule says "loet da day", or the other way round.
+     * Khop substring theo ca hai chieu: nguoi dung co the viet "benh da day" trong khi
+     * quy tac ghi "loet da day", hoac nguoc lai.
      */
     protected function danhSachCoDeCap(array $haystack, string $needle): bool
     {

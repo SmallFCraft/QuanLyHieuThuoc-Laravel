@@ -59,12 +59,13 @@ class NhacUongThuoc extends Model
     }
 
     /**
-     * Reminders are spread evenly across waking hours (08:00–20:00) rather than
-     * around the clock, so nobody is woken at 3am for a paracetamol dose.
+     * Nhac uong duoc rai deu trong gio thuc (08:00–20:00) thay vi qua dem, de khong
+     * ai bi danh thuc luc 3 gio sang vi mot lieu paracetamol.
      *
-     * The next slot is measured from now, not from the stored due date: after a
-     * scheduler or worker outage the stored date is hours or days stale, and stepping
-     * forward from it would send one mail per missed dose in a burst.
+     * Khung gio nhac tiep do tu hien tai, khong phai tu ngay den han da luu: sau mot
+     * gian doan cua scheduler hay worker, ngay da luu co the chi la thoi diem tuong
+     * lai cach nhieu gio hoac nhieu ngay, va buoc tuan tu tu do se bom mot loat mail,
+     * moi lieu uong lo mat mot mail.
      */
     public function advanceSchedule(): void
     {

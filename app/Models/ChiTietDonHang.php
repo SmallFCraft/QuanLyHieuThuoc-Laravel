@@ -15,7 +15,7 @@ class ChiTietDonHang extends Model
     protected $primaryKey = 'ma_ctdh';
 
     /**
-     * The attributes that are mass assignable.
+     * Cac thuoc tinh cho phep gan hang loat.
      *
      * @var array<int, string>
      */
@@ -29,7 +29,7 @@ class ChiTietDonHang extends Model
     ];
 
     /**
-     * The attributes that should be cast.
+     * Cac thuoc tinh nen ep kieu.
      *
      * @var array<string, string>
      */
@@ -39,7 +39,7 @@ class ChiTietDonHang extends Model
     ];
 
     /**
-     * Get the order that owns the order item.
+     * Don hang so huu dong chi tiet nay.
      */
     public function donHang()
     {
@@ -47,7 +47,7 @@ class ChiTietDonHang extends Model
     }
 
     /**
-     * Get the product that owns the order item.
+     * San pham cua dong chi tiet nay.
      */
     public function sanPham()
     {
@@ -55,7 +55,7 @@ class ChiTietDonHang extends Model
     }
 
     /**
-     * Get the batch that owns the order item.
+     * Lo san pham cua dong chi tiet nay.
      */
     public function loSanPham()
     {
@@ -63,7 +63,7 @@ class ChiTietDonHang extends Model
     }
 
     /**
-     * Get the subtotal for this order item.
+     * Tien hang cua dong chi tiet don hang nay.
      *
      * @return float
      */
@@ -73,7 +73,7 @@ class ChiTietDonHang extends Model
     }
 
     /**
-     * Get formatted subtotal in Vietnamese currency format.
+     * Tien hang da dinh dang theo dinh dang tien te Viet Nam.
      *
      * @return string
      */

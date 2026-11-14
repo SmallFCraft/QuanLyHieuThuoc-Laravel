@@ -11,34 +11,34 @@ use App\Services\NhatKyKiemToanService;
 use Illuminate\Support\Facades\Log;
 
 /**
- * The detailed part of the result page: why this conclusion, what to watch, when to
- * see a doctor, what to do without medicine, what to ask the pharmacist, and which
- * in-stock products are worth looking at.
+ * Phan chi tiet cua trang ket qua: vi sao co ket luan nay, can theo doi gi, khi nao
+ * nen di khoa, lam gi khi chua dung thuoc, nen hoi duoc si gi, va san pham nao
+ * con hang dang xem den.
  *
- * This is the one AI seam that writes *new* content rather than rephrasing the
- * pharmacist's. Three structural limits keep it safe:
+ * Day la seam AI duy nhat viet noi dung *moi* thay viet lai loi khuyen cua
+ * duoc si. Ba gioi han cau truc giu no an toan:
  *
- *  1. It runs after hoanTat() and writes only `ai_briefing`/`ai_briefing_status`.
- *     `outcome`, `advice_given` and `safety_net` are unreachable from here, so no
- *     briefing — hallucinated or injected — can soften a referral or move a number.
- *  2. SanPham suggestions are ids picked from a list this class builds from the
- *     catalogue. An id outside that list is dropped, so the model cannot name a
- *     medicine the pharmacy does not stock, and every suggestion still goes through
- *     AnToanThuocService on the way to the page.
- *  3. The customer's own words are sent (the "why" needs them). Health profile
- *     fields reach the provider only through SangLocAiNguCanhService, which is the
- *     single gate: they are included only when the profile carries explicit AI
- *     consent (`ai_consent_at`), never under the general purpose-limited consent.
+ *  1. No chay sau hoanTat() va chi ghi `ai_briefing`/`ai_briefing_status`.
+ *     `outcome`, `advice_given` va `safety_net` khong cham duoc tu day, nen khong
+ *     briefing nao — bi a tu hay duoc chen — lam nhe mot chuyen tu van hoac sua mot con so.
+ *  2. Goi y SanPham la id chon tu danh sach lop nay dung tu danh muc. Mot id
+ *     ngoai danh sach do bi bo, nen model khong the nhon mot loai thuoc
+ *     nha thuoc khong ton, va moi goi y van di qua
+ *     AnToanThuocService truoc khi den trang.
+ *  3. Loi cua khach hang duoc gui (phan "vi sao" can chung). Truong ho so suc khoe
+ *     chi den nha cung cap qua SangLocAiNguCanhService, ham la cua duy nhat:
+ *     duoc dua vao chi khi ho so co dong y AI ro rang
+ *     (`ai_consent_at`), khong bao gio duoi dong y chung gioi han muc dich.
  */
 class SangLocAiTomTatService extends SangLocAiService
 {
-    /** Calling 115 is the only thing that belongs on an emergency page. */
+    /** Goi 115 la thu duy nhat nen co tren trang khan cap. */
     private const NO_BRIEFING_OUTCOMES = ['emergency'];
 
     /**
-     * Outcomes where a medicine suggestion is appropriate at all. `refer_doctor`
-     * is excluded on purpose: that page exists to send somebody to a doctor, and
-     * offering something to take first works against it.
+     * Ket qua ma goi y thuoc thuc su phu hop. `refer_doctor`
+     * bi loai chu dich: trang do ton tai de dan nguoi den bac si, va
+     * de nghi thuoc uong truoc thi nguoc voi muc dich do.
      */
     private const PRODUCT_OUTCOMES = ['self_care', 'pharmacist_review'];
 
@@ -55,14 +55,14 @@ class SangLocAiTomTatService extends SangLocAiService
     private const MAX_CANDIDATES = 40;
 
     /**
-     * Per-product caps for the list SENT to the provider. The candidate rows keep
-     * their full text — `cleanProducts()` merges them back into the stored briefing,
-     * so the page still shows the whole usage line. These cut only the prompt.
+     * Han theo san pham cho danh sach GUI cho nha cung cap. Cac row ung cuien giu
+     * van ban day du — `cleanProducts()` hop chung tro lai vao briefing da luu,
+     * nen trang van hien toan bo dong cach dung. Cac han nay chi cat tren prompt.
      *
-     * Measured 2026-09-15: the catalogue's own `usage` column averages 2.8KB and
-     * peaks at 9.5KB, so 40 products reach 126KB of prompt and the provider needs
-     * 132s before its first byte — past the 90s briefing budget, so the briefing
-     * failed on every call. Trimming these fields took the same call to 16s.
+     * Do ngay 2026-09-15: cot `usage` cua danh muc trung binh 2.8KB va
+     * dinh 9.5KB, nen 40 san pham len den 126KB prompt va nha cung cap can
+     * 132s truoc khi tra byte dau — vuot ngan sach briefing 90s, nen briefing
+     * that bai moi lan goi. Cat bot cac truong nay dua cung mot lan goi ve 16s.
      */
     private const MAX_PROMPT_NAME = 120;
 
@@ -79,7 +79,7 @@ class SangLocAiTomTatService extends SangLocAiService
         'ask_pharmacist',
     ];
 
-    /** Max lines the model may write into `data_analysis`. */
+    /** So dong toi da model duoc ghi vao `data_analysis`. */
     private const MAX_ANALYSIS_LINES = 4;
 
     public function __construct(
@@ -95,8 +95,8 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Runs in a worker after the outcome is final, so it gets a real budget: it asks
-     * for six sections plus a product pick in one call.
+     * Chay trong worker sau khi ket qua chot, nen co ngan sach that: ham hoi
+     * sau khoi cong mot lua chon san pham trong mot lan goi.
      */
     protected function timeoutSeconds(): int
     {
@@ -111,8 +111,8 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Write `ai_briefing` / `ai_briefing_status`. Never throws: a failure leaves the
-     * columns null and the page renders exactly as it does with the feature off.
+     * Ghi `ai_briefing` / `ai_briefing_status`. Khong bao gio nem loi: that bai de
+     * cot null va trang render dung nhu khi tinh nang off.
      */
     public function sinhNoiDung(PhienSangLoc $phien): void
     {
@@ -178,7 +178,7 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Rule-derived material plus the customer's own words, clearly fenced.
+     * Du lieu suy tu quy tac cong loi cua khach hang, duoc rao ro rang.
      *
      * @param  array<int, array<string, mixed>>  $cacUngVien
      */
@@ -256,8 +256,8 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * The wizard answers as labelled lines. Truncated as a whole: a long injected
-     * block cannot push the instructions out of the context window.
+     * Cau tra loi wizard duoi dang dong co nhan. Cat toan khoi: mot khoi chen dai
+     * khong the day chi dan ra khoi cua so ngu canh.
      */
     protected function answerBlock(PhienSangLoc $phien): string
     {
@@ -294,10 +294,10 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * In-stock, unexpired products from the categories the pharmacy's own triage
-     * rules are allowed to suggest from. Reading the rule table rather than a new
-     * config keeps prescription-only shelves (antibiotics, cardiovascular) out
-     * without a second list to maintain.
+     * San pham con hang, chua het han tu cac danh muc ma bo quy tac sang loc cua chinh
+     * nha thuoc duoc phep goi y. Doc bang quy tac thay vi them mot config moi
+     * giu cac ke thuoc ban ke don (khang sinh, tim mach) o ngoai
+     * ma khong phai giu them mot danh sach thu hai.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -334,9 +334,9 @@ class SangLocAiTomTatService extends SangLocAiService
                 'price' => $sanPham->price_vnd,
                 'stock_quantity' => (int) $sanPham->so_luong_ton,
                 'category' => $sanPham->danhMuc?->ten,
-                // No `url`: this runs in a worker with no incoming request, so route()
-                // would bake APP_URL's host into the stored row. The result page builds
-                // the link from the id instead.
+                // Khong `url`: ham chay trong worker khong co request den, nen route()
+                // se cam host APP_URL vao row da luu. Trang ket qua dung
+                // link tu id thay the.
             ])
             ->all();
     }
@@ -418,11 +418,11 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Everything that reaches the page passes through here.
+     * Moi thu cham den trang di qua day.
      *
-     * @param  array<string, mixed>  $raw
+     * @param  array<string, mixed>  $du lieu tho
      * @param  array<int, array<string, mixed>>  $cacUngVien
-     * @return array<string, mixed>|null null when there is nothing usable left
+     * @return array<string, mixed>|null null khi khong con gi dung duoc
      */
     protected function sanitize(array $raw, array $cacUngVien, PhienSangLoc $phien): ?array
     {
@@ -436,15 +436,15 @@ class SangLocAiTomTatService extends SangLocAiService
 
         $briefing['products'] = $this->cleanProducts($raw['products'] ?? null, $cacUngVien, $phien);
 
-        // Optional and additive: stored only when the model produced a usable reading,
-        // so the stored shape of older briefings is unchanged.
+        // Tuy chon va cong them: chi luu khi model ra mot phan do dung duoc,
+        // nen dang luu cua cac briefing cu khong doi.
         if (($analysis = $this->cleanAnalysis($raw['data_analysis'] ?? null, $phien)) !== []) {
             $briefing['data_analysis'] = $analysis;
         }
 
-        // A briefing with only "why" and no guidance sections is thin and incomplete
-        // (session 31 left 5 empty lists and the page rendered a lone heading).
-        // Require why plus at least two filled guidance sections.
+        // Briefing chi co "vi sao" ma khong co khoi huong dan la mong va thieu
+        // (phien 31 de lai 5 danh sach rong va trang chi hien mot heading don).
+        // Yeu cau vi sao cong toi hai khoi huong dan co noi dung.
         $filledSectionCount = collect(self::SECTIONS)
             ->filter(fn (string $s) => $briefing[$s] !== [])
             ->count();
@@ -473,8 +473,8 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * A number the model writes that is not in the metric table is invented — the
-     * line is dropped rather than shown, the same way a hallucinated product id is.
+     * Mot con so model viet ma khong nam trong bang chi so la bia ra —
+     * dong bi bo thay vi hien, cung cach mot id san pham bi a tu bi bo.
      *
      * @return array<int, string>
      */
@@ -508,9 +508,9 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Ids are intersected with the candidate list, so a hallucinated or injected id
-     * cannot put a medicine on the page. The price, name and stock shown come from
-     * the catalogue row, never from the model.
+     * Id duoc giao voi danh sach ung vien, nen mot id bi a tu hoac chen vao
+     * khong the dua mot loai thuoc len trang. Gia, ten va ton hien thi den tu
+     * row danh muc, khong bao gio tu model.
      *
      * @param  array<int, array<string, mixed>>  $cacUngVien
      * @return array<int, array<string, mixed>>
@@ -522,7 +522,7 @@ class SangLocAiTomTatService extends SangLocAiService
         }
 
         $byId = collect($cacUngVien)->keyBy('id');
-        // The rule engine's own suggestions are already on the page above.
+        // Goi y rieng cua bo quy tac da co tren trang phia tren.
         $alreadyShown = collect($phien->suggested_products ?? [])->pluck('id')->map(fn ($id) => (int) $id)->all();
 
         return collect($items)
@@ -540,18 +540,18 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Markdown is stripped rather than rejected: every display site renders with
-     * {{ }} and white-space: pre-line, so markers would show as literal characters,
-     * and one stray asterisk is not a reason to lose a whole briefing.
+     * Markdown duoc bo chu khong bi tu choi: moi noi hien thi render voi
+     * {{ }} va white-space: pre-line, nen marker se hien nhu ky tu nghien van ban,
+     * va mot dau sao lac dau khong phai ly do de mat ca briefing.
      *
-     * Tool-call markup leaks in on the same terms. opencode (session 64) prefixes a
-     * field with the argument tag it was asked to fill — `<parameter>why>text` or
-     * `<parameter name="why">text` — which is transport noise, not content.
+     * Markup tool-call le theo cung nguyen tac. opencode (phien 64) gan tien to cho mot
+     * truong bang tag doi so no duoc yeu cau dien — `<parameter>why>text` hoac
+     * `<parameter name="why">text` — do la nhieu van chuyen, chu khong phai noi dung.
      */
     protected function cleanText(string $text, int $limit): string
     {
-        // The orphan name (`why>`) is only residue when it directly follows a stripped
-        // tag. A bare `pH>7` or `dose>2` is clinical prose and must survive.
+        // Ten mo coi (`why>`) chi la dot con lai khi no dung ngay sau mot tag da bo,
+        // mot `pH>7` hay `dose>2` la van ban lam sang va phai duoc giu.
         $text = preg_replace('/<\/?(?:parameter|param|arg|tool_call|function_call)\b[^>]*>\s*(?:[a-z_]+>)?/i', '', $text) ?? $text;
         $text = preg_replace('/^\s{0,3}#{1,6}\s*/mu', '', $text) ?? $text;
         $text = preg_replace('/(\*\*|__|`)/u', '', $text) ?? $text;
@@ -563,11 +563,11 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * The schema asks for one paragraph, but some models answer `why` as an array of
-     * sentences, or as a JSON-encoded array inside the string. Both reach here; casting
-     * an array to string would raise a PHP warning and store the literal word "Array"
-     * (session 31/40 showed the JSON form rendered raw on the page). Flatten to prose —
-     * the view renders white-space: pre-line, so a space join reads as a paragraph.
+     * Schema yeu cau mot doan van, nhung mot so model tra loi `why` thanh mang cac
+     * cau, hoac mang ma hoa JSON trong chuoi. Ca hai deu cham ham nay; ep kieu
+     * mang thanh chuoi se gap PHP warning va luu chu "Array" nguyen van
+     * (phien 31/40 cho thay dang JSON duoc render thot tren trang). Lam phang thanh van ban —
+     * view render voi white-space: pre-line, nen noi bang dau cach doc nhu mot doan van.
      */
     protected function cleanWhy(mixed $why): string
     {
@@ -647,8 +647,8 @@ class SangLocAiTomTatService extends SangLocAiService
             $durationMs
         );
 
-        // Provenance and shape only: never the prompt, never the briefing text, never
-        // the customer's words.
+        // Chi nguon goc va dang: khong bao gio prompt, khong bao gio van ban briefing, khong bao gio
+        // loi cua khach hang.
         $this->auditProvenance($phien, 'triage_ai_briefing', $described, $durationMs, [
             'ai_briefing_status' => $status,
             'product_count' => count($briefing['products'] ?? []),

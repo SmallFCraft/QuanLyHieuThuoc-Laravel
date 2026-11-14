@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class PasswordResetLinkController extends Controller
 {
     /**
-     * Display the password reset link request view.
+     * Hien thi view yeu cau link dat lai mat khau.
      */
     public function create(): View
     {
@@ -20,7 +20,7 @@ class PasswordResetLinkController extends Controller
     }
 
     /**
-     * Handle an incoming password reset link request.
+     * Xu ly mot request link dat lai mat khau den.
      *
      * @throws ValidationException
      */
@@ -30,9 +30,9 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
+        // Se gui link dat lai mat khau cho nguoi dung nay. Sau khi da thu gui
+        // link, se xem xet response roi thay thong bao can hien cho nguoi dung.
+        // Cuoi cung se tra ra mot response hop le.
         $status = Password::sendResetLink(
             $request->only('email')
         );

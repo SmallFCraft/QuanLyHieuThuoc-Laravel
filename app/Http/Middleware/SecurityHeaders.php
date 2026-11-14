@@ -9,15 +9,15 @@ use Symfony\Component\HttpFoundation\Response;
 class SecurityHeaders
 {
     /**
-     * Handle an incoming request.
+     * Xu ly mot request den.
      *
      * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
-        
-        // Set security headers
+
+        // Dat cac header bao mat
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-XSS-Protection', '1; mode=block');
@@ -29,7 +29,7 @@ class SecurityHeaders
         // camera van dong: anh vao bang <input type="file">, khong bang camera stream.
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(self), camera=()');
         
-        // Content Security Policy (adjust as needed for your application)
+        // Content Security Policy (chinh sua theo nhu cau ung dung cua ban)
         $response->headers->set('Content-Security-Policy', 
             "default-src 'self'; " .
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.datatables.net; " .

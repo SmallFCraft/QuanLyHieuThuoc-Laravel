@@ -13,34 +13,34 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Decide the outcome of a finished questionnaire, outside the web request.
+ * Quyet dinh ket qua cua mot bo cau hoi da hoan thanh, ngoai web request.
  *
- * Measured against the configured provider, one fact-extraction call takes 11-30s
- * (median ~14s). With the old 8s synchronous budget it almost always timed out, and
- * a timeout is not merely slow — it silently drops the AI facts, so a patient who
- * said "may nam nay roi" was scored as one day, and the follow-up round that should
- * have come next never appeared because `canHoiLamRo()` had no AI result to
- * read. The wizard looked like it skipped from "vong 1/3" straight to the result.
+ * Do tren nha cung cap da cau hinh, mot loi goi trich duyet su tht mat 11-30s
+ * (trung vi ~14s). Voi ngan sach dong bo 8s cu thi gan nhu luon bi timeout, va
+ * timeout khong chi la cham — no im lang lam mat cac su tht tu AI, nen nguoi benh
+ * noi "may nam nay roi" bi tinh la mot ngay, va vong hoi lam ro theo sau can phai
+ * xuat hien thi khong bao gio xuat hien vi `canHoiLamRo()` khong co ket qua AI de
+ * doc. Tro ly trong nhu da nhay tu "vong 1/3" thang den trang ket qua.
  *
- * Deferring this is safe — and different from deferring the advice rewrite — because
- * the patient WAITS on it: the result page is not shown until the job has decided.
- * The conclusion is therefore never revised after they have read it, which is the
- * rule that keeps fact extraction out of the background elsewhere.
+ * Tri hoan viec nay la an toan — va khac voi viec tri hoan viec viet lai loi khuyen —
+ * vi nguoi benh DOI no: trang ket qua khong duoc hien cho toi khi cong viec da quyet
+ * dinh. Vi vay ket luan khong bao gio bi sua lai sau khi ho da doc, va do la luat giu
+ * viec trich duyet su tht khoi nen nen hang doi o nhung cho khac.
  *
- * The job decides nothing itself. It calls the same danhGia() / canHoiLamRo()
- * / hoanTat() the controller used to call inline.
+ * Cong viec khong tu quyet dinh gi. No goi dung cac ham danhGia() / canHoiLamRo()
+ * / hoanTat() ma controller truoc day goi inline.
  */
 class XuLyDanhGiaSangLoc implements ShouldQueue
 {
     use Queueable;
 
     /**
-     * One attempt. A retry would call the provider again and could hand the patient
-     * a different conclusion for the same answers.
+     * Chi mot lan thu. Thu lai se goi nha cung cap them lan nua va co the dua cho
+     * nguoi benh mot ket luan khac cho cung cac cau tra loi.
      */
     public int $tries = 1;
 
-    /** Above the worst measured provider latency plus the fallback provider. */
+    /** Cao hon do tre lon nhat da do duoc cua nha cung cap cong nha cung cap du phong. */
     public int $timeout = 120;
 
     public function __construct(public string $uuid)
@@ -65,8 +65,8 @@ class XuLyDanhGiaSangLoc implements ShouldQueue
 
         $jobs->markRunning($job);
 
-        // NhatKyKiemToanService reads Auth::id(); without this the worker writes audit rows
-        // with a null customer, breaking the link to the person triaged.
+        // NhatKyKiemToanService doc Auth::id(); khong co dong nay thi worker ghi cac
+        // dong kiem toan voi khach null, dut lien ket voi nguoi dang duoc sang loc.
         Auth::onceUsingId((int) $job->ma_nd);
 
         try {
@@ -81,16 +81,16 @@ class XuLyDanhGiaSangLoc implements ShouldQueue
 
             $phien = $triage->hoanTat($phien, $result);
 
-            // Session id only, never a URL: a worker has no incoming request, so
-            // route() would build the link from APP_URL and send the browser to the
-            // wrong host or port. The controller turns this into a URL.
+            // Chi session id, khong bao gio la URL: worker khong co request den, nen
+            // route() se dung link tu APP_URL va gui trinh duyet den host hoac port
+            // sai. Controller moi bien no thanh URL.
             $jobs->markDone($job, [
                 'next' => 'result',
                 'ma_sl' => $phien->ma_sl,
             ]);
 
-            // Rephrasing is its own job: it runs after the conclusion is fixed and
-            // must not hold the patient back from reading it.
+            // Viet lai loi khuyen la cong viec rieng: no chay sau khi ket luan da an
+            // dinh va khong duoc giu nguoi benh lai khi ho dang doc.
             $jobs->dispatchAdviceRewriteIfEligible($phien);
         } catch (\Throwable $exception) {
             Log::error('Triage evaluation job failed', [

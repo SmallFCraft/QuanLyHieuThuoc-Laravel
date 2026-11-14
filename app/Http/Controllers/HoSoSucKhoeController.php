@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Redirect;
 class HoSoSucKhoeController extends Controller
 {
     /**
-     * Fields whose *content* is health data. Only their names and item counts
-     * may reach the audit log — never the values themselves.
+     * Cac field ma *noi dung* cua chung la du lieu suc khoe. Chi ten va so luong muc
+     * cua chung duoc phep den nhat ky kiam toan — khong bao gio gia tri.
      */
     protected const SENSITIVE_LISTS = ['allergies', 'chronic_conditions', 'current_medications'];
 
@@ -27,8 +27,8 @@ class HoSoSucKhoeController extends Controller
             ? ($hoSo?->consented_at ?? now())
             : null;
 
-        // Separate from consented_at: an unticked box is a real withdrawal of the
-        // AI consent, even when the safety-warning consent below stays ticked.
+        // Tach khoi consented_at: bo tick la mot viec rut lai dong y AI that su,
+        // ke ca khi dong y canh bao an toan phia duoi van con tick.
         $attributes['ai_consent_at'] = $request->boolean('ai_consent')
             ? ($hoSo?->ai_consent_at ?? now())
             : null;
@@ -75,7 +75,7 @@ class HoSoSucKhoeController extends Controller
     }
 
     /**
-     * Names of the fields whose value differs from what is stored.
+     * Ten cac field ma gia tri cua chung khac voi nhung gi dang luu.
      *
      * @return array<int, string>
      */
@@ -115,8 +115,8 @@ class HoSoSucKhoeController extends Controller
     }
 
     /**
-     * Audit payload with counts only: allergy and condition text must never be
-     * written to audit_logs in the clear.
+     * Payload audit chi gom so dem: van ban di ung va benh man tinh khong duoc duoc
+     * ghi vao audit_logs duoi dang trong.
      *
      * @return array<string, mixed>
      */

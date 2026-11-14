@@ -25,7 +25,7 @@ class HoSoSucKhoe extends Model
     ];
 
     protected $casts = [
-        // Health data is sensitive: encrypted at rest, decrypted only on read.
+        // Du lieu suc khoe la nhay cam: ma hoa khi luu, giai ma chi khi doc.
         'allergies' => 'encrypted:array',
         'chronic_conditions' => 'encrypted:array',
         'current_medications' => 'encrypted:array',
@@ -50,8 +50,8 @@ class HoSoSucKhoe extends Model
     }
 
     /**
-     * Nothing in this profile may influence triage or safety checks until the
-     * user has explicitly consented.
+     * Khong thu gi trong ho so nay duoc phep anh huong den sang loc hoac kiem tra
+     * an toan truoc khi nguoi da dong y ro rang.
      */
     public function hasConsented(): bool
     {
@@ -59,8 +59,8 @@ class HoSoSucKhoe extends Model
     }
 
     /**
-     * Separate from hasConsented(): consenting to a pharmacist reading the profile
-     * is not consent to sending it to an AI provider.
+     * Rieng biet voi hasConsented(): dong y cho duoc si doc ho so khong phai la dong y
+     * gui du lieu do den mot nha cung cap AI.
      */
     public function hasAiConsent(): bool
     {
@@ -68,17 +68,17 @@ class HoSoSucKhoe extends Model
     }
 
     /**
-     * What people type into a tag field to mean "nothing to declare".
+     * Nhung gi nguoi go vao truong tag de co nghia "khong co gi khai bao".
      *
-     * Not medical history: a literal "Khong" in the allergy list made knownTerms()
-     * non-empty, which made SangLocYTeService::isStepCoveredByProfile() skip wizard
-     * step 4 — so the triage never asked about chronic disease, allergy, pregnancy or
-     * breastfeeding at all, and a follow-up round asked it instead.
+     * Khong phai tien su y khoa: mot chu "Khong" thu van trong danh sach di ung lam
+     * knownTerms() khong con rong, va dieu do lam SangLocYTeService::isStepCoveredByProfile()
+     * bo qua buoc 4 cua tro ly — nen sang loc khong bao gio hoi ve benh man tinh, di ung,
+     * co thai hay cho con bu, de roi mot vong hoi lam ro hoi thay.
      *
-     * Also keeps the encrypted column clean, because AnToanThuocService reads `allergies`
-     * directly and falls back to substring-matching product names for terms of 4+ chars.
-     * "Khong" folds to a 5-character string, so it is one unlucky product name away from
-     * blocking a cart with a bogus allergy warning.
+     * Dong thoi gi cot da ma hoa sach se, vi AnToanThuocService doc `allergies` truc tiep
+     * va quay ve so khop chuoi con voi ten san pham cho tu khoa tu 4 ky tu tro len.
+     * "Khong" fold ra chuoi 5 ky tu, nen chi cach mot ten san pham xui la chan gio hang
+     * voi mot canh bao di ung vo co.
      */
     public const NEGATION_TERMS = [
         'khong', 'khong co', 'khong co gi', 'khong bi gi', 'ko', 'ko co', 'ko co gi',
@@ -87,8 +87,8 @@ class HoSoSucKhoe extends Model
     ];
 
     /**
-     * fold() strips punctuation, so "N/A", "N.A." and "-" all either land in the list
-     * above or fold to the empty string.
+     * fold() loai dau cau, nen "N/A", "N.A." va "-" deu hoac roi vao danh sach tren
+     * hoac fold ra chuoi rong.
      */
     public static function isNegationTerm(string $term): bool
     {
@@ -98,7 +98,8 @@ class HoSoSucKhoe extends Model
     }
 
     /**
-     * Flattened, lowercase list of every term the safety checks match against.
+     * Danh sach da lam phang, viet thuong, cua moi tu khoa ma cac kiem tra an toan
+     * dung de so khop.
      */
     public function knownTerms(): array
     {
@@ -121,8 +122,8 @@ class HoSoSucKhoe extends Model
     }
 
     /**
-     * The consented profile for a user, or null. Four call sites needed this exact
-     * query, so the "only read with consent" rule lives in one place.
+     * Ho so da duoc dong y cua mot nguoi dung, hoac null. Bon noi goi can dung dung
+     * truy van nay, nen luat "chi doc khi co dong y" nam tai mot cho duy nhat.
      */
     public static function consentedFor(int $userId): ?self
     {

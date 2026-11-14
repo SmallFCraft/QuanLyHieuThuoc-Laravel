@@ -10,35 +10,35 @@ use App\Support\VietnameseText;
 use Illuminate\Support\Facades\Log;
 
 /**
- * AI fact extraction for the triage wizard.
+ * Trich xuat chi tiet AI cho wizard sang loc.
  *
- * The model reads what the customer typed and proposes structured facts. It does
- * NOT decide anything: SangLocYTeService runs its rules twice — once on the
- * regex-derived facts, once on the AI-merged facts — and keeps the more severe
- * outcome. A hallucinated or injected fact can therefore only ever make the
- * result stricter, never laxer.
+ * Model doc nhung gi khach hang go va de nghi cac chi tiet co cau truc. No KHONG
+ * quyet dinh gi het: SangLocYTeService chay quy tac hai lan — mot lan tren
+ * chi tiet suy tu regex, mot lan tren chi tiet hop AI — va giu phia nghiem hon.
+ * Mot chi tiet bi a tu hoac chen vao vi vay chi co the lam ket qua
+ * nghiem hon, chu khong bao gio roi bo hon.
  *
- * Every returned value is validated against the database or a numeric range
- * before it leaves this class. Symptom codes that do not exist are dropped.
+ * Moi gia tri tra ve duoc xac minh voi database hoac mot khoang so
+ * truoc khi roi khoi lop nay. Ma trieu chung khong ton tai bi bo.
  */
 class SangLocAiSuKienService extends SangLocAiService
 {
-    /** A stated age above this is a typo, not a patient. */
+    /** Tuoi noi ro vuot muc nay la loi go, chu khong phai benh nhan. */
     private const MAX_AGE_YEARS = 120;
 
-    /** ~10 years. Longer than this is not a triage case. */
+    /** ~10 tuoi. Dai hon muc nay khong phai truong hop sang loc. */
     private const MAX_DURATION_DAYS = 3650;
 
     private const MAX_CLARIFY_LENGTH = 200;
 
     /**
-     * Folded-regex keyword per topic the account may already hold an answer to.
+     * Tu khoa regex khong dau theo moi chu de ma tai khoan co the da co cau tra loi.
      *
-     * A pattern per topic rather than a phrase list, because the model words the same
-     * question differently every round ("Anh/chi nam nay bao nhieu tuoi a?" vs "Cho em
-     * biet tuoi cua nguoi benh"). "da dung thuoc gi cho trieu chung nay" is deliberately
-     * NOT the medication topic: profile medications are what the customer takes daily,
-     * not what they took for this complaint.
+     * Mot pattern theo chu de thay vi danh sach cum, vi model dien dat cung cau hoi
+     * khac nhau moi vong ("Anh/chi nam nay bao nhieu tuoi a?" hoac "Cho em
+     * biet tuoi cua nguoi benh"). "da dung thuoc gi cho trieu chung nay" chu dich
+     * KHONG phai chu de thuoc: thuoc trong ho so la thuoc khach hang dung hang ngay,
+     * chu khong phai thuoc ho da dung cho phan nan nay.
      */
     private const TOPIC_PATTERNS = [
         'age' => '/(?<![a-z0-9])(tuoi|nam sinh|ngay sinh|sinh nam)(?![a-z0-9])/',
@@ -48,35 +48,35 @@ class SangLocAiSuKienService extends SangLocAiService
     ];
 
     /**
-     * Asking about a child's age must survive: a stated patient age outranks the
-     * account owner's birth_date (see SangLocYTeService::resolveAge), so when the
-     * complaint is about a child the account age is not a known fact at all.
+     * Cau hoi tuoi tre con phai duoc giu: tuoi benh nhan duoc noi ro uu tien hon
+     * birth_date cua chu tai khoan (xem SangLocYTeService::resolveAge), nen khi phan nan
+     * ve mot tre con thi tuoi tai khoan khong phai chi tiet da biet.
      *
-     * Matched against lowercased text WITH its accents, never the folded form:
-     * folding turns "con sot" into "con sot", so a customer's own round-1 answer
-     * read as a child's complaint, the account age was dropped as not applicable,
-     * and the model re-asked a birth date the profile already held.
+     * Khop tren van ban chu thuong CO dau, khong bao gio tren dang khong dau:
+     * khong dau bien "con sot" (tre sot) thanh "con sot" (ban sot), nen cau tra loi vong 1 cua khach
+     * duoc doc thanh phan nan cua tre, tuoi tai khoan bi bo vi khong phu hop,
+     * va model hoi lai ngay sinh ma ho so da co.
      */
     private const CHILD_MARKERS = '/(?<![\p{L}\d])(bé|be|con|trẻ|tre|cháu|chau|sơ sinh|so sinh)(?![\p{L}\d])/iu';
 
     /**
-     * A question about what the customer took FOR THIS COMPLAINT, on folded text.
+     * Cau hoi ve khach hang da dung gi CHO PHAN NAN NAY, tren van ban khong dau.
      *
-     * Deliberately separate from TOPIC_PATTERNS['medications']: that one covers the
-     * profile's daily medication list, this one covers "what did you take and did it
-     * help" — asked in all three rounds of session 52 against three answers all
-     * saying nothing was taken.
+     * Chu dich tach khoi TOPIC_PATTERNS['medications']: chu de kia phu danh sach thuoc
+     * hang ngay trong ho so, chu de nay phu "da dung thuoc gi va no co giup
+     * khong" — duoc hoi ca ba vong cua phien 52 voi ba cau tra loi deu
+     * noi khong dung thuoc gi.
      */
     private const MEDICATION_QUESTION = '/(?<![a-z0-9])(uong thuoc|dung thuoc|thuoc gi|thuoc nao)(?![a-z0-9])/';
 
-    /** Stand-in topic in the denied set; a symptom term can never equal it. */
+    /** Chu de thay the trong tap da phu dinh; thuat ngu trieu chung khong bao gio bang no. */
     private const MEDICATION_TOPIC = '@medication';
 
     /**
-     * Signs the model asks about by their bare name. The dictionary carries
-     * "buon non" / "non oi" / "non ra mau" but not bare "non", and nothing at all
-     * for "lu du", so a denied "Co kem non khong a?" recorded no term and the next
-     * round asked it again.
+     * Cac dau hieu model hoi bang ten not. Tu dien co
+     * "buon non" / "non oi" / "non ra mau" nhung khong co "not" don le, va khong co gi
+     * cho "lu du", nen "Co kem not khong a?" bi phu dinh khong ghi thuat ngu nao va vong
+     * sau hoi lai.
      *
      * @var array<int, string>
      */
@@ -91,7 +91,7 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * May run inside the wizard's form POST, so it keeps the fail-fast budget.
+     * Co the chay trong form POST cua wizard, nen giu ngan sach fail-fast.
      */
     protected function timeoutSeconds(): int
     {
@@ -99,11 +99,11 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Validated facts proposed by the model, or null when disabled, unavailable, or
-     * unusable.
+     * Cac chi tiet da xac minh do model de nghi, hoac null khi tat, khong kha dung, hoac
+     * khong dung duoc.
      *
-     * @param  array<int, string>  $allowedCodes  Active `medical_symptoms.code` values.
-     *                                            Passed in so this class adds no query.
+     * @param  array<int, string>  $allowedCodes  Gia tri `medical_symptoms.code` dang hoat dong.
+     *                                            Truyen vao nen lop nay khong them truy van nao.
      * @return array{
      *     symptom_codes: array<int, string>,
      *     duration_days: int|null,
@@ -124,10 +124,10 @@ class SangLocAiSuKienService extends SangLocAiService
 
         $startedAt = microtime(true);
 
-        // The account facts this seam may reuse, and the wizard answers that must not
-        // be re-asked either. Both are read before the call; the filtering below uses
-        // the same list, so a topic cannot be dropped from the prompt but still asked,
-        // or vice versa.
+        // Cac chi tiet tai khoan seam nay duoc tai dung, va cac cau tra loi wizard cung khong duoc
+        // hoi lai. Ca hai doc truoc lan goi; bo loc phia duoi dung
+        // cung danh sach, nen mot chu de khong the bi bo khoi prompt ma van duoc hoi,
+        // hoac nguoc lai.
         $known = $this->knownFacts($phien, $text);
 
         try {
@@ -164,14 +164,14 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Merge AI facts into the deterministic ones for the second rule pass.
+     * Hop chi tiet AI vao cac chi tiet all dinh cho lan chay quy tac thu hai.
      *
-     * Conservative in one direction only:
-     *  - a null AI value never erases a value the regex path found;
-     *  - a boolean risk flag is OR-ed, so the model can raise a risk but never
-     *    clear one (an AI "not pregnant" must not override a consented profile).
-     * Numeric values do come from the model when present — that is the point of the
-     * extraction — and the safety comes from the two-branch comparison, not here.
+     * Bao thu chi theo mot huong:
+     *  - gia tri AI null khong bao gio xoa gia tri nhanh regex tim duoc;
+     *  - co nguy hiem boolean la OR, nen model co the nang nguy hiem chu khong bao gio
+     *    duoc xoa mot co (AI "khong mang thai" khong duoc ghi de ho so da dong y).
+     * Gia tri so thi lay tu model khi co — dung la muc dich cua viec
+     * trich xuat — con an toan den tu phep so sanh hai nhanh, chu khong phai tai day.
      *
      * @param  array<string, mixed>  $regexFacts
      * @param  array<string, mixed>  $aiFacts
@@ -229,15 +229,15 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * The complaint plus every earlier round's Q&A, plus what the account already
-     * answers — so the model can confirm a known fact instead of asking for it.
+     * Phan nan cong cau hoi-dap cua moi vong truoc, cong nhung gi tai khoan da
+     * tra loi — nen model co the xac nhan chi tiet da biet thay vi hoi lai.
      *
-     * Without the earlier answers the model re-asks what the customer already told
-     * it, which is what made the single-round version feel like a form rather than a
-     * consultation.
+     * Neu khong co cau tra loi truoc do, model hoi lai nhung gi khach hang da noi,
+     * dieu do lam ban mot vong chi nhu mot form chu khong phai mot
+     * cuoc tu van.
      *
      * @param  array<int, array{question: string, answer: string}>  $wizardTranscript
-     * @param  array<string, string>  $knownFacts  human-readable, already filtered
+     * @param  array<string, string>  $knownFacts  doc duoc cho nguoi, da duoc loc
      */
     protected function buildUserMessage(
         PhienSangLoc $phien,
@@ -345,7 +345,7 @@ class SangLocAiSuKienService extends SangLocAiService
     /**
      * @param  array<string, mixed>  $raw
      * @param  array<int, string>  $allowedCodes
-     * @param  array<int, string>  $knownTopics  Topics the account already answers.
+     * @param  array<int, string>  $knownTopics  Cac chu de tai khoan da tra loi.
      * @return array<string, mixed>
      */
     protected function validate(array $raw, array $allowedCodes, array $knownTopics = [], array $deniedTerms = []): array
@@ -354,8 +354,8 @@ class SangLocAiSuKienService extends SangLocAiService
         $wantsMore = $this->nullableBool($raw['needs_more_info'] ?? null);
 
         return [
-            // Allow-list against the database: a fabricated code is structurally
-            // impossible to act on, and this costs no extra query.
+            // Danh sach trang tren database: mot ma bia ra ve cau truc la
+            // khong the hanh dong duoc, va cach nay khong ton truy van them.
             'symptom_codes' => array_values(array_intersect(
                 array_map(fn ($code) => (string) $code, (array) ($raw['symptom_codes'] ?? [])),
                 $allowedCodes
@@ -366,15 +366,15 @@ class SangLocAiSuKienService extends SangLocAiService
             'pregnant' => $this->nullableBool($raw['pregnant'] ?? null),
             'breastfeeding' => $this->nullableBool($raw['breastfeeding'] ?? null),
             'clarify_questions' => $wantsMore === false ? [] : $questions,
-            // An explicit false stops the rounds; a missing field falls back to
-            // "there are questions", which is how the single-round version behaved.
+            // false ro rang dung cac vong; truong thieu ve phia "con cau hoi",
+            // cung la cach ban mot vong truoc day hoat dong.
             'needs_more_info' => $wantsMore ?? ($questions !== []),
         ];
     }
 
     /**
-     * Months win over years when both are present: this is exactly the ambiguity
-     * the regex path gets wrong, and "be 8 thang" must not become 8 years old.
+     * Thang thang nam khi ca hai co mat: dung la trong hop hai nghia
+     * nhanh regex doc sai, va "be 8 thang" khong duoc thanh 8 tuoi.
      *
      * @param  array<string, mixed>  $raw
      */
@@ -401,8 +401,8 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * null stays null rather than collapsing to false: "not stated" and "stated as
-     * no" are different, and gopThanTrong() treats them differently.
+     * null giu nguyen chu roi ve false: "khong noi" va "noi la
+     * khong" la hai khac nhau, va gopThanTrong() xu ly chung khac nhau.
      */
     protected function nullableBool(mixed $value): ?bool
     {
@@ -433,15 +433,15 @@ class SangLocAiSuKienService extends SangLocAiService
                     return false;
                 }
 
-                // Measured: the model re-asked "sot" in three consecutive rounds after
-                // the customer answered "khong" to a question naming it. The prompt
-                // instruction against it was ignored, so the server enforces it.
+                // Do thu te: model hoi lai "sot" ba vong lien tiep sau khi
+                // khach hang tra loi "khong" cho mot cau hoi nhon den no. Chi dan trong prompt
+                // chong lai bi bo qua, nen server ap dung thay.
                 if ($this->asksDeniedTerm($question, $deniedTerms)) {
                     return false;
                 }
 
-                // A question is rendered as a form label, so it must not carry a link
-                // or template syntax.
+                // Cau hoi duoc render thanh label cua form, nen no khong duoc mang link
+                // hay cu phap template.
                 return ! preg_match('#https?://|www\.|[{}<>]#u', $question);
             })
             ->unique()
@@ -451,14 +451,14 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Symptom vocabulary the customer has already ruled out.
+     * Tu vung trieu chung khach hang da phu dinh.
      *
-     * A question is only discarded when every symptom it names has been denied —
-     * "co thay kho tho hoac dau nguc khong?" survives when only "kho tho" was denied,
-     * because the chest-pain half is still new information. Similarity scoring was
-     * measured against real rounds and rejected: token overlap put the genuinely
-     * repeated "co bi sot khong?" (0.33) below two unrelated questions (0.50), so no
-     * threshold separates them. Dictionary terms do.
+     * Mot cau hoi chi bi bo khi moi trieu chung no nhon deu bi phu dinh —
+     * "co thay kho tho hoac dau nguc khong?" con song khi chi "kho tho" bi phu dinh,
+     * vi phan dau nguc van la thong tin moi. Cham diem do tuong tu da duoc thu
+     * tren cac vong that va bi loai: chong lap token dat cau trung that
+     * "co bi sot khong?" (0.33) duoi hai cau khong lien quan (0.50), nen khong
+     * nguong nao tach duoc chung. Thuat ngu tu dien thi tach duoc.
      *
      * @return array<int, string>
      */
@@ -469,8 +469,8 @@ class SangLocAiSuKienService extends SangLocAiService
         foreach ($phien->clarifyHistory() as $pair) {
             $answer = (string) ($pair['answer'] ?? '');
 
-            // "nhung" makes the denial cover only part of the answer ("Khong, nhung co
-            // sot"); recording its symptoms as ruled out would suppress a real question.
+            // "nhung" lam lan phu dinh chi phu mot phan cau tra loi ("Khong, nhung co
+            // sot"); ghi cac trieu chung do la phu dinh se an mot cau hoi that.
             if ($answer === '' || ! VietnameseText::isDenial($answer)
                 || VietnameseText::containsWord(VietnameseText::fold($answer), 'nhung')) {
                 continue;
@@ -478,8 +478,8 @@ class SangLocAiSuKienService extends SangLocAiService
 
             $foldedQuestion = VietnameseText::fold((string) ($pair['question'] ?? ''));
 
-            // An answered medication question needs no symptom to match: "chua
-            // uong a" settles it without saying what was NOT taken.
+            // Cau hoi thuoc da tra loi khong can trieu chung de khop: "chua
+            // uong a" giai quyet ma khong can noi khong dung thuoc gi.
             if (preg_match(self::MEDICATION_QUESTION, $foldedQuestion) === 1) {
                 $terms[self::MEDICATION_TOPIC] = self::MEDICATION_TOPIC;
             }
@@ -495,9 +495,9 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * The every-name-must-match half of deniedSymptomTerms(): a question is skipped
-     * only when it names a denied term and names nothing else the customer could
-     * still be asked about.
+     * Nua moi-ten-phai-khop cua deniedSymptomTerms(): cau hoi bi bo qua chi khi
+     * no nhon mot thuat ngu da phu dinh va khong nhon them gi ma khach hang
+     * van co the bi hoi duoc.
      *
      * @param  array<int, string>  $deniedTerms
      */
@@ -509,8 +509,8 @@ class SangLocAiSuKienService extends SangLocAiService
 
         $folded = VietnameseText::fold($question);
 
-        // Medication is one whole topic, not a term the question can list alongside
-        // symptoms: a question about it is a repeat of the denied one, full stop.
+        // Thuoc la mot chu de nguyen, chu khong phai thuat ngu cau hoi liet ke cung
+        // trieu chung: cau hoi ve no la cau lap lai cua cau da phu dinh, the thoi.
         if (in_array(self::MEDICATION_TOPIC, $deniedTerms, true)
             && preg_match(self::MEDICATION_QUESTION, $folded) === 1) {
             return true;
@@ -518,8 +518,8 @@ class SangLocAiSuKienService extends SangLocAiService
 
         foreach ($this->clarifySymptomTerms() as $term) {
             if (VietnameseText::containsWord($folded, $term) && ! in_array($term, $deniedTerms, true)) {
-                // A symptom the customer has not spoken to yet: the question still
-                // has something to ask.
+                // Trieu chung khach hang chua noi den: cau hoi van con
+                // co gi de hoi.
                 return false;
             }
         }
@@ -534,8 +534,8 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Symptom names and aliases, comfortably longer than the generic WWHAM vocabulary
-     * a question is built from. Read once per request.
+     * Ten trieu chung va ten khac, dai thuan tien hon tu vung WWHAM chung
+     * ma cau hoi dung de dung. Doc mot lan moi request.
      *
      * @return array<int, string>
      */
@@ -556,17 +556,17 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * What the system already knows about this customer, in two shapes: prompt lines
-     * the model can read, and the topic keys whose questions must be discarded.
+     * He thong da biet gi ve khach hang nay, duoi hai dang: dong prompt
+     * model doc duoc, va key chu de ma cau hoi phai bi bo.
      *
-     * Age comes from `users.birth_date` and needs no consent — it is account data the
-     * customer entered for this app, not a health profile field. The profile fields
-     * need the SEPARATE AI consent, not the general `consented_at`: that consent is
-     * purpose-limited to pharmacist-facing contraindication checks, and sending the
-     * same values to a third-party model is a different act.
+     * Tuoi den tu `users.birth_date` va khong can dong y — do la du lieu tai khoan
+     * khach hang nhap cho ung dung nay, chu khong phai truong ho so suc khoe. Cac truong ho so
+     * can dong y AI RIENG, chu khong phai `consented_at` chung: dong y do
+     * gioi han muc dich cho kiem tra chung chi dinh huong duoc si, va gui cung
+     * gia tri do cho model thu ba la mot hanh dong khac.
      *
-     * Returning an empty `prompt` for a customer the system knows nothing about is
-     * what keeps the untouched path byte-identical.
+     * Tra ve `prompt` rong cho khach hang he thong khong biet gi la
+     * thu giu nhanh khong chang gi byte-identical.
      *
      * @return array{prompt: array<string, string>, topics: array<int, string>}
      */
@@ -577,8 +577,8 @@ class SangLocAiSuKienService extends SangLocAiService
 
         $aboutAChild = preg_match(self::CHILD_MARKERS, $text) === 1;
 
-        // A child's age is not the account age, so the topic stays open — the model
-        // still has to ask whose symptom it is and how old that person is.
+        // Tuoi tre con khong phai tuoi tai khoan, nen chu de van mo — model
+        // van phai hoi trieu chung cua ai va nguoi do bao nhieu tuoi.
         $age = $aboutAChild ? null : $phien->nguoiDung?->ageInYears();
 
         if ($age !== null) {
@@ -589,9 +589,9 @@ class SangLocAiSuKienService extends SangLocAiService
         $profile = $this->consentedAiProfile($phien);
 
         if ($profile !== null) {
-            // Labels only, never the values. Suppressing a question needs the model to
-            // know the topic is covered, not what the answer is — and the encrypted
-            // medical text is not needed to drop a question from a form.
+            // Chi nhan, khong bao gio gia tri. An mot cau hoi can model biet
+            // chu de da duoc tra loi, chu khong phai cau tra loi la gi — va van ban y khoa
+            // ma hoa khong can de bo mot cau hoi khoi form.
             $covered = [
                 'allergies' => 'Dị ứng',
                 'chronic' => 'Bệnh nền',
@@ -622,7 +622,7 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * The health profile this seam may send to the provider, or null.
+     * Ho so suc khoe seam nay duoc gui cho nha cung cap, hoac null.
      */
     protected function consentedAiProfile(PhienSangLoc $phien): ?HoSoSucKhoe
     {
@@ -636,7 +636,7 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * The patterns for the topics the account already answers.
+     * Cac pattern cho chu de tai khoan da tra loi.
      *
      * @param  array<int, string>  $topics
      * @return array<string, string>
@@ -647,7 +647,7 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * True when the question asks about a topic the account already answers.
+     * Cong khi cau hoi hoi ve mot chu de tai khoan da tra loi.
      *
      * @param  array<string, string>  $patterns
      */
@@ -685,7 +685,7 @@ class SangLocAiSuKienService extends SangLocAiService
             'triage_ai_facts',
             $facts['provider'] ?? [],
             $durationMs,
-            // Codes and shapes only. Never the prompt, never the complaint text.
+            // Chi ma va dang. Khong bao gio prompt, khong bao gio van ban phan nan.
             [
                 'ai_status' => 'ok',
                 'symptom_codes' => $facts['symptom_codes'],

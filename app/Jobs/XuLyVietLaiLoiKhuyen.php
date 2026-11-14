@@ -11,16 +11,16 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Rephrase a finished triage result outside the request.
+ * Viet lai ket qua triage da hoan thanh, ngoai web request.
  *
- * Safe to defer precisely because it runs *after* hoanTat(): it writes
- * `ai_advice`/`ai_safety_net`/`ai_status` and never touches `outcome`,
- * `advice_given` or `safety_net`. The medical conclusion the customer reads on the
- * result page is already final and cannot change once the job lands.
+ * An toan de tra lai chinh xac vi no chay *sau* hoanTat(): no ghi
+ * `ai_advice`/`ai_safety_net`/`ai_status` va khong bao gio cham vao `outcome`,
+ * `advice_given` hoac `safety_net`. Ket luan y ma khach doc tren trang ket qua
+ * da la cuoi cung va khong the doi khi job hoan tat.
  *
- * That is the line: fact extraction stays synchronous because it feeds
- * severerRule() and therefore the outcome. Changing a conclusion after the patient
- * has read it is not acceptable, so only this seam is deferred.
+ * Do la ranh gioi: trich duyet su tht giu dong bo vi no dinh duong vao
+ * severerRule() va do den ket qua. Doi mot ket luan sau khi benh nhan da doc
+ * la khong duoc chap nhan, nen chi seam nay duoc tra lai.
  */
 class XuLyVietLaiLoiKhuyen implements ShouldQueue
 {
@@ -53,8 +53,8 @@ class XuLyVietLaiLoiKhuyen implements ShouldQueue
         }
 
         try {
-            // rewrite() never throws and records its own ai_status, so this reports
-            // whether the seam ran, not whether the model was any good.
+            // rewrite() khong bao gio throw va tu ghi ai_status rieng, nen dieu nay bao
+            // cao viec seam co chay hay khong, chu khong phai model co tot hay khong.
             $advice->vietLai($phien);
 
             $jobs->markDone($job, ['ai_status' => $phien->refresh()->ai_status]);

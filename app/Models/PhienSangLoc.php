@@ -59,10 +59,10 @@ class PhienSangLoc extends Model
     public const TOTAL_STEPS = 5;
 
     /**
-     * Follow-up is a bounded conversation, not one blind guess: each round sees the
-     * previous answers. The ceiling is a hard stop — 3 rounds of 3 questions is
-     * already more than a pharmacist asks at the counter, and an unbounded loop
-     * would let the model keep a patient answering forever.
+     * Vong hoi lam ro la mot cuoc doi thaoi co gioi han, khong phai mot lan doan mo:
+     * moi vong deu nhin thay cac cau tra loi truoc. Tran la diem dung cung — 3 vong
+     * x 3 cau hoi da nhieu hon nhung gi mot duoc si hoi tai quay thuoc, va mot vong
+     * lap khong gioi han se de model cho nguoi benh tra loi mai mai.
      */
     public const MAX_CLARIFY_ROUNDS = 3;
     public const MAX_CLARIFY_QUESTIONS_PER_ROUND = 3;
@@ -100,16 +100,16 @@ class PhienSangLoc extends Model
     }
 
     /**
-     * The measured facts behind this session, for the briefing prompt's number
-     * allow-list. The controller's analysisMetrics() computes the same score for the
-     * chart; this copy keeps the numbers the model may quote.
+     * Cac so lieu do luoc dang sau phien nay, dung cho danh sach so duoc phep trong
+     * prompt cua briefing. analysisMetrics() cua controller tinh cung mot diem so cho
+     * bieu do; ban copy nay giu nhung con so ma model duoc phep dan.
      *
-     * Every value is read from persisted columns — nothing re-runs the rule engine,
-     * nothing is derived from the model's output.
+     * Moi gia tri deu doc tu cot da luu vao co so du lieu — khong gi chay lai bo
+     * luat, khong gi suy ra tu ket qua cua model.
      *
-     * @return array<string, int|string> label => display value; keys are Vietnamese
-     *                                      because the strings go into the model's
-     *                                      prompt as the number allow-list.
+     * @return array<string, int|string> label => gia tri hien thi; key la tieng Viet
+     *                                      vi cac chuoi nay vao prompt cua model lam
+     *                                      danh sach so duoc phep.
      */
     public function analysisMetrics(): array
     {
@@ -154,7 +154,7 @@ class PhienSangLoc extends Model
     }
 
     /**
-     * Questions from the current follow-up round that are still unanswered.
+     * Cac cau hoi cua vong hoi lam ro hien tai con chua duoc tra loi.
      *
      * @return array<int, string>
      */
@@ -172,8 +172,9 @@ class PhienSangLoc extends Model
     }
 
     /**
-     * Question/answer pairs from every completed round, oldest first. Feeds the next
-     * round's prompt so a follow-up builds on the answer instead of guessing again.
+     * Cac cap cau hoi/cau tra loi tu moi vong da hoan thanh, cu nhat truoc. Cap cho
+     * prompt cua vong ke tiep de vong hoi lam ro dung tren cau tra loi truoc thay vi
+     * doan lai tu dau.
      *
      * @return array<int, array{round: int, question: string, answer: string}>
      */

@@ -6,14 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class NhatKyKiemToan extends Model
 {
-    const UPDATED_AT = null; // Audit logs are immutable, no updated_at
+    const UPDATED_AT = null; // Nhat ky kiem toan khong duoc sua, khong co updated_at
 
     protected $table = 'nhat_ky_kiem_toans';
 
     protected $primaryKey = 'ma_nk';
 
     /**
-     * The attributes that are mass assignable.
+     * Cac thuoc tinh cho phep gan hang loat.
      *
      * @var array
      */
@@ -29,7 +29,7 @@ class NhatKyKiemToan extends Model
     ];
 
     /**
-     * The attributes that should be cast.
+     * Cac thuoc tinh nen ep kieu.
      *
      * @var array
      */
@@ -40,7 +40,7 @@ class NhatKyKiemToan extends Model
     ];
 
     /**
-     * Get the user that performed the action
+     * Nguoi dung da thuc hien hanh dong
      */
     public function nguoiDung()
     {
@@ -48,7 +48,7 @@ class NhatKyKiemToan extends Model
     }
 
     /**
-     * Get the auditable model
+     * Model co the kiem toan duoc ghi nhan
      */
     public function auditable()
     {

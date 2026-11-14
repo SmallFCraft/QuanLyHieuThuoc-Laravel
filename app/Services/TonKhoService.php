@@ -12,12 +12,12 @@ use Carbon\Carbon;
 class TonKhoService
 {
     /**
-     * Adjust stock quantity for a product.
+     * Dieu chinh so luong ton kho cho mot san pham.
      *
      * @param int $productId
-     * @param int $quantity Positive for increase, negative for decrease
-     * @param string $reason Reason code for the adjustment
-     * @param int $userId User performing the adjustment
+     * @param int $quantity Duong de tang, am de giam
+     * @param string $reason Ma ly do cho viec dieu chinh
+     * @param int $userId Nguoi thuc hien dieu chinh
      * @return bool
      * @throws \Exception
      */
@@ -42,7 +42,7 @@ class TonKhoService
             if ($coCacLo) {
                 $this->apDungBienDoTonLo($sanPham, $quantity);
                 $soLuongMoi = (int) $sanPham->cacLo()->sum('so_luong_ton');
-                // Sync stock_quantity to products table for consistency
+                // Dong bo stock_quantity sang bang san_phams de dam bao tinh nhat quan
                 DB::table('san_phams')
                     ->where('ma_sp', $sanPham->ma_sp)
                     ->update(['so_luong_ton' => $soLuongMoi, 'updated_at' => now()]);
@@ -77,7 +77,7 @@ class TonKhoService
     }
 
     /**
-     * Apply a stock delta across product batches (FEFO for decreases).
+     * Ap dung mot bien do ton kho tren cac lo san pham (FEFO khi giam).
      *
      * @throws \Exception
      */
@@ -126,9 +126,9 @@ class TonKhoService
     }
 
     /**
-     * Check for products expiring within specified days.
+     * Kiem tra cac san pham het han trong so ngay chi dinh.
      *
-     * @param int $daysThreshold Number of days to check (default: 30)
+     * @param int $daysThreshold So ngay can kiem tra (mac dinh 30)
      * @return Collection
      */
     public function kiemTraHetHan(int $daysThreshold = 30): Collection
@@ -141,7 +141,7 @@ class TonKhoService
     }
 
     /**
-     * Get products with low stock (quantity <= reorder point).
+     * Lay cac san pham ton kho thap (so luong <= diem dat lai hang).
      *
      * @return Collection
      */
@@ -154,11 +154,11 @@ class TonKhoService
     }
 
     /**
-     * Get inventory summary statistics.
+     * Lay thong ke tong quan ton kho.
      *
-     * Key names match what admin/inventory/index.blade.php reads. The view falls
-     * back to `?? 0`, so a rename here shows four zero cards above a table that
-     * lists the very rows being counted, with nothing failing loudly.
+     * Ten key khop voi nhung gi admin/inventory/index.blade.php doc. View quay ve
+     * `?? 0`, nen doi ten tai day se hien bon the so 0 phia tren mot bang liet ke
+     * dung nhung dong dang duoc dem, ma khong gi bao loi lon trao.
      *
      * @return array
      */

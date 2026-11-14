@@ -28,7 +28,7 @@ class DanhMuc extends Model
     public const SEARCH_PANEL_PRODUCTS_CACHE_KEY = 'search.panel_products';
 
     /**
-     * The attributes that are mass assignable.
+     * Cac thuoc tinh cho phep gan hang loat.
      *
      * @var array<int, string>
      */
@@ -46,8 +46,8 @@ class DanhMuc extends Model
             $danhMuc->ma_danh_muc = TaoMaSanPham::chuanHoaMaDanhMuc($danhMuc->ma_danh_muc)
                 ?: TaoMaSanPham::maDanhMucDuyNhat($danhMuc->ten, $danhMuc->exists ? $danhMuc->getKey() : null);
 
-            // Kept in sync here rather than at the call sites so a category created by
-            // the crawler, the admin form or a factory folds the same way.
+            // Giu dong bo tai day thay vi tung noi goi, de danh muc tao boi crawler,
+            // form quan tri hay factory deu duoc fold cung mot cach.
             if ($danhMuc->isDirty('ten')) {
                 $danhMuc->ten_khong_dau = VietnameseText::fold((string) $danhMuc->ten);
             }
@@ -63,13 +63,13 @@ class DanhMuc extends Model
     }
 
     /**
-     * Categories a customer can actually browse: at least one product in stock and
-     * unexpired, counted, fullest first.
+     * Cac danh muc khach thuc su co the duyet: co it nhat mot san pham con ton kho
+     * va chua het han, dem so luong, nhieu nhat truoc.
      *
-     * Shared by the header dropdown and the catalog filter so the two cannot disagree
-     * on which categories exist or in what order. The crawl produces 50 of them, and
-     * alphabetical order led with "Cham soc ca nhan" (2 products) while burying
-     * "Dung cu y te" (263).
+     * Chung bo dropdown tren header va bo loc catalog dung, de hai cho khong the lech
+     * nhau ve danh muc nao ton tai hay thu tu nao. Crawler sinh ra 50 danh muc, va
+     * thu tu alphabet dan dat "Cham soc ca nhan" (2 san pham) len dau trong khi
+     * "Dung cu y te" (263) nam sau.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -86,7 +86,7 @@ class DanhMuc extends Model
     }
 
     /**
-     * Get the products for the category.
+     * Cac san pham thuoc danh muc nay.
      */
     public function sanPhams()
     {
@@ -94,7 +94,7 @@ class DanhMuc extends Model
     }
 
     /**
-     * Check if the category has any products.
+     * Kiem tra danh muc co san pham nao khong.
      *
      * @return bool
      */
@@ -104,7 +104,7 @@ class DanhMuc extends Model
     }
 
     /**
-     * Get the count of products in this category.
+     * So san pham trong danh muc nay.
      *
      * @return int
      */
@@ -114,7 +114,7 @@ class DanhMuc extends Model
     }
 
     /**
-     * Forget shared category caches used across public layouts and catalog pages.
+     * Xoa cac cache danh muc dung chung giua cac layout cong khai va trang catalog.
      */
     public static function flushCategoryCaches(): void
     {

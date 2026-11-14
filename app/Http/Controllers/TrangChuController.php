@@ -9,7 +9,7 @@ use Illuminate\View\View;
 class TrangChuController extends Controller
 {
     /**
-     * Display the landing page
+     * Hien thi trang landing
      *
      * @return View
      */

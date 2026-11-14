@@ -10,7 +10,7 @@ use Illuminate\Http\RedirectResponse;
 class VerifyEmailController extends Controller
 {
     /**
-     * Mark the authenticated user's email address as verified.
+     * Danh dau dia chi email cua nguoi dung da xac thuc la da xac minh.
      */
     public function __invoke(EmailVerificationRequest $request): RedirectResponse
     {

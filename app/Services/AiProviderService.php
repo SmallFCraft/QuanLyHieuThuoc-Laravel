@@ -12,8 +12,8 @@ use RuntimeException;
 class AiProviderService
 {
     /**
-     * Ordered provider list. Index 0 is the primary provider, index 1 the
-     * optional fallback used when the primary one fails.
+     * Danh sach nha cung cap theo thu tu. Index 0 la nha cung cap chinh, index 1 la
+     * nha cung cap du phong tuy chon dung khi cai chinh that bai.
      *
      * @var array<int, array{mode: string, base_url: string, api_key: string, model: string}>
      */
@@ -63,8 +63,8 @@ class AiProviderService
         return $this->runWithFailover(
             fn (array $provider): array => $this->dispatchChat($provider, $messages, $options),
             'chat',
-            // A caller inside a synchronous request (triage, voice search) asks for a
-            // budget for the whole call, not one per provider.
+            // Caller trong mot request dong bo (triage, tim kiem giong noi) xin mot
+            // budget cho ca loi goi, chu khong phai mot budget cho moi nha cung cap.
             isset($options['timeout']) ? max(1, (int) $options['timeout']) : null
         );
     }
@@ -91,7 +91,7 @@ class AiProviderService
     }
 
     /**
-     * Provider metadata for the provider that served the last successful call.
+     * Metadata nha cung cap da phuc vu loi goi thanh cong gan nhat.
      *
      * @return array{index: int, mode: string, model: string}|null
      */
@@ -111,7 +111,7 @@ class AiProviderService
     }
 
     /**
-     * Configured providers without secrets, for diagnostics.
+     * Cac nha cung cap da cau hinh, khong kem secret, dung cho chan doan.
      *
      * @return array<int, array{index: int, mode: string, base_url: string, model: string, has_key: bool}>
      */
@@ -133,7 +133,7 @@ class AiProviderService
     }
 
     /**
-     * Send one minimal request to a single provider without failover.
+     * Gui mot request toi thieu den mot nha cung cap, khong failover.
      *
      * @return array{ok: bool, duration_ms: float, error: string|null}
      */
@@ -171,10 +171,10 @@ class AiProviderService
     }
 
     /**
-     * A small but real image for vision probes; upstream providers reject 1x1
-     * placeholder pixels as an unsupported image format.
+     * Mot anh nho nhung that su dung cho vision probe; cac nha cung cap upstream
+     * tu choi pixel placeholder 1x1 voi loi dinh dang anh khong ho tro.
      *
-     * @return array{0: string, 1: string} base64 payload and mime type
+     * @return array{0: string, 1: string} base64 payload va mime type
      */
     protected function buildVisionProbeImage(): array
     {
@@ -199,8 +199,8 @@ class AiProviderService
 
     protected function dispatchChat(array $provider, array $messages, array $options): array
     {
-        // No timeout handling here: `chat()` resolves the caller's override into a
-        // whole-call budget and `runWithFailover()` writes each provider's slice.
+        // Khong xu ly timeout o day: `chat()` bien override cua caller thanh mot
+        // budget cho ca loi goi va `runWithFailover()` ghi phan chia cho tung nha cung cap.
         return match ($provider['mode']) {
             'anthropic_messages' => $this->sendAnthropicMessagesRequest($provider, $messages, $options),
             'responses' => $this->sendResponsesRequest($provider, $messages, $options),
@@ -210,8 +210,8 @@ class AiProviderService
 
     protected function dispatchVision(array $provider, string $prompt, string $base64Image, string $mimeType): string
     {
-        // The data URL is built per branch: an upload may be several MB of base64, and
-        // the anthropic mode sends the raw payload instead.
+        // Data URL duoc dung trong tung nhanh: mot anh tai len co the la vai MB base64,
+        // va mode anthropic gui raw payload thay vi data URL.
         return match ($provider['mode']) {
             'anthropic_messages' => $this->sendAnthropicVisionRequest($provider, $prompt, $base64Image, $mimeType),
             'responses' => $this->sendResponsesVisionRequest($provider, $prompt, "data:{$mimeType};base64,{$base64Image}"),
@@ -220,15 +220,15 @@ class AiProviderService
     }
 
     /**
-     * Run a provider call, falling back to the next configured provider on failure.
-     * Connection errors are Exceptions rather than RuntimeExceptions, so any
-     * provider-side failure is caught here.
+     * Chay mot loi goi nha cung cap, chuyen sang nha cung cap ke tiep khi that bai.
+     * Loi ket noi la Exceptions chu khong phai RuntimeExceptions, nen bat ky loi nao
+     * phia nha cung cap cung duoc bat tai day.
      *
-     * `$budget` is seconds for the WHOLE call, not per provider: without it two slow
-     * providers each burn the caller's timeout and the total doubles, which is longer
-     * than the browser client waits and longer than the voice-search cache lock lives.
-     * Each provider gets what the earlier ones left, floored at 1s because Guzzle
-     * reads `timeout(0)` as "wait forever".
+     * `$budget` la so giay cho CA LOI GOI, chu khong phai cho tung nha cung cap: khong co
+     * no hai nha cung cap cham moi mot lan dot timeout cua caller va tong thoi gian gap doi,
+     * dai hon ca thoi gian browser client cho va dai hon ca lifetime cua lock cache
+     * tim kiem giong noi. Moi nha cung cap nhan phan con lai cua cac nha cung cap truoc,
+     * san 1 giay vi Guzzle doc `timeout(0)` nhu "cho mai mai".
      */
     protected function runWithFailover(callable $callback, string $operation, ?int $budget = null): mixed
     {
@@ -255,8 +255,8 @@ class AiProviderService
                     'mode' => $provider['mode'],
                     'model' => $provider['model'],
                     'failing_over' => $hasNextProvider,
-                    // post() already logged the status and the response body for HTTP
-                    // failures, so this line stays short on purpose.
+                    // post() da log status va response body cho cac loi HTTP, nen dong nay
+                    // duoc giu ngan co chu y.
                     'error' => Str::limit($exception->getMessage(), 120),
                 ]);
             }
@@ -278,10 +278,10 @@ class AiProviderService
             return null;
         }
 
-        // Same host and same model is not redundancy: whatever killed the primary
-        // (timeout, rate limit, dead upstream) kills this too, and the customer pays
-        // for it twice — AI_TIMEOUT again before the error finally surfaces. A
-        // different `mode` alone does not make it a second provider.
+        // Cung host va cung model khong la du phong: bat dieu gi da dot cai chinh
+        // (timeout, rate limit, upstream chet) cung dot cai nay, va khach tra gia cho
+        // no hai lan — mot lan AI_TIMEOUT nua truoc khi loi cuoi cung hien ra. Rieng
+        // viec khac `mode` khong bien no thanh nha cung cap thu hai.
         $primary = $this->providers[0];
         if ($baseUrl === $primary['base_url'] && $model === $primary['model']) {
             Log::warning('AI fallback provider ignored: same base_url and model as the primary', [
@@ -297,7 +297,7 @@ class AiProviderService
             'base_url' => $baseUrl,
             'api_key' => $apiKey,
             'model' => $model,
-            // A fallback is often a slower/pricier model, so it gets its own budget.
+            // Nha cung cap du phong thuong la model cham hon hoac dat hon, nen no co budget rieng.
             'timeout' => max(1, (int) config('chatbot.ai.fallback.timeout', $this->timeout)),
         ];
     }
@@ -471,8 +471,8 @@ class AiProviderService
             $payload['system'] = $system;
         }
 
-        // Adaptive thinking shares the max_tokens budget with the answer, so the
-        // chatbot keeps thinking off unless it is explicitly enabled.
+        // Adaptive thinking chia se budget max_tokens voi cau tra loi, nen chatbot
+        // giu thinking tat tru khi duoc bat ro rang.
         if ($this->normalizeThinkingMode() === 'disabled') {
             $payload['thinking'] = ['type' => 'disabled'];
         }
@@ -501,8 +501,8 @@ class AiProviderService
     }
 
     /**
-     * Anthropic keeps system prompts at the top level and requires the first
-     * turn to come from the user.
+     * Anthropic giu system prompt o cap do tren cung va yeu cau luot dau tien
+     * phai den tu nguoi dung.
      */
     protected function buildAnthropicConversation(array $messages): array
     {
@@ -583,7 +583,7 @@ class AiProviderService
             $message['function_call'] = $functionCall;
         }
 
-        // Same guard: empty prose + no tool call = dead upstream, throw to trigger failover.
+        // Cung guard: van ban rong + khong co tool call = upstream chet, throw de kich hoat failover.
         if ($message['content'] === '' && !isset($message['function_call'])) {
             throw new RuntimeException('AI provider returned an empty response: no content and no tool call');
         }
@@ -600,8 +600,8 @@ class AiProviderService
     }
 
     /**
-     * Decode a provider response, surfacing enough detail to tell a wrong
-     * base URL (HTML error page) apart from a real provider failure.
+     * Decode response cua nha cung cap, hien du chi tiet de phan biet base URL sai
+     * (trang loi HTML) voi that bai that su cua nha cung cap.
      */
     protected function decodeJsonPayload(Response $response, string $context): array
     {
@@ -617,7 +617,7 @@ class AiProviderService
             ));
         }
 
-        // Some gateways answer HTTP 200 with an error envelope instead of content.
+        // Mot so gateway tra loi HTTP 200 voi error envelope thay vi noi dung.
         if (isset($data['error']) && !isset($data['content']) && !isset($data['choices']) && !isset($data['output'])) {
             $error = $data['error'];
             $errorMessage = is_array($error)
@@ -732,21 +732,20 @@ class AiProviderService
     }
 
     /**
-     * Tool-call argument tags are transport noise, not content. opencode (session 64)
-     * prefixed a value with the tag it was asked to fill — `<parameter>why>Sot cao` or
-     * `<parameter name="why">Sot cao` — and every consumer decodes these arguments
-     * (chatbot queries, triage briefing, triage facts), so the scrub belongs here
-     * rather than in each service that happens to display the value.
+     * Cac tag trong arguments cua tool call la nhieu transport, khong phai noi dung.
+     * opencode (session 64) da tien to mot gia tri bang tag ma no duoc yeu cau dien —
+     * `<parameter>why>Sot cao` hoac `<parameter name="why">Sot cao` — va moi consumer
+     * decode cac arguments nay (truy van chatbot, briefing triage, facts triage), nen
+     * viec scrub thuoc ve day chu khong phai tung service maung nhien hien gia tri do.
      *
-     * Scrub the decoded values, never the encoded blob: a regex over the JSON text can
-     * run past the end of an unterminated tag and eat the fields in between (a dosage
-     * note like "Dung <param 500mg" swallowed everything up to the next `>`), and the
-     * result is still valid JSON, so the loss is silent.
+     * Scrub cac gia tri da decode, khong bao gio scrub blob da encode: regex tren van ban
+     * JSON co the chay qua dau mot tag chua dong va nuot cac field o giua (mot ghi chu lieu
+     * luong nhu "Dung <param 500mg" da nuot tat ca den dau `>` ke tiep), va ket qua van la
+     * JSON hop le nen mat du lieu di trong im lang.
      *
-     * Always returns a string, because that is the shape every consumer expects:
-     * SangLocAiService::decodeToolCall rejects a non-string, and ChatbotService hands the
-     * value straight to json_decode. A payload with nothing to scrub is returned
-     * byte-identical.
+     * Luon tra ve string, vi do la hinh dang moi consumer dung: SangLocAiService::decodeToolCall
+     * tu choi gia tri khong phai string, va ChatbotService dua gia tri thang vao json_decode.
+     * Payload khong co gi de scrub duoc tra lai byte nguyen ven.
      */
     protected function scrubToolArgumentMarkup(mixed $arguments): string
     {
@@ -754,7 +753,7 @@ class AiProviderService
             $decoded = json_decode($arguments, true);
 
             if (! is_array($decoded)) {
-                // Not a JSON object: scrub the text as-is rather than dropping it.
+                // Khong phai JSON object: scrub van ban nguy ven thay vi bo di.
                 return $this->scrubTagMarkup($arguments);
             }
 
@@ -765,9 +764,9 @@ class AiProviderService
                 : $arguments;
         }
 
-        // Some providers send arguments as an object/array rather than a JSON string.
-        // Consumers down the wire expect a string (SangLocAiService rejects non-strings,
-        // ChatbotService passes it straight to json_decode). Normalize to a JSON string.
+        // Mot so nha cung cap gui arguments la object/array thay vi JSON string.
+        // Cac consumer phia sau dung string (SangLocAiService tu choi non-string,
+        // ChatbotService dua thang vao json_decode). Chuan hoa thanh JSON string.
         if (is_array($arguments)) {
             [$scrubbed] = $this->scrubArgumentValues($arguments);
 
@@ -802,9 +801,8 @@ class AiProviderService
     }
 
     /**
-     * The tag itself, then the orphaned `why>` the model leaves behind once the opening
-     * tag is gone. Runs on a plain value, where a `<param` with no closing `>` is just
-     * text and cannot match.
+     * Ban than tag, roi phan `why>` ma model de lai sau khi tag mo bien mat. Chay tren
+     * gia tri don gian, noi ma `<param` khong co dau `>` dong chi la van ban va khong the khop.
      */
     protected function scrubTagMarkup(string $text): string
     {
@@ -825,10 +823,10 @@ class AiProviderService
 
         $message['content'] = $this->extractContentText($message['content'] ?? '');
 
-        // A 200 with neither prose nor a tool call is a dead upstream, not an
-        // answer: some combo routes return `finish_reason: stop` with empty content
-        // when their upstream refuses the tool schema. Throwing here is what sends
-        // the call down the failover path instead of storing a blank.
+        // HTTP 200 ma khong co van ban cung khong co tool call la upstream chet, khong
+        // phai cau tra loi: mot so route combo tra `finish_reason: stop` voi noi dung rong
+        // khi upstream cua chung tu choi tool schema. Throw tai day la thu gui loi goi
+        // di theo nhanh failover thay vi luu mot ket qua trong trang.
         if ($message['content'] === '' && !isset($message['function_call'])) {
             throw new RuntimeException('AI provider returned an empty response: no content and no tool call');
         }
@@ -956,9 +954,9 @@ class AiProviderService
             'image_url is not supported',
             'image blocks are not supported',
             'unsupported media type',
-            // Deliberately phrase-scoped: a bare "media_type" also appears in
-            // "image does not match the provided media_type", which is a bad upload,
-            // not a model without vision.
+            // Chu y gioi han theo cum tu: "media_type" don le cung xuat hien trong
+            // "image does not match the provided media_type", do la anh tai len loi,
+            // chu khong phai model khong co vision.
             'unsupported media_type',
             'media_type is not supported',
         ]);

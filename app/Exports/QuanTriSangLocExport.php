@@ -12,8 +12,8 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
 /**
- * Deliberately omits advice_given and any health-profile content: exported files
- * leave the application's access controls behind.
+ * Co chu y bo qua advice_given va moi noi dung ho so suc khoe: file xuat ra
+ * roi khoi cac controls truy cap cua app.
  */
 class QuanTriSangLocExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
 {
@@ -46,7 +46,7 @@ class QuanTriSangLocExport implements FromCollection, WithHeadings, WithMapping,
 
     public function headings(): array
     {
-        // Same keys the on-screen table uses, so the export cannot drift from it.
+        // Cung cac key ma bang tren man hinh dung, nen file xuat khong the lech khoi no.
         return [
             __('triage_report.table.code'),
             __('triage_report.table.date'),

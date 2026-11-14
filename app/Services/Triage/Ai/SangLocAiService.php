@@ -8,12 +8,12 @@ use App\Services\NhatKyKiemToanService;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Shared scaffolding for the triage AI seams (fact extraction, advice rewrite,
- * pharmacist draft, result briefing).
+ * Khung chung cho cac seam AI sang loc (trich xuat chi tiet, viet lai loi khuyen,
+ * soan loi du phong cho duoc si, briefing ket qua).
  *
- * Only the plumbing lives here — kill switch, provider call, tool-call decoding,
- * provenance. Every subclass keeps its own prompt, tool schema and validation,
- * because that is where each seam's safety boundary actually is.
+ * Chi phan dan dan o day — kill switch, goi nha cung cap, giai ma tool-call,
+ * nguon goc. Moi lop con giu prompt, tool schema va kiem tra hop le rieng,
+ * vi dung la noi ranh gioi an toan cua moi seam.
  */
 abstract class SangLocAiService
 {
@@ -21,16 +21,16 @@ abstract class SangLocAiService
         protected NhatKyKiemToanService $nhatKyKiemToanService,
     ) {}
 
-    /** The `chatbot.ai.triage.*` key that switches this seam off. */
+    /** Key `chatbot.ai.triage.*` tat seam nay. */
     abstract protected function configFlag(): string;
 
     /** Seconds this seam may spend inside one provider call. */
     abstract protected function timeoutSeconds(): int;
 
     /**
-     * Config only, no `runningUnitTests()` short-circuit: the flags are pinned off in
-     * phpunit.xml, so the existing suites never reach a provider, while the AI tests
-     * can still enable the feature they exist to cover.
+     * Chi doc config, khong co duong tat `runningUnitTests()`: cac co duoc gat off trong
+     * phpunit.xml, nen cac suite hien co khong bao gio cham nha cung cap, trong khi cac test AI
+     * van bat duoc tinh nang chung ton tai de phu.
      */
     public function daBat(): bool
     {
@@ -38,9 +38,9 @@ abstract class SangLocAiService
     }
 
     /**
-     * Resolved per call, never injected: the AiProviderService constructor throws when
-     * AI_BASE_URL/API_KEY/MODEL are blank, and /health-check must keep working —
-     * including emergency detection — with no AI configured at all.
+     * Giai moi lan goi, khong inject: constructor cua AiProviderService nem khi
+     * AI_BASE_URL/API_KEY/MODEL trong, va /health-check phai van chay —
+     * gum viec phong do khan cap — ke ca khi khong cau hinh AI nao.
      */
     protected function provider(): AiProviderService
     {
@@ -58,8 +58,8 @@ abstract class SangLocAiService
     }
 
     /**
-     * The tool-call arguments the model returned, or null when it answered in prose
-     * or with malformed JSON.
+     * Doi so tool-call ma model tra ve, hoac null khi no tra loi bang van ban
+     * hoac JSON hong.
      *
      * @param  array<string, mixed>  $response
      * @return array<string, mixed>|null
@@ -78,10 +78,10 @@ abstract class SangLocAiService
     }
 
     /**
-     * Write the subclass's own columns and this seam's `ai_meta` entry in one save.
+     * Ghi cot rieng cua lop con va entry `ai_meta` cua seam nay trong mot lan save.
      *
-     * @param  array<string, mixed>  $columns
-     * @param  array<string, mixed>|null  $described
+     * @param  array<string, mixed>  $cac cot
+     * @param  array<string, mixed>|null  $mo ta
      */
     protected function persistWithProvenance(
         PhienSangLoc $phien,
@@ -103,12 +103,12 @@ abstract class SangLocAiService
     }
 
     /**
-     * Provenance and shape only — never the prompt, never generated text, never the
-     * customer's own words. Swallows its own failures: a missing audit row must not
-     * cost the answer that was already produced.
+     * Chi nguon goc va dang — khong bao gio prompt, khong bao gio van ban sinh ra, khong bao gio
+     * loi nguoi dung. Tu nuot loi cua chinh no: row kiem toan thieu khong duoc lam
+     * mat cau tra loi da tao ra.
      *
-     * @param  array<string, mixed>|null  $described
-     * @param  array<string, mixed>  $values
+     * @param  array<string, mixed>|null  $mo ta
+     * @param  array<string, mixed>  $cac gia tri
      */
     protected function auditProvenance(
         PhienSangLoc $phien,
@@ -142,10 +142,10 @@ abstract class SangLocAiService
     }
 
     /**
-     * Markdown markers removed rather than rejected: every display site renders with
-     * {{ }} and white-space: pre-line, so markers would show as literal characters.
-     * SangLocAiVietLaiService deliberately does NOT use this — there a markdown answer
-     * means the model was steered off the task, and the rewrite is dropped instead.
+     * Marker markdown duoc bo chu khong bi tu choi: moi noi hien thi render voi
+     * {{ }} va white-space: pre-line, nen marker se hien nhu ky tu nghien van ban.
+     * SangLocAiVietLaiService chu dich KHONG dung ham nay — o do cau tra loi markdown
+     * co nghia model bi dan lo nhiem vu, nen ban viet lai bi bo thay vi giu.
      */
     protected function stripMarkdown(string $text): string
     {

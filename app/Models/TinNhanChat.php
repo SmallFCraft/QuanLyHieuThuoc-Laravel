@@ -11,7 +11,7 @@ class TinNhanChat extends Model
     protected $primaryKey = 'ma_tn';
 
     /**
-     * The attributes that are mass assignable.
+     * Cac thuoc tinh cho phep gan hang loat.
      *
      * @var array<string>
      */
@@ -26,7 +26,7 @@ class TinNhanChat extends Model
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * Cac thuoc tinh nen ep kieu.
      *
      * @return array<string, string>
      */
@@ -40,7 +40,7 @@ class TinNhanChat extends Model
     }
 
     /**
-     * Get the user that owns the message.
+     * Nguoi dung so huu tin nhan.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */

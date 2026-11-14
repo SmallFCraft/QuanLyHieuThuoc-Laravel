@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 class DanhMucController extends Controller
 {
     /**
-     * Display a listing of the categories.
+     * Hien thi danh sach cac danh muc.
      */
     public function index()
     {
@@ -23,7 +23,7 @@ class DanhMucController extends Controller
     }
 
     /**
-     * Store a newly created category in storage.
+     * Luu danh muc moi tao vao storage.
      */
     public function store(Request $request)
     {
@@ -59,7 +59,7 @@ class DanhMucController extends Controller
     }
 
     /**
-     * Update the specified category in storage.
+     * Cap nhat danh muc chi dinh trong storage.
      */
     public function update(Request $request, DanhMuc $category)
     {
@@ -99,11 +99,11 @@ class DanhMucController extends Controller
     }
 
     /**
-     * Remove the specified category from storage.
+     * Xoa danh muc chi dinh khoi storage.
      */
     public function destroy(DanhMuc $category)
     {
-        // Prevent deletion if category has products
+        // Chan xoa khi danh muc con san pham
         if ($category->hasProducts()) {
             return response()->json([
                 'success' => false,
@@ -132,13 +132,13 @@ class DanhMucController extends Controller
     }
 
     /**
-     * Rejects a name that only differs from an existing one by accents, punctuation
-     * or case: "Co - xuong - khop" and "Co xuong khop" are one category to a customer
-     * browsing the storefront, and the crawler now resolves them to one row too.
+     * Tu choi ten chi khac danh muc da co ve dau, dau cau hoac hoa thuong: "Co - xuong - khop"
+     * va "Co xuong khop" la mot danh muc trong mat khach xem storefront, va crawler
+     * gio cung phan giai chung ve mot dong.
      *
-     * A closure rather than Rule::unique, which would compare the raw input against
-     * the folded column. Enforced here as well as by the unique index so the admin
-     * gets a field error instead of a 500 from the driver.
+     * Dung closure thay vi Rule::unique, cai se so sanh input tho voi cot folded.
+     * Ap dung tai day cung luc voi unique index de quan tri vien nhan loi field
+     * thay vi loi 500 tu driver.
      */
     private function uniqueFoldedName(?DanhMuc $category = null): callable
     {

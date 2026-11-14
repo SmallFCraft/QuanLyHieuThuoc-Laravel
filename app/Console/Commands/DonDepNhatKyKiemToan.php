@@ -9,7 +9,7 @@ use Carbon\Carbon;
 class DonDepNhatKyKiemToan extends Command
 {
     /**
-     * The name and signature of the console command.
+     * Ten va chu ky cua lenh console.
      *
      * @var string
      */
@@ -23,21 +23,21 @@ class DonDepNhatKyKiemToan extends Command
     protected $description = 'Clean up old audit logs to prevent database bloat';
 
     /**
-     * Execute the console command.
+     * Thuc thi lenh console.
      */
     public function handle()
     {
         $retentionDays = $this->option('days');
         $cutoffDate = Carbon::now()->subDays($retentionDays);
-        
+
         $this->info("Cleaning up audit logs older than {$retentionDays} days (before {$cutoffDate->toDateString()})...");
-        
-        // Delete old audit logs
+
+        // Xoa cac nhat ky kiam toan cu
         $deleted = NhatKyKiemToan::where('created_at', '<', $cutoffDate)->delete();
 
         $this->info("Successfully deleted {$deleted} audit log records.");
 
-        // Show current stats
+        // Hien thi thong ke hien tai
         $remaining = NhatKyKiemToan::count();
         $this->info("Remaining audit logs: {$remaining}");
         

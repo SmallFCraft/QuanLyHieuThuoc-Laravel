@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Clears the product catalog and everything that points at it.
+ * Xoa sach catalog san pham va moi thu tro den no.
  *
- * Irreversible. chi_tiet_don_hangs.ma_sp is a restricting foreign key, so the tables
- * have to go in dependency order or the delete stops half-done. Order history goes
- * with the catalog because an order line cannot exist without its product row.
+ * Khong the hoan tac. chi_tiet_don_hangs.ma_sp la foreign key chan (restrict), nen cac bang
+ * phai di theo thu tu phu thuoc neu khong lenh xoa se dung luoi chang. Lich su don hang
+ * di cung catalog vi mot dong don hang khong the ton tai khong co dong san pham.
  */
 class XoaSachDanhMuc extends Command
 {
@@ -26,11 +26,11 @@ class XoaSachDanhMuc extends Command
     protected $description = 'Xoá toàn bộ sản phẩm, danh mục, đơn hàng và ảnh sản phẩm (không thể hoàn tác)';
 
     /**
-     * Delete order matters: each table listed here is referenced by the ones above it.
+     * Thu tu xoa quan trong: moi bang duoc liet ke tai day duoc tham chieu boi cac bang phia tren.
      *
-     * truy_van_tim_kiems has no foreign key to san_phams, but it holds the terms the
-     * trending pills promote — left behind they point at a catalog that no longer
-     * exists, and a customer clicking one lands on an empty results page.
+     * truy_van_tim_kiems khong co foreign key den san_phams, nhung no giu cac tu khoa ma
+     * cac pill trending quang ba — de lai chung se tro den mot catalog khong con
+     * ton tai, va khach bam vao se roi tren trang ket qua trong.
      */
     private const TABLES = [
         'chi_tiet_don_hangs',
@@ -44,10 +44,10 @@ class XoaSachDanhMuc extends Command
     ];
 
     /**
-     * JSON snapshots of products, kept on records that outlive the catalog. Left
-     * populated they would render links to product ids that no longer exist.
-     * Column names are the JSON payload keys of these tables — unchanged by the
-     * schema rename.
+     * Snapshot JSON cua san pham, giu tren cac ban ghi song lau hon catalog. Neu de
+     * du lieu thi chung se render link den cac product id khong con ton tai.
+     * Ten cot la cac key JSON payload cua cac bang nay — khong doi boi viec
+     * doi ten schema.
      *
      * @var array<string, array{0: string, 1: string}> table => [column, empty value]
      */
@@ -116,10 +116,9 @@ class XoaSachDanhMuc extends Command
     }
 
     /**
-     * Truncate is used rather than delete so the auto-increment keys restart, which
-     * keeps the crawled catalog numbered from 1. It cannot run inside a transaction
-     * on MySQL, and it ignores foreign keys, so the checks are lifted around it and
-     * always restored.
+     * Dung truncate thay vi delete de key auto-increment chay lai tu dau, giu catalog
+     * crawled duoc danh so tu 1. Khong the chay trong transaction tren MySQL, va no
+     * bo qua foreign keys, nen cac check duoc nang len quanh no va luon duoc khoi phuc.
      */
     private function truncateTables(): void
     {
@@ -168,8 +167,8 @@ class XoaSachDanhMuc extends Command
     }
 
     /**
-     * Only locally uploaded images are on disk. Crawled products store a Long Chau
-     * CDN URL, which has nothing to delete.
+     * Chi anh tai len cuc bo nam tren disk. San pham crawled luu URL CDN Long Chau,
+     * khong co gi de xoa.
      */
     private function productImages(): \Illuminate\Support\Collection
     {

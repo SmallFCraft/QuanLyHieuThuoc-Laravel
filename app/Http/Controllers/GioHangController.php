@@ -10,23 +10,23 @@ use Illuminate\Http\Request;
 class GioHangController extends Controller
 {
     /**
-     * Display the shopping cart.
+     * Hien thi gio hang.
      */
     public function index()
     {
         $cart = session()->get('cart', []);
-        
+
         if (empty($cart)) {
             return view('cart.index', ['cartItems' => [], 'total' => 0]);
         }
-        
-        // OPTIMIZED: Load all products in 1 query instead of N+1
+
+        // TOI UU: Tai moi san pham trong 1 truy van thay vi N+1
         $productIds = array_keys($cart);
         $sanPhams = SanPham::whereIn('ma_sp', $productIds)
             ->notExpired()
             ->where('so_luong_ton', '>', 0)
             ->get()
-            ->keyBy('ma_sp'); // Index by MaSP for O(1) lookup
+            ->keyBy('ma_sp'); // Index theo MaSP de lookup O(1)
         
         $cacMucGioHang = [];
         $tongTien = 0;
@@ -47,7 +47,7 @@ class GioHangController extends Controller
     }
 
     /**
-     * Add a product to the cart.
+     * Them san pham vao gio hang.
      */
     public function add(Request $request, AnToanThuocService $anToanThuoc)
     {
@@ -60,7 +60,7 @@ class GioHangController extends Controller
         $cart = session()->get('cart', []);
         $wantsJson = $request->expectsJson();
 
-        // SECURITY: Limit number of unique items in cart
+        // BAO MAT: Gioi han so san pham phan biet trong gio
         if (count($cart) >= 100 && ! isset($cart[$request->MaSP])) {
             $tinNhan = 'Giỏ hàng đã đạt giới hạn 100 sản phẩm khác nhau.';
             if ($wantsJson) {
@@ -70,7 +70,7 @@ class GioHangController extends Controller
             return back()->with('error', $tinNhan);
         }
 
-        // SECURITY: Limit total quantity in cart
+        // BAO MAT: Gioi han tong so luong trong gio
         $tongTienQuantity = array_sum($cart);
         if ($tongTienQuantity + $request->quantity > 1000) {
             $tinNhan = 'Tổng số lượng trong giỏ hàng không được vượt quá 1000.';
@@ -83,7 +83,7 @@ class GioHangController extends Controller
 
         $sanPham = SanPham::findOrFail($request->MaSP);
 
-        // Validate product is not expired
+        // Kiem tra san pham chua het han
         if ($sanPham->isExpired()) {
             $tinNhan = 'Sản phẩm đã hết hạn. Không thể thêm vào giỏ hàng.';
             if ($wantsJson) {
@@ -93,7 +93,7 @@ class GioHangController extends Controller
             return back()->with('error', $tinNhan);
         }
 
-        // Validate stock availability
+        // Kiem tra ton kho con du
         if ($sanPham->so_luong_ton < $request->quantity) {
             $tinNhan = __('messages.cart.stock_insufficient');
             if ($wantsJson) {
@@ -103,8 +103,8 @@ class GioHangController extends Controller
             return back()->with('error', $tinNhan);
         }
 
-        // Drug safety runs before the cart is touched: a blocked item must never land
-        // in the session, even for one request.
+        // An toan thuoc chay truoc khi gio hang bi cham vao: san pham bi chan khong duoc
+        // roi vao session, chi can cho mot request duy nhat.
         $userId = (int) auth()->id();
         $confirmed = $request->boolean('confirm_warning');
         $safety = $anToanThuoc->kiemTraThemVaoGio($sanPham, CartLine::rowsFrom($cart), $userId);
@@ -122,8 +122,8 @@ class GioHangController extends Controller
                 ], 409);
             }
 
-            // Redirect to the cart, not back(): the confirmation block lives there, and a
-            // product page cannot render it.
+            // Redirect den gio hang, chu khong phai back(): khoi xac nhan nam o do, va
+            // trang san pham khong the render no.
             return redirect()->route('gio-hang.index')
                 ->with('error', $tinNhan)
                 ->with('drug_warnings', $warnings)
@@ -131,11 +131,11 @@ class GioHangController extends Controller
                 ->with('drug_warning_quantity', (int) $request->quantity);
         }
 
-        // If product already in cart, update quantity
+        // Neu san pham da co trong gio, cap nhat so luong
         if (isset($cart[$request->MaSP])) {
             $newQuantity = $cart[$request->MaSP] + $request->quantity;
 
-            // Check if new quantity exceeds stock
+            // Kiem tra so luong moi co vuot ton kho
             if ($newQuantity > $sanPham->so_luong_ton) {
                 $tinNhan = __('messages.cart.stock_exceeded');
                 if ($wantsJson) {
@@ -178,7 +178,7 @@ class GioHangController extends Controller
     }
 
     /**
-     * Update cart item quantity.
+     * Cap nhat so luong muc gio hang.
      */
     public function update(Request $request, $productId)
     {
@@ -188,7 +188,7 @@ class GioHangController extends Controller
 
         $sanPham = SanPham::findOrFail($productId);
 
-        // Validate stock availability
+        // Kiem tra ton kho con du
         if ($sanPham->so_luong_ton < $request->quantity) {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -225,7 +225,7 @@ class GioHangController extends Controller
     }
 
     /**
-     * Remove a product from the cart.
+     * Xoa san pham khoi gio hang.
      */
     public function remove($productId)
     {

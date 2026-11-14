@@ -47,8 +47,8 @@ class BaoCaoSangLocController extends Controller
     }
 
     /**
-     * Administrators see only what triage recorded. Health profiles stay with the
-     * pharmacist handling the case, so nothing here touches user_health_profiles.
+     * Quan tri vien chi thay nhung gi triage da ghi. Ho so suc khoe thuoc ve duoc si
+     * xu ly truong hop, nen khong cho nao o day cham vao user_health_profiles.
      */
     public function show(int $MaSL)
     {
@@ -110,7 +110,7 @@ class BaoCaoSangLocController extends Controller
     }
 
     /**
-     * Wizard answers are stored under machine keys; the report shows Vietnamese labels.
+     * Cau tra loi wizard duoc luu duoi cac key may; bao cao hien nhan tieng Viet.
      */
     private function collectedAnswers(PhienSangLoc $phien): array
     {

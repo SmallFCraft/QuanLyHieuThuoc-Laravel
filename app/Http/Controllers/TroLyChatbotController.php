@@ -37,20 +37,20 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Hand a chatbot turn to a queue worker and answer immediately.
+     * Giao mot luot chatbot cho worker hang doi va tra loi ngay.
      *
-     * The AI call used to run inline, holding a PHP process for up to AI_TIMEOUT
-     * plus the fallback provider. With a single-process dev server that blocks
-     * every other page, so one customer waiting on the bot froze the whole site.
+     * Luc truoc loi goi AI chay truc tiep, giu mot process PHP toi da AI_TIMEOUT
+     * cong nua nha cung cap du phong. Server dev chi co mot process nen dieu nay
+     * chan moi trang khac: mot khach cho bot tra loi la ca site bi dong bang.
      *
-     * The response shape depends on the queue driver, deliberately:
-     *  - a worker is running  -> 202 with a job id to poll;
-     *  - the `sync` driver    -> the job already finished, so the full answer is
-     *                            returned here exactly as before.
+     * Hinh dang response phu thuoc vao queue driver, co chu y:
+     *  - worker dang chay       -> 202 kem job id de poll;
+     *  - driver `sync`          -> job da chay xong, tra ve cau tra loi day du
+     *                              ngay tai day giong het nhu truoc.
      */
     public function sendMessage(Request $request, AiJobService $aiJobs): JsonResponse
     {
-        // Check authentication first
+        // Kiem tra xac thuc truoc
         if (!auth()->check()) {
             return response()->json([
                 'success' => false,
@@ -82,9 +82,9 @@ class TroLyChatbotController extends Controller
         $userId = (int) auth()->id();
         $sessionId = $this->getSessionId();
 
-        // The browser asks for this when polling showed no worker ever picked the
-        // previous job up. The stranded job is retired first so a late worker
-        // cannot post a second answer for the same question.
+        // Browser goi yeu cau nay khi polling cho thay khong worker nao bao gio
+        // nhan job truoc do. Job bi bo leo duoc huu tro truoc de worker muon
+        // khong the dang mot cau tra loi thu hai cho cung cau hoi.
         $sync = $request->boolean('sync');
 
         if ($sync) {
@@ -123,10 +123,10 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Progress of any queued AI job — a chat turn or a triage advice rewrite.
+     * Tien do cua bat ky job AI nao trong hang doi — luot chat hoac viet lai loi khuyen sang loc.
      *
-     * The uuid is a public identifier, not a capability token: AiJobService scopes
-     * every lookup to the signed-in customer, so another user's job is a 404.
+     * uuid la identifier cong khai, khong phai capability token: AiJobService gioi
+     * han moi truy van vao khach dang dang nhap, nen job cua nguoi khac la 404.
      */
     public function pollJob(Request $request, AiJobService $aiJobs, string $uuid): JsonResponse
     {
@@ -163,8 +163,8 @@ class TroLyChatbotController extends Controller
             ]);
         }
 
-        // The customer pressed stop. Not an error: the browser already removed the
-        // pending bubble, so it only needs to know it can stop polling.
+        // Khach da nhan dung. Khong phai loi: browser da go bo bong chat dang cho,
+        // nen chi can biet rang no co the dung polling.
         if ($state['status'] === 'cancelled') {
             return response()->json([
                 'success' => false,
@@ -182,11 +182,11 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Stop a turn the customer no longer wants.
+     * Dung mot luot ma khach khong con muon nua.
      *
-     * Aborting the browser's fetch alone would leave the worker running and its answer
-     * landing in `chat_messages` — the customer would find a reply to a question they
-     * cancelled on their next reload. Retiring the row is what makes the stop real.
+     * Chi abort fetch o browser se de worker chay tiep va cau tra loi roi vao
+     * `chat_messages` — khach se thay cau tra loi cho cau hoi ho da huy o lan
+     * tai lai sau. Huu tro dong ban ghi moi la cach lam cho lenh dung co that.
      */
     public function cancelJob(Request $request, AiJobService $aiJobs, string $uuid): JsonResponse
     {
@@ -199,8 +199,8 @@ class TroLyChatbotController extends Controller
             ], 401);
         }
 
-        // Scoped to the signed-in customer: the uuid is a public identifier, so without
-        // this check anyone could kill another customer's turn.
+        // Gioi han vao khach dang dang nhap: uuid la identifier cong khai, nen khong
+        // co check nay bat ky ai cung co the ha luot chat cua khach khac.
         $job = AiJob::where('uuid', $uuid)->where('ma_nd', (int) auth()->id())->first();
 
         if ($job === null) {
@@ -234,17 +234,17 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Conversation context for the AI turn.
+     * Ngu canh hoi thoai cho luot AI.
      *
-     * Session id and history come from the server, never from the request body:
-     * a client-supplied session id would let one customer read another's thread.
+     * Session id va lich su den tu server, khong bao gio tu request body:
+     * session id do client cung cap se cho mot khach doc thread cua khach khac.
      *
-     * Both lists must stay sequential lists in chronological order. reverse() alone
-     * keeps the descending keys, which json_encode turns into an object, and the
-     * `ai_jobs.payload` json column returns object keys sorted ascending - the queue
-     * worker then handed the model the whole conversation newest-first, so a short
-     * follow-up ("co on khong?") was answered against the oldest message in the
-     * window instead of the newest.
+     * Ca hai danh sach phai giu nguyen la danh sach lien tuc theo thu tu thoi gian.
+     * Chi reverse() mot minh giu lai cac key giam dan, ma json_encode bien thanh
+     * object, va cot json `ai_jobs.payload` tra ve cac key object sap tang dan -
+     * worker hang doi khi do giao cho model ca cuoc tro chuyen moi nhat truoc,
+     * nen mot cau hoi theo ngan ("co on khong?") duoc tra loi dua tren tin nhan
+     * cu nhat trong cua so thay vi tin nhan moi nhat.
      *
      * @return array<string, mixed>
      */
@@ -297,14 +297,14 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Upload and process prescription or receipt image.
+     * Tai len va xu ly anh don thuoc hoac hoa don.
      *
      * @param Request $request
      * @return JsonResponse
      */
     public function uploadImage(Request $request): JsonResponse
     {
-        // Check authentication first
+        // Kiem tra xac thuc truoc
         if (!auth()->check()) {
             return response()->json([
                 'success' => false,
@@ -353,7 +353,7 @@ class TroLyChatbotController extends Controller
                 'show_disclaimer' => false,
             ]);
             
-            // Process image based on type
+            // Xu ly anh theo loai
             if ($type === 'prescription') {
                 $result = $this->nhanDienHinhAnhService->xuLyDonThuoc($anh, $userId);
             } else {
@@ -367,8 +367,8 @@ class TroLyChatbotController extends Controller
                             'type' => $type,
                             'status' => 'failed',
                             'error' => $result['error'] ?? null,
-                            // The file was stored before analysis ran, so a rejected image
-                            // still has bytes to show after a reload.
+                            // File da duoc luu truoc khi phan tich chay, nen anh bi tu choi
+                            // van con du lieu de hien thi sau khi tai lai trang.
                             'image_id' => $this->nhanDienHinhAnhService->maAnhLuuCuoi(),
                         ],
                     ],
@@ -379,7 +379,7 @@ class TroLyChatbotController extends Controller
                 ]), 400);
             }
             
-            // Create draft order from recognized products
+            // Tao don hang nhap tu cac san pham da nhan dien
             $recognizedProducts = $result['recognized_products'] ?? [];
             $draftOrder = null;
             
@@ -398,15 +398,15 @@ class TroLyChatbotController extends Controller
                         'status' => 'processed',
                         'recognized_count' => count($recognizedProducts),
                         'ocr_text' => $result['ocr_text'] ?? null,
-                        // Lets chat history re-render the upload after a reload. The live
-                        // bubble shows a blob: URL, which dies with the page.
+                        // Cho lich su chat render lai anh tai len sau khi tai lai trang.
+                        // Bong chat truc tuyen hien blob: URL, die mat cung voi trang.
                         'image_id' => $result['image_id'] ?? $this->nhanDienHinhAnhService->maAnhLuuCuoi(),
                     ],
                 ],
             ]);
 
-            // Answer the caption ("day la thuoc gi?") from what the image says,
-            // falling back to the deterministic recognition summary.
+            // Tra loi caption ("day la thuoc gi?") dua tren noi dung anh doc duoc,
+            // quay ve tom tat nhan dien xac dinh khi khong co cau tra loi.
             $imageAnswer = $this->chatbotService->answerImageQuestion(
                 $imageMessage,
                 (string) ($result['ocr_text'] ?? ''),
@@ -422,17 +422,17 @@ class TroLyChatbotController extends Controller
                 'session_id' => $sessionId,
                 'role' => 'assistant',
                 'content' => $messageContent,
-                // Flat catalog rows, the same shape the text path stores and the widget
-                // renders. Storing khopSanPham()'s wrapper here made every product card
-                // read undefined after a reload and show "0 d" with a placeholder icon.
+                // Dong catalog phang, cung hinh dang ma luong van ban luu va widget
+                // render. Luu wrapper cua khopSanPham() o day da lam moi card san pham
+                // doc undefined sau khi tai lai va hien "0 d" kem icon placeholder.
                 'products' => $this->normalizeProductsForWidget($recognizedProducts),
                 'metadata' => [
                     'draft_order' => $draftOrder,
                     'ocr_text' => $result['ocr_text'] ?? null,
                     'disclaimer' => $imageAnswer['disclaimer'] ?? null,
                     'debug' => $imageAnswer['debug'] ?? null,
-                    // Parsed names, confidence and the unmatched entries with their
-                    // suggestions: diagnostics for the admin session trace, not render data.
+                    // Ten da phan tich, confidence va cac dong khong khop kem goi y:
+                    // du lieu chan doan cho trace session quan tri, khong phai du lieu render.
                     'image_recognition' => $recognizedProducts,
                 ],
                 'show_disclaimer' => (bool) ($imageAnswer['show_disclaimer'] ?? false)
@@ -477,7 +477,7 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Retrieve chat history for current session.
+     * Lay lich su chat cho session hien tai.
      *
      * @param Request $request
      * @return JsonResponse
@@ -523,15 +523,15 @@ class TroLyChatbotController extends Controller
                     return [
                         'role' => $msg->role,
                         'content' => $msg->content,
-                        // Normalised on read too: sessions written before the shape was
-                        // fixed still hold khopSanPham()'s wrapper.
+                        // Chuan hoa ca khi doc: cac session ghi truoc khi hinh dang duoc
+                        // sua van giu wrapper cua khopSanPham().
                         'products' => $this->normalizeProductsForWidget($msg->products),
                         'categories' => $msg->metadata['categories'] ?? [],
                         'triage_handoff' => $msg->metadata['triage_handoff'] ?? null,
                         'show_disclaimer' => $msg->show_disclaimer,
                         'disclaimer' => $msg->metadata['disclaimer'] ?? null,
-                        // Absent when retention already removed the file, so the bubble
-                        // degrades to text instead of a broken-image icon.
+                        // Khong co khi retention da xoa file, nen bong chat ha cap thanh
+                        // van ban thay vi icon anh loi.
                         'hasImage' => $imageUrl !== null,
                         'imageUrl' => $imageUrl,
                         'created_at' => $msg->created_at->format('Y-m-d H:i:s')
@@ -562,9 +562,9 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Signed-free URLs for the uploads referenced by this page of history, keyed by
-     * MaAnh. One query for the whole page, and only rows that still have their file:
-     * retention deletes images after chatbot.images.cleanup_after hours.
+     * URL khong can chu ky cho cac anh tai len duoc trang lich su nay tham chieu, key theo
+     * MaAnh. Mot truy van cho ca trang, va chi nhung dong van con file: retention
+     * xoa anh sau chatbot.images.cleanup_after gio.
      *
      * @param \Illuminate\Support\Collection<int, TinNhanChat> $cacTinNhan
      * @return array<int, string>
@@ -592,11 +592,11 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Serve one of the customer's own chatbot uploads.
+     * Phuc vu mot trong nhung anh chatbot ma khach tu tai len.
      *
-     * Scoped to the owner, not the session: history survives a new chat session, and a
-     * sequential MaAnh would otherwise let any signed-in user page through every
-     * prescription image on the system.
+     * Gioi han vao chu so huu, khong phai session: lich su song sot qua session
+     * chat moi, va MaAnh lien tuc neu khong se cho bat ky nguoi dang nhap nao
+     * xem lan luot moi anh don thuoc tren he thong.
      */
     public function image(AnhChatbot $image)
     {
@@ -609,9 +609,9 @@ class TroLyChatbotController extends Controller
             'Content-Type' => $image->mime_type ?: 'image/jpeg',
         ]);
 
-        // setPrivate() rather than a Cache-Control header: BinaryFileResponse recomputes
-        // the directive and turns a plain max-age into `public`, which would let a shared
-        // proxy cache someone's prescription photo.
+        // setPrivate() thay vi header Cache-Control: BinaryFileResponse tinh lai
+        // directive va bien max-age don gian thanh `public`, cho phep proxy dung chung
+        // cache anh don thuoc cua ai do.
         $response->setPrivate();
         $response->setMaxAge(300);
 
@@ -619,7 +619,7 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Clear chat history for current session.
+     * Xoa lich su chat cho session hien tai.
      *
      * @param Request $request
      * @return JsonResponse
@@ -671,7 +671,7 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Add product to cart from chatbot.
+     * Them san pham vao gio hang tu chatbot.
      *
      * @param Request $request
      * @return JsonResponse
@@ -693,7 +693,7 @@ class TroLyChatbotController extends Controller
             $sanPham = \App\Models\SanPham::findOrFail($validated['MaSP']);
             $quantity = $validated['quantity'] ?? 1;
 
-            // Validate product
+            // Kiem tra san pham
             if ($sanPham->isExpired()) {
                 return response()->json([
                     'success' => false,
@@ -708,7 +708,7 @@ class TroLyChatbotController extends Controller
                 ], 422);
             }
 
-            // Add to session cart (same cart used by GioHangController)
+            // Them vao gio hang trong session (cung gio ma GioHangController dung)
             $cart = session()->get('cart', []);
             $currentQty = $cart[$sanPham->ma_sp] ?? 0;
             $newQty = $currentQty + $quantity;
@@ -720,9 +720,9 @@ class TroLyChatbotController extends Controller
                 ], 422);
             }
 
-            // Same drug-safety gate as GioHangController::add. This endpoint writes the
-            // same session cart, so skipping the check here would make the block
-            // bypassable through the chat widget.
+            // Cung gate an toan thuoc voi GioHangController::add. Endpoint nay ghi vao
+            // cung gio hang trong session, nen bo qua check o day se lam phep block
+            // bi vuot qua thong qua widget chat.
             $userId = (int) auth()->id();
             $confirmed = $request->boolean('confirm_warning');
             $safety = $anToanThuoc->kiemTraThemVaoGio($sanPham, CartLine::rowsFrom($cart), $userId);
@@ -743,7 +743,7 @@ class TroLyChatbotController extends Controller
                 $anToanThuoc->ghiNhatKyBoQua($userId, $sanPham, $safety['warnings']);
             }
 
-            // Build cart summary for response
+            // Xay dung tom tat gio hang cho response
             $cartSummary = $this->getCartSummary();
 
             return response()->json([
@@ -768,7 +768,7 @@ class TroLyChatbotController extends Controller
     }
     
     /**
-     * Get current cart summary.
+     * Lay tom tat gio hang hien tai.
      *
      * @param Request $request
      * @return JsonResponse
@@ -793,7 +793,7 @@ class TroLyChatbotController extends Controller
     }
     
     /**
-     * Update product quantity in cart.
+     * Cap nhat so luong san pham trong gio hang.
      *
      * @param Request $request
      * @return JsonResponse
@@ -811,7 +811,7 @@ class TroLyChatbotController extends Controller
             
             $cart = session()->get('cart', []);
             
-            // Remove if quantity is 0
+            // Xoa khi so luong la 0
             if ($quantity === 0) {
                 unset($cart[$sanPham->ma_sp]);
                 session()->put('cart', $cart);
@@ -823,7 +823,7 @@ class TroLyChatbotController extends Controller
                 ]);
             }
             
-            // Validate stock
+            // Kiem tra ton kho
             if ($sanPham->so_luong_ton < $quantity) {
                 return response()->json([
                     'success' => false,
@@ -854,7 +854,7 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Place order directly from chatbot.
+     * Dat hang truc tiep tu chatbot.
      *
      * @param Request $request
      * @return JsonResponse
@@ -907,7 +907,7 @@ class TroLyChatbotController extends Controller
                     Cache::forget($completedKey);
                 }
 
-                // Use existing ThanhToanService for transaction-safe order creation
+                // Dung ThanhToanService co san de tao don hang an toan trong transaction
                 $thanhToanService = app(\App\Services\ThanhToanService::class);
                 $donHang = $thanhToanService->xuLyThanhToan(
                     CartLine::rowsFrom($cart),
@@ -924,7 +924,7 @@ class TroLyChatbotController extends Controller
                 Cache::put($completedKey, $donHang->ma_dh, now()->addMinutes(10));
                 session()->forget('cart');
 
-                // Log audit
+                // Ghi nhat kiem toan
                 app(NhatKyKiemToanService::class)->ghi(
                     action: 'chatbot_order_placed',
                     modelType: DonHang::class,
@@ -964,7 +964,7 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Get cart summary with product details.
+     * Lay tom tat gio hang kem chi tiet san pham.
      *
      * @return array
      */
@@ -1036,7 +1036,7 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Get or create session ID for current user.
+     * Lay hoac tao session ID cho nguoi dung hien tai.
      *
      * @return string
      */
@@ -1073,8 +1073,8 @@ class TroLyChatbotController extends Controller
                 continue;
             }
 
-            // The recognition wrapper, not the rendered rows: the follow-up path needs
-            // parsed_name and the unmatched entries, which flattening drops.
+            // Wrapper nhan dien, khong phai cac dong da render: luong hoi theo can
+            // parsed_name va cac dong khong khop, ma viec lam phang da mat di.
             $recognition = $tinNhan['metadata']['image_recognition'] ?? [];
             if (is_array($recognition) && !empty($recognition)) {
                 return $recognition;
@@ -1090,13 +1090,13 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * The flat catalog rows the widget renders (`product.name`, `product.price`,
-     * `product.image_url`), from either shape ever stored on a message.
+     * Cac dong catalog phang ma widget render (`product.name`, `product.price`,
+     * `product.image_url`), tu bat ky hinh dang nao tung duoc luu tren tin nhan.
      *
-     * khopSanPham() returns a wrapper — `{parsed_name, matched, product:{...}}` — while
-     * the text path stores the rows directly. Storing the wrapper for image turns made
-     * every card read undefined and render "0 d" with a placeholder icon, so this runs on
-     * write AND on read: sessions from before the fix still hold the wrapper.
+     * khopSanPham() tra ve mot wrapper — `{parsed_name, matched, product:{...}}` — trong khi
+     * luong van ban luu cac dong truc tiep. Luu wrapper cho luot anh da lam moi card
+     * doc undefined va render "0 d" kem icon placeholder, nen ham nay chay ca khi GHI
+     * lẫn khi DOC: cac session truoc khi sua van giu wrapper.
      *
      * @param mixed $sanPhams
      * @return array<int, array<string, mixed>>
@@ -1121,8 +1121,8 @@ class TroLyChatbotController extends Controller
                 continue;
             }
 
-            // Unmatched entries have no catalog row to render; their parsed names and
-            // suggestions are already in the reply text.
+            // Dong khong khop khong co dong catalog nao de render; ten da phan tich va
+            // goi y cua chung da co trong van ban cau tra loi.
             if (($item['matched'] ?? false) !== true) {
                 continue;
             }

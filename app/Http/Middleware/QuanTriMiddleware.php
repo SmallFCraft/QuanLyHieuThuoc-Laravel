@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 class QuanTriMiddleware
 {
     /**
-     * Handle an incoming request.
+     * Xu ly mot request den.
      *
      * @param  Closure(Request): (Response)  $next
      */

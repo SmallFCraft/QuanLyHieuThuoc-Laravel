@@ -12,10 +12,10 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Customer-facing side of medication reminders and post-consultation follow-up.
+ * Phia khach hang cua nhac uong thuoc va theo doi sau tu van.
  *
- * Every action is scoped to the authenticated user: reminder ids and triage
- * session ids travel in emails, so ownership must be re-checked server side.
+ * Moi hanh dong duoc gioi han vao nguoi dung da xac thuc: nhac uong id va triage
+ * session id di trong email, nen quyen so huu phai duoc kiem tra lai phia server.
  */
 class NhacUongThuocController extends Controller
 {
@@ -49,8 +49,8 @@ class NhacUongThuocController extends Controller
                 ->with('error', __('messages.reminder.not_found'));
         }
 
-        // Cancel this schedule only. The same product can be on two courses from two
-        // orders (an original and a refill), and cancelling one must not stop the other.
+        // Chi huy lich nay. Cung mot san pham co the nam trong hai khoa tu hai don hang
+        // (don goc va don mua them), va huy mot khoa khong duoc dung khoa kia.
         $this->nhacUongThuocService->huyLichNhac($nhacUong);
 
         return redirect()->route('nhac-uong.index')
@@ -58,10 +58,10 @@ class NhacUongThuocController extends Controller
     }
 
     /**
-     * Confirmation page for the follow-up link in the email.
+     * Trang xac nhan cho link theo doi trong email.
      *
-     * The link is a signed GET that changes nothing, so mail scanners and link
-     * prefetchers cannot answer on the patient's behalf. The answer is the POST below.
+     * Link la mot GET co chu ky khong thay doi gi, nen mail scanner va link
+     * prefetcher khong the tra loi thay benh nhan. Cau tra loi la POST ben duoi.
      */
     public function followUpConfirm(Request $request, int $MaSL): View|RedirectResponse
     {
@@ -88,7 +88,7 @@ class NhacUongThuocController extends Controller
     }
 
     /**
-     * "Da do" / "Chua do" answer, submitted from the confirmation page.
+     * Cau tra loi "Da do" / "Chua do", gui tu trang xac nhan.
      */
     public function followUpResponse(Request $request, int $MaSL): RedirectResponse
     {
@@ -112,8 +112,8 @@ class NhacUongThuocController extends Controller
                 ->with('success', __('messages.reminder.response_already_answered'));
         }
 
-        // The layout only renders `success` and `error`; the referral advice must
-        // be visible, so it uses the `error` channel rather than a silent key.
+        // Layout chi render `success` va `error`; loi khuyen chuyen tuyen phai hien
+        // duoc, nen no dung kenh `error` thay vi mot key im lang.
         return redirect()->route('sang-loc.ket-qua', $phien->ma_sl)
             ->with($result['improved'] ? 'success' : 'error', $result['message']);
     }
