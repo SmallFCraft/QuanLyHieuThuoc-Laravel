@@ -1096,7 +1096,7 @@ class TroLyChatbotController extends Controller
      * khopSanPham() tra ve mot wrapper — `{parsed_name, matched, product:{...}}` — trong khi
      * luong van ban luu cac dong truc tiep. Luu wrapper cho luot anh da lam moi card
      * doc undefined va render "0 d" kem icon placeholder, nen ham nay chay ca khi GHI
-     * lẫn khi DOC: cac session truoc khi sua van giu wrapper.
+     * lan khi DOC: cac session truoc khi sua van giu wrapper.
      *
      * @param mixed $sanPhams
      * @return array<int, array<string, mixed>>

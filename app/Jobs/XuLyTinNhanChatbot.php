@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * Chay mot luot chatbot ngoai web request.
  *
- * Toan bo bản sửa do tre nam o day: loi goi AI co the giu mot tien trinh PHP trong
+ * Toan bo ban sua do tre nam o day: loi goi AI co the giu mot tien trinh PHP trong
  * AI_TIMEOUT cong nha cung cap du phong, con `artisan serve` chi co dung mot tien
  * trinh, nen chay inline se chan moi trang khac trong suot thoi gian do.
  *

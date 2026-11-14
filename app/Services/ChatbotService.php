@@ -2725,7 +2725,7 @@ PROMPT;
     /**
      * Bo "gia bao nhieu" va cac bien the khoi truy van da normalize.
      *
-     * Khop tren van ban da fold de "gia"/"giá" va "nhieu"/"nhiều" la mot quy tac,
+     * Khop tren van ban da fold de "gia"/"gia" va "nhieu"/"nhieu" la mot quy tac,
      * nhung cat ra khoi ban goc theo vi tri tu: cac ung cu vien duoc tim bang LIKE
      * tren van ban san pham that, van giu dau tieng Viet.
      */
