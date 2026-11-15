@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function () {
             { data: 'stock_quantity', name: 'stock_quantity' },
             { data: 'formatted_expiration_date', name: 'expiration_date' },
             { data: 'batch_number', name: 'batch_number' },
-            { data: 'ma_sp', name: 'actions', orderable: false, searchable: false, className: 'text-center' }
+            { data: 'MaSP', name: 'actions', orderable: false, searchable: false, className: 'text-center' }
         ],
         columnDefs: [
             {
