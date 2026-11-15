@@ -5,8 +5,8 @@ namespace App\Exceptions;
 use RuntimeException;
 
 /**
- * Dung khi mot site crawled khong con khop voi hinh dang ma mapper dung, de mot
- * lan chay abort thay vi am tham import khong duoc gi.
+ * Dùng khi một site crawled không còn khớp với hình dạng mà mapper dùng, để một
+ * lượt chạy abort thay vì mù quáng import không được gì.
  */
 class CrawlerSourceChangedException extends RuntimeException
 {

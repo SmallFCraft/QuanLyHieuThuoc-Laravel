@@ -15,7 +15,7 @@ class ChiTietDonHang extends Model
     protected $primaryKey = 'ma_ctdh';
 
     /**
-     * Cac thuoc tinh cho phep gan hang loat.
+     * Các thuộc tính cho phép gán hàng loạt.
      *
      * @var array<int, string>
      */
@@ -29,7 +29,7 @@ class ChiTietDonHang extends Model
     ];
 
     /**
-     * Cac thuoc tinh nen ep kieu.
+     * Các thuộc tính nên ép kiểu.
      *
      * @var array<string, string>
      */
@@ -39,7 +39,7 @@ class ChiTietDonHang extends Model
     ];
 
     /**
-     * Don hang so huu dong chi tiet nay.
+     * Đơn hàng sở hữu dòng chi tiết này.
      */
     public function donHang()
     {
@@ -47,7 +47,7 @@ class ChiTietDonHang extends Model
     }
 
     /**
-     * San pham cua dong chi tiet nay.
+     * Sản phẩm của dòng chi tiết này.
      */
     public function sanPham()
     {
@@ -55,7 +55,7 @@ class ChiTietDonHang extends Model
     }
 
     /**
-     * Lo san pham cua dong chi tiet nay.
+     * Lô sản phẩm của dòng chi tiết này.
      */
     public function loSanPham()
     {
@@ -63,7 +63,7 @@ class ChiTietDonHang extends Model
     }
 
     /**
-     * Tien hang cua dong chi tiet don hang nay.
+     * Tiền hàng của dòng chi tiết đơn hàng này.
      *
      * @return float
      */
@@ -73,7 +73,7 @@ class ChiTietDonHang extends Model
     }
 
     /**
-     * Tien hang da dinh dang theo dinh dang tien te Viet Nam.
+     * Tiền hàng đã định dạng theo định dạng tiền tệ Việt Nam.
      *
      * @return string
      */

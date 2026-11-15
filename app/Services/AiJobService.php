@@ -15,17 +15,17 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Giao cong viec AI cho worker hang doi va bao trang thai tro lai browser.
+ * Giao công việc AI cho worker hàng đợi và báo trạng thái trở lại browser.
  *
- * Van de o do la latency, chu khong phai throughput: mot loi goi AI co the giu mot
- * process PHP trong toan bo AI_TIMEOUT (cong nua nha cung cap du phong), va server
- * dev chi chay mot process, nen mot tin nhan chat chan ca site. Dua loi goi ra khoi
- * request giu moi trang responsive.
+ * Vấn đề ở đó là latency, chứ không phải throughput: một lời gọi AI có thể giữ một
+ * process PHP trong toàn bộ AI_TIMEOUT (cộng nửa nhà cung cấp dự phòng), và server
+ * dev chỉ chạy một process, nên một tin nhắn chat chặn cả site. Đưa lời gọi ra khỏi
+ * request giữ mỗi trang responsive.
  *
- * Queue driver quyet dinh hinh dang cua response, chu khong phai class nay: tren `sync`
- * job da chay xong truoc khi dispatch() tra ve, nen caller co the tra loi trong cung
- * request. Do la thu lam test suite va mot install khong co worker hoat dong giong
- * het code dong bo cu.
+ * Queue driver quyết định hình dạng của response, chứ không phải class này: trên `sync`
+ * job đã chạy xong trước khi dispatch() trả về, nên caller có thể trả lời trong cùng
+ * request. Đó là thứ làm test suite và một install không có worker hoạt động giống
+ * hệt code đồng bộ cũ.
  */
 class AiJobService
 {
@@ -34,11 +34,11 @@ class AiJobService
     ) {}
 
     /**
-     * @param  array<string, mixed>  $context  Ngu canh chat da dung san. Luu nguy ven:
-     *                                         no giu cung cac dong tin nhan ma `chat_messages` dang co, va
-     *                                         DonDepCongViecAi xoa no sau 24h.
-     * @param  bool  $sync  Chay job trong request nay thay vi dua vao hang doi. Dung khi
-     *                      browser phat hien khong worker nao nhan job truoc do.
+     * @param  array<string, mixed>  $context  Ngữ cảnh chat đã dựng sẵn. Lưu nguyên vẹn:
+     *                                         nó giữ cùng các dòng tin nhắn mà `chat_messages` đang có, và
+     *                                         DonDepCongViecAi xoá nó sau 24h.
+     * @param  bool  $sync  Chạy job trong request này thay vì đưa vào hàng đợi. Dùng khi
+     *                      browser phát hiện không worker nào nhận job trước đó.
      */
     public function dispatchChat(
         int $userId,
@@ -71,11 +71,11 @@ class AiJobService
     }
 
     /**
-     * Tra lai quyet dinh ket qua cho mot phieu khai bao da hoan thanh.
+     * Trả lại quyết định kết quả cho một phiếu khai báo đã hoàn thành.
      *
-     * Payload chi la session id: service doc cau tra loi tu dong ban ghi.
-     * Benh nhan cho job nay, nen ket luan khong bao gio duoc sua sau khi ho
-     * da doc — xem XuLyDanhGiaSangLoc.
+     * Payload chỉ là session id: service đọc câu trả lời từ dòng bản ghi.
+     * Bệnh nhân chờ job này, nên kết luận không bao giờ được sửa sau khi họ
+     * đã đọc — xem XuLyDanhGiaSangLoc.
      */
     public function dispatchEvaluation(PhienSangLoc $phien): AiJob
     {
@@ -87,18 +87,18 @@ class AiJobService
             'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
 
-        // Dua vao hang doi, khong chay truc tiep: caller quay ve quyet dinh trong request
-        // khi polling cho thay khong worker nao bao gio nhan job.
+        // Đưa vào hàng đợi, không chạy trực tiếp: caller quay về quyết định trong request
+        // khi polling cho thấy không worker nào bao giờ nhận job.
         XuLyDanhGiaSangLoc::dispatch($job->uuid);
 
         return $job->refresh();
     }
 
     /**
-     * Tra lai viec viet lai loi khuyen cho mot session da duoc dinh loi.
+     * Trả lại việc viết lại lời khuyên cho một session đã được định lôi.
      *
-     * Payload chi la session id: khong co van ban tu do cua khach, khong co field ho so.
-     * SangLocAiVietLaiService tu doc nhung gi can tu dong ban ghi.
+     * Payload chỉ là session id: không có văn bản tự do của khách, không có field hồ sơ.
+     * SangLocAiVietLaiService tự đọc những gì cần từ dòng bản ghi.
      */
     public function dispatchAdviceRewrite(PhienSangLoc $phien): AiJob
     {
@@ -116,8 +116,8 @@ class AiJobService
     }
 
     /**
-     * Chi dua viec viet lai vao hang doi khi session nay thuc su du dieu kien, va
-     * khong bao gio de loi hang doi mat di ket qua cua benh nhan.
+     * Chỉ đưa việc viết lại vào hàng đợi khi session này thực sự đủ điều kiện, và
+     * không bao giờ để lỗi hàng đợi mất đi kết quả của bệnh nhân.
      */
     public function dispatchAdviceRewriteIfEligible(PhienSangLoc $phien): ?AiJob
     {
@@ -138,11 +138,11 @@ class AiJobService
     }
 
     /**
-     * Tra lai briefing chi tiet cho trang ket qua cua mot session da dinh loi.
+     * Trả lại briefing chi tiết cho trang kết quả của một session đã định lôi.
      *
-     * Job rieng khoi viec viet lai loi khuyen la co chu y: loi goi nay xin sau
-     * section va mot san pham lua chon, nen cham hon nhieu, va hai viec khong duoc
-     * chia se mot loi. Payload chi la session id.
+     * Job riêng khỏi việc viết lại lời khuyên là có chủ ý: lời gọi này xin sáu
+     * section và một sản phẩm lựa chọn, nên chậm hơn nhiều, và hai việc không được
+     * chia sẻ một lời. Payload chỉ là session id.
      */
     public function dispatchBriefing(PhienSangLoc $phien): AiJob
     {
@@ -160,8 +160,8 @@ class AiJobService
     }
 
     /**
-     * Chi dua briefing vao hang doi khi session du dieu kien, va khong bao gio de
-     * loi hang doi mat di ket qua cua benh nhan.
+     * Chỉ đưa briefing vào hàng đợi khi session đủ điều kiện, và không bao giờ để
+     * lỗi hàng đợi mất đi kết quả của bệnh nhân.
      */
     public function dispatchBriefingIfEligible(PhienSangLoc $phien): ?AiJob
     {
@@ -182,13 +182,13 @@ class AiJobService
     }
 
     /**
-     * Trang thai job cho browser, gioi han vao chu so huu.
+     * Trạng thái job cho browser, giới hạn vào chủ sở hữu.
      *
-     * uuid la identifier cong khai, khong phai capability token, nen quyen so huu
-     * duoc kiem tra lai tai day thay vi tin vao URL.
+     * uuid là identifier công khai, không phải capability token, nên quyền sở hữu
+     * được kiểm tra lại tại đây thay vì tin vào URL.
      *
-     * @return array<string, mixed>|null null khi job khong ton tai hoac thuoc ve
-     *                                   nguoi khac — ca hai deu tra 404.
+     * @return array<string, mixed>|null null khi job không tồn tại hoặc thuộc về
+     *                                   người khác — cả hai đều trả 404.
      */
     public function poll(string $uuid, int $userId): ?array
     {
@@ -202,10 +202,10 @@ class AiJobService
             'status' => $job->status,
             'result' => $job->status === 'done' ? $job->result : null,
             'error' => $job->status === 'failed' ? ($job->error ?: null) : null,
-            // Cho browser dung polling mot worker ma bao gio khong duoc khoi dong. Gi tiep
-            // theo la lua chon cua caller: chat thu lai dong bo, nhung trang ket qua triage
-            // khong the — briefing cua no mat ~60-90s, xa hon moi web request — nen no
-            // thay bang thong bao "lan nay khong kha dung".
+            // Cho browser dừng polling một worker mà bao giờ không được khởi động. Gợi ý tiếp
+            // theo là lựa chọn của caller: chat thử lại đồng bộ, nhưng trang kết quả triage
+            // không thể — briefing của nó mất ~60-90s, xa hơn mọi web request — nên nó
+            // thay bằng thông báo "lần này không khả dụng".
             'stranded' => $job->isStranded(),
             'elapsed_ms' => $job->created_at === null
                 ? 0
@@ -214,8 +214,8 @@ class AiJobService
     }
 
     /**
-     * Huu tro mot job ma browser da bo cuoc, de dong ban ghi khong nam `queued`
-     * mai mai va worker muon khong the dang cau tra loi thu hai cho cung tin nhan.
+     * Hưu trí một job mà browser đã bỏ cuộc, để dòng bản ghi không nằm `queued`
+     * mãi mãi và worker muộn không thể đăng câu trả lời thứ hai cho cùng tin nhắn.
      */
     public function abandon(AiJob $job, string $reason): void
     {
@@ -223,12 +223,12 @@ class AiJobService
     }
 
     /**
-     * Huu tro mot luot ma khach da nhan dung.
+     * Hưu trí một lượt mà khách đã nhấn dừng.
      *
-     * `cancelled`, khong phai `failed`: poll muon khong duoc ve ra mot loi ma khach
-     * khong bao gio gay ra, va XuLyTinNhanChatbot doc lai dong ban ghi sau khi nha cung cap
-     * tra loi, nen luot bi dung khong bao gio den `chat_messages` — bang chuyen thoai
-     * van giu khop voi nhung gi khach thuc su da thay.
+     * `cancelled`, không phải `failed`: poll muộn không được vẽ ra một lỗi mà khách
+     * không bao giờ gây ra, và XuLyTinNhanChatbot đọc lại dòng bản ghi sau khi nhà cung cấp
+     * trả lời, nên lượt bị dừng không bao giờ đến `chat_messages` — bảng chuyển thoại
+     * vẫn giữ khớp với những gì khách thực sự đã thấy.
      */
     public function cancel(AiJob $job): void
     {
@@ -252,9 +252,9 @@ class AiJobService
             return;
         }
 
-        // Dong trong hang doi di cung no. Neu de pending, worker khoi dong sau se thay
-        // dong ban ghi da xong va tra ve som — vo hai voi chat, hang da tra loi dong bo,
-        // nhung no tich luy cac dong chet trong `jobs` mai mai.
+        // Dòng trong hàng đợi đi cùng nó. Nếu để pending, worker khởi động sau sẽ thấy
+        // dòng bản ghi đã xong và trả về sớm — vô hại với chat, hàng đã trả lời đồng bộ,
+        // nhưng nó tích luỹ các dòng chết trong `jobs` mãi mãi.
         $this->discardQueuedWork($job->uuid);
 
         $job->forceFill([
@@ -273,9 +273,9 @@ class AiJobService
     }
 
     /**
-     * Xoa dong hang doi dang cho mang uuid nay, de AiJob da huu tro va hang doi dong nhat.
-     * Chi database driver luu cac dong ma ta cham duoc; tren `sync` theo dinh nghia
-     * khong co gi dang cho.
+     * Xoá dòng hàng đợi đang chờ mang uuid này, để AiJob đã hưu trí và hàng đợi đồng nhất.
+     * Chỉ database driver lưu các dòng mà ta chạm được; trên `sync` theo định nghĩa
+     * không có gì đang chờ.
      */
     public function discardQueuedWork(string $uuid): int
     {
@@ -285,7 +285,7 @@ class AiJobService
             return 0;
         }
 
-        // uuid duoc nhung trong payload job da serialize, va no la duy nhat.
+        // uuid được nhúng trong payload job đã serialize, và nó là duy nhất.
         return DB::table((string) config("queue.connections.{$connection}.table", 'jobs'))
             ->where('payload', 'like', '%'.$uuid.'%')
             ->delete();
@@ -316,7 +316,7 @@ class AiJobService
     {
         $job->forceFill([
             'status' => 'failed',
-            // Cat bot: nha cung cap co the tra ve ca mot trang loi HTML.
+            // Cắt bớt: nhà cung cấp có thể trả về cả một trang lỗi HTML.
             'error' => Str::limit($error, 1000),
             'finished_at' => now(),
         ])->save();
@@ -325,7 +325,7 @@ class AiJobService
     }
 
     /**
-     * Chi status, kind va thoi gian — khong bao gio payload hay loi noi cua khach.
+     * Chỉ status, kind và thời gian — không bao giờ payload hay lời nói của khách.
      */
     protected function audit(AiJob $job, string $action): void
     {
@@ -341,8 +341,8 @@ class AiJobService
                     'status' => $job->status,
                     'attempts' => $job->attempts,
                 ],
-                // Viet tu worker hang doi khong kem hon viet tu request, nen chu so huu
-                // den tu dong ban ghi job chu khong phai tu guard.
+                // Viết từ worker hàng đợi không kém hơn viết từ request, nên chủ sở hữu
+                // đến từ dòng bản ghi job chứ không phải từ guard.
                 userId: $job->ma_nd
             );
         } catch (\Throwable $exception) {

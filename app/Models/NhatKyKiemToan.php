@@ -6,14 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class NhatKyKiemToan extends Model
 {
-    const UPDATED_AT = null; // Nhat ky kiem toan khong duoc sua, khong co updated_at
+    const UPDATED_AT = null; // Nhật ký kiểm toán không được sửa, không có updated_at
 
     protected $table = 'nhat_ky_kiem_toans';
 
     protected $primaryKey = 'ma_nk';
 
     /**
-     * Cac thuoc tinh cho phep gan hang loat.
+     * Các thuộc tính cho phép gán hàng loạt.
      *
      * @var array
      */
@@ -29,7 +29,7 @@ class NhatKyKiemToan extends Model
     ];
 
     /**
-     * Cac thuoc tinh nen ep kieu.
+     * Các thuộc tính nên ép kiểu.
      *
      * @var array
      */
@@ -40,7 +40,7 @@ class NhatKyKiemToan extends Model
     ];
 
     /**
-     * Nguoi dung da thuc hien hanh dong
+     * Người dùng đã thực hiện hành động
      */
     public function nguoiDung()
     {
@@ -48,7 +48,7 @@ class NhatKyKiemToan extends Model
     }
 
     /**
-     * Model co the kiem toan duoc ghi nhan
+     * Model có thể kiểm toán được ghi nhận
      */
     public function auditable()
     {

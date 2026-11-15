@@ -9,36 +9,36 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Dung va gui cac nhac uong thuoc dua tren don hang da hoan thanh.
+ * Dùng và gửi các nhắc uống thuốc dựa trên đơn hàng đã hoàn thành.
  *
- * Tan suat lieu luong duoc phan tich tu cot van ban tu do `products.usage` do nhan vien
- * nha thuoc viet. Khi van ban khong the phan tich duoc, lich quay ve mot lan mot ngay —
- * nhac it hon la an toan, doan mot tan suat cao hon thi khong.
+ * Tần suất liều lượng được phân tích từ cột văn bản tự do `products.usage` do nhân viên
+ * nhà thuốc viết. Khi văn bản không thể phân tích được, lịch quay về một lần một ngày —
+ * nhắc ít hơn là an toàn, đoán một tần suất cao hơn thì không.
  */
 class NhacUongThuocService
 {
-    /** Nhac chi chay trong khoang gio nay, khop voi NhacUongThuoc::advanceSchedule(). */
+    /** Nhắc chỉ chạy trong khoảng giờ này, khớp với NhacUongThuoc::advanceSchedule(). */
     private const DAY_START_HOUR = 8;
     private const DAY_END_HOUR = 20;
 
-    /** So gio thuc de phan bo cac lan lieu luong. */
+    /** Số giờ thức để phân bổ các lần liều lượng. */
     private const WAKING_HOURS = 12;
 
     private const MAX_TIMES_PER_DAY = 6;
     private const MAX_DURATION_DAYS = 30;
 
-    /** `medication_reminders.dosage_text` la VARCHAR; `products.usage` la TEXT. */
+    /** `medication_reminders.dosage_text` là VARCHAR; `products.usage` là TEXT. */
     private const MAX_DOSAGE_TEXT = 255;
 
     /**
-     * Tao (hoac lam moi) mot nhac uong cho moi san pham phan biet trong don hang.
+     * Tạo (hoặc làm mới) một nhắc uống cho mỗi sản phẩm phân biệt trong đơn hàng.
      *
-     * So luong duoc cong theo tung san pham truoc: FEFO tach mot lan mua thanh mot
-     * dong `order_items` cho moi lo, nen lap truc tiep cac dong se ghi de nhac uong
-     * va tinh do dai khoa dieu tri tu lo cuoi cung (nho nhat).
+     * Số lượng được cộng theo từng sản phẩm trước: FEFO tách một lần mua thành một
+     * dòng `order_items` cho mỗi lô, nên lặp trực tiếp các dòng sẽ ghi đè nhắc uống
+     * và tính độ dài khóa điều trị từ lô cuối cùng (nhỏ nhất).
      *
-     * Idempotent: key theo ma_dh + ma_sp nen phat lai mot thay doi trang thai
-     * khong the nhan doi lich.
+     * Idempotent: key theo ma_dh + ma_sp nên phát lại một thay đổi trạng thái
+     * không thể nhân đôi lịch.
      */
     public function taoTuDonHang(DonHang $donHang): int
     {
@@ -82,9 +82,9 @@ class NhacUongThuocService
     }
 
     /**
-     * `san_phams.cach_dung` la van ban tu do viet qua trinh soan thao WYSIWYG, nen no co the
-     * dai hon cot va mang theo markup. Cat bot thay vi de mot insert strict-mode lam
-     * abort transaction cua don hang.
+     * `san_phams.cach_dung` là văn bản tự do viết qua trình soạn thảo WYSIWYG, nên nó có thể
+     * dài hơn cột và mang theo markup. Cắt bớt thay vì để một insert strict-mode làm
+     * abort transaction của đơn hàng.
      */
     private function vanBanLieuLuong(\App\Models\SanPham $sanPham): string
     {
@@ -95,13 +95,13 @@ class NhacUongThuocService
     }
 
     /**
-     * So lan lieu luong moi ngay trich tu van ban cach dung tieng Viet.
+     * Số lần liều lượng mỗi ngày trích từ văn bản cách dùng tiếng Việt.
      *
-     * Cac dang duoc nhan dien, theo thu tu uu tien:
-     *   "x 2-3 lan/ngay"      -> tran (3)
-     *   "moi 4-6 gio"         -> gio thuc / khoang ngan nhat (12/4 = 3)
-     *   "1 vien/ngay"         -> mot lan lieu luong mot ngay (1)
-     * Bat ky dang khac tra ve 1 thay vi tu bia tan suat.
+     * Các dạng được nhận diện, theo thứ tự ưu tiên:
+     *   "x 2-3 lần/ngày"      -> trần (3)
+     *   "mỗi 4-6 giờ"         -> giờ thức / khoảng ngắn nhất (12/4 = 3)
+     *   "1 viên/ngày"         -> một lần liều lượng một ngày (1)
+     * Bất kỳ dạng khác trả về 1 thay vì tự bịa tần suất.
      */
     public function phanTichSoLanMotNgay(?string $cachDung): int
     {
@@ -111,21 +111,21 @@ class NhacUongThuocService
 
         $vanBan = mb_strtolower($cachDung, 'UTF-8');
 
-        // "x 2-3 lan/ngay", "3 lan/ngay", "2 lan moi ngay"
+        // "x 2-3 lần/ngày", "3 lần/ngày", "2 lần mỗi ngày"
         if (preg_match('/(\d+)\s*(?:-\s*(\d+))?\s*lần\s*(?:\/|mỗi\s*)ngày/u', $vanBan, $khop)) {
             $soLan = (int) ($khop[2] ?? $khop[1]);
 
             return $this->gioiHanSoLan($soLan);
         }
 
-        // "moi 4-6 gio" — khoang ngan nhat duoc neu ra, phan bo chi trong gio thuc
+        // "mỗi 4-6 giờ" — khoảng ngắn nhất được nêu ra, phân bổ chỉ trong giờ thức
         if (preg_match('/mỗi\s*(\d+)\s*(?:-\s*(\d+))?\s*giờ/u', $vanBan, $khop)) {
             $soGoiGiuaCacLan = max(1, (int) $khop[1]);
 
             return $this->gioiHanSoLan((int) floor(self::WAKING_HOURS / $soGoiGiuaCacLan));
         }
 
-        // "1 vien/ngay", "15-30ml/ngay" — mot lan lieu luong moi ngay
+        // "1 viên/ngày", "15-30ml/ngày" — một lần liều lượng mỗi ngày
         if (preg_match('/\/\s*ngày/u', $vanBan)) {
             return 1;
         }
@@ -134,15 +134,15 @@ class NhacUongThuocService
     }
 
     /**
-     * Gui moi nhac uong den han va keo lich cua no len phia truoc.
+     * Gửi mỗi nhắc uống đến hạn và kéo lịch của nó lên phía trước.
      */
     public function guiDungHan(): int
     {
         $daGui = 0;
 
         NhacUongThuoc::due()
-            // withTrashed tren san pham: san pham da soft-delete (ngung kinh doanh) van
-            // la mot khoa dieu tri benh nhan phai hoan thanh, nen khong duoc huy lich.
+            // withTrashed trên sản phẩm: sản phẩm đã soft-delete (ngừng kinh doanh) vẫn
+            // là một khóa điều trị bệnh nhân phải hoàn thành, nên không được hủy lịch.
             ->with(['nguoiDung', 'sanPham' => fn ($query) => $query->withTrashed()])
             ->chunkById(100, function ($cacNhacUong) use (&$daGui) {
                 foreach ($cacNhacUong as $nhacUong) {
@@ -155,7 +155,7 @@ class NhacUongThuocService
                         Mail::to($nhacUong->nguoiDung->email)->send(new NhacUongThuocMail($nhacUong));
                         $daGui++;
                     } catch (\Throwable $e) {
-                        // Mot mailbox loi khong duoc lam stall phan con lai cua batch.
+                        // Một mailbox lỗi không được làm stall phần còn lại của batch.
                         Log::warning('Medication reminder mail failed', [
                             'ma_nn' => $nhacUong->ma_nn,
                             'error' => $e->getMessage(),
@@ -170,9 +170,9 @@ class NhacUongThuocService
     }
 
     /**
-     * Dung mot lich cu the. Key tren dong ban ghi, chu khong phai san pham: cung
-     * mot thuoc co the nam trong hai khoa tu hai don hang, va huy mot khoa
-     * khong duoc im lang dung khoa kia.
+     * Dừng một lịch cụ thể. Key trên dòng bản ghi, chứ không phải sản phẩm: cùng
+     * một thuốc có thể nằm trong hai khóa từ hai đơn hàng, và hủy một khóa
+     * không được im lặng dừng khóa kia.
      */
     public function huyLichNhac(NhacUongThuoc $nhacUong): void
     {
@@ -187,7 +187,7 @@ class NhacUongThuocService
     }
 
     /**
-     * Dung nhac cho mot nguoi dung cu the ve mot san pham cu the, tren moi don hang.
+     * Dừng nhắc cho một người dùng cụ thể về một sản phẩm cụ thể, trên mọi đơn hàng.
      */
     public function huyTheoNguoiDung(int $maNguoiDung, int $maSp): void
     {
@@ -206,7 +206,7 @@ class NhacUongThuocService
     }
 
     /**
-     * So luong da xuat ton duoc bao lau voi tan suat da phan tich.
+     * Số lượng đã xuất tồn được bao lâu với tần suất đã phân tích.
      */
     private function soNgaySuDung(int $soLuong, int $soLanMotNgay): int
     {

@@ -7,25 +7,25 @@ use App\Services\AiProviderService;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Viet lai loi khuyen duoc si ban thanh tieng Viet than thien hon.
+ * Viết lại lời khuyên dược sĩ soạn thành tiếng Việt thân thiện hơn.
  *
- * Ban viet lai duoc luu trong cot rieng va render thanh mot khoi rieng co nhan,
- * va `advice_given` va `safety_net` khong bao gio bi ghi de, nen ban ghi xac dinh
- * duoc phuc hoi tu `rule_id`.
+ * Bản viết lại được lưu trong cột riêng và render thành một khối riêng có nhãn,
+ * và `advice_given` và `safety_net` không bao giờ bị ghi đè, nên bản ghi xác định
+ * được phục hồi từ `rule_id`.
  *
- * Ket qua khan cap va can thiet bi loai tru: chung tra ve huong dan duoc si viet
- * nguyen van (so 115, dong "khong aspirin khi nghi sot xuat huet"),
- * va moi tu deu mang trong so.
+ * Kết quả khẩn cấp và cần thiết bị loại trừ: chúng trả về hướng dẫn dược sĩ viết
+ * nguyên văn (số 115, dòng "không aspirin khi nghi sốt xuất huyết"),
+ * và mỗi từ đều mang trọng số.
  *
- * Khong gui van ban tu do cua khach hang hay mot truong ho so nao, dieu do
- * lam prompt injection vo giai phap ve cau truc chu khong chi it kha nang xay ra.
+ * Không gửi văn bản tự do của khách hàng hay một trường hồ sơ nào, điều đó
+ * làm prompt injection vô giải pháp về cấu trúc chứ không chỉ ít khả năng xảy ra.
  */
 class SangLocAiVietLaiService extends SangLocAiService
 {
     /**
-     * Ket qua co loi khuyen phai toi khach hang dung nhu duoc si da viet
-     * No. `pharmacist_review` du dieu kien: khach hang gio doc cau tra loi AI truoc
-     * va chi moi nguoi khi muon, nen van ban do la nhung gi ho thay.
+     * Kết quả có lời khuyên phải tới khách hàng đúng như dược sĩ đã viết
+     * nó. `pharmacist_review` đủ điều kiện: khách hàng giờ đọc câu trả lời AI trước
+     * và chỉ mời người khi muốn, nên văn bản đó là những gì họ thấy.
      */
     private const VERBATIM_OUTCOMES = ['emergency', 'refer_doctor'];
 
@@ -37,8 +37,8 @@ class SangLocAiVietLaiService extends SangLocAiService
     }
 
     /**
-     * Ngan sach rieng, chu khong phai fail-fast cua wizard: qua trinh goi nay luon chay trong
-     * worker sau khi ket qua chot, nen cau tra loi cham van dang cho.
+     * Ngân sách riêng, chứ không phải fail-fast của wizard: quy trình gọi này luôn chạy trong
+     * worker sau khi kết quả chốt, nên câu trả lời chậm vẫn đang chờ.
      */
     protected function timeoutSeconds(): int
     {
@@ -46,10 +46,10 @@ class SangLocAiVietLaiService extends SangLocAiService
     }
 
     /**
-     * Loi khuyen cua phien nay co duoc viet lai khong.
+     * Lời khuyên của phiên này có được viết lại không.
      *
-     * Public de trang ket qua phan biet "ban viet lai van dang den" voi "se khong bao gio
-     * co", thay vi suy lai quy tac tu enum ket qua.
+     * Public để trang kết quả phân biệt "bản viết lại vẫn đang đến" với "sẽ không bao giờ
+     * có", thay vì suy lại quy tắc từ enum kết quả.
      */
     public function duDieuKien(PhienSangLoc $phien): bool
     {
@@ -59,10 +59,10 @@ class SangLocAiVietLaiService extends SangLocAiService
     }
 
     /**
-     * Ghi `ai_advice` / `ai_safety_net` / `ai_status` len phien.
+     * Ghi `ai_advice` / `ai_safety_net` / `ai_status` lên phiên.
      *
-     * Khong bao gio nem loi: that bai de cot null va trang ket qua render
-     * dung nhu khi tinh nang off.
+     * Không bao giờ ném lỗi: thất bại để cột null và trang kết quả render
+     * đúng như khi tính năng off.
      */
     public function vietLai(PhienSangLoc $phien): void
     {
@@ -128,7 +128,7 @@ class SangLocAiVietLaiService extends SangLocAiService
     }
 
     /**
-     * Chi chuoi suy tu quy tac cong enum ket qua. Khong van ban tu do, khong ho so.
+     * Chỉ chuỗi suy từ quy tắc cộng enum kết quả. Không văn bản tự do, không hồ sơ.
      */
     protected function buildPrompt(PhienSangLoc $phien): string
     {
@@ -152,8 +152,8 @@ class SangLocAiVietLaiService extends SangLocAiService
     }
 
     /**
-     * Enum -> tieng Viet thuan, nen model biet phong cach chu khong duoc bao
-     * ket qua la co the danh gia lai. Tai dung nhan trang ket qua dang hien.
+     * Enum -> tiếng Việt thuần, nên model biết phong cách chứ không được báo
+     * kết quả là có thể đánh giá lại. Tại đúng nhãn trang kết quả đang hiện.
      */
     protected function outcomeLabel(?string $outcome): string
     {
@@ -172,12 +172,12 @@ class SangLocAiVietLaiService extends SangLocAiService
         $parts = preg_split('/NGƯỠNG CẦN ĐI KHÁM\s*:?/u', $rewrite, 2);
         $advice = $parts[0] ?? '';
 
-        // Moi thu truoc nhan LOI KHUYEN la phan dau model nga lai —
-        // thuc te la dong "Ket luan he thong:" tu prompt, no roi xuat hien
-        // nguyen van tren trang ket qua. Neo tai dau chuoi khong du,
-        // nen bo moi thu truoc nhan bat ke no xuat hien o dau.
-        // Offset byte tu PREG_OFFSET_CAPTURE, nen dung substr: lan cat cham dung
-        // bien khop, nen khong ky tu da byte nao bi cat doi.
+        // Mọi thứ trước nhãn LỜI KHUYÊN là phần đầu model ngả lại —
+        // thực tế là dòng "Kết luận hệ thống:" từ prompt, nó rơi xuất hiện
+        // nguyên văn trên trang kết quả. Neo tại đầu chuỗi không đủ,
+        // nên bỏ mọi thứ trước nhãn bất kể nó xuất hiện ở đâu.
+        // Offset byte từ PREG_OFFSET_CAPTURE, nên dùng substr: lần cắt chạm đúng
+        // biên khớp, nên không ký tự đa byte nào bị cắt đôi.
         if (preg_match('/LỜI KHUYÊN\s*:?/u', $advice, $match, PREG_OFFSET_CAPTURE) === 1) {
             $advice = substr($advice, $match[0][1] + strlen($match[0][0]));
         }
@@ -189,8 +189,8 @@ class SangLocAiVietLaiService extends SangLocAiService
     }
 
     /**
-     * @param  array<int, string>  $expected  Chuoi nguoi ma ban viet lai phai giu
-     * @param  array<int, string>  $produced  Cac khoi da viet lai
+     * @param  array<int, string>  $expected  Chuỗi nguồn mà bản viết lại phải giữ
+     * @param  array<int, string>  $produced  Các khối đã viết lại
      */
     protected function passesSafetyChecks(string $rewrite, array $expected, array $produced): bool
     {
@@ -202,19 +202,19 @@ class SangLocAiVietLaiService extends SangLocAiService
             return false;
         }
 
-        // Cau tra loi JSON co nghia model bi dan lo nhiem vu.
+        // Câu trả lời JSON có nghĩa model bị dẫn lôi nhiệm vụ.
         if (json_decode($rewrite, true) !== null) {
             return false;
         }
 
-        // Markdown se render thanh ky tu nghien van ban: moi noi hien thi dung
-        // {{ }} voi white-space: pre-line va khong co bo render markdown.
+        // Markdown sẽ render thành ký tự nghiền văn bản: mọi nơi hiển thị dùng
+        // {{ }} với white-space: pre-line và không có bộ render markdown.
         if (preg_match('/(\*\*|__|`|^\s{0,3}#{1,6}\s|\[[^\]]*\]\([^)]*\))/mu', $rewrite) === 1) {
             return false;
         }
 
-        // Moi con so trong nguoi phai song sot. Bo "39" hoac "3 ngay" mot cach im lang
-        // la mat nguong an toan, dung la toan bo y nghia cua khoi.
+        // Mọi con số nguồn phải sống sót. Bỏ "39" hoặc "3 ngày" một cách im lặng
+        // là mất ngưỡng an toàn, đúng là toàn bộ ý nghĩa của khối.
         return $this->numbersPreserved(implode(' ', $expected), implode(' ', $produced));
     }
 
@@ -260,8 +260,8 @@ class SangLocAiVietLaiService extends SangLocAiService
             $durationMs
         );
 
-        // Chi trang thai va nguon goc: khong bao gio prompt, khong bao gio bat ky ban nao cua
-        // van ban loi khuyen.
+        // Chỉ trạng thái và nguồn gốc: không bao giờ prompt, không bao giờ bất kỳ bản nào của
+        // văn bản lời khuyên.
         $this->auditProvenance($phien, 'triage_ai_advice', $described, $durationMs, [
             'ai_status' => $status,
         ]);

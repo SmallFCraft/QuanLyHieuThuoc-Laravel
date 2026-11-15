@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 class DangNhapRequest extends FormRequest
 {
     /**
-     * Xac dinh nguoi dung co duoc phep thuc hien request nay.
+     * Xác định người dùng có được phép thực hiện request này.
      */
     public function authorize(): bool
     {
@@ -22,7 +22,7 @@ class DangNhapRequest extends FormRequest
     }
 
     /**
-     * Cac luat kiem tra ap dung cho request.
+     * Các luật kiểm tra áp dụng cho request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -35,7 +35,7 @@ class DangNhapRequest extends FormRequest
     }
 
     /**
-     * Co gang xac thuc voi thong tin dang nhap cua request.
+     * Cố gắng xác thực với thông tin đăng nhập của request.
      *
      * @throws ValidationException
      */
@@ -60,7 +60,7 @@ class DangNhapRequest extends FormRequest
     }
 
     /**
-     * Dam bao request dang nhap khong bi gioi han tan suat.
+     * Đảm bảo request đăng nhập không bị giới hạn tần suất.
      *
      * @throws ValidationException
      */
@@ -83,7 +83,7 @@ class DangNhapRequest extends FormRequest
     }
 
     /**
-     * Khoa throttle gioi han tan suat cho request nay.
+     * Khóa throttle giới hạn tần suất cho request này.
      */
     public function throttleKey(): string
     {

@@ -11,7 +11,7 @@ class TinNhanChat extends Model
     protected $primaryKey = 'ma_tn';
 
     /**
-     * Cac thuoc tinh cho phep gan hang loat.
+     * Các thuộc tính cho phép gán hàng loạt.
      *
      * @var array<string>
      */
@@ -26,7 +26,7 @@ class TinNhanChat extends Model
     ];
 
     /**
-     * Cac thuoc tinh nen ep kieu.
+     * Các thuộc tính nên ép kiểu.
      *
      * @return array<string, string>
      */
@@ -40,7 +40,7 @@ class TinNhanChat extends Model
     }
 
     /**
-     * Nguoi dung so huu tin nhan.
+     * Người dùng sở hữu tin nhắn.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */

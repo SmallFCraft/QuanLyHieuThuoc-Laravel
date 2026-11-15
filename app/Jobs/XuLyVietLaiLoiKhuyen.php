@@ -11,16 +11,16 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Viet lai ket qua triage da hoan thanh, ngoai web request.
+ * Viết lại kết quả triage đã hoàn thành, ngoài web request.
  *
- * An toan de tra lai chinh xac vi no chay *sau* hoanTat(): no ghi
- * `ai_advice`/`ai_safety_net`/`ai_status` va khong bao gio cham vao `outcome`,
- * `advice_given` hoac `safety_net`. Ket luan y ma khach doc tren trang ket qua
- * da la cuoi cung va khong the doi khi job hoan tat.
+ * An toàn để trì hoãn chính xác vì nó chạy *sau* hoanTat(): nó ghi
+ * `ai_advice`/`ai_safety_net`/`ai_status` và không bao giờ chạm vào `outcome`,
+ * `advice_given` hoặc `safety_net`. Kết luận y mà khách đọc trên trang kết quả
+ * đã là cuối cùng và không thể đổi khi job hoàn tất.
  *
- * Do la ranh gioi: trich duyet su tht giu dong bo vi no dinh duong vao
- * severerRule() va do den ket qua. Doi mot ket luan sau khi benh nhan da doc
- * la khong duoc chap nhan, nen chi seam nay duoc tra lai.
+ * Đó là ranh giới: trích duyệt sự thật giữ đồng bộ vì nó nuôi vào
+ * severerRule() và do đó vào kết quả. Đổi một kết luận sau khi bệnh nhân đã đọc
+ * là không được chấp nhận, nên chỉ seam này được trì hoãn.
  */
 class XuLyVietLaiLoiKhuyen implements ShouldQueue
 {
@@ -53,8 +53,8 @@ class XuLyVietLaiLoiKhuyen implements ShouldQueue
         }
 
         try {
-            // rewrite() khong bao gio throw va tu ghi ai_status rieng, nen dieu nay bao
-            // cao viec seam co chay hay khong, chu khong phai model co tot hay khong.
+            // rewrite() không bao giờ throw và tự ghi ai_status riêng, nên điều này báo
+            // cáo việc seam có chạy hay không, chứ không phải model có tốt hay không.
             $advice->vietLai($phien);
 
             $jobs->markDone($job, ['ai_status' => $phien->refresh()->ai_status]);

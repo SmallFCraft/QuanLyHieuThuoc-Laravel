@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 trait Auditable
 {
     /**
-     * Boot trait auditable cho mot model.
+     * Boot trait auditable cho một model.
      */
     public static function bootAuditable()
     {
@@ -26,7 +26,7 @@ trait Auditable
     }
 
     /**
-     * Ghi log viec tao model
+     * Ghi log việc tạo model
      */
     protected function auditCreated()
     {
@@ -34,7 +34,7 @@ trait Auditable
     }
 
     /**
-     * Ghi log viec cap nhat model
+     * Ghi log việc cập nhật model
      */
     protected function auditUpdated()
     {
@@ -51,7 +51,7 @@ trait Auditable
     }
 
     /**
-     * Ghi log viec xoa model
+     * Ghi log việc xóa model
      */
     protected function auditDeleted()
     {
@@ -59,7 +59,7 @@ trait Auditable
     }
 
     /**
-     * Tao mot dong nhat ky kiam toan
+     * Tạo một dòng nhật ký kiểm toán
      */
     protected function createAuditLog(string $action, ?array $oldValues, ?array $newValues)
     {
@@ -76,13 +76,13 @@ trait Auditable
     }
 
     /**
-     * Lay cac attribute co the audit (loai bo timestamp va du lieu nhay cam)
+     * Lấy các attribute có thể audit (loại bỏ timestamp và dữ liệu nhạy cảm)
      */
     protected function getAuditableAttributes(): array
     {
         $attributes = $this->getAttributes();
 
-        // Bo cac field nhay cam va khong nen audit
+        // Bỏ các field nhạy cảm và không nên audit
         $exclude = ['password', 'remember_token', 'created_at', 'updated_at', 'deleted_at'];
         
         return array_diff_key($attributes, array_flip($exclude));

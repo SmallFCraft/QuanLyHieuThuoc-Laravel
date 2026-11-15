@@ -38,9 +38,9 @@ class CoDoYTe extends Model
     }
 
     /**
-     * Cac dong chatbot co the dung de cat ngang luong binh thuong. Loai tru cac dong
-     * bo canh nguoi benh (co thai, tre so sinh, benh man tinh) ma tro ly sang loc
-     * van con doc.
+     * Các dòng chatbot có thể dùng để cắt ngang luồng bình thường. Loại trừ các dòng
+     * bối cảnh người bệnh (có thai, trẻ sơ sinh, bệnh mạn tính) mà trợ lý sàng lọc
+     * vẫn còn đọc.
      */
     public function scopeChatShortCircuit($query)
     {
@@ -48,9 +48,9 @@ class CoDoYTe extends Model
     }
 
     /**
-     * Cap cuu truoc, roi khan cap, roi canh bao — nguoi goi dua vao thu tu nay de
-     * dung lai o phien dang nhat trong nhat. Sap xep bang CASE vi FIELD() chi co tren
-     * MySQL con bo test chay tren SQLite.
+     * Cấp cứu trước, rồi khẩn cấp, rồi cảnh báo — người gọi dựa vào thứ tự này để
+     * dừng lại ở khớp nghiêm trọng nhất. Sắp xếp bằng CASE vì FIELD() chỉ có trên
+     * MySQL còn bộ test chạy trên SQLite.
      */
     public function scopeBySeverity($query)
     {

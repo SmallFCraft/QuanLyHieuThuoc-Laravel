@@ -9,21 +9,21 @@ use Carbon\Carbon;
 class DonDepNhatKyKiemToan extends Command
 {
     /**
-     * Ten va chu ky cua lenh console.
+     * Tên và chu kỳ của lệnh console.
      *
      * @var string
      */
     protected $signature = 'audit:cleanup {--days=365 : Number of days to retain audit logs}';
 
     /**
-     * The console command description.
+     * Mô tả lệnh console.
      *
      * @var string
      */
     protected $description = 'Clean up old audit logs to prevent database bloat';
 
     /**
-     * Thuc thi lenh console.
+     * Thực thi lệnh console.
      */
     public function handle()
     {
@@ -32,12 +32,12 @@ class DonDepNhatKyKiemToan extends Command
 
         $this->info("Cleaning up audit logs older than {$retentionDays} days (before {$cutoffDate->toDateString()})...");
 
-        // Xoa cac nhat ky kiam toan cu
+        // Xóa các nhật ký kiểm toán cũ
         $deleted = NhatKyKiemToan::where('created_at', '<', $cutoffDate)->delete();
 
         $this->info("Successfully deleted {$deleted} audit log records.");
 
-        // Hien thi thong ke hien tai
+        // Hiển thị thống kê hiện tại
         $remaining = NhatKyKiemToan::count();
         $this->info("Remaining audit logs: {$remaining}");
         

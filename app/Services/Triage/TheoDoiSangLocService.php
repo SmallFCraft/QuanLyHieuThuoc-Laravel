@@ -10,11 +10,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Luoi an toan: moi ket qua tu cham soc duoc kiem tra lai sau vai ngay.
+ * Lưới an toàn: mọi kết quả tự chăm sóc được kiểm tra lại sau vài ngày.
  *
- * Neu trieu chung khong cai thien, cau tra loi luon la "di khoa". Khong
- * san pham nao tra ve tren nhanh do — mot cong cu sang loc ban them thuoc
- * cho nguoi khong bot di la lam hai, chu khong phai cham soc.
+ * Nếu triệu chứng không cải thiện, câu trả lời luôn là "đi khám". Không
+ * sản phẩm nào trả về trên nhánh đó — một công cụ sàng lọc bán thêm thuốc
+ * cho người không bớt đi là làm hại, chứ không phải chăm sóc.
  */
 class TheoDoiSangLocService
 {
@@ -23,7 +23,7 @@ class TheoDoiSangLocService
     ) {}
 
     /**
-     * Hoi moi phien den han trieu chung co bot khong.
+     * Hỏi mọi phiên đến hạn triệu chứng có bớt không.
      */
     public function guiDungHan(): int
     {
@@ -43,11 +43,11 @@ class TheoDoiSangLocService
     }
 
     /**
-     * Ghi cau tra loi cua khach hang.
+     * Ghi câu trả lời của khách hàng.
      *
-     * Idempotent: link hoi lam di qua email va co the duoc mo hon
-     * mot lan (mail scanner va prefetcher mo no tu dong), nen cau tra loi thu hai
-     * tra ve cau dau tien thay vi ghi lai.
+     * Idempotent: link hỏi làm đi qua email và có thể được mở hơn
+     * một lần (mail scanner và prefetcher mở nó tự động), nên câu trả lời thứ hai
+     * trả về câu đầu tiên thay vì ghi lại.
      *
      * @return array{improved: bool, message: string, products: array<int, mixed>, refer_doctor: bool, already_answered: bool}
      */
@@ -77,9 +77,9 @@ class TheoDoiSangLocService
             'follow_up_improved' => $improved,
         ];
 
-        // Chi ket qua tu cham soc duoc nang cap o day. Ket qua khan cap hoac
-        // quyet dinh duoc si nam tren refer_doctor roi, nen ghi de se
-        // ha cap loi khuyen benh nhan da nhan.
+        // Chỉ kết quả tự chăm sóc được nâng cấp ở đây. Kết quả khẩn cấp hoặc
+        // quyết định dược sĩ nằm trên refer_doctor rồi, nên ghi đè sẽ
+        // hạ cấp lời khuyên bệnh nhân đã nhận.
         if (! $improved && $phien->outcome === 'self_care') {
             $attributes['outcome'] = 'refer_doctor';
         }
@@ -106,7 +106,7 @@ class TheoDoiSangLocService
         return [
             'improved' => $improved,
             'message' => $message,
-            // Rong tuyet doi ca hai nhanh: hoi lam la cham soc, chu khong phai kenh ban hang.
+            // Rỗng tuyệt đối cả hai nhánh: hỏi làm là chăm sóc, chứ không phải kênh bán hàng.
             'products' => [],
             'refer_doctor' => ! $improved,
             'already_answered' => false,
@@ -114,7 +114,7 @@ class TheoDoiSangLocService
     }
 
     /**
-     * @return bool cau hoi co thuc su duoc gui khong
+     * @return bool câu hỏi có thực sự được gửi không
      */
     private function askOne(PhienSangLoc $phien): bool
     {
@@ -122,9 +122,9 @@ class TheoDoiSangLocService
             try {
                 Mail::to($phien->nguoiDung->email)->send(new TheoDoiSauSangLocMail($phien));
             } catch (\Throwable $e) {
-                // Giu follow_up_at de lan tick sau thu lai. Xoa no tai day se
-                // bo lui luoi an toan cho truong hop tu cham soc mot cach im lang, do la
-                // co che duy nai bat mot quyet dinh sang loc sai.
+                // Giữ follow_up_at để lần tick sau thử lại. Xoá nó tại đây sẽ
+                // bỏ lưới an toàn cho trường hợp tự chăm sóc một cách im lặng, đó là
+                // cơ chế duy nhất bắt một quyết định sàng lọc sai.
                 Log::warning('Triage follow-up mail failed, will retry', [
                     'ma_sl' => $phien->ma_sl,
                     'error' => $e->getMessage(),
@@ -139,8 +139,8 @@ class TheoDoiSangLocService
             'ma_sl' => $phien->ma_sl,
         ]);
 
-        // Xoa ngay den han la thu ngan cung cau hoi bi hoi
-        // them lan nua o tick scheduler ke tiep.
+        // Xoá ngày đến hạn là thứ ngăn cùng câu hỏi bị hỏi
+        // thêm lần nữa ở tick scheduler kế tiếp.
         $phien->update(['follow_up_at' => null]);
 
         $this->audit('triage_follow_up_sent', $phien, [
@@ -152,8 +152,8 @@ class TheoDoiSangLocService
     }
 
     /**
-     * Tro chuyen hoi lam chi ton tai cho phien den tu (hoac co the cham den)
-     * mot phien chat; chat_messages.session_id khong cho phep null.
+     * Trò chuyện hỏi làm chỉ tồn tại cho phiên đến từ (hoặc có thể chạm đến)
+     * một phiên chat; chat_messages.session_id không cho phép null.
      */
     private function writeChatMessage(PhienSangLoc $phien, string $content, array $metadata): void
     {

@@ -21,7 +21,7 @@ class SanPham extends Model
     protected $primaryKey = 'ma_sp';
 
     /**
-     * Cac thuoc tinh cho phep gan hang loat.
+     * Các thuộc tính cho phép gán hàng loạt.
      *
      * @var array<int, string>
      */
@@ -44,7 +44,7 @@ class SanPham extends Model
     ];
 
     /**
-     * Cac thuoc tinh nen ep kieu.
+     * Các thuộc tính nên ép kiểu.
      *
      * @var array<string, string>
      */
@@ -70,8 +70,8 @@ class SanPham extends Model
             }
         });
 
-        // Giu dong bo o moi lan ghi thay vi tung noi goi, de san pham tao boi crawler,
-        // form quan tri hay factory deu duoc tim kiem cung mot cach.
+        // Giữ đồng bộ ở mỗi lần ghi thay vì từng nơi gọi, để sản phẩm tạo bởi crawler,
+        // form quản trị hay factory đều được tìm kiếm cùng một cách.
         static::saving(function (SanPham $sanPham): void {
             if ($sanPham->isDirty('ten')) {
                 $sanPham->ten_khong_dau = VietnameseText::fold((string) $sanPham->ten);
@@ -84,7 +84,7 @@ class SanPham extends Model
     }
 
     /**
-     * Danh muc ma san pham thuoc ve.
+     * Danh mục mà sản phẩm thuộc về.
      */
     public function danhMuc()
     {
@@ -92,7 +92,7 @@ class SanPham extends Model
     }
 
     /**
-     * Cac chi tiet don hang chua san pham nay.
+     * Các chi tiết đơn hàng chứa sản phẩm này.
      */
     public function chiTietDonHangs()
     {
@@ -100,7 +100,7 @@ class SanPham extends Model
     }
 
     /**
-     * Cac lo san pham cua san pham nay.
+     * Các lô sản phẩm của sản phẩm này.
      */
     public function cacLo()
     {
@@ -108,8 +108,8 @@ class SanPham extends Model
     }
 
     /**
-     * Tra ve ton kho tu cot da dong bo theo mac dinh.
-     * Neu cac lo da duoc eager-loaded, uu tong hop trong bo nho.
+     * Trả về tồn kho từ cột đã đồng bộ theo mặc định.
+     * Nếu các lô đã được eager-loaded, ưu tiên tổng hợp trong bộ nhớ.
      *
      * @param mixed $value
      * @return int
@@ -124,7 +124,7 @@ class SanPham extends Model
     }
 
     /**
-     * Kiem tra san pham da het han.
+     * Kiểm tra sản phẩm đã hết hạn.
      *
      * @return bool
      */
@@ -134,9 +134,9 @@ class SanPham extends Model
     }
 
     /**
-     * Kiem tra san pham sap het han (trong so ngay chi dinh).
+     * Kiểm tra sản phẩm sắp hết hạn (trong số ngày chỉ định).
      *
-     * @param int $days Nguong so ngay (mac dinh: 180 ngay / 6 thang)
+     * @param int $days Ngưỡng số ngày (mặc định: 180 ngày / 6 tháng)
      * @return bool
      */
     public function isExpiringSoon(int $days = 180): bool
@@ -145,13 +145,13 @@ class SanPham extends Model
             return false;
         }
 
-        // Carbon 3 tra ve hieu co dau, nen goi diffInDays() tren ngay muon hon se cho
-        // ket qua am va `<= $days` khop voi moi ngay tuong lai.
+        // Carbon 3 trả về hiệu có dấu, nên gọi diffInDays() trên ngày muộn hơn sẽ cho
+        // kết quả âm và `<= $days` khớp với mọi ngày tương lai.
         return Carbon::now()->diffInDays($this->ngay_het_han, true) <= $days;
     }
 
     /**
-     * Kiem tra san pham co ton kho thap.
+     * Kiểm tra sản phẩm có tồn kho thấp.
      *
      * @return bool
      */
@@ -161,7 +161,7 @@ class SanPham extends Model
     }
 
     /**
-     * Gia san pham theo so dong Viet Nam nguyen.
+     * Giá sản phẩm theo số đồng Việt Nam nguyên.
      */
     public function getPriceVndAttribute(): int
     {
@@ -169,7 +169,7 @@ class SanPham extends Model
     }
 
     /**
-     * Luu gia theo so dong Viet Nam nguyen de tranh tong VND co phan le.
+     * Lưu giá theo số đồng Việt Nam nguyên để tránh tổng VND có phần lẻ.
      */
     public function setPriceAttribute($value): void
     {
@@ -177,7 +177,7 @@ class SanPham extends Model
     }
 
     /**
-     * Gia da dinh dang theo dinh dang tien te Viet Nam.
+     * Giá đã định dạng theo định dạng tiền tệ Việt Nam.
      *
      * @return string
      */
@@ -187,7 +187,7 @@ class SanPham extends Model
     }
 
     /**
-     * Ngay het han da dinh dang theo dinh dang Viet Nam (dd/MM/yyyy).
+     * Ngày hết hạn đã định dạng theo định dạng Việt Nam (dd/MM/yyyy).
      *
      * @return string
      */
@@ -202,10 +202,10 @@ class SanPham extends Model
     }
 
     /**
-     * Han dung hien tren giao dien ban le, theo cach cac chui nha thuoc thuong ghi:
-     * "36 thang" ke tu ngay san xuat. Giu nguyen don vi nha san xuat cong bo — viet
-     * lai 36 thang thanh "3 nam" se khong con khop voi nhan goc. Null khi khong cong
-     * bo, nen noi goi an dong nay thay vi doan.
+     * Hạn dùng hiện trên giao diện bán lẻ, theo cách các chuỗi nhà thuốc thường ghi:
+     * "36 tháng" kể từ ngày sản xuất. Giữ nguyên đơn vị nhà sản xuất công bố — viết
+     * lại 36 tháng thành "3 năm" sẽ không còn khớp với nhãn gốc. Null khi không công
+     * bố, nên nơi gọi ẩn dòng này thay vì đoán.
      */
     public function getShelfLifeTextAttribute(): ?string
     {
@@ -215,7 +215,7 @@ class SanPham extends Model
     }
 
     /**
-     * URL hinh anh san pham.
+     * URL hình ảnh sản phẩm.
      *
      * @return string|null
      */
@@ -239,7 +239,7 @@ class SanPham extends Model
     }
 
     /**
-     * Gioi han truy van chi lay cac san pham chua het han.
+     * Giới hạn truy vấn chỉ lấy các sản phẩm chưa hết hạn.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -250,7 +250,7 @@ class SanPham extends Model
     }
 
     /**
-     * Gioi han truy van chi lay cac san pham sap het han.
+     * Giới hạn truy vấn chỉ lấy các sản phẩm sắp hết hạn.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @param int $days
@@ -265,7 +265,7 @@ class SanPham extends Model
     }
 
     /**
-     * Gioi han truy van chi lay cac san pham ton kho thap.
+     * Giới hạn truy vấn chỉ lấy các sản phẩm tồn kho thấp.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -276,7 +276,7 @@ class SanPham extends Model
     }
 
     /**
-     * Sap xep truy van theo FEFO (First Expired, First Out — het han truoc xuat truoc).
+     * Sắp xếp truy vấn theo FEFO (First Expired, First Out — hết hạn trước xuất trước).
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -287,16 +287,16 @@ class SanPham extends Model
     }
 
     /**
-     * Tim kiem san pham phia khach hang. Chung bo trang catalog, trang ket qua tim
-     * kiem va endpoint autocomplete dung, de ca ba tra loi mot truy van cung mot cach.
+     * Tìm kiếm sản phẩm phía khách hàng. Chung bởi trang catalog, trang kết quả tìm
+     * kiếm và endpoint autocomplete dùng, để cả ba trả lời một truy vấn cùng một cách.
      *
-     * Moi tu phai khop (AND, khong phai OR). Voi catalog crawl nghin dong, OR cac tu
-     * cua "thuoc ho cho tre" khop 2.875 trong 3.132 san pham — bo ket qua dong den
-     * vay khong khac gi khong co bo loc.
+     * Mỗi từ phải khớp (AND, không phải OR). Với catalog crawl nghìn dòng, OR các từ
+     * của "thuốc ho cho trẻ" khớp 2.875 trong 3.132 sản phẩm — bộ kết quả đông đến
+     * vậy không khác gì không có bộ lọc.
      *
-     * So khop chay tren cac cot da fold de truy van khong dau van hoat dong: collation
-     * cua MySQL fold dau thanh nhung khong fold "d", nen "dau dau" khong ra gi trong
-     * khi "dau dau" ra 30 ket qua.
+     * So khớp chạy trên các cột đã fold để truy vấn không dấu vẫn hoạt động: collation
+     * của MySQL fold dấu thanh nhưng không fold "đ", nên "dau dau" không ra gì trong
+     * khi "đau đầu" ra 30 kết quả.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -309,9 +309,9 @@ class SanPham extends Model
             return $query;
         }
 
-        // Lap lai LIKE cho mot tu bi lap lai khong them gi, nen cac dieu kien duoc
-        // loai trung tai day thay vi trong searchWords() — bo xep hang ben duoi can
-        // nguyen cau tron ven.
+        // Lặp lại LIKE cho một từ bị lặp lại không thêm gì, nên các điều kiện được
+        // loại trùng tại đây thay vì trong searchWords() — bộ xếp hạng bên dưới cần
+        // nguyên câu trọn vẹn.
         foreach (array_unique($words) as $word) {
             $like = '%' . self::escapeLike($word) . '%';
 
@@ -325,12 +325,12 @@ class SanPham extends Model
     }
 
     /**
-     * Xep hang ket qua tim kiem ban le: cu ca cum tu trong ten dau tien, roi moi tu
-     * trong ten, roi moi thu con lai (mot thanh phan khop).
+     * Xếp hạng kết quả tìm kiếm bán lẻ: cả cụm từ trong tên đầu tiên, rồi mỗi từ
+     * trong tên, rồi mọi thứ còn lại (một thành phần khớp).
      *
-     * Khong co dieu nay, "paracetamol" dan dau boi sau san pham khong he ghi ten no —
-     * chi neu no sau trong phan huong dan su dung — trong khi dung cac san pham
-     * paracetamol nam sat xuong duoi trang.
+     * Không có điều này, "paracetamol" dẫn đầu bởi sáu sản phẩm không hề ghi tên nó —
+     * chỉ nhắc nó sâu trong phần hướng dẫn sử dụng — trong khi đúng các sản phẩm
+     * paracetamol nằm sát xuống dưới trang.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -345,8 +345,8 @@ class SanPham extends Model
 
         $phrase = self::escapeLike(implode(' ', $words));
 
-        // Mo dau bang cum tu thang viec chi chua trong do: tim "panadol" phai mo dau
-        // bang "Panadol Extra", khong phai mot san pham ket hop chi nhac ten no o giua.
+        // Mở đầu bằng cụm từ thắng việc chỉ chứa trong đó: tìm "panadol" phải mở đầu
+        // bằng "Panadol Extra", không phải một sản phẩm kết hợp chỉ nhắc tên nó ở giữa.
         $sql = 'CASE WHEN ten_khong_dau LIKE ? THEN 3 WHEN ten_khong_dau LIKE ? THEN 2 ';
         $bindings = [$phrase . '%', '%' . $phrase . '%'];
 
@@ -365,11 +365,11 @@ class SanPham extends Model
     }
 
     /**
-     * Cac tu truy van da fold, theo thu tu nguoi go. Ky tu don bi loai: mot chu cai
-     * khop gan ca catalog va khong noi gi ve y dinh.
+     * Các từ truy vấn đã fold, theo thứ tự người gõ. Ký tự đơn bị loại: một chữ cái
+     * khớp gần cả catalog và không nói gì về ý định.
      *
-     * Tu lap lai duoc giu nguyen — "dau dau" fold ra van la "dau dau", va gop no ve
-     * mot tu duy nhat se mat cau ma bo xep hang dung de tinh diem.
+     * Từ lặp lại được giữ nguyên — "đau đầu" fold ra vẫn là "dau dau", và gộp nó về
+     * một từ duy nhất sẽ mất câu mà bộ xếp hạng dùng để tính điểm.
      *
      * @return array<string>
      */
@@ -388,8 +388,8 @@ class SanPham extends Model
     }
 
     /**
-     * Vo hieu hoa cac ky tu dai dien LIKE ma khach go vao. Mot dau "%" tran chi
-     * khop ca catalog va doc nhu mot tim kiem bi loi.
+     * Vô hiệu hoá các ký tự đại diện LIKE mà khách gõ vào. Một dấu "%" trần chỉ
+     * khớp cả catalog và đọc như một tìm kiếm bị lỗi.
      */
     private static function escapeLike(string $value): string
     {
@@ -397,9 +397,9 @@ class SanPham extends Model
     }
 
     /**
-     * Tim kiem san pham phia quan tri. Chung bo endpoint DataTables, xuat san pham
-     * va man hinh ton kho cung xuat cua no, de mot cot tim kiem duoc them vao day
-     * khong the mat mat o mot trong nhung cho do.
+     * Tìm kiếm sản phẩm phía quản trị. Chung bởi endpoint DataTables, xuất sản phẩm
+     * và màn hình tồn kho cùng xuất của nó, để một cột tìm kiếm được thêm vào đây
+     * không thể mất mặt ở một trong những chỗ đó.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -423,7 +423,7 @@ class SanPham extends Model
     }
 
     /**
-     * Bo loc trang thai ton kho, chung bo man hinh ton kho va xuat cua no.
+     * Bộ lọc trạng thái tồn kho, chung bởi màn hình tồn kho và xuất của nó.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder

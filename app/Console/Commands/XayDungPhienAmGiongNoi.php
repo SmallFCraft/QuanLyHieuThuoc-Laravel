@@ -16,7 +16,7 @@ class XayDungPhienAmGiongNoi extends Command
 
     protected $description = 'Dựng lại index phiên âm cho tìm kiếm bằng giọng nói';
 
-    /** 6 cot x 500 dong = 3.000 tham so, trong gioi han cua ca MySQL va SQLite. */
+    /** 6 cột x 500 dòng = 3.000 tham số, trong giới hạn của cả MySQL và SQLite. */
     private const INSERT_CHUNK = 500;
 
     public function handle(): int
@@ -34,15 +34,15 @@ class XayDungPhienAmGiongNoi extends Command
                 continue;
             }
 
-            // Dang khach doc duoc, khong phai dang da lot dau: "thuoc" de doc hon
-            // "thuoc" khi no duoc dien vao o tim kiem.
+            // Dạng khách đọc được, không phải dạng đã lột dấu: "thuốc" dễ đọc hơn
+            // "thuoc" khi nó được điền vào ô tìm kiếm.
             arsort($token['forms']);
 
             $this->addRow($rows, (string) array_key_first($token['forms']), 'token', $token['hits']);
         }
 
-        // Transaction quanh ca truncate + insert: mot lan dung that bai giua duong
-        // de lai index rong, va index rong nghia la moi luot voice roi xuong AI.
+        // Transaction quanh cả truncate + insert: một lần dừng thất bại giữa đường
+        // để lại index rỗng, và index rỗng nghĩa là mỗi lượt voice rơi xuống AI.
         DB::transaction(function () use ($rows) {
             PhienAmGiongNoi::query()->delete();
 
@@ -64,7 +64,7 @@ class XayDungPhienAmGiongNoi extends Command
         $rows = [];
         $tokens = [];
 
-        // cursor(): catalog da 3.146 dong va chi tang, nen khong nap het vao bo nho.
+        // cursor(): catalog đã 3.146 dòng và chỉ tăng, nên không nạp hết vào bộ nhớ.
         SanPham::select('ma_sp', 'ten')->cursor()->each(function (SanPham $sanPham) use (&$rows, &$tokens): void {
             $name = (string) $sanPham->ten;
 
@@ -97,8 +97,8 @@ class XayDungPhienAmGiongNoi extends Command
             return;
         }
 
-        // Khoa gop theo (phonetic_key, term_folded) — dung cap unique cua bang, nen
-        // insert khong bao gio dung constraint.
+        // Khóa gộp theo (phonetic_key, term_folded) — dùng cặp unique của bảng, nên
+        // insert không bao giờ dúng constraint.
         $dedupe = $key . "\0" . $folded;
 
         if (isset($rows[$dedupe])) {

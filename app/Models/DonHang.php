@@ -16,7 +16,7 @@ class DonHang extends Model
     protected $primaryKey = 'ma_dh';
 
     /**
-     * Cac thuoc tinh cho phep gan hang loat.
+     * Các thuộc tính cho phép gán hàng loạt.
      *
      * @var array<int, string>
      */
@@ -31,7 +31,7 @@ class DonHang extends Model
     ];
 
     /**
-     * Cac thuoc tinh nen ep kieu.
+     * Các thuộc tính nên ép kiểu.
      *
      * @var array<string, string>
      */
@@ -40,7 +40,7 @@ class DonHang extends Model
     ];
 
     /**
-     * Nguoi dung so huu don hang.
+     * Người dùng sở hữu đơn hàng.
      */
     public function nguoiDung()
     {
@@ -48,7 +48,7 @@ class DonHang extends Model
     }
 
     /**
-     * Cac chi tiet don hang cua don hang nay.
+     * Các chi tiết đơn hàng của đơn hàng này.
      */
     public function chiTietDonHangs()
     {
@@ -56,7 +56,7 @@ class DonHang extends Model
     }
 
     /**
-     * Tong tien da dinh dang theo dinh dang tien te Viet Nam.
+     * Tổng tiền đã định dạng theo định dạng tiền tệ Việt Nam.
      *
      * @return string
      */
@@ -66,7 +66,7 @@ class DonHang extends Model
     }
 
     /**
-     * Ngay tao da dinh dang theo dinh dang Viet Nam (dd/MM/yyyy).
+     * Ngày tạo đã định dạng theo định dạng Việt Nam (dd/MM/yyyy).
      *
      * @return string
      */

@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class ConfirmablePasswordController extends Controller
 {
     /**
-     * Hien thi view xac nhan mat khau.
+     * Hiển thị view xác nhận mật khẩu.
      */
     public function show(): View
     {
@@ -20,7 +20,7 @@ class ConfirmablePasswordController extends Controller
     }
 
     /**
-     * Xac nhan mat khau cua nguoi dung.
+     * Xác nhận mật khẩu của người dùng.
      */
     public function store(Request $request): RedirectResponse
     {

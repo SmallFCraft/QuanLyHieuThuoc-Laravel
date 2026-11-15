@@ -14,8 +14,8 @@ class BaoCaoSangLocService
     public const OUTCOMES = ['emergency', 'refer_doctor', 'pharmacist_review', 'self_care'];
 
     /**
-     * Bang mau duoc do tuong phan trong resources/views/health/partials/styles.blade.php.
-     * Giu tai day de endpoint bieu do va view khong bao gio suy lai mau.
+     * Bảng màu được đo tương phản trong resources/views/health/partials/styles.blade.php.
+     * Giữ tại đây để endpoint biểu đồ và view không bao giờ suy lại màu.
      */
     public const OUTCOME_STYLES = [
         'emergency' => ['color' => '#B91C1C', 'bg' => '#FEF2F2', 'icon' => 'bi-exclamation-octagon-fill'],
@@ -33,8 +33,8 @@ class BaoCaoSangLocService
 
         $referred = $outcomes['refer_doctor'] + $outcomes['emergency'];
 
-        // Tong hop trong SQL: tai moi row da xem de trung binh hai moc thoi gian trong
-        // PHP se lon vo han theo bang.
+        // Tổng hợp trong SQL: tải mỗi row đã xem để trung bình hai mốc thời gian trong
+        // PHP sẽ lớn vô hạn theo bảng.
         $wait = $this->applyFilters(PhienSangLoc::query(), $filters)
             ->where('status', 'reviewed')
             ->whereNotNull('reviewed_at')
@@ -56,8 +56,8 @@ class BaoCaoSangLocService
     }
 
     /**
-     * So phut giua created_at va reviewed_at, viet theo phuong ngu cua driver.
-     * MySQL tren production, SQLite trong suite test.
+     * Số phút giữa created_at và reviewed_at, viết theo phương ngữ của driver.
+     * MySQL trên production, SQLite trong suite test.
      */
     protected function waitMinutesExpression(): string
     {
@@ -87,8 +87,8 @@ class BaoCaoSangLocService
 
     public function layPhanBoKetQua(array $filters = []): array
     {
-        // Chi so luong ket qua, chu khong phai toan bo tong hop: endpoint bieu do neu khong
-        // se chay lai cac truy van tong, dang cho va thoi gian cho ma no khong bao gio doc.
+        // Chỉ số lượng kết quả, chứ không phải toàn bộ tổng hợp: endpoint biểu đồ nếu không
+        // sẽ chạy lại các truy vấn tổng, đang chờ và thời gian chờ mà nó không bao giờ đọc.
         $counts = $this->outcomeCounts($filters);
 
         $rows = [];
@@ -111,9 +111,9 @@ class BaoCaoSangLocService
     }
 
     /**
-     * @param  array  $filters  cung bo loc voi phan con lai cua bao cao; xu huong phai
-     *                          khop voi cac the chi so thay vi luon hien
-     *                          moi ket qua.
+     * @param  array  $filters  cùng bộ lọc với phần còn lại của báo cáo; xu hướng phải
+     *                          khớp với các thẻ chỉ số thay vì luôn hiện
+     *                          mọi kết quả.
      */
     public function layXuHuongNgay(int $days = 30, array $filters = []): array
     {
@@ -130,7 +130,7 @@ class BaoCaoSangLocService
             ->pluck('aggregate', 'date')
             ->toArray();
 
-        // Ngay khong co phien van phai chiem mot slot, neu truc x noi loi.
+        // Ngày không có phiên vẫn phải chiếm một slot, nếu không trục x nói dối.
         $labels = [];
         $data = [];
         for ($i = $days - 1; $i >= 0; $i--) {
@@ -248,8 +248,8 @@ class BaoCaoSangLocService
     }
 
     /**
-     * Moi truy van bao cao di qua day nen ngung nghia bo loc giu nguyen
-     * giua cac chi so, bieu do va file xuat Excel.
+     * Mỗi truy vấn báo cáo đi qua đây nên ý nghĩa bộ lọc giữ nguyên
+     * giữa các chỉ số, biểu đồ và file xuất Excel.
      */
     protected function applyFilters(Builder $query, array $filters): Builder
     {
@@ -268,8 +268,8 @@ class BaoCaoSangLocService
             $query->where('entry_point', $entryPoint);
         }
 
-        // Ngay den tu query string, nen gia tri khong doc duoc phai
-        // bo qua thay vi lam 500 ca trang bao cao.
+        // Ngày đến từ query string, nên giá trị không đọc được phải
+        // bỏ qua thay vì làm 500 cả trang báo cáo.
         $dateFrom = $this->parseDate($filters['date_from'] ?? null);
         if ($dateFrom) {
             $query->where('created_at', '>=', $dateFrom->startOfDay());

@@ -21,14 +21,14 @@ class DanhMuc extends Model
     public const FILTER_CACHE_KEY = 'catalog.filter_categories';
 
     /**
-     * San pham xem nhieu o panel tim kiem. Song o day, canh ba key kia, vi cung duoc
-     * ProductObserver xoa qua flushCategoryCaches() — mot observer khong the biet
-     * hang so nam tren service provider.
+     * Sản phẩm xem nhiều ở panel tìm kiếm. Sống ở đây, cạnh ba key kia, vì cùng được
+     * ProductObserver xoá qua flushCategoryCaches() — một observer không thể biết
+     * hằng số nằm trên service provider.
      */
     public const SEARCH_PANEL_PRODUCTS_CACHE_KEY = 'search.panel_products';
 
     /**
-     * Cac thuoc tinh cho phep gan hang loat.
+     * Các thuộc tính cho phép gán hàng loạt.
      *
      * @var array<int, string>
      */
@@ -46,8 +46,8 @@ class DanhMuc extends Model
             $danhMuc->ma_danh_muc = TaoMaSanPham::chuanHoaMaDanhMuc($danhMuc->ma_danh_muc)
                 ?: TaoMaSanPham::maDanhMucDuyNhat($danhMuc->ten, $danhMuc->exists ? $danhMuc->getKey() : null);
 
-            // Giu dong bo tai day thay vi tung noi goi, de danh muc tao boi crawler,
-            // form quan tri hay factory deu duoc fold cung mot cach.
+            // Giữ đồng bộ tại đây thay vì từng nơi gọi, để danh mục tạo bởi crawler,
+            // form quản trị hay factory đều được fold cùng một cách.
             if ($danhMuc->isDirty('ten')) {
                 $danhMuc->ten_khong_dau = VietnameseText::fold((string) $danhMuc->ten);
             }
@@ -63,13 +63,13 @@ class DanhMuc extends Model
     }
 
     /**
-     * Cac danh muc khach thuc su co the duyet: co it nhat mot san pham con ton kho
-     * va chua het han, dem so luong, nhieu nhat truoc.
+     * Các danh mục khách thực sự có thể duyệt: có ít nhất một sản phẩm còn tồn kho
+     * và chưa hết hạn, đếm số lượng, nhiều nhất trước.
      *
-     * Chung bo dropdown tren header va bo loc catalog dung, de hai cho khong the lech
-     * nhau ve danh muc nao ton tai hay thu tu nao. Crawler sinh ra 50 danh muc, va
-     * thu tu alphabet dan dat "Cham soc ca nhan" (2 san pham) len dau trong khi
-     * "Dung cu y te" (263) nam sau.
+     * Chung bởi dropdown trên header và bộ lọc catalog dùng, để hai chỗ không thể lệch
+     * nhau về danh mục nào tồn tại hay thứ tự nào. Crawler sinh ra 50 danh mục, và
+     * thứ tự alphabet dẫn đặt "Chăm sóc cá nhân" (2 sản phẩm) lên đầu trong khi
+     * "Dụng cụ y tế" (263) nằm sau.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -86,7 +86,7 @@ class DanhMuc extends Model
     }
 
     /**
-     * Cac san pham thuoc danh muc nay.
+     * Các sản phẩm thuộc danh mục này.
      */
     public function sanPhams()
     {
@@ -94,7 +94,7 @@ class DanhMuc extends Model
     }
 
     /**
-     * Kiem tra danh muc co san pham nao khong.
+     * Kiểm tra danh mục có sản phẩm nào không.
      *
      * @return bool
      */
@@ -104,7 +104,7 @@ class DanhMuc extends Model
     }
 
     /**
-     * So san pham trong danh muc nay.
+     * Số sản phẩm trong danh mục này.
      *
      * @return int
      */
@@ -114,7 +114,7 @@ class DanhMuc extends Model
     }
 
     /**
-     * Xoa cac cache danh muc dung chung giua cac layout cong khai va trang catalog.
+     * Xoá các cache danh mục dùng chung giữa các layout công khai và trang catalog.
      */
     public static function flushCategoryCaches(): void
     {

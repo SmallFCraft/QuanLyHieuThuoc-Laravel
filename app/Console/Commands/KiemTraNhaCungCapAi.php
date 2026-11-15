@@ -9,21 +9,21 @@ use RuntimeException;
 class KiemTraNhaCungCapAi extends Command
 {
     /**
-     * Ten va chu ky cua lenh console.
+     * Tên và chu kỳ của lệnh console.
      *
      * @var string
      */
     protected $signature = 'chatbot:ai-check {--vision : Also send an image request to each provider}';
 
     /**
-     * The console command description.
+     * Mô tả lệnh console.
      *
      * @var string
      */
     protected $description = 'Check every configured chatbot AI provider (primary and fallback) with a live request';
 
     /**
-     * Thuc thi lenh console.
+     * Thực thi lệnh console.
      */
     public function handle(): int
     {

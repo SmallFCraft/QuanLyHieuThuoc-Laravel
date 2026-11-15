@@ -15,20 +15,20 @@ use Intervention\Image\ImageManager;
 class NhanDienHinhAnhService
 {
     /**
-     * Luong bang chung nhan dien toi thieu truoc khi mot san pham trong danh muc
-     * duoc bao la san pham tren anh.
+     * Lượng bằng chứng nhận diện tối thiểu trước khi một sản phẩm trong danh mục
+     * được báo là sản phẩm trên ảnh.
      */
     protected const IDENTITY_MATCH_MIN_SCORE = 30;
 
     /**
-     * Khoang cach diem bat buoc so voi doi thu ten khac tot nhat, de mot lua chon
-     * 50/50 giua hai san pham duoc bao la "khong tim thay" chu khong phai doan.
+     * Khoảng cách điểm bắt buộc so với đối thủ tên khác tốt nhất, để một lựa chọn
+     * 50/50 giữa hai sản phẩm được báo là "không tìm thấy" chứ không phải đoán.
      */
     protected const IDENTITY_MATCH_MIN_MARGIN = 12;
 
     /**
-     * Cac token xuat hien trong phan lon dong danh muc, nen chung khong bao gio
-     * xac dinh duoc mot san pham.
+     * Các token xuất hiện trong phần lớn dòng danh mục, nên chúng không bao giờ
+     * xác định được một sản phẩm.
      */
     protected const WEAK_IDENTITY_TOKENS = [
         'vitamin', 'vitamins', 'thuoc', 'duoc', 'pham', 'san', 'hang', 'khoang', 'chat',
@@ -40,19 +40,19 @@ class NhanDienHinhAnhService
     protected AiProviderService $aiProviderService;
 
     /**
-     * MaAnh cua dong luuAnh() vua ghi, de caller co the lien ket luot chat
-     * voi cac byte tren dia. Lich su chat can lien ket nay de render lai anh tai
-     * len sau khi tai lai trang — bubble truc tiep dung blob: URL chet theo trang.
+     * MaAnh của dòng luuAnh() vừa ghi, để caller có thể liên kết lượt chat
+     * với các byte trên đĩa. Lịch sử chat cần liên kết này để render lại ảnh tải
+     * lên sau khi tải lại trang — bubble trực tiếp dùng blob: URL chết theo trang.
      */
     protected ?int $maAnhLuuCuoi = null;
 
     /**
-     * MaAnh cua dong luuAnh() vua ghi, de caller co the lien ket luot chat
-     * voi cac byte tren dia. Lich su chat can lien ket nay de render lai anh tai
-     * len sau khi tai lai trang — bubble truc tiep dung blob: URL chet theo trang.
+     * MaAnh của dòng luuAnh() vừa ghi, để caller có thể liên kết lượt chat
+     * với các byte trên đĩa. Lịch sử chat cần liên kết này để render lại ảnh tải
+     * lên sau khi tải lại trang — bubble trực tiếp dùng blob: URL chết theo trang.
      *
-     * Doc no SAU MOI ket qua: file duoc luu truoc khi phan tich chay, nen mot anh
-     * bi tu choi hoac khong doc duoc van co cai gi do de hien thi.
+     * Đọc nó SAU MỌI kết quả: file được lưu trước khi phân tích chạy, nên một ảnh
+     * bị từ chối hoặc không đọc được vẫn có cái gì đó để hiển thị.
      */
     public function maAnhLuuCuoi(): ?int
     {
@@ -73,7 +73,7 @@ class NhanDienHinhAnhService
     }
 
     /**
-     * Xu ly anh don thuoc bang nha cung cap AI da cau hinh.
+     * Xử lý ảnh đơn thuốc bằng nhà cung cấp AI đã cấu hình.
      *
      * @param UploadedFile $anh
      * @param int $userId
@@ -106,7 +106,7 @@ class NhanDienHinhAnhService
             $processingTime = (microtime(true) - $startTime) * 1000;
             $this->markLatestImageAnalysisResult($userId, 'prescription', $analysisResult, $matched);
             
-            // Ghi nhat ky kiem toan
+            // Ghi nhật ký kiểm toán
             $this->nhatKyKiemToanService->ghi(
                 action: 'chatbot_image_processed',
                 modelType: AnhChatbot::class,
@@ -166,7 +166,7 @@ class NhanDienHinhAnhService
     }
 
     /**
-     * Xu ly anh hoa don bang nha cung cap AI da cau hinh.
+     * Xử lý ảnh hoá đơn bằng nhà cung cấp AI đã cấu hình.
      *
      * @param UploadedFile $anh
      * @param int $userId
@@ -199,7 +199,7 @@ class NhanDienHinhAnhService
             $processingTime = (microtime(true) - $startTime) * 1000;
             $this->markLatestImageAnalysisResult($userId, 'receipt', $analysisResult, $matched);
             
-            // Ghi nhat ky kiem toan
+            // Ghi nhật ký kiểm toán
             $this->nhatKyKiemToanService->ghi(
                 action: 'chatbot_image_processed',
                 modelType: AnhChatbot::class,
@@ -259,11 +259,11 @@ class NhanDienHinhAnhService
     }
 
     /**
-     * Phan tich anh bang nha cung cap AI da cau hinh.
+     * Phân tích ảnh bằng nhà cung cấp AI đã cấu hình.
      *
-     * @param string $imagePath Duong dan tuyet doi den file anh
-     * @param string $type Loai anh (prescription hoac receipt)
-     * @return array Ket qua phan tich gom 'products' va 'description'
+     * @param string $imagePath Đường dẫn tuyệt đối đến file ảnh
+     * @param string $type Loại ảnh (prescription hoặc receipt)
+     * @return array Kết quả phân tích gồm 'products' và 'description'
      * @throws \Exception
      */
     protected function analyzeImageWithProvider(string $imagePath, string $type): array
@@ -314,7 +314,7 @@ class NhanDienHinhAnhService
         }
     }
     /**
-     * Xay dung prompt cho vision cua nha cung cap theo loai anh.
+     * Xây dựng prompt cho vision của nhà cung cấp theo loại ảnh.
      *
      * @param string $type
      * @return string
@@ -387,22 +387,22 @@ PROMPT;
     }
 
     /**
-     * Phan tich van ban tra loi cua provider vision thanh du lieu co cau truc.
+     * Phân tích văn bản trả lời của provider vision thành dữ liệu có cấu trúc.
      *
      * @param string $responseText
      * @return array
      */
     protected function parseVisionProviderResponse(string $responseText): array
     {
-        // Co thu trich xuat JSON tu cau tra loi
+        // Cố thử trích xuất JSON từ câu trả lời
         $jsonText = trim($responseText);
 
-        // Go bo cac markdown code block neu co
+        // Gỡ bỏ các markdown code block nếu có
         if (preg_match('/```(?:json)?\s*([\s\S]*?)```/', $jsonText, $matches)) {
             $jsonText = trim($matches[1]);
         }
 
-        // Co thu parse JSON truc tiep
+        // Cố thử parse JSON trực tiếp
         $parsed = json_decode($jsonText, true);
         
         if (json_last_error() === JSON_ERROR_NONE && is_array($parsed)) {
@@ -415,7 +415,7 @@ PROMPT;
             ];
         }
         
-        // Co thu tim object JSON trong van ban
+        // Cố thử tìm object JSON trong văn bản
         if (preg_match('/\{[\s\S]*\}/', $jsonText, $jsonMatch)) {
             $parsed = json_decode($jsonMatch[0], true);
             
@@ -443,7 +443,7 @@ PROMPT;
     }
 
     /**
-     * Resize va chuan hoa anh truoc khi gui cho nha cung cap AI.
+     * Resize và chuẩn hoá ảnh trước khi gửi cho nhà cung cấp AI.
      *
      * @param string $imagePath
      * @return array{0: string, 1: string}
@@ -482,12 +482,12 @@ PROMPT;
     }
 
     /**
-     * Luu anh tai len vao local disk.
+     * Lưu ảnh tải lên vào local disk.
      *
      * @param UploadedFile $anh
      * @param int $userId
      * @param string $type
-     * @return string Duong dan tuyet doi den anh da luu
+     * @return string Đường dẫn tuyệt đối đến ảnh đã lưu
      */
     protected function luuAnh(UploadedFile $anh, int $userId, string $type): string
     {
@@ -518,9 +518,9 @@ PROMPT;
 
         $this->maAnhLuuCuoi = (int) $stored->ma_anh;
 
-        // Resolve qua disk thay vi storage_path(): root hardcode trung lap voi
-        // filesystems.local va lam Storage::fake() vo dung, nen moi test upload
-        // deu ghi vao thu muc storage that.
+        // Resolve qua disk thay vì storage_path(): root hardcode trùng lặp với
+        // filesystems.local và làm Storage::fake() vô dụng, nên mỗi test upload
+        // đều ghi vào thư mục storage thật.
         return Storage::disk('local')->path($path);
     }
 
@@ -584,7 +584,7 @@ PROMPT;
     }
 
     /**
-     * Khop cac san pham da parse voi database.
+     * Khớp các sản phẩm đã parse với database.
      *
      * @param array $parsedProducts
      * @return array
@@ -600,7 +600,7 @@ PROMPT;
                 continue;
             }
 
-            // Tim san pham trong database kem ngu canh provider da trich xuat.
+            // Tìm sản phẩm trong database kèm ngữ cảnh provider đã trích xuất.
             $sanPham = $this->findProductByParsedData($parsedProduct);
             
             if ($sanPham) {
@@ -622,7 +622,7 @@ PROMPT;
                     'confidence' => $this->calculateMatchConfidenceFromParsedData($parsedProduct, $sanPham)
                 ];
             } else {
-                // Khong tim thay SanPham
+                // Không tìm thấy SanPham
                 $matched[] = [
                     'parsed_name' => $productName,
                     'matched' => false,
@@ -639,9 +639,9 @@ PROMPT;
     }
     
     /**
-     * Tim san pham theo ten voi fuzzy matching.
+     * Tìm sản phẩm theo tên với fuzzy matching.
      *
-     * @param string $name Ten SanPham can tim
+     * @param string $name Tên SanPham cần tìm
      * @return \App\Models\SanPham|null
      */
     protected function findProductByParsedData(array $parsedProduct): ?SanPham
@@ -651,10 +651,10 @@ PROMPT;
             return null;
         }
 
-        // Don ten: bo ten thuong mai, lieu luong, tu thong thuong
+        // Dọn tên: bỏ tên thương mại, liều lượng, từ thông thường
         $cleanName = $this->cleanProductName($name);
 
-        // Co thu khop chinh xac truoc
+        // Cố thử khớp chính xác trước
         $sanPham = SanPham::notExpired()
             ->where('so_luong_ton', '>', 0)
             ->where('ten', 'LIKE', $name)
@@ -665,7 +665,7 @@ PROMPT;
             return $sanPham;
         }
 
-        // Co thu khop mot phan voi ten da don
+        // Cố thử khớp một phần với tên đã dọn
         $sanPham = SanPham::notExpired()
             ->where('so_luong_ton', '>', 0)
             ->where(function($query) use ($name, $cleanName) {
@@ -676,8 +676,8 @@ PROMPT;
             ->FEFO()
             ->first();
 
-        // "Vitamin A" khong duoc an xong voi "Vitamin C 1000mg" chi vi ten da don
-        // la mot substring cua no.
+        // "Vitamin A" không được ăn xong với "Vitamin C 1000mg" chỉ vì tên đã dọn
+        // là một substring của nó.
         if ($sanPham && !$this->conflictsWithParsedProduct($parsedProduct, $sanPham)) {
             return $sanPham;
         }
@@ -687,11 +687,11 @@ PROMPT;
             return $scoredProduct;
         }
         
-        // Co thu khop tung tu voi ten da don.
-        // Yeu cau it nhat 2 tu co nghia (>2 ky tu) de khong tra ve mot khop
-        // chung chung khi cac token phan biet qua ngan
-        // (vi du "Vitamin A-D" -> ["vitamin", "a", "d"] KHONG duoc khop bat ky
-        // san pham "Vitamin *" nao chi vi tu "vitamin" dung chung).
+        // Cố thử khớp từng từ với tên đã dọn.
+        // Yêu cầu ít nhất 2 từ có nghĩa (>2 ký tự) để không trả về một khớp
+        // chung chung khi các token phân biệt quá ngắn
+        // (ví dụ "Vitamin A-D" -> ["vitamin", "a", "d"] KHÔNG được khớp bất kỳ
+        // sản phẩm "Vitamin *" nào chỉ vì từ "vitamin" dùng chung).
         $words = explode(' ', $cleanName);
         $meaningfulWords = array_values(array_filter(
             $words,
@@ -718,7 +718,7 @@ PROMPT;
     }
 
     /**
-     * Dung khi dong danh muc ro rang khong phai san pham ma anh the hien.
+     * Đúng khi dòng danh mục rõ ràng không phải sản phẩm mà ảnh thể hiện.
      */
     protected function conflictsWithParsedProduct(array $parsedProduct, SanPham $sanPham): bool
     {
@@ -758,10 +758,10 @@ PROMPT;
             return null;
         }
 
-        // Gan nhu hoa nhau giua hai san pham khac nhau nghia la du lieu anh khong
-        // xac dinh duoc san pham nao trong hai san pham. Bao mot trong hai la "con
-        // trong kho" se la mot doan doan, nen de no khop va de caller dua ra goi y.
-        // Cac dong cung ten (lo khac nhau) khong phai doi thu - FEFO da chon mot dong.
+        // Gần như hoà nhau giữa hai sản phẩm khác nhau nghĩa là dữ liệu ảnh không
+        // xác định được sản phẩm nào trong hai sản phẩm. Báo một trong hai là "còn
+        // trong kho" sẽ là một đoán đoán, nên để nó không khớp và để caller đưa ra gợi ý.
+        // Các dòng cùng tên (lô khác nhau) không phải đối thủ - FEFO đã chọn một dòng.
         $bestName = $this->normalizeProductText($best['product']->ten);
         $rival = $candidates
             ->first(fn (array $candidate): bool => $this->normalizeProductText($candidate['product']->ten) !== $bestName);
@@ -782,7 +782,7 @@ PROMPT;
     }
 
     /**
-     * Cac truong xac dinh san pham ma anh the hien.
+     * Các trường xác định sản phẩm mà ảnh thể hiện.
      */
     protected function buildProviderIdentityText(array $parsedProduct): string
     {
@@ -790,9 +790,9 @@ PROMPT;
     }
 
     /**
-     * Cac truong chi mo ta cong dung cua san pham. Huu ich cho goi y, nhung qua
-     * chung chung de chung minh danh tinh — moi vi bo sung trong danh muc deu
-     * chia se cach dien dat nhu "bo sung", "tang cuong mien dich" hay "uong 1 vien moi ngay".
+     * Các trường chỉ mô tả công dụng của sản phẩm. Hữu ích cho gợi ý, nhưng quá
+     * chung chung để chứng minh danh tính — mỗi vi bổ sung trong danh mục đều
+     * chia sẻ cách diễn đạt như "bổ sung", "tăng cường miễn dịch" hay "uống 1 viên mỗi ngày".
      */
     protected function buildProviderContextText(array $parsedProduct): string
     {
@@ -844,8 +844,8 @@ PROMPT;
     }
 
     /**
-     * Cham diem ung cu vien chi tren bang chung nhan dien. Tra ve 0 khi anh va
-     * san pham ro rang mo ta hai thu khac nhau.
+     * Chấm điểm ứng cử viên chỉ trên bằng chứng nhận diện. Trả về 0 khi ảnh và
+     * sản phẩm rõ ràng mô tả hai thứ khác nhau.
      */
     protected function scoreProductIdentity(array $parsedProduct, array $identityTokens, SanPham $sanPham): int
     {
@@ -901,8 +901,8 @@ PROMPT;
     }
 
     /**
-     * "Vitamin A" va "Vitamin C 1000mg" la hai san pham khac nhau; tu chung
-     * "vitamin" khong bao gio duoc lam chung khop nhau.
+     * "Vitamin A" và "Vitamin C 1000mg" là hai sản phẩm khác nhau; từ chung
+     * "vitamin" không bao giờ được làm chúng khớp nhau.
      */
     protected function hasVitaminLetterConflict(string $normalizedIdentityText, string $normalizedProductText): bool
     {
@@ -927,10 +927,10 @@ PROMPT;
     }
 
     /**
-     * Diem long dung cho cac goi y "san pham tuong tu" thoi. Bang chung nhan dien
-     * uu tien cao nhat, phan cong dung/danh muc trung lap dung de phan thang thua,
-     * va cac san pham cung ho (vi du mot vitamin khac) xep tren cac vi bo sung
-     * khong lien quan.
+     * Điểm lỏng dùng cho các gợi ý "sản phẩm tương tự" thôi. Bằng chứng nhận diện
+     * ưu tiên cao nhất, phần công dụng/danh mục trùng lặp dùng để phân thắng thua,
+     * và các sản phẩm cùng họ (ví dụ một vitamin khác) xếp trên các vi bổ sung
+     * không liên quan.
      */
     protected function scoreProductCandidate(array $parsedProduct, string $queryText, array $queryTokens, SanPham $sanPham): int
     {
@@ -946,9 +946,9 @@ PROMPT;
             $sanPham->danhMuc?->ten,
         ])));
 
-        // Do than thiety cung ho duoc cham tren ten/hoat chat thoi: moi vi bo sung
-        // trong danh muc deu chia se ten danh muc "Vitamin va khoang chat", nen dung
-        // danh muc tai day se tra thuong cho tat ca nhu nhau.
+        // Độ thân thiết cùng họ được chấm trên tên/hoạt chất thôi: mỗi vi bổ sung
+        // trong danh mục đều chia sẻ tên danh mục "Vitamin và khoáng chất", nên dùng
+        // danh mục tại đây sẽ trả thưởng cho tất cả như nhau.
         $productIdentityText = $this->normalizeProductText(implode(' ', array_filter([
             $sanPham->ten,
             $sanPham->thanh_phan,
@@ -982,8 +982,8 @@ PROMPT;
     {
         $text = mb_strtolower($text, 'UTF-8');
         $text = str_replace(['đ', 'Đ'], ['d', 'd'], $text);
-        // Fold dau de "Bo sung kem" va "bo sung kem" so sanh bang nhau tren
-        // ca hai ben: phan da phan tich va phan catalog.
+        // Fold dấu để "Bổ sung kẽm" và "bo sung kem" so sánh bằng nhau trên
+        // cả hai bên: phần đã phân tích và phần catalog.
         $text = Str::ascii($text);
         $text = preg_replace('/(\d+)\s*(mg|g|ml|mcg|iu)\b/u', '$1 $2', $text) ?? $text;
         $text = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $text) ?? $text;
@@ -1018,37 +1018,37 @@ PROMPT;
     }
     
     /**
-     * Lam sach ten san pham bang cach bo ten thuong hieu, lieu luong va cac tu pho bien.
+     * Làm sạch tên sản phẩm bằng cách bỏ tên thương hiệu, liều lượng và các từ phổ biến.
      *
      * @param string $name
      * @return string
      */
     protected function cleanProductName(string $name): string
     {
-        // Chuyen ve chu thuong de xu ly
+        // Chuyển về chữ thường để xử lý
         $cleaned = mb_strtolower($name, 'UTF-8');
 
-        // Chuan hoa cac ky tu phan cach (gach noi, en-dash, em-dash, dau &, dau cong, gach cheo)
-        // thanh khoang trang de "Vitamin A-D", "Vitamin A&D", "Vitamin A+D" duoc tach token
-        // nhat quan.
+        // Chuẩn hoá các ký tự phân cách (gạch nối, en-dash, em-dash, dấu &, dấu cộng, gạch chéo)
+        // thành khoảng trắng để "Vitamin A-D", "Vitamin A&D", "Vitamin A+D" được tách token
+        // nhất quán.
         $cleaned = preg_replace('/[-–—&+\/]/u', ' ', $cleaned);
 
-        // Bo cac ten thuong hieu pho bien
+        // Bỏ các tên thương hiệu phổ biến
         $brands = ['mylan', 'teva', 'pfizer', 'novartis', 'roche', 'sanofi', 'glaxo', 'bayer'];
         foreach ($brands as $brand) {
             $cleaned = str_replace($brand, '', $cleaned);
         }
-        
-        // Bo cac mau lieu luong (50mg, 500mg, 10ml, v.v.)
+
+        // Bỏ các mẫu liều lượng (50mg, 500mg, 10ml, v.v.)
         $cleaned = preg_replace('/\d+\s*(mg|g|ml|mcg|iu|%)/i', '', $cleaned);
 
-        // Bo cac tu pho bien
+        // Bỏ các từ phổ biến
         $commonWords = ['tablets', 'tablet', 'viên', 'vỉ', 'hộp', 'box', 'pack'];
         foreach ($commonWords as $word) {
             $cleaned = str_replace($word, '', $cleaned);
         }
-        
-        // Bo khoang trang thua
+
+        // Bỏ khoảng trắng thừa
         $cleaned = preg_replace('/\s+/', ' ', $cleaned);
         $cleaned = trim($cleaned);
         
@@ -1056,11 +1056,11 @@ PROMPT;
     }
     
     /**
-     * Tinh diem confidence cua viec khop.
+     * Tính điểm confidence của việc khớp.
      *
-     * @param string $parsedName Ten san pham da phan tich
-     * @param string $actualName Ten san pham that tu database
-     * @return float Diem confidence (0-1)
+     * @param string $parsedName Tên sản phẩm đã phân tích
+     * @param string $actualName Tên sản phẩm thật từ database
+     * @return float Điểm confidence (0-1)
      */
     protected function calculateMatchConfidenceFromParsedData(array $parsedProduct, SanPham $sanPham): float
     {
@@ -1079,17 +1079,17 @@ PROMPT;
         $parsedLower = mb_strtolower($parsedName, 'UTF-8');
         $actualLower = mb_strtolower($actualName, 'UTF-8');
         
-        // Khop chinh xac
+        // Khớp chính xác
         if ($parsedLower === $actualLower) {
             return 1.0;
         }
 
-        // Khop chua ben trong
+        // Khớp chứa bên trong
         if (strpos($actualLower, $parsedLower) !== false || strpos($parsedLower, $actualLower) !== false) {
             return 0.8;
         }
 
-        // Trung lap giua cac tu
+        // Trùng lặp giữa các từ
         $parsedWords = explode(' ', $parsedLower);
         $actualWords = explode(' ', $actualLower);
         $commonWords = array_intersect($parsedWords, $actualWords);
@@ -1102,9 +1102,9 @@ PROMPT;
     }
     
     /**
-     * Find similar products for suggestions.
+     * Tìm các sản phẩm tương tự cho gợi ý.
      *
-     * @param string $name SanPham name
+     * @param string $name Tên SanPham
      * @return array
      */
     protected function findSimilarProductsFromParsedData(array $parsedProduct): array

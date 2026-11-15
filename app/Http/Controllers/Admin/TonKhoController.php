@@ -20,7 +20,7 @@ class TonKhoController extends Controller
     }
 
     /**
-     * Hien thi danh sach ton kho voi sap xep FEFO va lam noi bat ngay het han.
+     * Hiển thị danh sách tồn kho với sắp xếp FEFO và làm nổi bật ngày hết hạn.
      */
     public function index(Request $request)
     {
@@ -28,9 +28,9 @@ class TonKhoController extends Controller
         $soNgay = min(max($request->integer('days', 30), 1), 365);
         $tuKhoa = $request->filled('q') ? $request->string('q')->trim()->toString() : null;
 
-        // Tim kiem va loc deu chay trong SQL tren ca bang, nen file xuat (lam cung mot
-        // dieu do) tra ve dung nhung dong ma man hinh hien. Mot tim kiem DataTables
-        // phia client chi bao gio thay trang hien tai.
+        // Tìm kiếm và lọc đều chạy trong SQL trên cả bảng, nên file xuất (làm cùng một
+        // điều đó) trả về đúng những dòng mà màn hình hiện. Một tìm kiếm DataTables
+        // phía client chỉ bao giờ thấy trang hiện tại.
         $sanPhams = SanPham::with('danhMuc')
             ->inventoryStatus($trangThai, $soNgay)
             ->search($tuKhoa)
@@ -44,7 +44,7 @@ class TonKhoController extends Controller
     }
 
     /**
-     * Hien thi san pham ton kho thap.
+     * Hiển thị sản phẩm tồn kho thấp.
      */
     public function lowStock()
     {
@@ -52,7 +52,7 @@ class TonKhoController extends Controller
     }
 
     /**
-     * Hien thi san pham sap het han.
+     * Hiển thị sản phẩm sắp hết hạn.
      */
     public function expiring(Request $request)
     {
@@ -79,7 +79,7 @@ class TonKhoController extends Controller
     }
 
     /**
-     * Xu ly dieu chinh ton kho.
+     * Xử lý điều chỉnh tồn kho.
      */
     public function adjust(Request $request)
     {

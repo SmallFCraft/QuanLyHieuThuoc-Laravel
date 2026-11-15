@@ -9,8 +9,8 @@ use Illuminate\Foundation\Http\FormRequest;
 class HoSoSucKhoeRequest extends FormRequest
 {
     /**
-     * Danh sach tag phai giu moi muc tren mot dong: AnToanThuocService so khop tung
-     * muc rieng le, nen dong trong hoac khoang trang lai tao ra cac tu khoa chet.
+     * Danh sách tag phải giữ mỗi mục trên một dòng: AnToanThuocService so khớp từng
+     * mục riêng lẻ, nên dòng trống hoặc khoảng trắng lại tạo ra các từ khóa chết.
      */
     protected const TAG_FIELDS = ['allergies', 'chronic_conditions', 'current_medications'];
 

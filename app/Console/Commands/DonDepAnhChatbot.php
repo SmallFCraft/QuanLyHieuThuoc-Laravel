@@ -10,21 +10,21 @@ use Illuminate\Support\Facades\Log;
 class DonDepAnhChatbot extends Command
 {
     /**
-     * Ten va chu ky cua lenh console.
+     * Tên và chu kỳ của lệnh console.
      *
      * @var string
      */
     protected $signature = 'chatbot:cleanup-images {--hours= : Age in hours for images to be deleted (default: chatbot.images.cleanup_after)}';
 
     /**
-     * The console command description.
+     * Mô tả lệnh console.
      *
      * @var string
      */
     protected $description = 'Delete chatbot images older than specified hours (default: chatbot.images.cleanup_after)';
 
     /**
-     * Thuc thi lenh console.
+     * Thực thi lệnh console.
      */
     public function handle(): int
     {

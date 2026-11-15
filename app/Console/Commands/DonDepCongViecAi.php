@@ -12,10 +12,10 @@ class DonDepCongViecAi extends Command
     protected $signature = 'ai-jobs:cleanup';
     protected $description = 'Dọn bản ghi công việc AI đã xong và đóng các job bị treo';
 
-    /** Job van `running` sau khoang thoi gian nay da mat worker. */
+    /** Job vẫn `running` sau khoảng thời gian này đã mất worker. */
     private const STUCK_MINUTES = 10;
 
-    /** Payload giu nhung gi khach da go, nen no khong duoc o trong DB mai mai. */
+    /** Payload giữ những gì khách đã gõ, nên nó không được ở trong DB mãi mãi. */
     private const RETENTION_HOURS = 24;
 
     public function handle(AiJobService $jobs): int
@@ -27,10 +27,10 @@ class DonDepCongViecAi extends Command
             ->get();
 
         foreach ($stuckJobs as $job) {
-            // Dong hang doi di truoc, va viec xoa no duoc log. Huu tro dong AiJob
-            // trong khi cong viec van dang cho trong `jobs` nghia la worker khoi dong
-            // sau se thay dong da xong, tra ve som, va luot cua khach — hoac briefing
-            // cua benh nhan — bien mat ma khong ghi lai gi bat dau.
+            // Dòng hàng đợi đi trước, và việc xóa nó được log. Hưu trí dòng AiJob
+            // trong khi công việc vẫn đang chờ trong `jobs` nghĩa là worker khởi động
+            // sau sẽ thấy dòng đã xong, trả về sớm, và lượt của khách — hoặc briefing
+            // của bệnh nhân — biến mất mà không có gì được ghi lại ở bất cứ đâu.
             $discarded = $jobs->discardQueuedWork($job->uuid);
 
             $job->forceFill([

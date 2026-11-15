@@ -6,15 +6,15 @@ use App\Models\NhatKyKiemToan;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Moi method la instance method co chu y: service duoc inject vao
- * ChatbotService, AiJobService va cac service triage, va mot static method khong the
- * duoc PHPUnit nhan ban (double) — mock static se throw, catch cua caller nuot no,
- * va dong ghi kiam toan cuoi cung khong duoc test nao phu.
+ * Mọi method là instance method có chủ ý: service được inject vào
+ * ChatbotService, AiJobService và các service triage, và một static method không thể
+ * được PHPUnit nhận ban (double) — mock static sẽ throw, catch của caller nuốt nó,
+ * và dòng ghi kiểm toán cuối cùng không được test nào phủ.
  */
 class NhatKyKiemToanService
 {
     /**
-     * Ghi log mot lan dang nhap
+     * Ghi log một lần đăng nhập
      */
     public function ghiThuDangNhap(string $email, bool $thanhCong, ?string $lyDo = null)
     {
@@ -35,7 +35,7 @@ class NhatKyKiemToanService
     }
 
     /**
-     * Ghi log su kien dang xuat
+     * Ghi log sự kiện đăng xuất
      */
     public function ghiDangXuat()
     {
@@ -52,12 +52,12 @@ class NhatKyKiemToanService
     }
 
     /**
-     * Ghi log mot hanh dong tuy bien
+     * Ghi log một hành động tùy biến
      *
-     * @param int|null $userId Quy gan cho cong viec khong chay trong request cua khach.
-     *        Trong worker hang doi khong co guard da xac thuc, nen caller nao da biet
-     *        chu so huu phai truyen vao hoac dong ban ghi se mat chu the — day la
-     *        vet kiam toan nha thuoc, chu khong phai log su kien UX.
+     * @param int|null $userId Quy gán cho công việc không chạy trong request của khách.
+     *        Trong worker hàng đợi không có guard đã xác thực, nên caller nào đã biết
+     *        chủ sở hữu phải truyền vào hoặc dòng bản ghi sẽ mất chủ thể — đây là
+     *        vết kiểm toán nhà thuốc, chứ không phải log sự kiện UX.
      */
     public function ghi(
         string $action,

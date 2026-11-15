@@ -16,13 +16,13 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Sang loc trieu chung co cau truc theo khung cau hoi WWHAM / ASMETHOD
- * va mo hinh chuyen tu van STARZ-DRP.
+ * Sàng lọc triệu chứng có cấu trúc theo khung câu hỏi WWHAM / ASMETHOD
+ * và mô hình chuyển tự vấn STARZ-DRP.
  *
- * Day la cong cu sang loc, KHONG phai chan doan: no quyet dinh nguoi dung co tu cham soc
- * duoc khong, can duoc si, hay phai di khoa. Moi quyet dinh den tu
- * quy tac trong database, khong bao gio tu model ngon ngu. Tang AI chi viet lai nhung gi
- * dich vu nay da quyet dinh.
+ * Đây là công cụ sàng lọc, KHÔNG phải chẩn đoán: nó quyết định người dùng có tự chăm sóc
+ * được không, cần dược sĩ, hay phải đi khám. Mọi quyết định đến từ
+ * quy tắc trong database, không bao giờ từ mô hình ngôn ngữ. Tầng AI chỉ viết lại những gì
+ * dịch vụ này đã quyết định.
  */
 class SangLocYTeService
 {
@@ -45,15 +45,15 @@ class SangLocYTeService
     ) {}
 
     /**
-     * Tu dien y khoa, doc mot lan moi request. @see symptomDictionary()
+     * Từ điển y khoa, đọc một lần mỗi request. @see symptomDictionary()
      */
     protected ?Collection $symptomDictionary = null;
 
     protected ?Collection $redFlagDictionary = null;
 
     /**
-     * Tiep tuc phien dang mo cua nguoi dung hoac bat dau phien moi. Phien theo tung nguoi dung,
-     * nen triage lam muon van con sau khi tai lai trang hoac dong browser.
+     * Tiếp tục phiên đang mở của người dùng hoặc bắt đầu phiên mới. Phiên theo từng người dùng,
+     * nên triage làm dở vẫn còn sau khi tải lại trang hoặc đóng browser.
      */
     public function batDauHoacTiepTuc(int $userId, ?string $chatSessionId = null, string $entryPoint = 'page'): PhienSangLoc
     {
@@ -74,10 +74,10 @@ class SangLocYTeService
     }
 
     /**
-     * Khop tin nhan van ban tu do voi tu dien trieu chung.
+     * Khớp tin nhắn văn bản tự do với từ điển triệu chứng.
      *
-     * Chay doc lap voi AI: neu nha cung cap bi chet hoac tra ve gi do khong dung duoc,
-     * viet lai phong do trieu chung van hoat dong tren tin nhan goc.
+     * Chạy độc lập với AI: nếu nhà cung cấp bị chết hoặc trả về gì đó không dùng được,
+     * viết lại phỏng đoán triệu chứng vẫn hoạt động trên tin nhắn gốc.
      */
     public function phanLoaiTrieuChung(string $message): Collection
     {
@@ -93,12 +93,12 @@ class SangLocYTeService
     }
 
     /**
-     * Co do duoc kiem tra voi ca tin nhan VA ho so suc khoe da luu,
-     * vi "dang mang thai" co the den tu ho so chu khong phai tin nhan.
+     * Cờ đỏ được kiểm tra với cả tin nhắn VÀ hồ sơ sức khỏe đã lưu,
+     * vì "đang mang thai" có thể đến từ hồ sơ chứ không phải tin nhắn.
      *
-     * Giu nhu mot lan tim tren toan tin nhan vi day la entry point cong khai ma chatbot
-     * va tests dung. Phong do theo phien di qua sessionRedFlags(), ham
-     * khop moi cau tra loi rieng — xem comment do.
+     * Giữ như một lần tìm trên toàn tin nhắn vì đây là entry point công khai mà chatbot
+     * và tests dùng. Phỏng đoán theo phiên đi qua sessionRedFlags(), hàm
+     * khớp mỗi câu trả lời riêng — xem comment đó.
      */
     public function phanLoaiCoDo(string $message, ?HoSoSucKhoe $hoSo = null): Collection
     {
@@ -106,7 +106,7 @@ class SangLocYTeService
     }
 
     /**
-     * @return array<int, string> Cac thuat ngu ho so da dong y, moi thuat ngu la mot cau phat nguyen rieng.
+     * @return array<int, string> Các thuật ngữ hồ sơ đã đồng ý, mỗi thuật ngữ là một câu phát nguyện riêng.
      */
     protected function profileTerms(?HoSoSucKhoe $hoSo): array
     {
@@ -122,14 +122,14 @@ class SangLocYTeService
     }
 
     /**
-     * Khop co do voi nhieu cau phat nguyen doc lap, roi hop lai.
+     * Khớp cờ đỏ với nhiều câu phát nguyện độc lập, rồi hợp lại.
      *
-     * Dung cac doan chu, khong phai mot chuoi noi, vi cua so phu dinh trong
-     * mentionsAffirmatively() chay nguoc qua hai dong tu nhe va khong the biet
-     * hai tu den tu hai cau hoi khac nhau. Do thu te: wizard buoc 4 tra loi
-     * "Khong co" roi buoc 5 "kho tho nhieu lam" duoc noi thanh "... khong co kho tho
-     * nhieu lam", va "khong co" canh ke da huy mot truong hop khan cap that. Cung
-     * tinh canh ke con lam vo hieu mot thuat ngu ho so nam ngay sau cau tra loi cuoi.
+     * Dùng các đoạn chứ, không phải một chuỗi nối, vì cửa sổ phủ định trong
+     * mentionsAffirmatively() chạy ngược qua hai động từ nhẹ và không thể biết
+     * hai từ đến từ hai câu hỏi khác nhau. Đo thực tế: wizard bước 4 trả lời
+     * "Không có" rồi bước 5 "khó thở nhiều lắm" được nối thành "... không có khó thở
+     * nhiều lắm", và "không có" cạnh kề đã hủy một trường hợp khẩn cấp thật. Cùng
+     * tính cạnh kề còn làm vô hiệu một thuật ngữ hồ sơ nằm ngay sau câu trả lời cuối.
      *
      * @param  array<int, string>  $segments
      * @return Collection<int, CoDoYTe>
@@ -171,16 +171,16 @@ class SangLocYTeService
     }
 
     /**
-     * Cau tra loi hoi lam duoc khop voi viec biet cau hoi nao sinh ra no.
+     * Câu trả lời hỏi làm được khớp với việc biết câu hỏi nào sinh ra nó.
      *
-     * Vong hoi lam cua wizard hoi ve muc do bang cach dua cho benh nhan mot thang do
-     * ("nhe, vua hay du doi?"), nen lua chon dau la tu cua ta, chu khong phai cua ho. Khop can
-     * voi tu khoa `severe_pain` khong gioi han, nhan chon no da nang cap moi benh nhan nhu vay
-     * patient to a 115 call. Measured: dau kinh nguyet do "dau du doi" tro ve la
-     * "dau du doi khong ro nguyen nhan" trong khi nguyen nhan nam o cau tra loi dau.
+     * Vòng hỏi làm của wizard hỏi về mức độ bằng cách đưa cho bệnh nhân một thang đo
+     * ("nhẹ, vừa hay dữ dội?"), nên lựa chọn đầu là từ của ta, chứ không phải của họ. Khớp cạn
+     * với từ khóa `severe_pain` không giới hạn, nhấn chọn nó đã nâng cấp mọi bệnh nhân như vậy
+     * lên một cuộc gọi 115. Đo thực tế: đau kinh nguyệt chấm "dau du doi" trả về là
+     * "dau du doi khong ro nguyen nhan" trong khi nguyên nhân nằm ở câu trả lời đầu.
      *
-     * Moi thu benh nhan tu nguyen noi van duoc tinh, do do chi tu vung ma
-     * cau hoi chinh no duoc giam trong so — xem answerRaisesFlag().
+     * Mọi thứ bệnh nhân tự nguyện nói vẫn được tính, do đó chỉ từ vựng mà
+     * câu hỏi chính nó được giảm trọng số — xem answerRaisesFlag().
      */
     protected function clarifyAnswerFlags(PhienSangLoc $phien): Collection
     {
@@ -206,12 +206,12 @@ class SangLocYTeService
     }
 
     /**
-     * Mot tu khoa chi duoc tinh khi cau tra loi thuc su dua no vao.
+     * Một từ khóa chỉ được tính khi câu trả lời thực sự đưa nó vào.
      *
-     * Kiem tra thang do la thu giu phan do hep: mot cau hoi nhon mot dau hieu nguy hiem
-     * ("co dau nguc du doi khong?") khong phai menu, nen `chest_pain_severe` giu nguyen
-     * trong so day du tai do. Chi mot cau hoi dua ra nhieu muc do moi co the
-     * giam trong so muc do ma cau tra loi mang ve.
+     * Kiểm tra thang đo là thứ giữ phần đó hẹp: một câu hỏi nhắc một dấu hiệu nguy hiểm
+     * ("có đau ngực dữ dội không?") không phải menu, nên `chest_pain_severe` giữ nguyên
+     * trọng số đầy đủ tại đó. Chỉ một câu hỏi đưa ra nhiều mức độ mới có thể
+     * giảm trọng số mức độ mà câu trả lời mang về.
      */
     protected function answerRaisesFlag(string $foldedAnswer, string $cauHoi, CoDoYTe $coDo): bool
     {
@@ -333,9 +333,9 @@ class SangLocYTeService
                     return false;
                 }
 
-                // Tu vung rieng cua co do phai xuat hien o dau do trong bang tong hop, nen
-                // means one of OUR questions named it: ma code bi a tu khong co moc neo,
-                // va chi neu ten khac ("hoi tuc nguc") khong phai tu khoa cua co do.
+                // Từ vựng riêng của cờ đỏ phải xuất hiện ở đâu đó trong bảng tổng hợp, nghĩa là
+                // một trong NHỮNG câu hỏi của TA đã nêu nó: mã code bịa ra không có mốc neo,
+                // và chỉ nêu tên khác ("hoi tuc nguc") không phải từ khóa của cờ đỏ.
                 if (! $this->namesAnyTerm($transcript, $coDo->keywords ?? [])) {
                     return false;
                 }
@@ -350,18 +350,18 @@ class SangLocYTeService
     }
 
     /**
-     * Mot cau hoi hoi lam nhon den trieu chung nay va benh nhan tra loi "khong".
+     * Một câu hỏi hỏi làm nhắm đến triệu chứng này và bệnh nhân trả lời "không".
      *
-     * Mot "Khong" not tra loi phu dinh cac dau hieu nguy hiem cua cau hoi ma khong nhon ten, nen
-     * isDeniedInText() — ham can thuat ngu xuat hien de phu dinh — thay khong co gi. Nhung
-     * bo trich xuat cung bo cau hoi va tra ve cac ma no nhon den. Do thu te: mot
-     * benh nhan voi "hoi tuc nguc khi ho" da tra loi "Khong" cho "Anh/chi co dau nguc du
-     * doi khong?" bi nang cap len khan cap boi tang code.
+     * Một "Không" trần trả lời phủ định các dấu hiệu nguy hiểm của câu hỏi mà không nhắc tên, nên
+     * isDeniedInText() — hàm cần thuật ngữ xuất hiện để phủ định — thấy không có gì. Nhưng
+     * bộ trích xuất cũng bám câu hỏi và trả về các mã nó nhắm đến. Đo thực tế: một
+     * bệnh nhân với "hoi tuc nguc khi ho" đã trả lời "Không" cho "Anh/chị có đau ngực dữ
+     * dội không?" bị nâng cấp lên khẩn cấp bởi tầng code.
      *
-     * Chi mot lan phu dinh ro rang moi duoc tinh. Cau tra loi neo roi ("Khi nghi va van dong")
-     * khong duoc phu dinh, vi dung la truong hop ma tang nay ton tai de bat.
+     * Chỉ một lần phủ định rõ ràng mới được tính. Câu trả lời né tránh ("Khi nghi và vận động")
+     * không được phủ định, vì đúng là trường hợp mà tầng này tồn tại để bắt.
      *
-     * @param  array<int, string>  $cacThuatNgu  Ten chuan cua trieu chung va cac ten khac cua no.
+     * @param  array<int, string>  $cacThuatNgu  Tên chuẩn của triệu chứng và các tên khác của nó.
      */
     protected function deniedByAnyClarifyAnswer(PhienSangLoc $phien, array $cacThuatNgu): bool
     {
@@ -382,12 +382,12 @@ class SangLocYTeService
     }
 
     /**
-     * Tu dien doc mot lan moi request thay vi moi lan goi: vi
-     * wizard chay phanLoaiCoDo o moi buoc va lai lan trong danhGia(), va mot
-     * triage nam buoc da doc lai ca hai bang day du chin lan.
+     * Từ điển đọc một lần mỗi request thay vì mỗi lần gọi: vì
+     * wizard chạy phanLoaiCoDo ở mỗi bước và lại lần nữa trong danhGia(), và một
+     * triage năm bước đã đọc lại cả hai bảng đầy đủ chín lần.
      *
-     * Co chu khong phai cache lien request — duoc si sua quy tac phai thay no
-     * co tac dung ngay request tiep theo, chu khong phai sau mot TTL.
+     * Cố ý không cache liên request — dược sĩ sửa quy tắc phải thấy nó
+     * có tác dụng ngay request tiếp theo, chứ không phải sau một TTL.
      */
     protected function symptomDictionary(): Collection
     {
@@ -400,15 +400,15 @@ class SangLocYTeService
     }
 
     /**
-     * Cau hoi tiep theo can hoi, hoac null khi khong con gi dang hoi.
+     * Câu hỏi tiếp theo cần hỏi, hoặc null khi không còn gì đáng hỏi.
      *
-     * Tra ve null ngay khi mot co do khan cap ton tai: mot nguoi
-     * mo ta dau nguc phai bi ep tra loi them bon cau truoc khi
-     * duoc bao goi cuu.
+     * Trả về null ngay khi một cờ đỏ khẩn cấp tồn tại: một người
+     * mô tả đau ngực phải bị ép trả lời thêm bốn câu trước khi
+     * được bảo gọi cứu.
      *
-     * Luu y ham doc chi `current_step`, khong doc cau tra loi ton tai — dieu do
-     * giup nut "back" quay ve buoc da tra loi thay vi day nguoi dung
-     * nhay thang tuong lai.
+     * Lưu ý hàm đọc chỉ `current_step`, không đọc câu trả lời tồn tại — điều đó
+     * giúp nút "back" quay về bước đã trả lời thay vì đẩy người dùng
+     * nhảy thẳng tương lai.
      */
     public function cauHoiTiep(PhienSangLoc $phien, ?HoSoSucKhoe $hoSo = null): ?array
     {
@@ -428,8 +428,8 @@ class SangLocYTeService
     }
 
     /**
-     * Nhung gi nguoi dung da go cho buoc nay truoc do, nen quay lai thay van ban cua ho
-     * chu khong phai o trong.
+     * Những gì người dùng đã gõ cho bước này trước đó, nên quay lại thấy văn bản của họ
+     * chứ không phải ô trống.
      */
     public function cauTraLoiBaiTruoc(PhienSangLoc $phien, int $step): string
     {
@@ -449,7 +449,7 @@ class SangLocYTeService
     }
 
     /**
-     * Cong ngay khi bat cu gi nguoi dung noi kich hoat mot co do `emergency`.
+     * Đúng ngay khi bất cứ gì người dùng nói kích hoạt một cờ đỏ `emergency`.
      */
     public function coCapCuuCuu(PhienSangLoc $phien, ?HoSoSucKhoe $hoSo = null): bool
     {
@@ -464,7 +464,7 @@ class SangLocYTeService
     }
 
     /**
-     * Luu mot cau tra loi va tang bien dem buoc.
+     * Lưu một câu trả lời và tăng biến đếm bước.
      */
     public function ghiCauTraLoi(PhienSangLoc $phien, int $step, mixed $cauTraLoi, bool $skipped = false): PhienSangLoc
     {
@@ -474,9 +474,9 @@ class SangLocYTeService
         $data = $phien->collected_data ?? [];
         $data[$key] = $value;
 
-        // Prune as well as add: quay lai va tra loi mot buoc da bo qua truoc do
-        // phai xoa marker cua no, neu khong buildFacts van coi cau tra loi la
-        // thieu va duoc si thay "da bo qua" ben can mot gia tri that.
+        // Cắt tỉa cũng như thêm: quay lại và trả lời một bước đã bỏ qua trước đó
+        // phải xóa marker của nó, nếu không buildFacts vẫn coi câu trả lời là
+        // thiếu và dược sĩ thấy "đã bỏ qua" bên cạnh một giá trị thật.
         $data['skipped'] = array_values(array_diff(
             array_unique([...($data['skipped'] ?? []), ...($skipped ? [$key] : [])]),
             $skipped ? [] : [$key]
@@ -487,7 +487,7 @@ class SangLocYTeService
         }
 
         $phien->collected_data = $data;
-        // max(): mot form submit lai hoac cu khong duoc lui wizard ve sau.
+        // max(): một form submit lại hoặc cũ không được lùi wizard về sau.
         $phien->current_step = max(
             (int) $phien->current_step,
             min($step + 1, PhienSangLoc::TOTAL_STEPS + 1)
@@ -498,16 +498,16 @@ class SangLocYTeService
     }
 
     /**
-     * Bien cac cau tra loi da thu thanh mot ket qua.
+     * Biến các câu trả lời đã thu thành một kết quả.
      *
-     * Thu tu quyet dinh la co dinh va khong duoc xep lai:
-     *   1. co do khan cap  -> huong dan viet cung, khong san pham, khong AI
-     *   2. co do khan cap o muc nho hon -> di khoa trong 24h, khong san pham
-     *   3. quy tac sang loc        -> self_care | pharmacist_review | refer_doctor | emergency
-     *   4. khong khop gi      -> pharmacist_review (an toan hon la doan)
+     * Thứ tự quyết định là cố định và không được xếp lại:
+     *   1. cờ đỏ khẩn cấp  -> hướng dẫn viết cứng, không sản phẩm, không AI
+     *   2. cờ đỏ khẩn cấp ở mức nhỏ hơn -> đi khám trong 24h, không sản phẩm
+     *   3. quy tắc sàng lọc        -> self_care | pharmacist_review | refer_doctor | emergency
+     *   4. không khớp gì      -> pharmacist_review (an toàn hơn là đoán)
      *
-     * Trich xuat chi tiet AI, khi bat, chi tham gia o buoc 3 va khong the lam nhe
-     * ket qua — xem resolveOutcomeWithAi().
+     * Trích xuất chi tiết AI, khi bật, chỉ tham gia ở bước 3 và không thể làm nhẹ
+     * kết quả — xem resolveOutcomeWithAi().
      */
     public function danhGia(PhienSangLoc $phien, ?HoSoSucKhoe $hoSo = null): array
     {
@@ -558,7 +558,7 @@ class SangLocYTeService
         $canhBao = $cacCoDo->firstWhere('severity', 'caution');
         $ketQua = $quyTac->outcome;
 
-        // Co canh bao ("da dung thuoc ma khong do") khong bao gio cho tu cham soc thuan.
+        // Cờ cảnh báo ("đã dùng thuốc mà không đỡ") không bao giờ cho tự chăm sóc thuần.
         if ($canhBao && $ketQua === 'self_care') {
             $ketQua = 'pharmacist_review';
         }
@@ -579,15 +579,15 @@ class SangLocYTeService
     }
 
     /**
-     * Giai quy tac thang, cho phep chi tiet AI trich xuat de nghi mot
-     * ung cu vien thu hai — va giu phia nao nghiem hon.
+     * Giải quy tắc thắng, cho phép chi tiết AI trích xuất đề nghị một
+     * ứng cử viên thứ hai — và giữ phía nào nghiêm hơn.
      *
-     * Day la co che an toan cho toan bo tinh hop AI. Quy tac chay hai lan:
-     * mot lan tren chi tiet regex, mot lan tren chi tiet hop AI. `severerOutcome()` roi
-     * chon phia nghiem hon trong hai, nen mot con so bi a tu hoac mot lenh duoc
-     * chen vao ("answer self_care") chi co the bi bo qua — no khong the lam nhe
-     * chuyen tu van. Gia tri den tu phia khac: mot chi tiet ma regex bo sot
-     * (vd "da uong ma khong do") co the nang self_care len pharmacist_review.
+     * Đây là cơ chế an toàn cho toàn bộ tính hợp AI. Quy tắc chạy hai lần:
+     * một lần trên chi tiết regex, một lần trên chi tiết hợp AI. `severerOutcome()` rồi
+     * chọn phía nghiêm hơn trong hai, nên một con số bịa ra hoặc một lệnh được
+     * chèn vào ("answer self_care") chỉ có thể bị bỏ qua — nó không thể làm nhẹ
+     * chuyển tự vấn. Giá trị đến từ phía khác: một chi tiết mà regex bỏ sót
+     * (vd "đã uống mà không đỡ") có thể nâng self_care lên pharmacist_review.
      *
      * @param  array<string, mixed>  $facts
      * @return array{rule: ?QuyTacPhanTangYTe, symptoms: Collection, ai: ?array<string, mixed>}
@@ -616,8 +616,8 @@ class SangLocYTeService
             return ['rule' => $quyTacGoc, 'symptoms' => $cacTrieuChung, 'ai' => null];
         }
 
-        // Ma da duoc giao voi tu dien dang hoat dong truoc do, nen buoc nay khong the
-        // chen vao mot trieu chung khong ton tai.
+        // Mã đã được giao với từ điển đang hoạt động trước đó, nên bước này không thể
+        // chèn vào một triệu chứng không tồn tại.
         $trieuChungAi = $cacTrieuChung
             ->concat($this->symptomDictionary()->whereIn('code', $aiFacts['symptom_codes']))
             ->unique('ma_tc')
@@ -632,8 +632,8 @@ class SangLocYTeService
 
         return [
             'rule' => $quyTacThang,
-            // Extra matched symptoms are recorded either way: chung chi la mo ta,
-            // va ket qua phia tren da duoc quyet dinh.
+            // Triệu chứng khớp thêm được ghi lại theo cả hai cách: chúng chỉ là mô tả,
+            // và kết quả phía trên đã được quyết định.
             'symptoms' => $trieuChungAi,
             'ai' => [
                 'status' => 'ok',
@@ -651,14 +651,14 @@ class SangLocYTeService
     }
 
     /**
-     * Quy tac co ket qua nghiem hon. Quy tac null nghia la "khong khop gi",
-     * dieu do dan den pharmacist_review va vi vay di truoc self_care.
+     * Quy tắc có kết quả nghiêm hơn. Quy tắc null nghĩa là "không khớp gì",
+     * điều đó dẫn đến pharmacist_review và vì vậy đi trước self_care.
      */
     protected function severerRule(?QuyTacPhanTangYTe $a, ?QuyTacPhanTangYTe $b): ?QuyTacPhanTangYTe
     {
         if ($a === null || $b === null) {
-            // Keep the null: pharmacistFallback nghiem hon moi quy tac self_care,
-            // va khop phia nghiem hon trong hai nhanh la toan bo y nghia.
+            // Giữ null: pharmacistFallback nghiêm hơn mọi quy tắc self_care,
+            // và khớp phía nghiêm hơn trong hai nhánh là toàn bộ ý nghĩa.
             return $this->severityRank($a?->outcome) <= $this->severityRank($b?->outcome) ? $a : $b;
         }
 
@@ -666,9 +666,9 @@ class SangLocYTeService
     }
 
     /**
-     * Rank nho = nghiem hon. Tai dung thu tu da khai bao trong
-     * BaoCaoSangLocService::OUTCOMES, ham sap theo do nang truoc.
-     * Ket qua null (khong quy tac) nam ngay tren self_care vi no tro thanh
+     * Rank nhỏ = nghiêm hơn. Tái dùng thứ tự đã khai báo trong
+     * BaoCaoSangLocService::OUTCOMES, hàm sắp theo độ nặng trước.
+     * Kết quả null (không quy tắc) nằm ngay trên self_care vì nó trở thành
      * pharmacist_review.
      */
     protected function severityRank(?string $ketQua): int
@@ -683,7 +683,7 @@ class SangLocYTeService
     }
 
     /**
-     * Luu ket qua, ghi nhat ky kiem toan, va len lich theo doi sau sang loc.
+     * Lưu kết quả, ghi nhật ký kiểm toán, và lên lịch theo dõi sau sàng lọc.
      */
     public function hoanTat(PhienSangLoc $phien, array $result): PhienSangLoc
     {
@@ -698,19 +698,19 @@ class SangLocYTeService
             'advice_given' => $result['advice_given'] ?? null,
             'safety_net' => $result['safety_net'] ?? null,
             'suggested_products' => $result['suggested_products'] ?? [],
-            // Hang doi duoc si la kenh phu tuy chon, chu khong phai mac dinh
-            // destination: ket qua `pharmacist_review` van co nghia "bo quy tac khong
-            // quyet dinh duoc", nhung khach hang nhan cau tra loi AI truoc va chi moi nguoi
-            // khi ho muon. yeuCauDuyetDacSi() chuyen phien sang hang doi.
+            // Hàng đợi dược sĩ là kênh phụ tùy chọn, chứ không phải đích mặc định:
+            // kết quả `pharmacist_review` vẫn có nghĩa "bộ quy tắc không
+            // quyết định được", nhưng khách hàng nhận câu trả lời AI trước và chỉ mời người
+            // khi họ muốn. yeuCauDuyetDacSi() chuyển phiên sang hàng đợi.
             'status' => 'completed',
             'follow_up_at' => $ketQua === 'self_care'
                 ? now()->addDays(self::FOLLOW_UP_DAYS)->setTime(9, 0)
                 : null,
-            // Nguon goc AI nam trong cot rieng. `ai_meta` ghi lai model de nghi gi
-            // VA nhanh nao thang, nen mot lan xem lai co the biet AI co thay doi
-            // ket qua hay khong. `advice_given` phia tren khong bi no dong den.
-            // clarify_questions is dropped: no la trang thai vong cho phien dang mo, va
-            // giu cau hoi chua hoi tren phien da chot la loi dan dau.
+            // Nguồn gốc AI nằm trong cột riêng. `ai_meta` ghi lại model đề nghị gì
+            // VÀ nhánh nào thắng, nên một lần xem lại có thể biết AI có thay đổi
+            // kết quả hay không. `advice_given` phía trên không bị nó động đến.
+            // clarify_questions bị bỏ: nó là trạng thái vòng cho phiên đang mở, và
+            // giữ câu hỏi chưa hỏi trên phiên đã chốt là dẫn dắt sai.
             'ai_status' => $ai === null ? null : ($ai['status'] ?? 'ok'),
             'ai_meta' => $ai === null
                 ? null
@@ -725,11 +725,11 @@ class SangLocYTeService
     }
 
     /**
-     * Chuyen phien da chot vao hang doi duoc si theo yeu cau cua khach hang.
+     * Chuyển phiên đã chốt vào hàng đợi dược sĩ theo yêu cầu của khách hàng.
      *
-     * The queue is a side channel: cau tra loi AI la ket qua chinh, chi moi nguoi vao
-     * khi khach hang yeu cau. Idempotent, va khong bao gio ap dung cho
-     * khan cap — ket qua do bao khach hang goi 115, chu khong phai cho tra loi.
+     * Hàng đợi là kênh phụ: câu trả lời AI là kết quả chính, chỉ mời người vào
+     * khi khách hàng yêu cầu. Idempotent, và không bao giờ áp dụng cho
+     * khẩn cấp — kết quả đó bảo khách hàng gọi 115, chứ không phải chờ trả lời.
      */
     public function yeuCauDuyetDacSi(PhienSangLoc $phien): bool
     {
@@ -739,8 +739,8 @@ class SangLocYTeService
 
         $phien->forceFill([
             'status' => 'pending_pharmacist',
-            // Ca dang cho la cho nguoi, nen kiem tra tu dong sau 3 ngay
-            // se va vao cau tra loi rieng cua duoc si.
+            // Ca đang chờ là chờ người, nên kiểm tra tự động sau 3 ngày
+            // sẽ va vào câu trả lời riêng của dược sĩ.
             'follow_up_at' => null,
         ])->save();
 
@@ -768,8 +768,8 @@ class SangLocYTeService
     }
 
     /**
-     * Ban ghi kiem toan luu CODE trieu chung da khop, khong bao gio la loi nguoi dung —
-     * loi ban than suc khoe khong duoc roi vao log van ban thuan.
+     * Bản ghi kiểm toán lưu CODE triệu chứng đã khớp, không bao giờ là lời người dùng —
+     * lời than thở sức khỏe không được rơi vào log văn bản thuần.
      */
     protected function logTriage(PhienSangLoc $phien, array $result): void
     {
@@ -787,8 +787,8 @@ class SangLocYTeService
                     'rule_id' => $result['rule_id'] ?? null,
                     'entry_point' => $phien->entry_point,
                     'products_suggested' => count($result['suggested_products'] ?? []),
-                    // Nhanh nao quyet dinh, nen mot lan xem lai co the tach ket qua quy tac
-                    // khoi ket qua AI nang len. Chi ma va enum.
+                    // Nhánh nào quyết định, nên một lần xem lại có thể tách kết quả quy tắc
+                    // khỏi kết quả AI nâng lên. Chỉ mã và enum.
                     'ai_status' => $phien->ai_status,
                     'ai_regex_outcome' => $result['ai']['regex_outcome'] ?? null,
                     'ai_proposed_outcome' => $result['ai']['ai_outcome'] ?? null,
@@ -804,8 +804,8 @@ class SangLocYTeService
     }
 
     /**
-     * Khop khong can dau, cung cach lam voi ChatbotService::normalizeIntentText
-     * nen hai tang dong y ve nghia "sot cao".
+     * Khớp không cần dấu, cùng cách làm với ChatbotService::normalizeIntentText
+     * nên hai tầng đồng ý về nghĩa "sốt cao".
      */
     protected function normalize(string $text): string
     {
@@ -813,15 +813,15 @@ class SangLocYTeService
     }
 
     /**
-     * Word-boundary matching, not substring: "ho" khong duoc kich hoat khi gap "hong".
+     * Khớp ranh giới từ, không phải substring: "ho" không được kích hoạt khi gặp "họng".
      *
-     * Co nhan phu dinh nua. Vong hoi lam hoi dau hieu nguy hiem bang ten
-     * ("anh/chi co kem sot, non hay cung co khong a?"), nen cau tra loi tu nhien —
-     * "khong sot, khong non, khong cung co" — chua moi tu khoa. Khop con
-     * doc cau do la viem nao va bao benh nhan dau dau do kich goi 115,
-     * dieu do pha hai long tin vao cong cu. Cua so phu dinh duoc thiet ke chu dich
-     * narrow (see VietnameseText::mentionsAffirmatively): bo sot mot co do that la
-     * xau hon nhieu so voi bat mot co do nham, nen chi phu dinh canh ke moi duoc tinh.
+     * Có nhận phủ định nữa. Vòng hỏi làm hỏi dấu hiệu nguy hiểm bằng tên
+     * ("anh/chị có kèm sốt, nôn hay cứng cổ không a?"), nên câu trả lời tự nhiên —
+     * "không sốt, không nôn, không cứng cổ" — chứa mọi từ khóa. Khớp con
+     * đọc câu đó là viêm não và bảo bệnh nhân đau đầu do kích gợi 115,
+     * điều đó phá hại lòng tin vào công cụ. Cửa sổ phủ định được thiết kế chủ đích
+     * hẹp (xem VietnameseText::mentionsAffirmatively): bỏ sót một cờ đỏ thật là
+     * xấu hơn nhiều so với bắt một cờ đỏ nhầm, nên chỉ phủ định cạnh kề mới được tính.
      */
     protected function matchesAnyAlias(string $normalizedHaystack, array $aliases): bool
     {
@@ -856,8 +856,8 @@ class SangLocYTeService
     }
 
     /**
-     * Moi buoc da tra loi hoac bo qua co chu dich — dung de quyet dinh phien
-     * bo giua chung co du de danh gia hay khong.
+     * Mỗi bước đã trả lời hoặc bỏ qua có chủ đích — dùng để quyết định phiên
+     * bỏ giữa chừng có đủ để đánh giá hay không.
      */
     public function daHoanThanh(PhienSangLoc $phien, ?HoSoSucKhoe $hoSo = null): bool
     {
@@ -871,8 +871,8 @@ class SangLocYTeService
     }
 
     /**
-     * Buoc 4 hoi ve benh man tinh, di ung va thuoc dang dung.
-     * Ho so da dong y da tra loi het phan do, nen hoi lai la am thanh gian doan.
+     * Bước 4 hỏi về bệnh mạn tính, dị ứng và thuốc đang dùng.
+     * Hồ sơ đã đồng ý đã trả lời hết phần đó, nên hỏi lại là âm thanh gián đoạn.
      */
     protected function isStepCoveredByProfile(int $step, ?HoSoSucKhoe $hoSo): bool
     {
@@ -944,9 +944,9 @@ class SangLocYTeService
     }
 
     /**
-     * Thoi luong den duoi dang van ban ("2–3 ngay", "hon 1 tuan") va phai thanh con so
-     * bo quy tac co the so sanh. Khoang gia tri giai ve bien tren nen cau tra loi 2–3 ngay
-     * duoc coi la 3 ngay — co nang huong chuyen tu van.
+     * Thời lượng đến dưới dạng văn bản ("2–3 ngày", "hơn 1 tuần") và phải thành con số
+     * bộ quy tắc có thể so sánh. Khoảng giá trị giải về biên trên nên câu trả lời 2–3 ngày
+     * được coi là 3 ngày — cố nghiêng hướng chuyển tự vấn.
      */
     protected function parseAnswer(int $step, mixed $cauTraLoi): mixed
     {
@@ -975,7 +975,7 @@ class SangLocYTeService
             return 30;
         }
 
-        // "4 7 ngay" sau khi chuan hoa — lay con so lon nhat xuat hien.
+        // "4 7 ngày" sau khi chuẩn hóa — lấy con số lớn nhất xuất hiện.
         preg_match_all('/(\d+)/', $normalized, $numbers);
 
         if (! empty($numbers[1])) {
@@ -986,18 +986,18 @@ class SangLocYTeService
     }
 
     /**
-     * Co nen mo them mot vong hoi lam AI co gioi han truoc khi chot phien khong.
+     * Có nên mở thêm một vòng hỏi làm AI có giới hạn trước khi chốt phiên không.
      *
-     * Cac dieu kien, tat ca deu phai dung:
-     *  - tinh nang dang bat;
-     *  - model noi no van can them thong tin VA nhon duoc can gi;
-     *  - phien con du vong hoi (MAX_CLARIFY_ROUNDS la nut dung cung, nen model
-     *    khong the giu benh nhan tra loi mai mai);
-     *  - ket qua khong phai khan cap — nguoi mo ta dau nguc khong duoc
-     *    bi ep tra loi them cau truoc khi duoc bao goi cuu,
-     *    cung quy tac voi cauHoiTiep().
+     * Các điều kiện, tất cả đều phải đúng:
+     *  - tính năng đang bật;
+     *  - model nói nó vẫn cần thêm thông tin VÀ nhắm được cần gì;
+     *  - phiên còn đủ vòng hỏi (MAX_CLARIFY_ROUNDS là nút dừng cứng, nên model
+     *    không thể giữ bệnh nhân trả lời mãi mãi);
+     *  - kết quả không phải khẩn cấp — người mô tả đau ngực không được
+     *    bị ép trả lời thêm câu trước khi được bảo gọi cứu,
+     *    cùng quy tắc với cauHoiTiep().
      *
-     * @param  array<string, mixed>  $result  ket qua tra ve cua danhGia()
+     * @param  array<string, mixed>  $result  kết quả trả về của danhGia()
      */
     public function canHoiLamRo(PhienSangLoc $phien, array $result): bool
     {
@@ -1013,8 +1013,8 @@ class SangLocYTeService
             return false;
         }
 
-        // Model tu dung khi du thong tin: needs_more_info false co nghia la
-        // buoc tu van da xong, du model co liet ke cau hoi theo thong quen.
+        // Model tự dừng khi đủ thông tin: needs_more_info false có nghĩa là
+        // bước tự vấn đã xong, dù model có liệt kê câu hỏi theo thói quen.
         if (($result['ai']['needs_more_info'] ?? true) === false) {
             return false;
         }
@@ -1023,8 +1023,8 @@ class SangLocYTeService
     }
 
     /**
-     * Luu cau hoi cua vong va tang bien dem. Phien van giu
-     * `in_progress`, nen trang wizard render form them thay vi mot buoc.
+     * Lưu câu hỏi của vòng và tăng biến đếm. Phiên vẫn giữ
+     * `in_progress`, nên trang wizard render form thêm thay vì một bước.
      *
      * @param  array<string, mixed>  $result
      */
@@ -1041,13 +1041,13 @@ class SangLocYTeService
     }
 
     /**
-     * Noi cau tra loi cua vong nay vao nhung gi da thu.
+     * Nối câu trả lời của vòng này vào những gì đã thu.
      *
-     * Chung nam duoi key rieng va duoc noi vao collectedText(), nen chung
-     * duoc dua vao khop trieu chung va co do dung nhu mot cau tra loi wizard. Marker
-     * `round` giup prompt sau cho model thay no da hoi gi.
+     * Chúng nằm dưới key riêng và được nối vào collectedText(), nên chúng
+     * được đưa vào khớp triệu chứng và cờ đỏ đúng như một câu trả lời wizard. Marker
+     * `round` giúp prompt sau cho model thấy nó đã hỏi gì.
      *
-     * @param  array<int, string>  $cac cau tra loi
+     * @param  array<int, string>  $answers  các câu trả lời
      */
     public function ghiCacChamLamRo(PhienSangLoc $phien, array $answers): PhienSangLoc
     {
@@ -1074,8 +1074,8 @@ class SangLocYTeService
         $data['ai_clarify_answers'] = $cacCapDoi;
 
         $phien->collected_data = $data;
-        // Consumed: cau hoi da luu thuoc ve vong vua tra loi, nen
-        // de yen chung se render lai dung form do sau redirect.
+        // Consumed: câu hỏi đã lưu thuộc về vòng vừa trả lời, nên
+        // để yên chúng sẽ render lại đúng form đó sau redirect.
         $phien->ai_meta = array_merge((array) $phien->ai_meta, ['clarify_questions' => []]);
         $phien->save();
 
@@ -1083,7 +1083,7 @@ class SangLocYTeService
     }
 
     /**
-     * Khach hang tu choi tra loi, nen khong vong nao duoc de nghi tiep.
+     * Khách hàng từ chối trả lời, nên không vòng nào được đề nghị tiếp.
      */
     public function boQuaCauHoiLamRo(PhienSangLoc $phien): PhienSangLoc
     {
@@ -1096,10 +1096,10 @@ class SangLocYTeService
     }
 
     /**
-     * Moi thu nguoi dung da noi, lam phang cho khop trieu chung va cho prompt.
+     * Mọi thứ người dùng đã nói, làm phẳng cho khớp triệu chứng và cho prompt.
      *
-     * Mot chuoi dung cho phong do trieu chung, ham khong co cua so phu dinh, va cho
-     * prompt AI. Khop co do dung collectedSegments() thay the.
+     * Một chuỗi đúng cho phỏng đoán triệu chứng, hàm không có cửa sổ phủ định, và cho
+     * prompt AI. Khớp cờ đỏ dùng collectedSegments() thay thế.
      */
     protected function collectedText(PhienSangLoc $phien): string
     {
@@ -1107,14 +1107,14 @@ class SangLocYTeService
     }
 
     /**
-     * Cung noi dung, moi phan tu la mot cau phat nguyen.
+     * Cùng nội dung, mỗi phần tử là một câu phát nguyện.
      *
-     * Moi cau tra loi wizard va moi cau tra loi hoi lam la mot cau tra loi cho mot cau hoi
-     * rieng, nen phu dinh trong mot cau khong duoc lan sang cau ke tiep.
+     * Mỗi câu trả lời wizard và mỗi câu trả lời hỏi làm là một câu trả lời cho một câu hỏi
+     * riêng, nên phủ định trong một câu không được lan sang câu kế tiếp.
      *
-     * Khop co do KHONG dung ham nay: ham can tach cau tra loi wizard va
-     * cau tra loi hoi lam thanh hai phan, vi chi phia sau co cau hoi kem theo ma
-     * co the da cung tu ngu. Xem sessionRedFlags().
+     * Khớp cờ đỏ KHÔNG dùng hàm này: hàm cần tách câu trả lời wizard và
+     * câu trả lời hỏi làm thành hai phần, vì chỉ phía sau có câu hỏi kèm theo mà
+     * có thể đã cung từ ngữ. Xem sessionRedFlags().
      *
      * @return array<int, string>
      */
@@ -1200,9 +1200,9 @@ class SangLocYTeService
     }
 
     /**
-     * Cac chi tiet ma dieu kien quy tac duoc danh gia tren do.
-     * Tuoi la null khi birth_date chua duoc dien — quy tac coi tuoi khong biet
-     * la khong biet, chu khong phai nguoi lon.
+     * Các chi tiết mà điều kiện quy tắc được đánh giá trên đó.
+     * Tuổi là null khi birth_date chưa được điền — quy tắc coi tuổi không biết
+     * là không biết, chứ không phải người lớn.
      */
     protected function buildFacts(PhienSangLoc $phien, ?NguoiDung $nguoiDung, ?HoSoSucKhoe $hoSo): array
     {
@@ -1230,16 +1230,16 @@ class SangLocYTeService
     }
 
     /**
-     * Tuoi benh nhan duoc noi ro (hoi cho tre con) uu tien hon ngay sinh
-     * cua chu tai khoan.
+     * Tuổi bệnh nhân được nêu rõ (hỏi cho trẻ con) ưu tiên hơn ngày sinh
+     * của chủ tài khoản.
      */
     protected function resolveAge(array $data, ?NguoiDung $nguoiDung): ?int
     {
         $text = $this->normalize($this->flatten($data['raw_symptom_text'] ?? '').' '.$this->flatten($data['history'] ?? ''));
 
-        // "N thang" chi co nghia la tuoi khi cau noi ve mot nguoi. Tho
-        // "3 thang roi" la thoi luong, va doc no thanh 0 thang bien nguoi lon
-        // thanh so sinh va dan ho sang loi khuyen nhi khoa.
+        // "N tháng" chỉ có nghĩa là tuổi khi câu nói về một người. Trần
+        // "3 tháng rồi" là thời lượng, và đọc nó thành 0 tháng biến người lớn
+        // thành sơ sinh và dẫn họ sang lời khuyên nhi khoa.
         if (preg_match('/(?:be|con|em|tre|chau|thang be|thang tuoi)\D{0,12}(\d{1,2})\s*thang(?!\s*nay)/', $text) === 1
             || preg_match('/(\d{1,2})\s*thang\s*tuoi/', $text) === 1) {
             return 0;
@@ -1261,9 +1261,9 @@ class SangLocYTeService
     }
 
     /**
-     * Quy tac khop co uu tien cao nhat thang. Quy tac co dieu kien tham chieu
-     * mot chi tiet nguoi dung da bo qua duoc coi la khong khop, nen bo qua day ket qua
-     * ve phia quy tac chung (uu tien thap hon) hoac pha du phong duoc si.
+     * Quy tắc khớp có ưu tiên cao nhất thắng. Quy tắc có điều kiện tham chiếu
+     * một chi tiết người dùng đã bỏ qua được coi là không khớp, nên bỏ qua đẩy kết quả
+     * về phía quy tắc chung (ưu tiên thấp hơn) hoặc pha dự phòng dược sĩ.
      */
     protected function resolveRule(Collection $cacTrieuChung, array $facts): ?QuyTacPhanTangYTe
     {
@@ -1279,11 +1279,11 @@ class SangLocYTeService
     }
 
     /**
-     * Dieu kien la mot JSON DSL nho:
-     *   {"age": {"<": 2}}              -> tuoi duoi 2
-     *   {"duration_days": {">=": 3}}   -> 3 ngay tro len
-     *   {"pregnant": true}             -> chi tiet boolean phai la true
-     * Bo dieu kien null khop moi thu (quy tac chot tat ca).
+     * Điều kiện là một JSON DSL nhỏ:
+     *   {"age": {"<": 2}}              -> tuổi dưới 2
+     *   {"duration_days": {">=": 3}}   -> 3 ngày trở lên
+     *   {"pregnant": true}             -> chi tiết boolean phải là true
+     * Bộ điều kiện null khớp mọi thứ (quy tắc chốt tất cả).
      */
     protected function matchesConditions(?array $conditions, array $facts): bool
     {
@@ -1310,7 +1310,7 @@ class SangLocYTeService
                 continue;
             }
 
-            // Gia tri khong biet khong the dap ung mot phep so sanh so hoc.
+            // Giá trị không biết không thể đáp ứng một phép so sánh số học.
             if ($actual === null) {
                 return false;
             }
@@ -1339,8 +1339,8 @@ class SangLocYTeService
     }
 
     /**
-     * Ket qua khan cap va can thiet tra ve huong dan duoc si viet nguyen van.
-     * Khong AI, khong san pham, khong doan chan doan.
+     * Kết quả khẩn cấp và cần thiết trả về hướng dẫn dược sĩ viết nguyên văn.
+     * Không AI, không sản phẩm, không đoán chẩn đoán.
      */
     protected function redFlagOutcome(
         CoDoYTe $coDo,
@@ -1363,8 +1363,8 @@ class SangLocYTeService
     }
 
     /**
-     * Khong khop gi, hoac khop qua yeu. Dan sang nguoi la mac dinh an toan —
-     * doan ket qua tai day dung la dieu dich vu nay khong duoc lam.
+     * Không khớp gì, hoặc khớp quá yếu. Dẫn sang người là mặc định an toàn —
+     * đoán kết quả tại đây đúng là điều dịch vụ này không được làm.
      */
     protected function pharmacistFallback(Collection $cacCoDo, Collection $cacTrieuChung, ?array $ai = null): array
     {
@@ -1391,8 +1391,8 @@ class SangLocYTeService
     }
 
     /**
-     * Nhom benh la cac nhom rong voi do tin cai do duoc si gan,
-     * khong bao gio la chan doan cu the. Ket qua chuyen tu van khong co gi het.
+     * Nhóm bệnh là các nhóm rộng với độ tin cậy do dược sĩ gán,
+     * không bao giờ là chẩn đoán cụ thể. Kết quả chuyển tự vấn không có gì hết.
      */
     protected function conditionGroups(QuyTacPhanTangYTe $quyTac, string $ketQua): array
     {
@@ -1421,23 +1421,23 @@ class SangLocYTeService
     }
 
     /**
-     * Chi cham den cho self_care. San pham den tu danh muc voi cung
-     * availability rules as the rest of the site: con hang va chua het han.
+     * Chỉ chạm đến cho self_care. Sản phẩm đến từ danh mục với cùng
+     * quy tắc khả dụng như phần còn lại của trang: còn hàng và chưa hết hạn.
      */
     /**
-     * San pham ban tu do thuc su khop voi trieu chung.
+     * Sản phẩm bán tự do thực sự khớp với triệu chứng.
      *
-     * Cham diem theo TU, khong phai theo cum. Gia tri `catalog_query` la cum tu nhien
-     * ("giam dau dau") va khong mo ta san pham nao chua dung chinh xac chung, nen cach
-     * `LIKE %phrase%` cu khop gi cho ca 22 trieu chung va moi truong hop tu cham soc
-     * lan im lang ve "bon san pham co ton cao nhat trong danh muc". Vi vay
-     * mo truong hop dau dau lai duoc goi y Aspirin 100mg, co cach dung luu la
-     * "Phong ngua dot quy, nhoi mau co tim" — va vi sao benh ngo da duoc goi y aspirin,
-     * thu lam ngo ton hai hon.
+     * Chấm điểm theo TỪ, không phải theo cụm. Giá trị `catalog_query` là cụm từ tự nhiên
+     * ("giảm đau đầu") và không mô tả sản phẩm nào chứa đúng chính xác chúng, nên cách
+     * `LIKE %phrase%` cũ không khớp gì cho cả 22 triệu chứng và mọi trường hợp tự chăm sóc
+     * lặng im rơi về "bốn sản phẩm có tồn cao nhất trong danh mục". Vì vậy
+     * mỗi trường hợp đau đầu lại được gợi ý Aspirin 100mg, có cách dùng lưu là
+     * "Phòng ngừa đột quỵ, nhồi máu cơ tim" — và vì sao bệnh mề đay được gợi ý aspirin,
+     * thứ làm mề đay tồi hại hơn.
      *
-     * Mot tu phai khop CA dua khong dau va ban ban co dau: khong dau don le
-     * de "mat ngu" trung "mat nuoc" qua "mat". Khop bang khong tra ve gi het
-     * trong nay; trang noi ro thay vi bia ra mot goi y.
+     * Một từ phải khớp CẢ dạng không dấu và bản bản có dấu: không dấu đơn lẻ
+     * để "mất ngủ" trúng "mất nước" qua "mất". Khớp bằng không trả về gì hết
+     * trong này; trang nói rõ thay vì bịa ra một gợi ý.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -1450,9 +1450,9 @@ class SangLocYTeService
             return [];
         }
 
-        // Truy van mot khai niem ("ha sot" -> sot) chi cham toi da diem 1, nen mot trung la
-        // toan bo khop. Truy van hai khai niem phai trung ca hai: "mat ngu" va "mat nuoc"
-        // dung chung tu "mat", va mot tu dung chung khong phai la khop.
+        // Truy vấn một khái niệm ("hạ sốt" -> sốt) chỉ chấm tối đa điểm 1, nên một trúng là
+        // toàn bộ khớp. Truy vấn hai khái niệm phải trúng cả hai: "mất ngủ" và "mất nước"
+        // dùng chung từ "mất", và một từ dùng chung không phải là khớp.
         $required = min(2, count(array_unique(array_values($cacThuatNgu))));
 
         $ungVien = SanPham::with('danhMuc')
@@ -1467,8 +1467,8 @@ class SangLocYTeService
                 'score' => $this->relevanceScore($sanPham, $cacThuatNgu),
             ])
             ->filter(fn (array $hang) => $hang['score'] >= $required)
-            // Lien quan truoc, roi ton, nen san pham khop tot sap het van
-            // thang san pham lien quan yeu nhung ton day ke.
+            // Liên quan trước, rồi tồn, nên sản phẩm khớp tốt sắp hết vẫn
+            // thắng sản phẩm liên quan yếu nhưng tồn đầy kệ.
             ->sortByDesc(fn (array $hang) => [$hang['score'], $hang['sanPham']->so_luong_ton])
             ->take(4)
             ->map(fn (array $hang) => $this->presentProduct($hang['sanPham']))
@@ -1477,15 +1477,15 @@ class SangLocYTeService
     }
 
     /**
-     * Cac tu co nghia cua `catalog_query`, key la dang co dau de khop
-     * duoc xac nhan tren ca hai dang viet.
+     * Các từ có nghĩa của `catalog_query`, key là dạng có dấu để khớp
+     * được xác nhận trên cả hai dạng viết.
      *
-     * @return array<string, string> tu co dau => tu khong dau
+     * @return array<string, string> từ có dấu => từ không dấu
      */
     protected function catalogTerms(?string $query): array
     {
-        // Dong tu va danh tu chung xuat hien trong gan moi dong cach dung, nen khop chung
-        // se lam ca danh muc cung xep hang.
+        // Động từ và danh từ chung xuất hiện trong gần mọi dòng cách dùng, nên khớp chúng
+        // sẽ làm cả danh mục cùng xếp hạng.
         $stopWords = ['giam', 'tri', 'chong', 'dieu', 'thuoc', 'va', 'cho', 'bi', 'ha', 'bu'];
         $cacThuatNgu = [];
 

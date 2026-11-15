@@ -8,7 +8,7 @@ use Illuminate\Validation\Rule;
 class SanPhamRequest extends FormRequest
 {
     /**
-     * Xac dinh nguoi dung co duoc phep thuc hien request nay.
+     * Xác định người dùng có được phép thực hiện request này.
      */
     public function authorize(): bool
     {
@@ -16,7 +16,7 @@ class SanPhamRequest extends FormRequest
     }
 
     /**
-     * Cac luat kiem tra ap dung cho request.
+     * Các luật kiểm tra áp dụng cho request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -51,7 +51,7 @@ class SanPhamRequest extends FormRequest
     }
 
     /**
-     * Thong bao tuy chinh cho cac loi cua validator.
+     * Thông báo tùy chỉnh cho các lỗi của validator.
      *
      * @return array<string, string>
      */

@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 class DanhMucController extends Controller
 {
     /**
-     * Hien thi danh sach cac danh muc.
+     * Hiển thị danh sách các danh mục.
      */
     public function index()
     {
@@ -23,7 +23,7 @@ class DanhMucController extends Controller
     }
 
     /**
-     * Luu danh muc moi tao vao storage.
+     * Lưu danh mục mới tạo vào storage.
      */
     public function store(Request $request)
     {
@@ -59,7 +59,7 @@ class DanhMucController extends Controller
     }
 
     /**
-     * Cap nhat danh muc chi dinh trong storage.
+     * Cập nhật danh mục chỉ định trong storage.
      */
     public function update(Request $request, DanhMuc $category)
     {
@@ -99,11 +99,11 @@ class DanhMucController extends Controller
     }
 
     /**
-     * Xoa danh muc chi dinh khoi storage.
+     * Xoá danh mục chỉ định khỏi storage.
      */
     public function destroy(DanhMuc $category)
     {
-        // Chan xoa khi danh muc con san pham
+        // Chặn xoá khi danh mục còn sản phẩm
         if ($category->hasProducts()) {
             return response()->json([
                 'success' => false,
@@ -132,13 +132,13 @@ class DanhMucController extends Controller
     }
 
     /**
-     * Tu choi ten chi khac danh muc da co ve dau, dau cau hoac hoa thuong: "Co - xuong - khop"
-     * va "Co xuong khop" la mot danh muc trong mat khach xem storefront, va crawler
-     * gio cung phan giai chung ve mot dong.
+     * Từ chối tên chỉ khác danh mục đã có về dấu, dấu câu hoặc hoa thường: "Cơ - xương - khớp"
+     * và "Cơ xương khớp" là một danh mục trong mắt khách xem storefront, và crawler
+     * giờ cũng phân giải chúng về một dòng.
      *
-     * Dung closure thay vi Rule::unique, cai se so sanh input tho voi cot folded.
-     * Ap dung tai day cung luc voi unique index de quan tri vien nhan loi field
-     * thay vi loi 500 tu driver.
+     * Dùng closure thay vì Rule::unique, cái sẽ so sánh input thô với cột folded.
+     * Áp dụng tại đây cùng lúc với unique index để quản trị viên nhận lỗi field
+     * thay vì lỗi 500 từ driver.
      */
     private function uniqueFoldedName(?DanhMuc $category = null): callable
     {

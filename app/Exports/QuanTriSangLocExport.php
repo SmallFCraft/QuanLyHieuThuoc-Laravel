@@ -12,8 +12,8 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
 /**
- * Co chu y bo qua advice_given va moi noi dung ho so suc khoe: file xuat ra
- * roi khoi cac controls truy cap cua app.
+ * Có chủ ý bỏ qua advice_given và mọi nội dung hồ sơ sức khỏe: file xuất ra
+ * rời khỏi các controls truy cập của app.
  */
 class QuanTriSangLocExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
 {
@@ -46,7 +46,7 @@ class QuanTriSangLocExport implements FromCollection, WithHeadings, WithMapping,
 
     public function headings(): array
     {
-        // Cung cac key ma bang tren man hinh dung, nen file xuat khong the lech khoi no.
+        // Cùng các key mà bảng trên màn hình dùng, nên file xuất không thể lệch khỏi nó.
         return [
             __('triage_report.table.code'),
             __('triage_report.table.date'),

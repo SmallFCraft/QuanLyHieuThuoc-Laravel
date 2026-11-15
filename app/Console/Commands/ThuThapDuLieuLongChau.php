@@ -82,7 +82,7 @@ class ThuThapDuLieuLongChau extends Command
                         $importer->nhap($product);
                         $written++;
                     } catch (Throwable $e) {
-                        // Mot dong loi duy nhat khong duoc ket thuc mot lan chay cua hang nghin dong.
+                        // Một dòng lỗi duy nhất không được kết thúc một lượt chạy của hàng nghìn dòng.
                         $writeErrors++;
 
                         Log::warning('Long Châu product could not be imported', [
@@ -100,8 +100,8 @@ class ThuThapDuLieuLongChau extends Command
 
             return self::FAILURE;
         } finally {
-            // Progress bar chi tien khi co san pham dung duoc, nen no luon dung truoc
-            // tong so khi co trang bi bo qua.
+            // Progress bar chỉ tiến khi có sản phẩm dùng được, nên nó luôn kết thúc
+            // trước tổng số khi có trang bị bỏ qua.
             $bar->finish();
             $this->newLine(2);
         }
@@ -135,9 +135,9 @@ class ThuThapDuLieuLongChau extends Command
 
         $this->reportNewCategories($importer, $dryRun);
 
-        // Catalog vua doi nen index phien am da lech. Khong goi o day thi voice
-        // search chi thay catalog cua lan crawl truoc cho toi lan chay lich ke.
-        // --dry-run khong ghi gi vao DB nen cung khong co gi de danh index lai.
+        // Catalog vừa đổi nên index phiên âm đã lệch. Không gọi ở đây thì voice
+        // search chỉ thấy catalog của lần crawl trước cho tới lần chạy lịch kế.
+        // --dry-run không ghi gì vào DB nên cũng không có gì để đánh index lại.
         if (! $dryRun && $written > 0) {
             $this->call('voice:build-phonetics');
         }
@@ -146,10 +146,10 @@ class ThuThapDuLieuLongChau extends Command
     }
 
     /**
-     * Danh muc ma lan chay phai tao. Long Chau viet cung mot section khac nhau
-     * giua cac chi nhanh ("Co - xuong - khop" thuoc Thuoc, "Co xuong khop" thuoc Thuc
-     * pham chuc nang); fold bat duoc nhung truong hop do, nhung mot section hoan toan
-     * moi van can nguoi quyet dinh no co nam tren storefront nhu mot entry rieng hay khong.
+     * Danh mục mà lượt chạy phải tạo. Long Châu viết cùng một section khác nhau
+     * giữa các chi nhánh ("Cơ - xương - khớp" thuộc Thuốc, "Cơ xương khớp" thuộc Thực
+     * phẩm chức năng); fold bắt được những trường hợp đó, nhưng một section hoàn toàn
+     * mới vẫn cần người quyết định nó có nằm trên storefront như một entry riêng hay không.
      */
     private function reportNewCategories(NhapSanPhamService $importer, bool $dryRun): void
     {

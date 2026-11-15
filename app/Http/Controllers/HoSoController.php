@@ -19,7 +19,7 @@ use Intervention\Image\ImageManager;
 class HoSoController extends Controller
 {
     /**
-     * Hien thi form ho so cua nguoi dung.
+     * Hiển thị form hồ sơ của người dùng.
      */
     public function edit(Request $request): View
     {
@@ -43,11 +43,11 @@ class HoSoController extends Controller
     }
 
     /**
-     * Cap nhat thong tin ho so cua nguoi dung.
+     * Cập nhật thông tin hồ sơ của người dùng.
      */
     public function update(CapNhatHoSoRequest $request): RedirectResponse
     {
-        // Key form (name, birth_date, ...) giu nguyen la hop dong form; map sang cot VN cua model.
+        // Key form (name, birth_date, ...) giữ nguyên là hợp đồng form; map sang cột VN của model.
         $capNhat = collect($request->validated())
             ->mapWithKeys(fn ($giaTri, $khoa) => [CapNhatHoSoRequest::COLUMN_MAP[$khoa] ?? $khoa => $giaTri])
             ->all();
@@ -64,10 +64,10 @@ class HoSoController extends Controller
     }
 
     /**
-     * Thay the anh dai dien cua nguoi dung.
+     * Thay thế ảnh đại diện của người dùng.
      *
-     * Gioi han dung luong va dinh dang lay tu config('uploads.images') — cung nguon
-     * voi anh chatbot, nen client va server khong the chan o hai nguong khac nhau.
+     * Giới hạn dung lượng và định dạng lấy từ config('uploads.images') — cùng nguồn
+     * với ảnh chatbot, nên client và server không thể chặn ở hai ngưỡng khác nhau.
      */
     public function updateAvatar(Request $request): RedirectResponse
     {
@@ -90,10 +90,10 @@ class HoSoController extends Controller
         $maxDimension = (int) config('uploads.avatars.max_dimension', 512);
 
         try {
-            // Anh tu dien thoai thuong 3000px+ trong khi avatar hien thi lon nhat o
-            // 96px. Chuan hoa ve JPEG da thu nho, dong thoi loai metadata EXIF —
-            // trong do co toa do GPS cua nguoi dung.
-            // decodePath/encodeUsingMediaType: API cua intervention/image 4.x, giong
+            // Ảnh từ điện thoại thường 3000px+ trong khi avatar hiển thị lớn nhất ở
+            // 96px. Chuẩn hoá về JPEG đã thu nhỏ, đồng thời loại metadata EXIF —
+            // trong đó có tọa độ GPS của người dùng.
+            // decodePath/encodeUsingMediaType: API của intervention/image 4.x, giống
             // NhanDienHinhAnhService::prepareImageForProvider().
             $encoded = (new ImageManager(Driver::class))
                 ->decodePath($request->file('avatar')->getRealPath())
@@ -112,8 +112,8 @@ class HoSoController extends Controller
         $nguoiDung->anh_dai_dien = $filename;
         $nguoiDung->save();
 
-        // Xoa anh cu sau khi ban ghi da tro sang anh moi: neu save() loi thi nguoi
-        // dung van con anh cu chu khong mat ca hai.
+        // Xoá ảnh cũ sau khi bản ghi đã trỏ sang ảnh mới: nếu save() lỗi thì người
+        // dùng vẫn còn ảnh cũ chứ không mất cả hai.
         if ($previous && $previous !== $filename) {
             $disk->delete($previous);
         }
@@ -122,7 +122,7 @@ class HoSoController extends Controller
     }
 
     /**
-     * Xoa anh dai dien cua nguoi dung va quay ve chu cai dau cua ten.
+     * Xoá ảnh đại diện của người dùng và quay về chữ cái đầu của tên.
      */
     public function destroyAvatar(Request $request): RedirectResponse
     {
@@ -138,7 +138,7 @@ class HoSoController extends Controller
     }
 
     /**
-     * Xoa tai khoan cua nguoi dung.
+     * Xoá tài khoản của người dùng.
      */
     public function destroy(Request $request): RedirectResponse
     {

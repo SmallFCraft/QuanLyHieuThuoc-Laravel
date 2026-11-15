@@ -16,7 +16,7 @@ class BangDieuKhienController extends Controller
     }
 
     /**
-     * Display the admin dashboard
+     * Hiển thị bảng điều khiển quản trị
      */
     public function index()
     {
@@ -34,7 +34,7 @@ class BangDieuKhienController extends Controller
     }
 
     /**
-     * Get revenue chart data (AJAX endpoint)
+     * Lấy dữ liệu biểu đồ doanh thu (AJAX endpoint)
      */
     public function revenueChart(Request $request)
     {
@@ -45,7 +45,7 @@ class BangDieuKhienController extends Controller
     }
 
     /**
-     * Get order status chart data (AJAX endpoint)
+     * Lấy dữ liệu biểu đồ trạng thái đơn hàng (AJAX endpoint)
      */
     public function orderStatusChart()
     {
@@ -55,7 +55,7 @@ class BangDieuKhienController extends Controller
     }
 
     /**
-     * Get top products chart data (AJAX endpoint)
+     * Lấy dữ liệu biểu đồ sản phẩm bán chạy (AJAX endpoint)
      */
     public function topProductsChart(Request $request)
     {

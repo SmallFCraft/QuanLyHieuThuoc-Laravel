@@ -8,12 +8,12 @@ use App\Services\NhatKyKiemToanService;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Khung chung cho cac seam AI sang loc (trich xuat chi tiet, viet lai loi khuyen,
- * soan loi du phong cho duoc si, briefing ket qua).
+ * Khung chung cho các seam AI sàng lọc (trích xuất chi tiết, viết lại lời khuyên,
+ * soạn lời dự phòng cho dược sĩ, briefing kết quả).
  *
- * Chi phan dan dan o day — kill switch, goi nha cung cap, giai ma tool-call,
- * nguon goc. Moi lop con giu prompt, tool schema va kiem tra hop le rieng,
- * vi dung la noi ranh gioi an toan cua moi seam.
+ * Chỉ phần cơ chế nằm ở đây — kill switch, gọi nhà cung cấp, giải mã tool-call,
+ * nguồn gốc. Mỗi lớp con giữ prompt, tool schema và kiểm tra hợp lệ riêng,
+ * vì đúng là nơi ranh giới an toàn của mỗi seam.
  */
 abstract class SangLocAiService
 {
@@ -21,16 +21,16 @@ abstract class SangLocAiService
         protected NhatKyKiemToanService $nhatKyKiemToanService,
     ) {}
 
-    /** Key `chatbot.ai.triage.*` tat seam nay. */
+    /** Key `chatbot.ai.triage.*` tắt seam này. */
     abstract protected function configFlag(): string;
 
-    /** Seconds this seam may spend inside one provider call. */
+    /** Số giây seam này được phép tiêu trong một lần gọi provider. */
     abstract protected function timeoutSeconds(): int;
 
     /**
-     * Chi doc config, khong co duong tat `runningUnitTests()`: cac co duoc gat off trong
-     * phpunit.xml, nen cac suite hien co khong bao gio cham nha cung cap, trong khi cac test AI
-     * van bat duoc tinh nang chung ton tai de phu.
+     * Chỉ đọc config, không có đường tắt `runningUnitTests()`: các cờ được gạt off trong
+     * phpunit.xml, nên các suite hiện có không bao giờ chạm nhà cung cấp, trong khi các test AI
+     * vẫn bắt được tính năng chung tồn tại để phủ.
      */
     public function daBat(): bool
     {
@@ -38,9 +38,9 @@ abstract class SangLocAiService
     }
 
     /**
-     * Giai moi lan goi, khong inject: constructor cua AiProviderService nem khi
-     * AI_BASE_URL/API_KEY/MODEL trong, va /health-check phai van chay —
-     * gum viec phong do khan cap — ke ca khi khong cau hinh AI nao.
+     * Giải mỗi lần gọi, không inject: constructor của AiProviderService ném khi
+     * AI_BASE_URL/API_KEY/MODEL trống, và /health-check phải vẫn chạy —
+     * gồm việc phát hiện khẩn cấp — kể cả khi không cấu hình AI nào.
      */
     protected function provider(): AiProviderService
     {
@@ -58,8 +58,8 @@ abstract class SangLocAiService
     }
 
     /**
-     * Doi so tool-call ma model tra ve, hoac null khi no tra loi bang van ban
-     * hoac JSON hong.
+     * Đối số tool-call mà model trả về, hoặc null khi nó trả lời bằng văn bản
+     * hoặc JSON hỏng.
      *
      * @param  array<string, mixed>  $response
      * @return array<string, mixed>|null
@@ -78,10 +78,10 @@ abstract class SangLocAiService
     }
 
     /**
-     * Ghi cot rieng cua lop con va entry `ai_meta` cua seam nay trong mot lan save.
+     * Ghi cột riêng của lớp con và entry `ai_meta` của seam này trong một lần save.
      *
-     * @param  array<string, mixed>  $cac cot
-     * @param  array<string, mixed>|null  $mo ta
+     * @param  array<string, mixed>  $các cột
+     * @param  array<string, mixed>|null  $mô tả
      */
     protected function persistWithProvenance(
         PhienSangLoc $phien,
@@ -103,12 +103,12 @@ abstract class SangLocAiService
     }
 
     /**
-     * Chi nguon goc va dang — khong bao gio prompt, khong bao gio van ban sinh ra, khong bao gio
-     * loi nguoi dung. Tu nuot loi cua chinh no: row kiem toan thieu khong duoc lam
-     * mat cau tra loi da tao ra.
+     * Chỉ nguồn gốc và dạng — không bao giờ prompt, không bao giờ văn bản sinh ra, không bao giờ
+     * lời người dùng. Tự nuốt lỗi của chính nó: row kiểm toán thiếu không được làm
+     * mất câu trả lời đã tạo ra.
      *
-     * @param  array<string, mixed>|null  $mo ta
-     * @param  array<string, mixed>  $cac gia tri
+     * @param  array<string, mixed>|null  $mô tả
+     * @param  array<string, mixed>  $các giá trị
      */
     protected function auditProvenance(
         PhienSangLoc $phien,
@@ -142,10 +142,10 @@ abstract class SangLocAiService
     }
 
     /**
-     * Marker markdown duoc bo chu khong bi tu choi: moi noi hien thi render voi
-     * {{ }} va white-space: pre-line, nen marker se hien nhu ky tu nghien van ban.
-     * SangLocAiVietLaiService chu dich KHONG dung ham nay — o do cau tra loi markdown
-     * co nghia model bi dan lo nhiem vu, nen ban viet lai bi bo thay vi giu.
+     * Marker markdown được bóc chứ không bị từ chối: mọi nơi hiển thị render với
+     * {{ }} và white-space: pre-line, nên marker sẽ hiện như ký tự nghiền văn bản.
+     * SangLocAiVietLaiService cố ý KHÔNG dùng hàm này — ở đó câu trả lời markdown
+     * có nghĩa model bị dẫn lôi nhiệm vụ, nên bản viết lại bị bỏ thay vì giữ.
      */
     protected function stripMarkdown(string $text): string
     {

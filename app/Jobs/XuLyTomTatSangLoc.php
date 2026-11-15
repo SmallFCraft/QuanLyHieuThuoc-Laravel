@@ -11,14 +11,14 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Viet briefing chi tiet cho trang ket qua ngoai web request.
+ * Viết briefing chi tiết cho trang kết quả ngoài web request.
  *
- * Tra lai cung ly do voi viec viet lai loi khuyen: no chay sau hoanTat() va
- * chi cham vao `ai_briefing`/`ai_briefing_status`, nen ket luan ma khach doc
- * khong the doi khi job nay hoan tat. Trang poll va tai lai khi dieu do xay ra.
+ * Trì hoãn cùng lý do với việc viết lại lời khuyên: nó chạy sau hoanTat() và
+ * chỉ chạm vào `ai_briefing`/`ai_briefing_status`, nên kết luận mà khách đọc
+ * không thể đổi khi job này hoàn tất. Trang poll và tải lại khi điều đó xảy ra.
  *
- * Timeout khoang rong vi loi goi xin sau section mot luc va duoc do cham qua
- * budget dong bo cua wizard.
+ * Timeout khoan dung vì lệnh gọi xin sáu section cùng lúc và được đo vượt xa
+ * budget đồng bộ của wizard.
  */
 class XuLyTomTatSangLoc implements ShouldQueue
 {
@@ -51,8 +51,8 @@ class XuLyTomTatSangLoc implements ShouldQueue
         }
 
         try {
-            // generate() khong bao gio throw va tu ghi trang thai rieng, nen dieu nay bao
-            // cao viec seam co chay hay khong, chu khong phai model co tot hay khong.
+            // generate() không bao giờ throw và tự ghi trạng thái riêng, nên điều này báo
+            // cáo việc seam có chạy hay không, chứ không phải model có tốt hay không.
             $briefing->sinhNoiDung($phien);
 
             $jobs->markDone($job, ['ai_briefing_status' => $phien->refresh()->ai_briefing_status]);

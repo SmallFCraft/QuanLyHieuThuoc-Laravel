@@ -15,10 +15,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
- * Hang doi xem lai cho cac phien sang loc bo quy tac khong tu chot duoc.
+ * Hàng đợi xem lại cho các phiên sàng lọc bộ quy tắc không tự chốt được.
  *
- * Moi lan ghi di qua mot lan doc co khoa cua phien nen hai duoc si
- * khong the tra loi cung mot khach hang hai lan.
+ * Mỗi lần ghi đi qua một lần đọc có khoá của phiên nên hai dược sĩ
+ * không thể trả lời cùng một khách hàng hai lần.
  */
 class HangChoSangLocController extends Controller
 {
@@ -32,9 +32,9 @@ class HangChoSangLocController extends Controller
     ];
 
     /**
-     * Cac trang thai co nghia "ca nay da duoc dua cho doi duoc si". Bat ky
-     * trang thai khac (in_progress, tu cham soc hoan thanh) chua tung duoc chuyen tu van, nen ho so
-     * suc khoe khong phai cua ta doc.
+     * Các trạng thái có nghĩa "ca này đã được đưa cho đội dược sĩ". Bất kỳ
+     * trạng thái khác (in_progress, tự chăm sóc hoàn thành) chưa từng được chuyển tư vấn, nên hồ sơ
+     * sức khoẻ không phải của ta đọc.
      */
     private const REVIEWABLE_STATUSES = ['pending_pharmacist', 'reviewed'];
 
@@ -66,9 +66,9 @@ class HangChoSangLocController extends Controller
 
     public function show(int $MaSL, SangLocAiSoanLoiService $draftService): View
     {
-        // Chi nhung ca thuc su da vao hang doi. Neu khong co bo loc nay, bat ky
-        // duoc si nao cung duyet duoc MaSL=1..N va doc ho so suc khoe cua moi
-        // khach hang, gom ca phien van dang dien.
+        // Chỉ những ca thực sự đã vào hàng đợi. Nếu không có bộ lọc này, bất kỳ
+        // dược sĩ nào cũng duyệt được MaSL=1..N và đọc hồ sơ sức khoẻ của mọi
+        // khách hàng, gồm cả phiên vẫn đang điền.
         $phien = PhienSangLoc::with(['nguoiDung', 'pharmacist'])
             ->whereIn('status', self::REVIEWABLE_STATUSES)
             ->where('ma_sl', $MaSL)
@@ -76,7 +76,7 @@ class HangChoSangLocController extends Controller
 
         $hoSo = HoSoSucKhoe::consentedFor((int) $phien->ma_nd);
 
-        // Doc du lieu suc khoe cua nguoi khac phai kiem toan moi lan, chu khong phai mot lan.
+        // Đọc dữ liệu sức khoẻ của người khác phải kiểm toán mỗi lần, chứ không phải một lần.
         if ($hoSo) {
             app(NhatKyKiemToanService::class)->ghi(
                 action: 'health_profile_accessed',
@@ -87,8 +87,8 @@ class HangChoSangLocController extends Controller
             );
         }
 
-        // Cung REVIEWABLE_STATUSES voi ca hien tai: phien con dang lam
-        // chua tung duoc dua cho doi duoc si, nen khong phai cua ta doc tai day.
+        // Cùng REVIEWABLE_STATUSES với ca hiện tại: phiên còn đang làm
+        // chưa từng được đưa cho đội dược sĩ, nên không phải của ta đọc tại đây.
         $pastSessions = $phien->ma_nd
             ? PhienSangLoc::where('ma_nd', $phien->ma_nd)
                 ->where('ma_sl', '!=', $phien->ma_sl)
@@ -134,7 +134,7 @@ class HangChoSangLocController extends Controller
                 'status' => 'reviewed',
             ])->save();
 
-            // Chep cau tra loi sang phien chat de khach hang thay co nguoi tra loi.
+            // Chép câu trả lời sang phiên chat để khách hàng thấy có người trả lời.
             if ($phien->session_id) {
                 TinNhanChat::create([
                     'ma_nd' => $phien->ma_nd,
@@ -188,7 +188,7 @@ class HangChoSangLocController extends Controller
                 'reviewed_at' => now(),
                 'status' => 'reviewed',
                 'outcome' => 'refer_doctor',
-                // Ca da chuyen tu van khong duoc kem danh sach mua sam.
+                // Ca đã chuyển tư vấn không được kèm danh sách mua sắm.
                 'suggested_products' => [],
             ])->save();
 
@@ -223,8 +223,8 @@ class HangChoSangLocController extends Controller
     }
 
     /**
-     * Nhan phan cong truoc khi viet cau tra loi, nen duoc si thu hai mo cung
-     * ca se duoc bao la da co nguoi nhan thay vi tra loi trung.
+     * Nhận phân công trước khi viết câu trả lời, nên dược sĩ thứ hai mở cùng
+     * ca sẽ được báo là đã có người nhận thay vì trả lời trùng.
      */
     public function claim(int $MaSL): RedirectResponse
     {
@@ -259,12 +259,12 @@ class HangChoSangLocController extends Controller
     }
 
     /**
-     * Dien truoc o tra loi bang ban soan AI.
+     * Điền trước ô trả lời bằng bản soạn AI.
      *
-     * Chi POST va khong bao gio luu: ban soan tro ve qua `withInput()`, nen
-     * `old('pharmacist_note')` dien form hien co va duoc si van phai
-     * doc, sua va gui no. `validatedNote()` van la ranh gioi tin duy nhat.
-     * GET con ghi row kiem toan `health_profile_accessed` moi lan click.
+     * Chỉ POST và không bao giờ lưu: bản soạn trở về qua `withInput()`, nên
+     * `old('pharmacist_note')` điền form hiện có và dược sĩ vẫn phải
+     * đọc, sửa và gửi nó. `validatedNote()` vẫn là ranh giới tin duy nhất.
+     * GET còn ghi row kiểm toán `health_profile_accessed` mỗi lần click.
      */
     public function draft(Request $request, int $MaSL, SangLocAiSoanLoiService $draftService): RedirectResponse
     {
@@ -278,8 +278,8 @@ class HangChoSangLocController extends Controller
             ->where('ma_sl', $MaSL)
             ->firstOrFail();
 
-        // Cung gate voi reply(): ca da tra loi hoac cua nguoi khac khong duoc
-        // ton mot lan goi nha cung cap.
+        // Cùng gate với reply(): ca đã trả lời hoặc của người khác không được
+        // tốn một lần gọi nhà cung cấp.
         if ($phien->status !== 'pending_pharmacist') {
             return $this->draftError($MaSL, __('messages.pharmacist.error_already_reviewed'));
         }
@@ -331,7 +331,7 @@ class HangChoSangLocController extends Controller
     }
 
     /**
-     * @return array<string, string> nhan tieng Viet => cau tra loi doc duoc
+     * @return array<string, string> nhãn tiếng Việt => câu trả lời đọc được
      */
     protected function labelledAnswers(PhienSangLoc $phien): array
     {
@@ -368,7 +368,7 @@ class HangChoSangLocController extends Controller
     }
 
     /**
-     * Trieu chung da khop duoc luu duoi dang ma; duoc si can ten tieng Viet.
+     * Triệu chứng đã khớp được lưu dưới dạng mã; dược sĩ cần tên tiếng Việt.
      */
     protected function symptomNames(PhienSangLoc $phien): array
     {

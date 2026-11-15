@@ -10,7 +10,7 @@ use Illuminate\Http\RedirectResponse;
 class LienHeController extends Controller
 {
     /**
-     * Display the contact page
+     * Hiển thị trang liên hệ
      *
      * @return View
      */
@@ -20,7 +20,7 @@ class LienHeController extends Controller
     }
 
     /**
-     * Submit contact inquiry
+     * Gửi yêu cầu liên hệ
      *
      * @param Request $request
      * @return RedirectResponse

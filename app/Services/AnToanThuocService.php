@@ -12,16 +12,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Kiem tra tuong tac thuoc va chong chi dinh.
+ * Kiểm tra tương tác thuốc và chống chỉ định.
  *
- * Toan bo kien thuc nam trong `drug_interactions` va `drug_contraindications`; khong
- * cho nao o day hoi mot language model. Ten hoat chat duoc khop sau khi bo lieu luong,
- * vi `products.ingredients` luu chuoi nhu "Paracetamol 500mg".
+ * Toàn bộ kiến thức nằm trong `drug_interactions` và `drug_contraindications`; không
+ * chỗ nào ở đây hỏi một language model. Tên hoạt chất được khớp sau khi bỏ liều lượng,
+ * vì `products.ingredients` lưu chuỗi như "Paracetamol 500mg".
  */
 class AnToanThuocService
 {
     /**
-     * Cac tu xuat hien trong chuoi thanh phan nhung khong bao gio xac dinh mot thuoc.
+     * Các từ xuất hiện trong chuỗi thành phần nhưng không bao giờ xác định một thuốc.
      */
     protected const NOISE_TOKENS = [
         'mg', 'g', 'ml', 'mcg', 'iu', 'vien', 'sui', 'hcl', 'sodium', 'potassium',
@@ -30,8 +30,8 @@ class AnToanThuocService
     ];
 
     /**
-     * Ten hoat chat nhieu tu phai song sot qua buoc tach token, nen chung duoc khop
-     * nhu nguyen cum truoc khi xet den tung token don le.
+     * Tên hoạt chất nhiều từ phải sống sót qua bước tách token, nên chúng được khớp
+     * như nguyên cụm trước khi xét đến từng token đơn lẻ.
      */
     protected const COMPOUND_INGREDIENTS = [
         'acid acetylsalicylic',
@@ -51,21 +51,21 @@ class AnToanThuocService
     }
 
     /**
-     * Bang tuong tac index theo cap hoat chat, dung mot lan moi request.
+     * Bảng tương tác index theo cặp hoạt chất, dùng một lần mỗi request.
      *
      * @var array<string, TuongTacThuoc>|null
      */
     protected ?array $chiMucTuongTac = null;
 
     /**
-     * Cac dong chong chi dinh index theo hoat chat, dung mot lan moi request.
+     * Các dòng chống chỉ định index theo hoạt chất, dùng một lần mỗi request.
      *
      * @var array<string, array<int, ChungChiDinhThuoc>>|null
      */
     protected ?array $chiMucChongChiDinh = null;
 
     /**
-     * Moi canh bao ap dung cho viec mua san pham nay voi nguoi dung nay.
+     * Mọi cảnh báo áp dụng cho việc mua sản phẩm này với người dùng này.
      *
      * @return array{warnings: array<int, array>, blocking: bool}
      */
@@ -90,7 +90,7 @@ class AnToanThuocService
     }
 
     /**
-     * Tuong tac giua hai chuoi hoat chat thieu (nhu cach luu tren products).
+     * Tương tác giữa hai chuỗi hoạt chất thiếu (như cách lưu trên products).
      */
     public function kiemTraCapHoatChat(string $ingredientsA, string $ingredientsB): Collection
     {
@@ -121,11 +121,11 @@ class AnToanThuocService
     }
 
     /**
-     * Mot truy van moi request thay vi mot truy van cho moi cap hoat chat.
+     * Một truy vấn mỗi request thay vì một truy vấn cho mỗi cặp hoạt chất.
      *
-     * Gio hang n san pham moi san pham k hoat chat da tao ra O(n²k²) SELECT — o
-     * tran 100 san pham, do la ~10k truy van cho mot lan render checkout. Bang tuong tac
-     * duoc bien soan nho du de index trong bo nho mot lan.
+     * Giỏ hàng n sản phẩm mỗi sản phẩm k hoạt chất đã tạo ra O(n²k²) SELECT — ở
+     * trần 100 sản phẩm, đó là ~10k truy vấn cho một lần render checkout. Bảng tương tác
+     * được biên soạn nhỏ đủ để index trong bộ nhớ một lần.
      *
      * @return array<string, TuongTacThuoc>
      */
@@ -138,7 +138,7 @@ class AnToanThuocService
         $chiMuc = [];
 
         foreach (TuongTacThuoc::active()->get() as $tuongTac) {
-            // Luu mot lan nhung doi xung, nen index ca hai chieu.
+            // Lưu một lần nhưng đối xứng, nên index cả hai chiều.
             $chiMuc[$tuongTac->ingredient_a . '|' . $tuongTac->ingredient_b] = $tuongTac;
             $chiMuc[$tuongTac->ingredient_b . '|' . $tuongTac->ingredient_a] = $tuongTac;
         }
@@ -152,7 +152,7 @@ class AnToanThuocService
     }
 
     /**
-     * Cung ly do voi chiMucTuongTac: mot truy van thay vi mot truy van cho moi san pham.
+     * Cùng lý do với chiMucTuongTac: một truy vấn thay vì một truy vấn cho mỗi sản phẩm.
      *
      * @return array<string, array<int, ChungChiDinhThuoc>>
      */
@@ -172,10 +172,10 @@ class AnToanThuocService
     }
 
     /**
-     * Quet ca gio hang: moi san pham doi chieu voi ho so nguoi dung, va moi cap
-     * san pham doi chieu voi nhau.
+     * Quét cả giỏ hàng: mỗi sản phẩm đối chiếu với hồ sơ người dùng, và mỗi cặp
+     * sản phẩm đối chiếu với nhau.
      *
-     * @param array $cartItems cac dong gio hang trong session, moi dong it nha co key MaSP
+     * @param array $cartItems các dòng giỏ hàng trong session, mỗi dòng ít nhất có key MaSP
      * @return array{warnings: array<int, array>, blocking: bool}
      */
     public function kiemTraGioHang(array $cartItems, int $userId): array
@@ -216,7 +216,7 @@ class AnToanThuocService
     }
 
     /**
-     * Them mot san pham vao gio hang da co san pham khac.
+     * Thêm một sản phẩm vào giỏ hàng đã có sản phẩm khác.
      *
      * @return array{warnings: array<int, array>, blocking: bool}
      */
@@ -252,11 +252,11 @@ class AnToanThuocService
     }
 
     /**
-     * Duoc goi khi nguoi dung xac nhan mot canh bao major va van mua.
-     * Ghi lai de quyet dinh co the truy vet — day la ban ghi suc khoe, khong phai su kien UX.
+     * Được gọi khi người dùng xác nhận một cảnh báo major và vẫn mua.
+     * Ghi lại để quyết định có thể truy vết — đây là bản ghi sức khoẻ, không phải sự kiện UX.
      *
-     * Viec ghi la best-effort: quyet dinh an toan da duoc dua ra, nen mot dong audit
-     * ghi that bai khong duoc bien viec them vao gio da xac nhan thanh loi 500.
+     * Việc ghi là best-effort: quyết định an toàn đã được đưa ra, nên một dòng audit
+     * ghi thất bại không được biến việc thêm vào giỏ đã xác nhận thành lỗi 500.
      */
     public function ghiNhatKyBoQua(int $userId, SanPham $sanPham, array $warnings): void
     {
@@ -284,8 +284,8 @@ class AnToanThuocService
     }
 
     /**
-     * Ho so chi duoc doc sau khi nguoi dung dong y; khong co dong y, cac kiem tra
-     * quay ve quy tac cap san pham khong can du lieu ca nhan.
+     * Hồ sơ chỉ được đọc sau khi người dùng đồng ý; không có đồng ý, các kiểm tra
+     * quay về quy tắc cấp sản phẩm không cần dữ liệu cá nhân.
      */
     protected function hoSoDaDongY(int $userId): ?HoSoSucKhoe
     {
@@ -307,7 +307,7 @@ class AnToanThuocService
 
         $timThay = [];
 
-        // Ten gop truoc, roi xoa chung de cac phan cua chung khong bi khop lai.
+        // Tên gộp trước, rồi xoá chúng để các phần của chúng không bị khớp lại.
         foreach (self::COMPOUND_INGREDIENTS as $compound) {
             if (str_contains($daChuanHoa, $compound)) {
                 $timThay[] = $compound;
@@ -325,15 +325,15 @@ class AnToanThuocService
     }
 
     /**
-     * Cung quy tac fold voi NhanDienHinhAnhService::normalizeProductText de ca hai
-     * service dong nhat ve cach viet hoat chat.
+     * Cùng quy tắc fold với NhanDienHinhAnhService::normalizeProductText để cả hai
+     * service đồng nhất về cách viết hoạt chất.
      */
     protected function chuanHoaVanBanHoatChat(string $text): string
     {
         $text = mb_strtolower($text, 'UTF-8');
         $text = str_replace(['đ', 'Đ'], ['d', 'd'], $text);
         $text = Str::ascii($text);
-        // Bo hoan toan lieu luong: no khong thuoc ve danh tinh cua thuoc.
+        // Bỏ hoàn toàn liều lượng: nó không thuộc về danh tính của thuốc.
         $text = preg_replace('/\d+[.,]?\d*\s*(mg|mcg|g|ml|iu)\b/u', ' ', $text) ?? $text;
         $text = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $text) ?? $text;
         $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
@@ -349,7 +349,7 @@ class AnToanThuocService
     }
 
     /**
-     * Chong chi dinh ve tuoi, mang thai, cho con bu va benh man tinh.
+     * Chống chỉ định về tuổi, mang thai, cho con bú và bệnh mạn tính.
      *
      * @return array<int, array>
      */
@@ -397,7 +397,7 @@ class AnToanThuocService
         array $cacDiUng
     ): bool {
         return match ($dong->condition_type) {
-            // Tuoi khong biet khong duoc im lang vuot qua guard tuoi.
+            // Tuổi không biết không được im lặng vượt qua guard tuổi.
             'age_under' => $tuoi !== null && $tuoi < (int) $dong->condition_value,
             'age_over' => $tuoi !== null && $tuoi > (int) $dong->condition_value,
             'pregnancy' => (bool) ($hoSo?->hasConsented() && $hoSo->is_pregnant),
@@ -422,7 +422,7 @@ class AnToanThuocService
     }
 
     /**
-     * Tuong tac giua san pham dang mua va nhung gi nguoi dung dang dung.
+     * Tương tác giữa sản phẩm đang mua và những gì người dùng đang dùng.
      *
      * @return array<int, array>
      */
@@ -463,7 +463,7 @@ class AnToanThuocService
     }
 
     /**
-     * Khop dung dung vi di ung da khai. Luon chan: di ung da khai khong phai loi de xuat.
+     * Khớp đúng dị ứng đã khai. Luôn chặn: dị ứng đã khai không phải lỗi để xuất.
      *
      * @return array<int, array>
      */
@@ -480,9 +480,9 @@ class AnToanThuocService
             $diUngDaChuanHoa = $this->chuanHoaVanBanHoatChat((string) $diUng);
             $tenSanPham = $this->chuanHoaVanBanHoatChat($sanPham->ten);
 
-            // Fallback theo ten can cung san do dai toi thieu voi laTokenCoNghia:
-            // mot di ung duoc go nhu "C" hoac "ca" neu khong se substring-khop gan
-            // moi ten san pham va chan ca catalog nhu mot canh bao major.
+            // Fallback theo tên cần cùng sẵn độ dài tối thiểu với laTokenCoNghia:
+            // một dị ứng được gõ như "C" hoặc "ca" nếu không sẽ substring-khớp gần
+            // mọi tên sản phẩm và chặn cả catalog như một cảnh báo major.
             $khopTheoTen = mb_strlen($diUngDaChuanHoa) >= 4
                 && preg_match('/(?<![a-z0-9])' . preg_quote($diUngDaChuanHoa, '/') . '/u', $tenSanPham) === 1;
 
@@ -550,8 +550,8 @@ class AnToanThuocService
     }
 
     /**
-     * Khop substring theo ca hai chieu: nguoi dung co the viet "benh da day" trong khi
-     * quy tac ghi "loet da day", hoac nguoc lai.
+     * Khớp substring theo cả hai chiều: người dùng có thể viết "bệnh dạ dày" trong khi
+     * quy tắc ghi "loét dạ dày", hoặc ngược lại.
      */
     protected function danhSachCoDeCap(array $haystack, string $needle): bool
     {

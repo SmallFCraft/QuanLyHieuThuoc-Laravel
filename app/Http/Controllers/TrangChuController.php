@@ -9,13 +9,13 @@ use Illuminate\View\View;
 class TrangChuController extends Controller
 {
     /**
-     * Hien thi trang landing
+     * Hiển thị trang landing
      *
      * @return View
      */
     public function index(): View
     {
-        // San pham moi ra mat (theo ngay tao moi nhat)
+        // Sản phẩm mới ra mắt (theo ngày tạo mới nhất)
         $sanPhamMoi = SanPham::with('danhMuc')
             ->where('ngay_het_han', '>', now())
             ->where('so_luong_ton', '>', 0)
@@ -24,7 +24,7 @@ class TrangChuController extends Controller
             ->limit(8)
             ->get();
 
-        // San pham noi bat (theo luot xem cao nhat)
+        // Sản phẩm nổi bật (theo lượt xem cao nhất)
         $sanPhamNoiBat = SanPham::with('danhMuc')
             ->where('ngay_het_han', '>', now())
             ->where('so_luong_ton', '>', 0)
@@ -33,8 +33,8 @@ class TrangChuController extends Controller
             ->limit(8)
             ->get();
 
-        // So that cho dai thong ke o hero. Truoc day ghi cung "10k+" va "24/7"
-        // trong khi kho chi co hon 3.000 san pham ban duoc va duoc si chi truc
+        // Số thật cho đài thống kê ở hero. Trước đây ghi cứng "10k+" và "24/7"
+        // trong khi kho chỉ có hơn 3.000 sản phẩm bán được và dược sĩ trực
         // 8:00-20:00 (xem messages.working_hours_desc).
         $soSanPhamBanDuoc = SanPham::notExpired()
             ->where('so_luong_ton', '>', 0)
@@ -42,10 +42,10 @@ class TrangChuController extends Controller
 
         $soDanhMucBanDuoc = DanhMuc::browsable()->count();
 
-        // browsable(): cung mot scope voi dropdown header va bo loc catalog, nen ba cho
-        // khong the lech nhau ve thu tu. Xep theo ten thi trang chu dan bang danh muc 2
-        // san pham trong khi dropdown ngay tren no dan bang danh muc 263 — xem docblock
-        // cua scopeBrowsable().
+        // browsable(): cùng một scope với dropdown header và bộ lọc catalog, nên ba chỗ
+        // không thể lệch nhau về thứ tự. Xếp theo tên thì trang chủ dẫn bằng danh mục 2
+        // sản phẩm trong khi dropdown ngay trên nó dẫn bằng danh mục 263 — xem docblock
+        // của scopeBrowsable().
         $danhMucs = DanhMuc::browsable()->limit(10)->get();
 
         return view('home', compact(

@@ -11,34 +11,34 @@ use App\Services\NhatKyKiemToanService;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Phan chi tiet cua trang ket qua: vi sao co ket luan nay, can theo doi gi, khi nao
- * nen di khoa, lam gi khi chua dung thuoc, nen hoi duoc si gi, va san pham nao
- * con hang dang xem den.
+ * Phần chi tiết của trang kết quả: vì sao có kết luận này, cần theo dõi gì, khi nào
+ * nên đi khám, làm gì khi chưa dùng thuốc, nên hỏi dược sĩ gì, và sản phẩm nào
+ * còn hàng đáng xem đến.
  *
- * Day la seam AI duy nhat viet noi dung *moi* thay viet lai loi khuyen cua
- * duoc si. Ba gioi han cau truc giu no an toan:
+ * Đây là seam AI duy nhất viết nội dung *mới* thay viết lại lời khuyên của
+ * dược sĩ. Ba giới hạn cấu trúc giữ nó an toàn:
  *
- *  1. No chay sau hoanTat() va chi ghi `ai_briefing`/`ai_briefing_status`.
- *     `outcome`, `advice_given` va `safety_net` khong cham duoc tu day, nen khong
- *     briefing nao — bi a tu hay duoc chen — lam nhe mot chuyen tu van hoac sua mot con so.
- *  2. Goi y SanPham la id chon tu danh sach lop nay dung tu danh muc. Mot id
- *     ngoai danh sach do bi bo, nen model khong the nhon mot loai thuoc
- *     nha thuoc khong ton, va moi goi y van di qua
- *     AnToanThuocService truoc khi den trang.
- *  3. Loi cua khach hang duoc gui (phan "vi sao" can chung). Truong ho so suc khoe
- *     chi den nha cung cap qua SangLocAiNguCanhService, ham la cua duy nhat:
- *     duoc dua vao chi khi ho so co dong y AI ro rang
- *     (`ai_consent_at`), khong bao gio duoi dong y chung gioi han muc dich.
+ *  1. Nó chạy sau hoanTat() và chỉ ghi `ai_briefing`/`ai_briefing_status`.
+ *     `outcome`, `advice_given` và `safety_net` không chạm được từ đây, nên không
+ *     briefing nào — bịa tự hoặc được chèn — làm nhẹ một chuyển tư vấn hoặc sửa một con số.
+ *  2. Gợi ý SanPham là id chọn từ danh sách lớp này dựng từ danh mục. Một id
+ *     ngoài danh sách đó bị bỏ, nên model không thể nhọn một loại thuốc
+ *     nhà thuốc không tồn, và mỗi gợi ý vẫn đi qua
+ *     AnToanThuocService trước khi đến trang.
+ *  3. Lời của khách hàng được gửi (phần "vì sao" cần chúng). Trường hồ sơ sức khoẻ
+ *     chỉ đến nhà cung cấp qua SangLocAiNguCanhService, hàm là cửa duy nhất:
+ *     được đưa vào chỉ khi hồ sơ có đồng ý AI rõ ràng
+ *     (`ai_consent_at`), không bao giờ dưới đồng ý chung giới hạn mục đích.
  */
 class SangLocAiTomTatService extends SangLocAiService
 {
-    /** Goi 115 la thu duy nhat nen co tren trang khan cap. */
+    /** Gọi 115 là thứ duy nhất nên có trên trang khẩn cấp. */
     private const NO_BRIEFING_OUTCOMES = ['emergency'];
 
     /**
-     * Ket qua ma goi y thuoc thuc su phu hop. `refer_doctor`
-     * bi loai chu dich: trang do ton tai de dan nguoi den bac si, va
-     * de nghi thuoc uong truoc thi nguoc voi muc dich do.
+     * Kết quả mà gợi ý thuốc thực sự phù hợp. `refer_doctor`
+     * bị loại cố ý: trang đó tồn tại để dẫn người đến bác sĩ, và
+     * đề nghị thuốc uống trước thì ngược với mục đích đó.
      */
     private const PRODUCT_OUTCOMES = ['self_care', 'pharmacist_review'];
 
@@ -55,14 +55,14 @@ class SangLocAiTomTatService extends SangLocAiService
     private const MAX_CANDIDATES = 40;
 
     /**
-     * Han theo san pham cho danh sach GUI cho nha cung cap. Cac row ung cuien giu
-     * van ban day du — `cleanProducts()` hop chung tro lai vao briefing da luu,
-     * nen trang van hien toan bo dong cach dung. Cac han nay chi cat tren prompt.
+     * Hạn theo sản phẩm cho danh sách GỬI cho nhà cung cấp. Các row ứng cử viên giữ
+     * văn bản đầy đủ — `cleanProducts()` hợp nhất trở lại vào briefing đã lưu,
+     * nên trang vẫn hiện toàn bộ dòng cách dùng. Các hạn này chỉ cắt trên prompt.
      *
-     * Do ngay 2026-09-15: cot `usage` cua danh muc trung binh 2.8KB va
-     * dinh 9.5KB, nen 40 san pham len den 126KB prompt va nha cung cap can
-     * 132s truoc khi tra byte dau — vuot ngan sach briefing 90s, nen briefing
-     * that bai moi lan goi. Cat bot cac truong nay dua cung mot lan goi ve 16s.
+     * Đo ngày 2026-09-15: cột `usage` của danh mục trung bình 2.8KB và
+     * đỉnh 9.5KB, nên 40 sản phẩm lên đến 126KB prompt và nhà cung cấp cần
+     * 132s trước khi trả byte đầu — vượt ngân sách briefing 90s, nên briefing
+     * thất bại mỗi lần gọi. Cắt bớt các trường này đưa cùng một lần gọi về 16s.
      */
     private const MAX_PROMPT_NAME = 120;
 
@@ -70,7 +70,7 @@ class SangLocAiTomTatService extends SangLocAiService
 
     private const MAX_PROMPT_USAGE = 300;
 
-    /** @var array<int, string> Lists the model may fill, in reading order. */
+    /** @var array<int, string> Danh sách model được phép điền, theo thứ tự đọc. */
     private const SECTIONS = [
         'possible_causes',
         'self_care',
@@ -79,7 +79,7 @@ class SangLocAiTomTatService extends SangLocAiService
         'ask_pharmacist',
     ];
 
-    /** So dong toi da model duoc ghi vao `data_analysis`. */
+    /** Số dòng tối đa model được ghi vào `data_analysis`. */
     private const MAX_ANALYSIS_LINES = 4;
 
     public function __construct(
@@ -95,8 +95,8 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Chay trong worker sau khi ket qua chot, nen co ngan sach that: ham hoi
-     * sau khoi cong mot lua chon san pham trong mot lan goi.
+     * Chạy trong worker sau khi kết quả chốt, nên có ngân sách thật: hàm hỏi
+     * sáu khối cộng một lựa chọn sản phẩm trong một lần gọi.
      */
     protected function timeoutSeconds(): int
     {
@@ -111,8 +111,8 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Ghi `ai_briefing` / `ai_briefing_status`. Khong bao gio nem loi: that bai de
-     * cot null va trang render dung nhu khi tinh nang off.
+     * Ghi `ai_briefing` / `ai_briefing_status`. Không bao giờ ném lỗi: thất bại để
+     * cột null và trang render đúng như khi tính năng off.
      */
     public function sinhNoiDung(PhienSangLoc $phien): void
     {
@@ -178,7 +178,7 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Du lieu suy tu quy tac cong loi cua khach hang, duoc rao ro rang.
+     * Dữ liệu suy từ quy tắc cộng lời của khách hàng, được rào rõ ràng.
      *
      * @param  array<int, array<string, mixed>>  $cacUngVien
      */
@@ -256,8 +256,8 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Cau tra loi wizard duoi dang dong co nhan. Cat toan khoi: mot khoi chen dai
-     * khong the day chi dan ra khoi cua so ngu canh.
+     * Câu trả lời wizard dưới dạng dòng có nhãn. Cắt toàn khối: một khối chèn dài
+     * không thể đẩy chỉ dẫn ra khỏi cửa sổ ngữ cảnh.
      */
     protected function answerBlock(PhienSangLoc $phien): string
     {
@@ -294,10 +294,10 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * San pham con hang, chua het han tu cac danh muc ma bo quy tac sang loc cua chinh
-     * nha thuoc duoc phep goi y. Doc bang quy tac thay vi them mot config moi
-     * giu cac ke thuoc ban ke don (khang sinh, tim mach) o ngoai
-     * ma khong phai giu them mot danh sach thu hai.
+     * Sản phẩm còn hàng, chưa hết hạn từ các danh mục mà bộ quy tắc sàng lọc của chính
+     * nhà thuốc được phép gợi ý. Đọc bảng quy tắc thay vì thêm một config mới
+     * giữ các kệ thuốc bán kê đơn (kháng sinh, tim mạch) ở ngoài
+     * mà không phải giữ thêm một danh sách thứ hai.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -334,9 +334,9 @@ class SangLocAiTomTatService extends SangLocAiService
                 'price' => $sanPham->price_vnd,
                 'stock_quantity' => (int) $sanPham->so_luong_ton,
                 'category' => $sanPham->danhMuc?->ten,
-                // Khong `url`: ham chay trong worker khong co request den, nen route()
-                // se cam host APP_URL vao row da luu. Trang ket qua dung
-                // link tu id thay the.
+                // Không `url`: hàm chạy trong worker không có request đến, nên route()
+                // sẽ cắm host APP_URL vào row đã lưu. Trang kết quả dựng
+                // link từ id thay thế.
             ])
             ->all();
     }
@@ -418,11 +418,11 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Moi thu cham den trang di qua day.
+     * Mọi thứ chạm đến trang đi qua đây.
      *
-     * @param  array<string, mixed>  $du lieu tho
+     * @param  array<string, mixed>  $raw dữ liệu tho
      * @param  array<int, array<string, mixed>>  $cacUngVien
-     * @return array<string, mixed>|null null khi khong con gi dung duoc
+     * @return array<string, mixed>|null null khi không còn gì dùng được
      */
     protected function sanitize(array $raw, array $cacUngVien, PhienSangLoc $phien): ?array
     {
@@ -436,15 +436,15 @@ class SangLocAiTomTatService extends SangLocAiService
 
         $briefing['products'] = $this->cleanProducts($raw['products'] ?? null, $cacUngVien, $phien);
 
-        // Tuy chon va cong them: chi luu khi model ra mot phan do dung duoc,
-        // nen dang luu cua cac briefing cu khong doi.
+        // Tuỳ chọn và cộng thêm: chỉ lưu khi model ra một phần đọc dùng được,
+        // nên dạng lưu của các briefing cũ không đổi.
         if (($analysis = $this->cleanAnalysis($raw['data_analysis'] ?? null, $phien)) !== []) {
             $briefing['data_analysis'] = $analysis;
         }
 
-        // Briefing chi co "vi sao" ma khong co khoi huong dan la mong va thieu
-        // (phien 31 de lai 5 danh sach rong va trang chi hien mot heading don).
-        // Yeu cau vi sao cong toi hai khoi huong dan co noi dung.
+        // Briefing chỉ có "vì sao" mà không có khối hướng dẫn là mỏng và thiếu
+        // (phiên 31 để lại 5 danh sách rỗng và trang chỉ hiện một heading đơn).
+        // Yêu cầu vì sao cộng tới hai khối hướng dẫn có nội dung.
         $filledSectionCount = collect(self::SECTIONS)
             ->filter(fn (string $s) => $briefing[$s] !== [])
             ->count();
@@ -473,8 +473,8 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Mot con so model viet ma khong nam trong bang chi so la bia ra —
-     * dong bi bo thay vi hien, cung cach mot id san pham bi a tu bi bo.
+     * Một con số model viết mà không nằm trong bảng chỉ số là bịa ra —
+     * dòng bị bỏ thay vì hiện, cùng cách một id sản phẩm bị bịa tự bị bỏ.
      *
      * @return array<int, string>
      */
@@ -508,9 +508,9 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Id duoc giao voi danh sach ung vien, nen mot id bi a tu hoac chen vao
-     * khong the dua mot loai thuoc len trang. Gia, ten va ton hien thi den tu
-     * row danh muc, khong bao gio tu model.
+     * Id được giao với danh sách ứng cử viên, nên một id bị bịa tự hoặc chèn vào
+     * không thể đưa một loại thuốc lên trang. Giá, tên và tồn hiển thị đến từ
+     * row danh mục, không bao giờ từ model.
      *
      * @param  array<int, array<string, mixed>>  $cacUngVien
      * @return array<int, array<string, mixed>>
@@ -522,7 +522,7 @@ class SangLocAiTomTatService extends SangLocAiService
         }
 
         $byId = collect($cacUngVien)->keyBy('id');
-        // Goi y rieng cua bo quy tac da co tren trang phia tren.
+        // Gợi ý riêng của bộ quy tắc đã có trên trang phía trên.
         $alreadyShown = collect($phien->suggested_products ?? [])->pluck('id')->map(fn ($id) => (int) $id)->all();
 
         return collect($items)
@@ -540,18 +540,18 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Markdown duoc bo chu khong bi tu choi: moi noi hien thi render voi
-     * {{ }} va white-space: pre-line, nen marker se hien nhu ky tu nghien van ban,
-     * va mot dau sao lac dau khong phai ly do de mat ca briefing.
+     * Markdown được bóc chứ không bị từ chối: mỗi nơi hiển thị render với
+     * {{ }} và white-space: pre-line, nên marker sẽ hiện như ký tự nghiền văn bản,
+     * và một dấu sao lạc đâu không phải lý do để mất cả briefing.
      *
-     * Markup tool-call le theo cung nguyen tac. opencode (phien 64) gan tien to cho mot
-     * truong bang tag doi so no duoc yeu cau dien — `<parameter>why>text` hoac
-     * `<parameter name="why">text` — do la nhieu van chuyen, chu khong phai noi dung.
+     * Markup tool-call lẻ theo cùng nguyên tắc. opencode (phiên 64) gắn tiền tố cho một
+     * trường bằng tag đối số nó được yêu cầu điền — `<parameter>why>text` hoặc
+     * `<parameter name="why">text` — đó là nhiễu vận chuyển, chứ không phải nội dung.
      */
     protected function cleanText(string $text, int $limit): string
     {
-        // Ten mo coi (`why>`) chi la dot con lai khi no dung ngay sau mot tag da bo,
-        // mot `pH>7` hay `dose>2` la van ban lam sang va phai duoc giu.
+        // Tên mồ côi (`why>`) chỉ là dư củ còn lại khi nó đứng ngay sau một tag đã bóc,
+        // một `pH>7` hay `dose>2` là văn bản lâm sàng và phải được giữ.
         $text = preg_replace('/<\/?(?:parameter|param|arg|tool_call|function_call)\b[^>]*>\s*(?:[a-z_]+>)?/i', '', $text) ?? $text;
         $text = preg_replace('/^\s{0,3}#{1,6}\s*/mu', '', $text) ?? $text;
         $text = preg_replace('/(\*\*|__|`)/u', '', $text) ?? $text;
@@ -563,11 +563,11 @@ class SangLocAiTomTatService extends SangLocAiService
     }
 
     /**
-     * Schema yeu cau mot doan van, nhung mot so model tra loi `why` thanh mang cac
-     * cau, hoac mang ma hoa JSON trong chuoi. Ca hai deu cham ham nay; ep kieu
-     * mang thanh chuoi se gap PHP warning va luu chu "Array" nguyen van
-     * (phien 31/40 cho thay dang JSON duoc render thot tren trang). Lam phang thanh van ban —
-     * view render voi white-space: pre-line, nen noi bang dau cach doc nhu mot doan van.
+     * Schema yêu cầu một đoạn văn, nhưng một số model trả lời `why` thành mảng các
+     * câu, hoặc mảng mã hoá JSON trong chuỗi. Cả hai đều chạm hàm này; ép kiểu
+     * mảng thành chuỗi sẽ gặp PHP warning và lưu chữ "Array" nguyên văn
+     * (phiên 31/40 cho thấy dạng JSON được render thọt trên trang). Làm phẳng thành văn bản —
+     * view render với white-space: pre-line, nên nối bằng dấu cách đọc như một đoạn văn.
      */
     protected function cleanWhy(mixed $why): string
     {
@@ -647,8 +647,8 @@ class SangLocAiTomTatService extends SangLocAiService
             $durationMs
         );
 
-        // Chi nguon goc va dang: khong bao gio prompt, khong bao gio van ban briefing, khong bao gio
-        // loi cua khach hang.
+        // Chỉ nguồn gốc và dạng: không bao giờ prompt, không bao giờ văn bản briefing, không bao giờ
+        // lời của khách hàng.
         $this->auditProvenance($phien, 'triage_ai_briefing', $described, $durationMs, [
             'ai_briefing_status' => $status,
             'product_count' => count($briefing['products'] ?? []),

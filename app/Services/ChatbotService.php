@@ -21,23 +21,23 @@ class ChatbotService
     protected NhatKyKiemToanService $nhatKyKiemToanService;
 
     /**
-     * Widget chi bien markdown link thanh nut bam khi nhan khop dung chinh xac nhan
+     * Widget chỉ biến markdown link thành nút bấm khi nhận khớp đúng chính xác nhãn
      * — xem detailLinkPattern trong components/chatbot-markdown-renderer.blade.php.
-     * Moi link san pham phai dung dung chuoi nay, neu khong se hien nhu van ban thuong.
+     * Mọi link sản phẩm phải dùng đúng chuỗi này, nếu không sẽ hiện như văn bản thường.
      */
     protected const PRODUCT_LINK_LABEL = 'Mở sản phẩm';
 
     /**
-     * Kien thuc y khoa duoc doc tu database mot lan moi request.
+     * Kiến thức y khoa được đọc từ database một lần mỗi request.
      */
     protected ?array $urgentKeywordsCache = null;
     protected ?array $symptomMapCache = null;
 
     /**
-     * Chi dung khi khong doc duoc `medical_red_flags`. Doi xung voi cac dong
-     * chat_short_circuit da seed de khi database co van de, phat hien cap cuu
-     * van ra quyet dinh giong nhu cu chu khong phai mot bo khac. 'ngat' va
-     * 'nguy hiem' duoc bo chuoc: chung kich hoat tren "ngat loi", "viec nay nguy hiem khong".
+     * Chỉ dùng khi không đọc được `medical_red_flags`. Đối xứng với các dòng
+     * chat_short_circuit đã seed để khi database có vấn đề, phát hiện cấp cứu
+     * vẫn ra quyết định giống như cũ chứ không phải một bộ khác. 'ngất' và
+     * 'nguy hiểm' được bỏ chủ ý: chúng kích hoạt trên "ngat loi", "viec nay nguy hiem khong".
      */
     protected const URGENT_KEYWORDS_FALLBACK = [
         'ung thu', 'giai doan cuoi', 'cap cuu', 'nguy kich', 'rat nguy hiem', 'khan cap',
@@ -50,7 +50,7 @@ class ChatbotService
     ];
 
     /**
-     * Cung ly do voi URGENT_KEYWORDS_FALLBACK, ap dung cho `medical_symptoms`.
+     * Cùng lý do với URGENT_KEYWORDS_FALLBACK, áp dụng cho `medical_symptoms`.
      */
     protected const SYMPTOM_MAP_FALLBACK = [
         'sot xuat huyet' => 'sốt xuất huyết',
@@ -70,8 +70,8 @@ class ChatbotService
     ];
 
     /**
-     * Tu canh bao du phong, chi dung khi khong doc duoc `medical_symptoms`.
-     * Gia tri that lay tu `medical_symptoms.guard_words`.
+     * Từ cảnh báo dự phòng, chỉ dùng khi không đọc được `medical_symptoms`.
+     * Giá trị thật lấy từ `medical_symptoms.guard_words`.
      */
     protected const AMBIGUOUS_ALIAS_GUARDS = [
         'sot' => ['nuoc', 'banh', 'mi', 'hu', 'chai', 'lo', 'goi', 'tuong', 'thit', 'nong', 'ruot'],
@@ -79,8 +79,8 @@ class ChatbotService
     ];
 
     /**
-     * System prompt cho tro ly AI, viet bang tieng Viet.
-     * Dinh nghia vai tro, nhiem vu va hanh vi cua tro ly nha thuoc.
+     * System prompt cho trợ lý AI, viết bằng tiếng Việt.
+     * Định nghĩa vai trò, nhiệm vụ và hành vi của trợ lý nhà thuốc.
      */
     protected const SYSTEM_PROMPT = <<<'PROMPT'
 Bạn là trợ lý AI của nhà thuốc Medicare Pharmacy.
@@ -119,14 +119,14 @@ PROMPT;
 
 
     /**
-     * Cac dong tu khung cau khach hang bao quanh mot lan tim tren danh muc san pham.
-     * Bo truoc khi cac tang tu khoa chay, vi phan con lai duoc LIKE khop nhu mot
-     * cum tu duy nhat: "kiem thuoc ho" khong ra gi trong khi "thuoc ho" ra nam.
+     * Các động từ khung câu khách hàng bao quanh một lần tìm trên danh mục sản phẩm.
+     * Bỏ trước khi các tầng từ khóa chạy, vì phần còn lại được LIKE khớp như một
+     * cụm từ duy nhất: "kiem thuoc ho" không ra gì trong khi "thuoc ho" ra năm.
      *
-     * Cach viet khong dau chi duoc liet ke khi no khong the trung voi tu vung
-     * danh muc that. "tim" khong co mat du thuoc day — no cung la "tim" ( trai tim),
-     * va danh muc co san pham ve tim mach; tuong tu "tiem" ( tiem, thuoc tiem)
-     * khi fold tu "tiem".
+     * Cách viết không dấu chỉ được liệt kê khi nó không thể trùng với từ vựng
+     * danh mục thật. "tim" không có mặt dù thuộc đây — nó cũng là "tìm" (trái tim),
+     * và danh mục có sản phẩm về tim mạch; tương tự "tiem" (tiệm, thuốc tiệm)
+     * khi fold từ "tiệm".
      */
     protected const SEARCH_STOP_WORDS = [
         'cho tôi hỏi', 'cho mình hỏi', 'tôi muốn tìm', 'tôi muốn mua', 'tôi cần tìm', 'tôi cần mua',
@@ -184,7 +184,7 @@ PROMPT;
     ];
 
     /**
-     * Cac chuoi nha thuoc canh tranh. Ton kho cua ho khong hien voi tro ly nay.
+     * Các chuỗi nhà thuốc cạnh tranh. Tồn kho của họ không hiện với trợ lý này.
      */
     protected const OTHER_PHARMACY_KEYWORDS = [
         'long chau', 'pharmacity', 'phano', 'eco pharma', 'nha thuoc viet',
@@ -192,8 +192,8 @@ PROMPT;
     ];
 
     /**
-     * Ten chuoi vua trung voi tu Viet thong thuong ("an khang thinh vuong"),
-     * nen chi duoc tinh khi co tu nha thuoc dung canh.
+     * Tên chuỗi vừa trùng với từ Việt thông thường ("an khang thịnh vượng"),
+     * nên chỉ được tính khi có từ nhà thuốc đứng cạnh.
      */
     protected const OTHER_PHARMACY_AMBIGUOUS_KEYWORDS = [
         'an khang', 'trung son', 'guardian', 'my chau', 'vinh loi', 'phuc an khang',
@@ -204,8 +204,8 @@ PROMPT;
     ];
 
     /**
-     * Ten dia danh Viet thong dung, dung de nhan dang cac cau hoi kieu
-     * "nha thuoc ... tai Da Nang" la hoi ve dia diem chu khong phai san pham.
+     * Tên địa danh Việt thông dụng, dùng để nhận dạng các câu hỏi kiểu
+     * "nhà thuốc ... tại Đà Nẵng" là hỏi về địa điểm chứ không phải sản phẩm.
      */
     protected const VIETNAM_PLACE_KEYWORDS = [
         'da nang', 'ha noi', 'sai gon', 'ho chi minh', 'tphcm', 'hcm', 'hue', 'hoi an',
@@ -221,8 +221,8 @@ PROMPT;
     ];
 
     /**
-     * Cach dien dat khi dung mot minh chi lap lai o disclaimer. isBoilerplateDisclaimerSentence()
-     * tru chung nay ra khoi cau: phan con lai quyet dinh cau do co noi dung that hay khong.
+     * Cách diễn đạt khi dùng một mình chỉ lặp lại ở disclaimer. isBoilerplateDisclaimerSentence()
+     * trừ chunk này ra khỏi câu: phần còn lại quyết định câu đó có nội dung thật hay không.
      */
     protected const DISCLAIMER_BOILERPLATE_FRAGMENTS = [
         'noi dung do ai tao ra co the khong chinh xac',
@@ -243,40 +243,40 @@ PROMPT;
     ];
 
     /**
-     * Cac token khong mang chu de nao. Mot tin nhan chi gom chung ("co on khong?",
-     * "vay duoc khong?") chi co the hieu duoc khi dua vao luot truoc.
+     * Các token không mang chủ đề nào. Một tin nhắn chỉ gồm chúng ("cơm ổn không?",
+     * "vậy được không?") chỉ có thể hiểu được khi dựa vào lượt trước.
      */
     protected const ELLIPTICAL_FOLLOW_UP_TOKENS = [
         'co', 'khong', 'ko', 'hong', 'k', 'on', 'sao', 'vay', 'the', 'nao', 'gi',
         'duoc', 'chu', 'nhi', 'nhe', 'nha', 'a', 'ha', 'u', 'uh', 'oke', 'ok',
         'roi', 'thi', 'ma', 'day', 'do', 'nua', 'that', 'toi', 'minh', 'em',
         'anh', 'chi', 'ban', 'ai', 'la',
-        // "cho xem link san pham di" / "xem chi tiet di" khong neu ten san pham nao
-        // cua rieng chung: chung chi den phan luot truoc da liet ke. Khong co chung,
-        // tin nhan da duoc tim nhu truy van nguyen van "cho link san pham di",
-        // ra khong gi, va model da tu bia cac link san pham thay vao.
+        // "cho xem link san pham di" / "xem chi tiết đi" không nêu tên sản phẩm nào
+        // của riêng chúng: chúng chỉ đến phần lượt trước đã liệt kê. Không có chúng,
+        // tin nhắn đã được tìm như truy vấn nguyên văn "cho link san pham di",
+        // ra không gì, và model đã tự bịa các link sản phẩm thay vào.
         'link', 'xem', 'xin', 'chi', 'tiet', 'them', 'gui', 'cho', 'dua', 'di',
-        // Mot yeu cau doi cach trinh bay phan vua duoc liet ke: "tom tat lai
-        // theo dang table", "tom tat lai thanh bang". Khong co chung, tin nhan da
-        // duoc tim nhu truy van "tom tat", va khop voi nhung san pham khong lien quan.
+        // Một yêu cầu đổi cách trình bày phần vừa được liệt kê: "tóm tắt lại
+        // theo dạng table", "tóm tắt lại thành bảng". Không có chúng, tin nhắn đã
+        // được tìm như truy vấn "tóm tắt", và khớp với những sản phẩm không liên quan.
         'tom', 'tat', 'lai', 'table', 'bang', 'dang', 'giup', 'nhé', 'theo', 'thanh',
     ];
 
     /**
-     * Cac bang chu tro ly khong bao gio viet: chu tu han va dau cau CJK, kana,
-     * Hangul, dang halfwidth/fullwidth, Cyrillic, Thai, Arabic, Hebrew, Devanagari.
-     * Dau cau Latin, "×", "µ" va dau tieng Viet nam ngoai cac khoang nay,
-     * nen cau tra loi binh thuong khong bi anh huong.
+     * Các bảng chữ trợ lý không bao giờ viết: chữ tượng hình và dấu câu CJK, kana,
+     * Hangul, dạng halfwidth/fullwidth, Cyrillic, Thai, Arabic, Hebrew, Devanagari.
+     * Dấu câu Latin, "×", "µ" và dấu tiếng Việt nằm ngoài các khoảng này,
+     * nên câu trả lời bình thường không bị ảnh hưởng.
      */
     protected const FOREIGN_SCRIPT_CLASS = '[\x{3000}-\x{30FF}\x{3400}-\x{4DBF}\x{4E00}-\x{9FFF}\x{F900}-\x{FAFF}\x{1100}-\x{11FF}\x{AC00}-\x{D7AF}\x{FF00}-\x{FFEF}\x{0400}-\x{04FF}\x{0E00}-\x{0E7F}\x{0600}-\x{06FF}\x{0590}-\x{05FF}\x{0900}-\x{097F}]';
 
     /**
-     * Tu xoa (filler) khong duoc phep tu no tu keo mot ket qua khop. "thuoc"/"san pham"
-     * nam o day vi chung xuat hien dong thoi trong ten phan lon danh muc va san pham.
+     * Từ xóa (filler) không được phép tự nó tự kéo một kết quả khớp. "thuốc"/"sản phẩm"
+     * nằm ở đây vì chúng xuất hiện đồng thời trong tên phần lớn danh mục và sản phẩm.
      *
-     * Cach viet khong dau chi duoc liet ke khi khong the trung voi mot tu co nghia:
-     * "ho" ( ho) va "tim" ( trai tim) bi bo ra du la filler, vi fold lam hai tu
-     * khong the phan biet.
+     * Cách viết không dấu chỉ được liệt kê khi không thể trùng với một từ có nghĩa:
+     * "ho" (ho) và "tim" (trái tim) bị bỏ ra dù là filler, vì fold làm hai từ
+     * không thể phân biệt.
      */
     protected const QUERY_NOISE_TOKENS = [
         'có', 'co', 'không', 'khong', 'ko', 'gì', 'gi', 'nào', 'nao',
@@ -292,13 +292,13 @@ PROMPT;
     ];
 
     /**
-     * Cac cau hoi ve gia, duoc bo nguyen cum truoc khi xay dung cac cua so thu hep.
-     * "que thu thai gia bao nhieu" da tim tren "bao nhieu", trung voi
-     * "can trung hoa luong acid dich vi bao nhieu" trong cach dung cua thuoc tham vi,
-     * va da tra loi cau hoi que thu thai bang thuoc da day.
+     * Các câu hỏi về giá, được bỏ nguyên cụm trước khi xây dựng các cửa sổ thu hẹp.
+     * "que thu thai gia bao nhieu" đã tìm trên "bao nhiêu", trùng với
+     * "can trung hoa luong acid dich vi bao nhieu" trong cách dùng của thuốc tham vị,
+     * và đã trả lời câu hỏi que thử thai bằng thuốc dạ dày.
      *
-     * Dung cum tu, khong dung token le: "bao" mot minh co nghia ("bao cao su"),
-     * "gia" fold trung voi "gia" ("nuoc oxy gia"). Dat dai nhat truoc de nguyen cum duoc bo.
+     * Dùng cụm từ, không dùng token lẻ: "bao" một mình có nghĩa ("bao cao su"),
+     * "giá" fold trùng với "gia" ("nước oxy già"). Đặt dài nhất trước để nguyên cụm được bỏ.
      */
     protected const QUERY_PRICE_PHRASES = [
         'gia bao nhieu', 'het bao nhieu', 'gia ca bao nhieu',
@@ -306,15 +306,15 @@ PROMPT;
     ];
 
     /**
-     * So dong fetch moi tang tu khoa truoc khi keepGenuineMatches() loai cac ket qua
-     * LIKE mo tim khong dau. Lon hon con 5 hien thi de mot vai ket qua sai khong the
-     * lam chet doi mot tang tu that co ket qua.
+     * Số dòng fetch mỗi tầng từ khóa trước khi keepGenuineMatches() loại các kết quả
+     * LIKE mờ tìm không dấu. Lớn hơn con 5 hiển thị để một vài kết quả sai không thể
+     * làm chết đôi một tầng từ thật có kết quả.
      */
     protected const QUERY_MATCH_FETCH_LIMIT = 25;
 
     /**
-     * Cac cau tra loi du phong chi noi nha cung cap AI khong kha dung. Chung duoc
-     * hien cho khach nhung bi loai khoi lich su cung cap cho AI boi
+     * Các câu trả lời dự phòng chỉ nói nhà cung cấp AI không khả dụng. Chúng được
+     * hiện cho khách nhưng bị loại khỏi lịch sử cung cấp cho AI bởi
      * sanitizeHistoryForAi().
      */
     protected const UNINFORMATIVE_FALLBACK_TYPES = [
@@ -322,8 +322,8 @@ PROMPT;
     ];
 
     /**
-     * Schema function cho tool calling cua nha cung cap AI.
-     * Dinh nghia function search_products cho cac truy van san pham co cau truc.
+     * Schema function cho tool calling của nhà cung cấp AI.
+     * Định nghĩa function search_products cho các truy vấn sản phẩm có cấu trúc.
      *
      * @return array
      */
@@ -425,7 +425,7 @@ PROMPT;
     }
 
     /**
-     * Lay system prompt cua tro ly AI.
+     * Lấy system prompt của trợ lý AI.
      *
      * @return string
      */
@@ -435,7 +435,7 @@ PROMPT;
     }
 
     /**
-     * Khoi tao ChatbotService bang dependency injection.
+     * Khởi tạo ChatbotService bằng dependency injection.
      *
      * @param TonKhoService $tonKhoService
      * @param ThanhToanService $thanhToanService
@@ -454,10 +454,10 @@ PROMPT;
     }
 
     /**
-     * Kiem tra tin nhan co du y nghia de xu ly hay khong.
+     * Kiểm tra tin nhắn có đủ ý nghĩa để xử lý hay không.
      *
-     * @param string $message Tin nhan cua nguoi dung
-     * @return array Ket qua kiem tra voi co success va ly do
+     * @param string $message Tin nhắn của người dùng
+     * @return array Kết quả kiểm tra với cờ success và lý do
      */
     public function validateMessage(string $message): array
     {
@@ -471,7 +471,7 @@ PROMPT;
             ];
         }
         
-        // Phat hien spam/ky tu lap lai
+        // Phát hiện spam/ký tự lặp lại
         if (preg_match('/^([a-zA-Z0-9À-ỹ])\1{4,}$/u', $trimmed)) {
             return [
                 'valid' => false,
@@ -479,7 +479,7 @@ PROMPT;
             ];
         }
         
-        // Chi gom ky tu dac biet
+        // Chỉ gồm ký tự đặc biệt
         if (preg_match('/^[^a-zA-ZÀ-ỹ0-9\s]+$/', $trimmed)) {
             return [
                 'valid' => false,
@@ -487,7 +487,7 @@ PROMPT;
             ];
         }
         
-        // Phat hien tu xau tu config
+        // Phát hiện từ xấu từ config
         $badWords = config('blacklists.chatbot', []);
         if (!empty($badWords) && $this->containsBlacklistedTerm($trimmed, $badWords)) {
             return [
@@ -565,12 +565,12 @@ PROMPT;
     }
 
     /**
-     * Xu ly tin nhan nguoi dung va tao cau tra loi AI.
+     * Xử lý tin nhắn người dùng và tạo câu trả lời AI.
      *
-     * @param string $message Noi dung tin nhan nguoi dung
-     * @param int $userId ID nguoi dung
-     * @param array $context Ngu canh cuoc tro chuyen
-     * @return array Cau tra loi gom tin nhan AI va metadata
+     * @param string $message Nội dung tin nhắn người dùng
+     * @param int $userId ID người dùng
+     * @param array $context Ngữ cảnh cuộc trò chuyện
+     * @return array Câu trả lời gồm tin nhắn AI và metadata
      * @throws \Exception
      */
     public function processMessage(string $message, int $userId, array $context): array
@@ -882,8 +882,8 @@ PROMPT;
                     $hasCatalogData = !empty($sanPhams) || !empty($danhMucs);
 
                     if (!$hasCatalogData) {
-                        // Luc tra khong ra gi nen khoi "chua thay san pham" cua no
-                        // se moc lac voi cau tra loi da tu dung duoc san.
+                        // Lúc tra không ra gì nên khối "chưa thấy sản phẩm" của nó
+                        // sẽ mọc lẫn với câu trả lời đã tự đứng được sẵn.
                         $responseText = $assistantText !== ''
                             ? $assistantText
                             : $catalogResponse['response'];
@@ -916,9 +916,9 @@ PROMPT;
             $responseText = $this->enforceMetaResponsePolicy($workingMessage, $responseText);
             $responseText = $this->formatFriendlyProductLinks($responseText, $sanPhams);
 
-            // Luot khong tra duoc gi thi khong co link san pham de de xuat. Bat cu
-            // gi model viet theo hinh dang do deu den tu nho cua no ve mot luot truoc,
-            // kem ca host va nhan tu do no bia ra.
+            // Lượt không tra được gì thì không có link sản phẩm để đề xuất. Bất cứ
+            // gì model viết theo hình dáng đó đều đến từ nhớ của nó về một lượt trước,
+            // kèm cả host và nhãn tự do nó bịa ra.
             if (empty($sanPhams)) {
                 $responseText = $this->stripInventedProductLinks($responseText);
             }
@@ -1106,8 +1106,8 @@ PROMPT;
     }
 
     /**
-     * Metadata nha cung cap da thuc su phuc vu cau tra loi, de vet dung
-     * phia quan tri van chinh xac sau khi failover.
+     * Metadata nhà cung cấp đã thực sự phục vụ câu trả lời, để vết dò
+     * phía quản trị vẫn chính xác sau khi failover.
      */
     protected function describeAiProviderForDebug(): array
     {
@@ -1124,8 +1124,8 @@ PROMPT;
     {
         $message = $this->normalizeIntentText($exception->getMessage());
 
-        // Loi gateway/upstream thuong chua tu "forbidden" trong body,
-        // nen phai khop truoc cac tu khoa auth phia duoi.
+        // Lỗi gateway/upstream thường chứa từ "forbidden" trong body,
+        // nên phải khớp trước các từ khóa auth phía dưới.
         if ($this->containsAnyKeyword($message, [
             'user location is not supported',
             'location is not supported',
@@ -1149,10 +1149,10 @@ PROMPT;
             return 'provider_upstream_error';
         }
 
-        // Dat truoc khoi auth: body gioi han ty le thuong de cap den credential
-        // ("your api key has exceeded its quota"), va token `api key` long leo phia
-        // duoi neu khong se bao khach rang quyen truy cap bi thu hoi trong khi
-        // nha cung cap chi la qua tai.
+        // Đặt trước khối auth: body giới hạn tỷ lệ thường đề cập đến credential
+        // ("your api key has exceeded its quota"), và token `api key` lỏng lẽo phía
+        // dưới nếu không sẽ báo khách rằng quyền truy cập bị thu hồi trong khi
+        // nhà cung cấp chỉ là quá tải.
         if ($this->containsAnyKeyword($message, [
             'high demand',
             'quota',
@@ -1207,15 +1207,15 @@ PROMPT;
     }
 
     /**
-     * Viet lai cac URL san pham model in nhu van ban thuong, giu nguyen markdown link.
+     * Viết lại các URL sản phẩm model in như văn bản thường, giữ nguyên markdown link.
      *
-     * Hai phuong an, vi model duoc yeu cau dua link se viet ca `(url)` va `url` tran,
-     * va ca hai deu khong duoc cham vao `[label](url)` co san:
-     *   1. `(url)` co dau mo ngoac khong phai la `](` cua mot markdown link
-     *   2. url tran khong dung truoc boi `](`
+     * Hai phương án, vì model được yêu cầu đưa link sẽ viết cả `(url)` và `url` trần,
+     * và cả hai đều không được chạm vào `[label](url)` có sẵn:
+     *   1. `(url)` có dấu mở ngoặc không phải là `](` của một markdown link
+     *   2. url trần không đứng trước bởi `](`
      *
-     * Phien ban truoc chi neo tren `(?!\))`, nen URL boc ngoac — truong hop pho
-     * bien nhat — bi bo qua hoan toan va gui widget nguyen ban.
+     * Phiên bản trước chỉ neo trên `(?!\))`, nên URL bọc ngoặc — trường hợp phổ
+     * biến nhất — bị bỏ qua hoàn toàn và gửi widget nguyên bản.
      *
      * @param array<int, string> $urls
      */
@@ -1233,7 +1233,7 @@ PROMPT;
             $responseText = preg_replace($pattern, $replacement, $responseText) ?? $responseText;
         }
 
-        // Don lai dau cau ma viec go bo URL de lai: " , con 300 ." va khoang trang kep.
+        // Dọn lại dấu câu mà việc gỡ bỏ URL để lại: " , còn 300 ." và khoảng trắng kép.
         $responseText = preg_replace('/[ \t]+([,;.])/u', '$1', $responseText) ?? $responseText;
         $responseText = preg_replace('/[ \t]{2,}/u', ' ', $responseText) ?? $responseText;
 
@@ -1253,9 +1253,9 @@ PROMPT;
                 continue;
             }
 
-            // self::PRODUCT_LINK_LABEL, khong phai ten san pham: widget chi nang
-            // link len thanh nut bam khi nhan khop dung nhan, nen "Xem chi tiet Smecta"
-            // truoc day van la link inline thuong.
+            // self::PRODUCT_LINK_LABEL, không phải tên sản phẩm: widget chỉ nâng
+            // link lên thành nút bấm khi nhận khớp đúng nhãn, nên "Xem chi tiết Smecta"
+            // trước đây vẫn là link inline thường.
             $responseText = $this->replaceRawProductUrls(
                 $responseText,
                 [$url],
@@ -1267,15 +1267,15 @@ PROMPT;
     }
 
     /**
-     * Go bo cac link san pham model tu viet.
+     * Gỡ bỏ các link sản phẩm model tự viết.
      *
-     * Luot khong goi tool danh muc se nhan danh sach san pham rong, nhung model van
-     * nho id tu cac luot truoc va tu viet link: "[San pham 322](http://localhost/products/322)"
-     * — mot host thieu port dev, mot nhan la id chu khong phai ten, va mot san pham
-     * ma cau tra loi nay chua bao gio tra cuu. Chi card san pham that moi co link,
-     * va chung duoc render tu `$sanPhams` sau khi buoc nay chay.
+     * Lượt không gọi tool danh mục sẽ nhận danh sách sản phẩm rỗng, nhưng model vẫn
+     * nhớ id từ các lượt trước và tự viết link: "[San phẩm 322](http://localhost/products/322)"
+     * — một host thiếu port dev, một nhãn là id chứ không phải tên, và một sản phẩm
+     * mà câu trả lời này chưa bao giờ tra cứu. Chỉ card sản phẩm thật mới có link,
+     * và chúng được render từ `$sanPhams` sau khi bước này chạy.
      *
-     * URL listing dang `/products?category=` khong phai san pham va duoc de nguyen.
+     * URL listing dạng `/products?category=` không phải sản phẩm và được để nguyên.
      */
     protected function stripInventedProductLinks(string $responseText): string
     {
@@ -1283,21 +1283,21 @@ PROMPT;
             return $responseText;
         }
 
-        // Markdown link ma dich den la mot san pham don le: bo ca link.
+        // Markdown link mà đích đến là một sản phẩm đơn lẻ: bỏ cả link.
         $responseText = preg_replace(
             '/\[([^\]]*)\]\((?:https?:\/\/[^\s)]*)?\/products\/\d+[^\s)]*\)/u',
             '',
             $responseText
         ) ?? $responseText;
 
-        // URL san pham tran hoac boc ngoac ma model in nhu van ban thuong.
+        // URL sản phẩm trần hoặc bọc ngoặc mà model in như văn bản thường.
         $responseText = preg_replace(
             '/\(?\s*(?:https?:\/\/[^\s)]*)?\/products\/\d+[^\s)]*\s*\)?/u',
             '',
             $responseText
         ) ?? $responseText;
 
-        // Don nhung gi viec go bo de lai: bullet rong, khoang trang kep, khoang trong lien tiep.
+        // Dọn những gì việc gỡ bỏ để lại: bullet rỗng, khoảng trắng kép, khoảng trống liên tiếp.
         $responseText = preg_replace('/^[ \t]*[-*•]\s*$/mu', '', $responseText) ?? $responseText;
         $responseText = preg_replace('/[ \t]{2,}/u', ' ', $responseText) ?? $responseText;
         $responseText = preg_replace('/[ \t]+\n/u', "\n", $responseText) ?? $responseText;
@@ -1335,9 +1335,9 @@ PROMPT;
     }
 
     /**
-     * Cac tu chua bang chu tro ly khong bao gio tra loi. Nha cung cap thinh tho
-     * tron vao doan Trung, Han hoang Cyrillic ("tha酸", "중풍"), va nua tu khong dang
-     * giu nen ca tu bi go, phan dau cau de lai duoc don lai.
+     * Các từ chứa bảng chữ trợ lý không bao giờ trả lời. Nhà cung cấp thỉnh thoảng
+     * trộn vào đoạn Trung, Hàn hoặc Cyrillic ("tha酸", "중풍"), và nửa từ không đáng
+     * giữ nên cả từ bị gỡ, phần dấu câu để lại được dọn lại.
      */
     protected function stripForeignScriptArtifacts(string $responseText): string
     {
@@ -1359,19 +1359,19 @@ PROMPT;
     }
 
     /**
-     * Widget da render mot o disclaimer moi cuoc tro chuyen tu `show_disclaimer`,
-     * nen phan duoi cau "tham khao y kien duoc si/bac si" trong ban than van ban
-     * lap lai dung dieu do hai lan — va khac voi o disclaimer, no lap lai tren
-     * moi cau tra loi. Prompt da yeu cau nha cung cap khong them vao; buoc nay
-     * go bo khi nha cung cap van them.
+     * Widget đã render một ô disclaimer mỗi cuộc trò chuyện từ `show_disclaimer`,
+     * nên phần đuôi câu "tham khảo ý kiến dược sĩ/bác sĩ" trong bản thân văn bản
+     * lặp lại đúng điều đó hai lần — và khác với ô disclaimer, nó lặp lại trên
+     * mỗi câu trả lời. Prompt đã yêu cầu nhà cung cấp không thêm vào; bước này
+     * gỡ bỏ khi nhà cung cấp vẫn thêm.
      */
     protected function stripRedundantDisclaimer(string $responseText): string
     {
         $original = $responseText;
         $responseText = rtrim($responseText);
 
-        // Chay hai luot: loi nhac den hoac nhu mot dong rieng o cuoi, hoac nhu
-        // cau cuoi cung cua doan ket.
+        // Chạy hai lượt: lời nhắc đến hoặc như một dòng riêng ở cuối, hoặc như
+        // câu cuối cùng của đoạn kết.
         for ($pass = 0; $pass < 2; $pass++) {
             $lines = preg_split('/\R/u', $responseText) ?: [];
             $lastIndex = null;
@@ -1407,16 +1407,16 @@ PROMPT;
             $responseText = rtrim(implode("\n", $lines));
         }
 
-        // Khong bao gio go sach ca cau tra loi den trang trong.
+        // Không bao giờ gỡ sạch cả câu trả lời đến trống trơn.
         return trim($responseText) === '' ? $original : $responseText;
     }
 
     /**
-     * Chi dung khi cau do khong con gi ngoai boilerplate: tru het moi fragment
-     * da biet va khong con noi dung that nao lai. Loi khuyen co dieu kien
-     * ("neu co benh nen thi nen hoi duoc si") va canh bao that ("co canh bao o muc
-     * nghiem trong, nen hoi duoc si") giu nhung tu khong nam trong danh sach,
-     * nen duoc giu lai.
+     * Chỉ đúng khi câu đó không còn gì ngoài boilerplate: trừ hết mọi fragment
+     * đã biết và không còn nội dung thật nào lại. Lời khuyên có điều kiện
+     * ("neu co benh nen thi nen hoi duoc si") và cảnh báo thật ("co canh bao o muc
+     * nghiem trong, nen hoi duoc si") giữ những từ không nằm trong danh sách,
+     * nên được giữ lại.
      */
     protected function isBoilerplateDisclaimerSentence(string $sentence): bool
     {
@@ -1762,11 +1762,11 @@ PROMPT;
             return null;
         }
 
-        // Mot luot hoi theo ("tom tat lai theo dang table") n dinh dang, khong phai
-        // ten san pham. Xu ly nhu mot truy van thi no tro thanh "tom tat", ma tim kiem
-        // substring cua danh muc lai khop voi bay san pham lien quan gi, va builder
-        // nay tra loi bang PHP truoc khi model duoc den — nen yeu cau mot bang
-        // lai ve duoi dang danh sach so. Chuyen no cho model thay.
+        // Một lượt hỏi theo ("tóm tắt lại theo dạng table") nhắm định dạng, không phải
+        // tên sản phẩm. Xử lý như một truy vấn thì nó trở thành "tóm tắt", mà tìm kiếm
+        // substring của danh mục lại khớp với bảy sản phẩm liên quan gì, và builder
+        // này trả lời bằng PHP trước khi model được đến — nên yêu cầu một bảng
+        // lại về dưới dạng danh sách số. Chuyển nó cho model thay.
         if (!$this->isSymptomRelatedQuery($message) && !$this->isEllipticalFollowUpMessage($message)) {
             $query = $this->resolveCatalogQuery($message);
 
@@ -1979,13 +1979,13 @@ PROMPT;
                 }
             }
 
-            // Mot truy van linh dieu tri ("ho tro tieu hoa") khop mot danh muc nhung
-            // khong khop ten/hoat chat/cach dung san pham nao, nen tim kiem tu khoa
-            // ra rong trong khi danh muc khop lai day san pham lien quan. Tra loi
-            // bang ton kho do thay vi bao khach khong tim thay. Yeu cau mot khop
-            // khong nhieu nghia: truy van rong tra ve cac danh muc nhieu ton kho nhat,
-            // va nhieu danh muc khop cung luc se lam "san pham cua danh muc dau tien"
-            // thanh mot lua chon tuy y.
+            // Một truy vấn lĩnh điều trị ("hỗ trợ tiêu hóa") khớp một danh mục nhưng
+            // không khớp tên/hoạt chất/cách dùng sản phẩm nào, nên tìm kiếm từ khóa
+            // ra rỗng trong khi danh mục khớp lại đầy sản phẩm liên quan. Trả lời
+            // bằng tồn kho đó thay vì báo khách không tìm thấy. Yêu cầu một khớp
+            // không nhiều nghĩa: truy vấn rỗng trả về các danh mục nhiều tồn kho nhất,
+            // và nhiều danh mục khớp cùng lúc sẽ làm "sản phẩm của danh mục đầu tiên"
+            // thành một lựa chọn tùy ý.
             $categoryProducts = $categoryQuery !== '' && count($danhMucs) === 1
                 ? $this->getFeaturedProductsForCategory((int) $danhMucs[0]['id'])
                 : collect();
@@ -2128,9 +2128,9 @@ PROMPT;
     }
 
     /**
-     * Moi danh muc trong payload duoc render nhu mot card bam duoc duoi tin nhan,
-     * nen link den cung URL trong van ban la trung lap. Dong chi gom link do bi
-     * bo; o cho khac nhan giu nguyen nhu van ban thuong.
+     * Mỗi danh mục trong payload được render như một card bấm được dưới tin nhắn,
+     * nên link đến cùng URL trong văn bản là trùng lặp. Dòng chỉ gồm link đó bị
+     * bỏ; ở chỗ khác nhãn giữ nguyên như văn bản thường.
      */
     protected function stripDuplicateCategoryCardLinks(string $responseText, array $danhMucs): string
     {
@@ -2180,14 +2180,14 @@ PROMPT;
     }
 
     /**
-     * Tra loi cau hoi di kem anh tai len, dua tren ket qua buoc doc anh (vision)
-     * cong voi ket qua tra cuu danh muc. Tra ve response rong khi nha cung cap AI
-     * khong kha dung de caller co the du phong bang phan tom tat xac dinh cua no.
+     * Trả lời câu hỏi đi kèm ảnh tải lên, dựa trên kết quả bước đọc ảnh (vision)
+     * cộng với kết quả tra cứu danh mục. Trả về response rỗng khi nhà cung cấp AI
+     * không khả dụng để caller có thể dự phòng bằng phần tóm tắt xác định của nó.
      *
-     * @param string $question Caption nhap kem anh (co the trong)
-     * @param string $imageDescription Mo ta anh tu buoc vision
-     * @param array $parsedProducts San pham tho buoc vision trich xuat duoc
-     * @param array $recognizedProducts Ket qua khop danh muc tu NhanDienHinhAnhService
+     * @param string $question Caption nhập kèm ảnh (có thể trống)
+     * @param string $imageDescription Mô tả ảnh từ bước vision
+     * @param array $parsedProducts Sản phẩm thô bước vision trích xuất được
+     * @param array $recognizedProducts Kết quả khớp danh mục từ NhanDienHinhAnhService
      */
     public function answerImageQuestion(
         string $question,
@@ -2249,13 +2249,13 @@ PROMPT;
                 return $empty;
             }
 
-            // Cung khoi ma duong xu ly van ban render, duoc ghe them chu khong hoi:
-            // truoc day model duoc dua URL san pham va tu format, de ra nhung link
-            // tran ma khong regex nao sua kip loi de bien thanh nut bam.
+            // Cùng khối mà đường xử lý văn bản render, được gắn thêm chứ không hỏi:
+            // trước đây model được đưa URL sản phẩm và tự format, để ra những link
+            // trần mà không regex nào sửa kịp lỗi để biến thành nút bấm.
             $productBlock = $this->renderRecognizedProductBlock($recognizedProducts);
             if ($productBlock !== '') {
-                // Prompt cam link, nhung model mac bo qua thi khong duoc de lo URL
-                // tran qua khoi da co san nut bam.
+                // Prompt cấm link, nhưng model mặc bỏ qua thì không được để lọt URL
+                // trần qua khối đã có sẵn nút bấm.
                 $responseText = $this->replaceRawProductUrls(
                     $responseText,
                     $this->recognizedProductUrls($recognizedProducts),
@@ -2331,8 +2331,8 @@ PROMPT;
             }
 
             if (($item['matched'] ?? false) === true && is_array($item['product'] ?? null)) {
-                // Co y khong co url: model khong the lam roi format mot link ma no
-                // khong bao gio nhan, va renderProductDetailLines() se ghe link that vao.
+                // Cố ý không có url: model không thể làm rối format một link mà nó
+                // không bao giờ nhận, và renderProductDetailLines() sẽ gắn link thật vào.
                 $inStock[] = [
                     'name' => $item['product']['name'] ?? '',
                     'price' => $item['product']['price'] ?? null,
@@ -2364,8 +2364,8 @@ PROMPT;
     }
 
     /**
-     * URL SanPham cho cac dong ma anh khop duoc, de vo gan cho model bo qua
-     * quy tac "khong dua link" van duoc go bo truoc khi khoi dung chung duoc ghe vao.
+     * URL SanPham cho các dòng mà ảnh khớp được, để model bỏ qua
+     * quy tắc "không đưa link" vẫn được gỡ bỏ trước khi khối dùng chung được gắn vào.
      *
      * @param array<int, mixed> $recognizedProducts khopSanPham() output
      * @return array<int, string>
@@ -2389,12 +2389,12 @@ PROMPT;
     }
 
     /**
-     * Khoi danh muc cho cac san pham anh khop duoc, render bang cung method ma
-     * duong xu ly van ban dung de ca hai cau tra loi deu co nut "Mo san pham" giong nhau.
+     * Khối danh mục cho các sản phẩm ảnh khớp được, render bằng cùng method mà
+     * đường xử lý văn bản dùng để cả hai câu trả lời đều có nút "Mở sản phẩm" giống nhau.
      *
-     * Chuoi rong khi anh khong khop duoc gi con trong kho.
+     * Chuỗi rỗng khi ảnh không khớp được gì còn trong kho.
      *
-     * @param array<int, mixed> $recognizedProducts ket qua cua khopSanPham()
+     * @param array<int, mixed> $recognizedProducts kết quả của khopSanPham()
      */
     protected function renderRecognizedProductBlock(array $recognizedProducts): string
     {
@@ -2416,8 +2416,8 @@ PROMPT;
             return '';
         }
 
-        // Doc lai cac dong: danh muc va cach dung chi dieu hai dong cua khoi dung
-        // chung va khong nam trong payload nhan dang.
+        // Đọc lại các dòng: danh mục và cách dùng chỉ điều hai dòng của khối dùng
+        // chung và không nằm trong payload nhận dạng.
         $sanPhams = SanPham::with('danhMuc')
             ->whereIn('ma_sp', $ids)
             ->FEFO()
@@ -2565,7 +2565,7 @@ PROMPT;
                     'processing_time_ms' => $processingTimeMs,
                     'show_disclaimer' => $showDisclaimer
                 ],
-                // Chay trong queue worker, cho khong co guard xac thuc nao.
+                // Chạy trong queue worker, chỗ không có guard xác thực nào.
                 userId: $userId
             );
         } catch (\Throwable $exception) {
@@ -2613,11 +2613,11 @@ PROMPT;
     }
 
     /**
-     * Tra cuu DanhMuc cho cac truy van theo cong dung. searchCategories() LIKE khop
-     * nguyen cum, nen "ho tro tieu hoa nhanh" khong ra danh muc "Thuoc tieu hoa"
-     * dang giu moi san pham can hoi. Viec khop chay trong PHP tren ten + mo ta
-     * da fold: bang rat nho, va khong the tin collation de bo qua dau tieng Viet
-     * (MySQL utf8mb4_unicode_ci lam duoc, SQLite thi khong).
+     * Tra cứu DanhMuc cho các truy vấn theo công dụng. searchCategories() LIKE khớp
+     * nguyên cụm, nên "ho tro tieu hoa nhanh" không ra danh mục "Thuốc tiêu hóa"
+     * đang giữ mọi sản phẩm cần hỏi. Việc khớp chạy trong PHP trên tên + mô tả
+     * đã fold: bảng rất nhỏ, và không thể tin collation để bỏ qua dấu tiếng Việt
+     * (MySQL utf8mb4_unicode_ci làm được, SQLite thì không).
      *
      * @param array<int, string> $queries Ordered by preference
      */
@@ -2652,8 +2652,8 @@ PROMPT;
                 $candidate
             ))->values();
 
-            // Khop qua mot vai dong nghia la ung cu vien la tu chung ("thuoc"),
-            // chu khong phai mot linh dieu tri.
+            // Khớp quá một vài dòng nghĩa là ứng cử viên là từ chung ("thuốc"),
+            // chứ không phải một lĩnh điều trị.
             if ($matched->isNotEmpty() && $matched->count() <= $limit) {
                 return $matched->take($limit);
             }
@@ -2663,22 +2663,22 @@ PROMPT;
     }
 
     /**
-     * Cac n-gram fold cua truy van, dai nhat truoc, da bo tu xoa de
-     * "ho tro tieu hoa nhanh" duoc thu nhu "tieu hoa". Token don ngan hon
-     * 4 ky tu bi bo qua: chung khop qua nhieu de xac dinh mot danh muc.
+     * Các n-gram fold của truy vấn, dài nhất trước, đã bỏ từ xóa để
+     * "ho tro tieu hoa nhanh" được thử như "tiêu hóa". Token đơn ngắn hơn
+     * 4 ký tự bị bỏ qua: chúng khớp quá nhiều để xác định một danh mục.
      *
-     * Dau tieng Viet duoc giu, vi bien the tim san pham cua buoc tra nay nap vao
-     * SQL LIKE: utf8mb4_unicode_ci cua MySQL bo qua dau nhung SQLite thi khong,
-     * nen fold o day se lam test va production khac nhau.
+     * Dấu tiếng Việt được giữ, vì biến thể tìm sản phẩm của bước trả này nạp vào
+     * SQL LIKE: utf8mb4_unicode_ci của MySQL bỏ qua dấu nhưng SQLite thì không,
+     * nên fold ở đây sẽ làm test và production khác nhau.
      *
-     * Trong cung mot do dai, n-gram ben phai dung truoc, vi mot cum danh tu
-     * tieng Viet de chu de o cuoi: "giam dau da day" phai di qua "da day" ( thuoc
-     * tham vi) chu khong phai "giam dau" — se de xuat NSAID, dung nhom thuoc
-     * giam dau lam dau day to hon.
+     * Trong cùng một độ dài, n-gram bên phải đứng trước, vì một cụm danh từ
+     * tiếng Việt để chủ đề ở cuối: "giam dau da day" phải đi qua "đau dạ dày" (thuốc
+     * tham vị) chứ không phải "giảm đau" — sẽ đề xuất NSAID, đúng nhóm thuốc
+     * giảm đau làm đau dạ dày tệ hơn.
      *
-     * Truy van nhieu tu khong bao gio bi rut con ve mot token: "tieu hoa" hep
-     * xuong "hoa" da khop "chong oxy hoa" va de xuat vitamin E cho benh tieu hoa.
-     * Duoi hai token, nen tra "khong tim thay" de buoc tra danh muc lam viec.
+     * Truy vấn nhiều từ không bao giờ bị rút còn về một token: "tiêu hóa" hẹp
+     * xuống "hóa" đã khớp "chống oxy hóa" và đề xuất vitamin E cho bệnh tiêu hóa.
+     * Dưới hai token, nên trả "không tìm thấy" để buộc tra danh mục làm việc.
      *
      * @return array<int, string>
      */
@@ -2723,11 +2723,11 @@ PROMPT;
     }
 
     /**
-     * Bo "gia bao nhieu" va cac bien the khoi truy van da normalize.
+     * Bỏ "gia bao nhieu" và các biến thể khỏi truy vấn đã normalize.
      *
-     * Khop tren van ban da fold de "gia"/"gia" va "nhieu"/"nhieu" la mot quy tac,
-     * nhung cat ra khoi ban goc theo vi tri tu: cac ung cu vien duoc tim bang LIKE
-     * tren van ban san pham that, van giu dau tieng Viet.
+     * Khớp trên văn bản đã fold để "giá"/"gia" và "nhiều"/"nhieu" là một quy tắc,
+     * nhưng cắt ra khỏi bản gốc theo vị trí từ: các ứng cử viên được tìm bằng LIKE
+     * trên văn bản sản phẩm thật, vẫn giữ dấu tiếng Việt.
      */
     protected function stripPricePhrases(string $normalized): string
     {
@@ -2757,9 +2757,9 @@ PROMPT;
     }
 
     /**
-     * Truy van co du sach de trich dan lai cho khach. Cai den tay cac response
-     * builder thuong la mot doan rut ra khoi cau hoi ("hien tai o website trang
-     * danh muc khong"), doc se nhu mot bug khi duoc echo lai.
+     * Truy vấn có đủ sạch để trích dẫn lại cho khách. Cái đến tay các response
+     * builder thường là một đoạn rút ra khỏi câu hỏi ("hien tai o website trang
+     * danh muc khong"), đọc sẽ như một bug khi được echo lại.
      */
     protected function isPresentableQuery(string $query): bool
     {
@@ -2839,10 +2839,10 @@ PROMPT;
     }
 
     /**
-     * San pham tim duoc qua danh muc khop voi truy van, khi tim kiem tu khoa tren
-     * ten/hoat chat/cach dung da ra rong. Truy van goc co y khong duoc echo lai:
-     * no den day nhu mot doan rut ra khoi cau hoi ("gi ho tro tieu hoa nhanh khong"),
-     * va ten danh muc da noi ro cai gi da duoc khop.
+     * Sản phẩm tìm được qua danh mục khớp với truy vấn, khi tìm kiếm từ khóa trên
+     * tên/hoạt chất/cách dùng đã ra rỗng. Truy vấn gốc cố ý không được echo lại:
+     * nó đến đây như một đoạn rút ra khỏi câu hỏi ("gi ho tro tieu hoa nhanh khong"),
+     * và tên danh mục đã nói rõ cái gì đã được khớp.
      */
     protected function buildCategoryProductFallbackResponseText(
         array $danhMuc,
@@ -3001,8 +3001,8 @@ PROMPT;
 
     protected function buildSymptomGuidanceResponse(string $message, ?int $userAge = null): array
     {
-        // Tai khoan da biet tuoi roi, nen hoi lai se lam bot nhu bo qua ho so
-        // ma no dang giu.
+        // Tài khoản đã biết tuổi rồi, nên hỏi lại sẽ làm bot như bỏ qua hồ sơ
+        // mà nó đang giữ.
         $ageKnown = $userAge !== null;
         $normalizedMessage = $this->normalizeIntentText($message);
         $isDiarrheaMessage = Str::contains($normalizedMessage, ['tieu chay', 'ia chay']);
@@ -3273,11 +3273,11 @@ PROMPT;
     }
 
     /**
-     * Cac cau hoi ve chat lai hoac chat cam. Chi khop tren nguyen token, va danh
-     * sach co y bo qua tieng long Viet vua la tu thong thuong ("da", "co", "ke",
-     * "bong da"), cung nhu cac chat kiem soat ma van la thuoc hop phap ("morphin",
-     * "methadone", "fentanyl") — khach hoi ve chung can cau tra loi tu duoc si,
-     * chu khong phai hang rao nay.
+     * Các câu hỏi về chất lậu hoặc chất cấm. Chỉ khớp trên nguyên token, và danh
+     * sách cố ý bỏ qua tiếng lóng Việt vừa là từ thông thường ("dạ", "cơ", "kê",
+     * "bóng đá"), cũng như các chất kiểm soát mà vẫn là thuốc hợp pháp ("morphin",
+     * "methadone", "fentanyl") — khách hỏi về chúng cần câu trả lời từ dược sĩ,
+     * chứ không phải hàng rào này.
      */
     protected const ILLICIT_SUBSTANCE_KEYWORDS = [
         'ma tuy', 'can sa', 'heroin', 'cocaine', 'cocain', 'crack',
@@ -3338,13 +3338,13 @@ PROMPT;
     }
 
     /**
-     * Red flags nam trong `medical_red_flags` de duoc si co the them dau hieu canh
-     * bao ma khong can sua code. Chi cac dong emergency/urgent co co `chat_short_circuit`
-     * den duoc day — cac dong ngu canh benh nhan ("dang mang thai", "be 1 tuoi") va
-     * cac dong `caution` ("keo dai", "benh nen") duoc xu ly thap hon trong bac thang,
-     * neu khong mot cau hoi san pham thuong se duoc tra loi bang huong dan cap cuu.
+     * Red flags nằm trong `medical_red_flags` để dược sĩ có thể thêm dấu hiệu cảnh
+     * báo mà không cần sửa code. Chỉ các dòng emergency/urgent có cờ `chat_short_circuit`
+     * đến được đây — các dòng ngữ cảnh bệnh nhân ("đang mang thai", "bé 1 tuổi") và
+     * các dòng `caution` ("kéo dài", "bệnh nền") được xử lý thấp hơn trong bậc thang,
+     * nếu không một câu hỏi sản phẩm thường sẽ được trả lời bằng hướng dẫn cấp cứu.
      *
-     * Cache theo tung request: buoc nay chay tren moi tin nhan den.
+     * Cache theo từng request: bước này chạy trên mỗi tin nhắn đến.
      *
      * @return array<int, string>
      */
@@ -3365,7 +3365,7 @@ PROMPT;
                 ->values()
                 ->all();
         } catch (\Throwable $exception) {
-            // Table thieu hoac ket noi chet khong duoc phep tat phat hien cap cuu.
+            // Table thiếu hoặc kết nối chết không được phép tắt phát hiện cấp cứu.
             Log::warning('Falling back to built-in urgent keywords', [
                 'error' => $exception->getMessage(),
             ]);
@@ -3373,18 +3373,18 @@ PROMPT;
             $keywords = [];
         }
 
-        // Table rong nghia la co so kien thuc chua duoc seed, chu khong phai
-        // khong co gi nguy hiem. Khong bao gio de dieu do tat phat hien cap cuu.
+        // Table rỗng nghĩa là cơ sở kiến thức chưa được seed, chứ không phải
+        // không có gì nguy hiểm. Không bao giờ để điều đó tắt phát hiện cấp cứu.
         $this->urgentKeywordsCache = $keywords !== [] ? $keywords : self::URGENT_KEYWORDS_FALLBACK;
 
         return $this->urgentKeywordsCache;
     }
 
     /**
-     * Tang 2.5: chuyen mot case sang loc that su sang trang /health-check rieng.
+     * Tầng 2.5: chuyển một case sàng lọc thật sự sang trang /health-check riêng.
      *
-     * Khung chat qua hep cho wizard 5 buoc, nen widget chi nhan dien case va dua
-     * ra mot link. Khong goi AI, khong tra danh muc.
+     * Khung chat quá hẹp cho wizard 5 bước, nên widget chỉ nhận diện case và đưa
+     * ra một link. Không gọi AI, không tra danh mục.
      */
     protected function tryTriageHandoffResponse(string $message, array $context): ?array
     {
@@ -3392,12 +3392,12 @@ PROMPT;
             return null;
         }
 
-        // Tim san pham ro rang ("co thuoc dau dau khong") la viec cua danh muc.
+        // Tìm sản phẩm rõ ràng ("có thuốc đau đầu không") là việc của danh mục.
         if ($this->wantsProductSuggestionForSymptom($message)) {
             return null;
         }
 
-        // Cac luot hoi theo da co huong dan bien soan rieng o phia duoi.
+        // Các lượt hỏi theo đã có hướng dẫn biên soạn riêng ở phía dưới.
         if ($this->isHealthFollowUpMessage($message) || $this->isCauseQuestion($message)) {
             return null;
         }
@@ -3414,8 +3414,8 @@ PROMPT;
     }
 
     /**
-     * Mot thoi gian duoc neu ra hoac nhieu trieu chung cung luc la nhung gi wizard
-     * thuc su can de xep muc do, nen do la nhung case dang duoc chuyen giao.
+     * Một thời gian được nêu ra hoặc nhiều triệu chứng cùng lúc là những gì wizard
+     * thực sự cần để xếp mức độ, nên đó là những case đang được chuyển giao.
      */
     protected function needsStructuredTriage(string $message): bool
     {
@@ -3450,7 +3450,7 @@ PROMPT;
     }
 
     /**
-     * PHP giu toan bo viec khop va quyet dinh; AI chi trich xuat ten.
+     * PHP giữ toàn bộ việc khớp và quyết định; AI chỉ trích xuất tên.
      */
     protected function buildDrugSafetyCheckResponse(string $productName, int $userId): array
     {
@@ -3468,7 +3468,7 @@ PROMPT;
             ];
         }
 
-        // Du lieu ho so suc khoe la du lieu ca nhan, nen chi doc khi da co dong y tren ho so.
+        // Dữ liệu hồ sơ sức khỏe là dữ liệu cá nhân, nên chỉ đọc khi đã có đồng ý trên hồ sơ.
         $nguoiDung = NguoiDung::with('hoSoSucKhoe')->find($userId);
         $profile = $nguoiDung?->hoSoSucKhoe?->hasConsented() ? $nguoiDung->hoSoSucKhoe : null;
 
@@ -4583,9 +4583,9 @@ PROMPT;
     }
 
     /**
-     * Cac cau hoi du lich giai tri ("di Da Nang choi thi nen di dau?") nam ngoai
-     * pham vi; bat chung tai day tranh mot luot goi AI cho mot cau tra loi ma
-     * tro ly cung khong duoc phep tra loi.
+     * Các câu hỏi du lịch giải trí ("đi Đà Nẵng chơi thì nên đi đâu?") nằm ngoài
+     * phạm vi; bắt chúng tại đây tránh một lượt gọi AI cho một câu trả lời mà
+     * trợ lý cũng không được phép trả lời.
      */
     protected function isLeisureTravelIntent(string $message): bool
     {
@@ -4604,7 +4604,7 @@ PROMPT;
         $tokens = preg_split('/\s+/', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
         foreach ($tokens as $index => $token) {
-            // "choi" doc lap la giai tri, tru khi la mot phan cua san pham ("do choi").
+            // "chơi" đọc lập là giải trí, trừ khi là một phần của sản phẩm ("đồ chơi").
             if ($token === 'choi' && !in_array($tokens[$index - 1] ?? '', ['do', 'dung', 'bo'], true)) {
                 return true;
             }
@@ -4635,9 +4635,9 @@ PROMPT;
     }
 
     /**
-     * "tim thuoc o nha thuoc Long Chau tai Da Nang" - tro ly khong the nhin vao
-     * catalog cua doi thu, va viec coi ca cau la tu khoa san pham da tao ra cac
-     * tim kiem vo nghia nhu `nha long chau tai da nang`.
+     * "tìm thuốc ở nhà thuốc Long Châu tại Đà Nẵng" — trợ lý không thể nhìn vào
+     * catalog của đối thủ, và việc coi cả câu là từ khóa sản phẩm đã tạo ra các
+     * tìm kiếm vô nghĩa như `nha long chau tai da nang`.
      */
     protected function isOtherPharmacyIntent(string $message): bool
     {
@@ -4688,8 +4688,8 @@ PROMPT;
     }
 
     /**
-     * Giu lai phan san pham cua mot cau hoi ve nha thuoc khac, de "tim paracetamol o
-     * nha thuoc Long Chau Da Nang" van tim tren "paracetamol".
+     * Giữ lại phần sản phẩm của một câu hỏi về nhà thuốc khác, để "tìm paracetamol ở
+     * nhà thuốc Long Châu Đà Nẵng" vẫn tìm trên "paracetamol".
      */
     protected function resolveOtherPharmacyProductQuery(string $message): string
     {
@@ -4709,8 +4709,8 @@ PROMPT;
     }
 
     /**
-     * Bo cac tu xoa con lai o hai dau cua truy van da trich xuat de cau tra loi
-     * hien `paracetamol` chu khong phai `paracetamol o`.
+     * Bỏ các từ xóa còn lại ở hai đầu của truy vấn đã trích xuất để câu trả lời
+     * hiện `paracetamol` chứ không phải `paracetamol o`.
      */
     protected function trimQueryFillerWords(string $query): string
     {
@@ -4740,8 +4740,8 @@ PROMPT;
     }
 
     /**
-     * Go bo ten doi thu, tu nha thuoc va ten dia danh ma van giu dau goc,
-     * de phan van ban con lai van doc nhu mot truy van san pham.
+     * Gỡ bỏ tên đối thủ, từ nhà thuốc và tên địa danh mà vẫn giữ dấu gốc,
+     * để phần văn bản còn lại vẫn đọc như một truy vấn sản phẩm.
      */
     protected function stripPharmacyLocationNoise(string $text): string
     {
@@ -4956,10 +4956,10 @@ PROMPT;
             $name = preg_replace('/\s+/u', ' ', (string) $name);
             $name = trim((string) $name);
 
-            // "toi la nam hay nu?" la cau hoi ve gioi tinh, chu khong phai tu gioi
-            // thieu: doan bat duoc la nguyen menh de va khong duoc tro thanh ten.
-            // Tuong tu voi mot tu gioi tinh doc lap, mot nghe nghiep, hay cau hoi
-            // khach da hoi.
+            // "tôi là nam hay nữ?" là câu hỏi về giới tính, chứ không phải tự giới
+            // thiệu: đoạn bắt được là nguyên mệnh đề và không được trở thành tên.
+            // Tương tự với một từ giới tính đơn lập, một nghề nghiệp, hay câu hỏi
+            // khách đã hỏi.
             if ($this->isNotAPersonName($name)) {
                 $name = '';
                 continue;
@@ -5003,26 +5003,26 @@ PROMPT;
     }
 
     /**
-     * Loai bo cac doan bat duoc ro rang khong phai ten ca nhan cua khach.
+     * Loại bỏ các đoạn bắt được rõ ràng không phải tên cá nhân của khách.
      *
-     * "toi la nam hay nu?" khop voi `(?:toi la)\s+(.+)` va bat duoc `nam hay nu?`.
-     * Khong co buoc kiem tra nay, "nam" da bi trich xuat lam ten khach, va tro ly
-     * goi ho la "Nam" tu luc do. Tuong tu voi nghe nghiep va cau hoi.
+     * "toi la nam hay nu?" khớp với `(?:toi la)\s+(.+)` và bắt được `nam hay nu?`.
+     * Không có bước kiểm tra này, "nam" đã bị trích xuất làm tên khách, và trợ lý
+     * gọi họ là "Nam" từ lúc đó. Tương tự với nghề nghiệp và câu hỏi.
      */
     protected function isNotAPersonName(string $name): bool
     {
         $normalized = $this->normalizeIntentText($name);
-        // Cac trung tu cuoi cau ("nu a", "nam nhe") la su lich su, chu khong phai phan cua tu.
+        // Các trợ từ cuối câu ("nữ à", "nam nhé") là sự lịch sự, chứ không phải phần của từ.
         $trimmed = trim(preg_replace('/\s+(?:a|ạ|à|nhe|nhé|nha|da|dạ|vay|vậy)$/u', '', $normalized) ?? $normalized);
 
         if ($trimmed === '') {
             return true;
         }
 
-        // Dau hoi quyet dinh. Tu hoi cung vay — nhung "hay" KHONG phai tu hoi:
-        // fold lam cau menh lenh "hay cho minh biet" van giu nguyen, va mot ten
-        // bat duoc chua no se bi bo vi mot ly do sai.
-        // Cac cau hoi gioi tinh duoc khop nhu nguyen cum thay.
+        // Dấu hỏi quyết định. Từ hỏi cũng vậy — nhưng "hay" KHÔNG phải từ hỏi:
+        // fold làm câu mệnh lệnh "hay cho mình biết" vẫn giữ nguyên, và một tên
+        // bắt được chứa nó sẽ bị bỏ vì một lý do sai.
+        // Các câu hỏi giới tính được khớp như nguyên cụm thay thế.
         if (str_contains($name, '?')
             || preg_match('/\b(?:ai|gi|sao|khong|phai khong|dung khong)\b/u', $trimmed) === 1
         ) {
@@ -5033,8 +5033,8 @@ PROMPT;
             return true;
         }
 
-        // Cac nghe nghiep, vai tro va tu gioi tinh thuan tuy khong phai ten thuong dung.
-        // "nu" ( nu) bi chan; "nam" duoc phep vi la ten rat pho bien.
+        // Các nghề nghiệp, vai trò và từ giới tính thuần túy không phải tên thường dùng.
+        // "nữ" (nữ) bị chặn; "nam" được phép vì là tên rất phổ biến.
         $occupations = [
             'nu', 'gioi tinh',
             'bac si', 'duoc si', 'y ta', 'dieu duong', 'nhan vien', 'sinh vien',
@@ -5152,9 +5152,9 @@ PROMPT;
     }
 
     /**
-     * Tuoi tu ho so cua chinh khach, hoac null khi khong biet (khach vang lai,
-     * hoac khong co birth_date). Cac quy tac sang loc coi null la chua biet,
-     * chu khong phai nguoi lon.
+     * Tuổi từ hồ sơ của chính khách, hoặc null khi không biết (khách vãng lai,
+     * hoặc không có birth_date). Các quy tắc sàng lọc coi null là chưa biết,
+     * chứ không phải người lớn.
      */
     protected function resolveUserAge(int $userId): ?int
     {
@@ -5399,7 +5399,7 @@ PROMPT;
         $queries = [];
 
         foreach ($this->symptomMapFromDatabase() as $needle => $entry) {
-            // Khop theo tu hoan chinh, khong phai substring: alias ngan khong duoc kich hoat giua mot tu.
+            // Khớp theo từ hoàn chỉnh, không phải substring: alias ngắn không được kích hoạt giữa một từ.
             if (!VietnameseText::containsWord($normalized, $needle)) {
                 continue;
             }
@@ -5415,11 +5415,11 @@ PROMPT;
     }
 
     /**
-     * Mot so alias trung voi tieng Viet thong thuong sau khi dau da duoc go:
-     * "nuoc sot" la mot loai sot cham, "sot ruot" la su nong tat, "con ngua" la
-     * con ngua. Quyet dinh bang cac tu o hai ben cua alias. Guard words lay tu
-     * `medical_symptoms.guard_words`, nen duoc si them mot alias trung nghia
-     * co the tu canh bao no ma khong can sua code.
+     * Một số alias trùng với tiếng Việt thông thường sau khi dấu đã được gỡ:
+     * "nước sốt" là một loại sốt chấm, "sốt ruột" là sự nóng nảy, "con ngựa" là
+     * con ngựa. Quyết định bằng các từ ở hai bên của alias. Guard words lấy từ
+     * `medical_symptoms.guard_words`, nên dược sĩ thêm một alias trùng nghĩa
+     * có thể tự cảnh báo nó mà không cần sửa code.
      *
      * @param array<int, string> $guards
      */
@@ -5448,21 +5448,21 @@ PROMPT;
             $before = $tokens[$index - 1] ?? '';
             $after = $tokens[$index + $length] ?? '';
 
-            // Mot lan xuat hien ma khong co guard nao o hai ben nghia la alias thuc su
-            // dang duoc dung theo nghia y khoa tai day.
+            // Một lần xuất hiện mà không có guard nào ở hai bên nghĩa là alias thực sự
+            // đang được dùng theo nghĩa y khoa tại đây.
             if (!in_array($before, $guards, true) && !in_array($after, $guards, true)) {
                 return false;
             }
         }
 
-        // Chi khop qua regex (vi du ben trong mot token dai hon) — coi nhu la nghia thong thuong.
+        // Chỉ khớp qua regex (ví dụ bên trong một token dài hơn) — coi như là nghĩa thông thường.
         return $found;
     }
 
     /**
-     * Cac alias trieu chung nam trong `medical_symptoms`, khoa boi alias khong dau
-     * de duoc si day cho bot mot cach viet moi ma khong phai sua code.
-     * Du phong ve `catalog_query` khi co gia tri, khong thi dung ten tieng Viet.
+     * Các alias triệu chứng nằm trong `medical_symptoms`, khóa bởi alias không dấu
+     * để dược sĩ dạy cho bot một cách viết mới mà không phải sửa code.
+     * Dự phòng về `catalog_query` khi có giá trị, không thì dùng tên tiếng Việt.
      *
      * @return array<string, array{query: string, guards: array<int, string>}>
      */
@@ -5499,7 +5499,7 @@ PROMPT;
             $map = [];
         }
 
-        // Table chua seed khong duoc im lang tat phat hien trieu chung.
+        // Table chưa seed không được im lặng tắt phát hiện triệu chứng.
         $this->symptomMapCache = $map !== [] ? $map : $this->fallbackSymptomMap();
 
         return $this->symptomMapCache;
@@ -5523,11 +5523,11 @@ PROMPT;
     }
 
     /**
-     * Xay dung mang tin nhan cuoc tro chuyen cho nha cung cap AI.
+     * Xây dựng mảng tin nhắn cuộc trò chuyện cho nhà cung cấp AI.
      *
-     * @param string $currentMessage Tin nhan hien tai cua nguoi dung
-     * @param array $context Ngu canh cuoc tro chuyen kem cac tin nhan truoc
-     * @return array Mang cac object tin nhan
+     * @param string $currentMessage Tin nhắn hiện tại của người dùng
+     * @param array $context Ngữ cảnh cuộc trò chuyện kèm các tin nhắn trước
+     * @return array Mảng các object tin nhắn
      */
     protected function buildConversationMessages(string $currentMessage, array $context): array
     {
@@ -5563,17 +5563,17 @@ PROMPT;
             $history = $this->sanitizeHistoryForAi($context['previous_messages']);
             $latestTopic = $this->findLatestUserTopic($history);
 
-            // Chi ap dung cho tin nhan khong mang chu de rieng nao. Ghim chu de cho
-            // moi luot se mac khach moi khi ho doi chu de.
+            // Chỉ áp dụng cho tin nhắn không mang chủ đề riêng nào. Ghim chủ đề cho
+            // mỗi lượt sẽ mâu thuẫn với khách mới khi họ đổi chủ đề.
             $isElliptical = $latestTopic !== '' && $this->isEllipticalFollowUpMessage($currentMessage);
 
             if ($isElliptical) {
-                // Chi bao nha cung cap dung chu de nao la chua du: voi doan hoi thoai
-                // da bao cao nam trong ngu canh, no van tra loi cau hoi ve thuoc cu
-                // du khi lenh da goi ten chu de moi va luot nguoi dung da mang tham
-                // chieu da giai quyet. Vi vay cac chu de cu bi giu lai trong luot nay
-                // — tin nhan khong co noi dung chi co the chi den doan hoi thoai ngay
-                // phia tren, va phan khong co mat thi khong the tra loi.
+                // Chỉ báo cho nhà cung cấp dùng chủ đề nào là chưa đủ: với đoạn hội thoại
+                // đã báo cáo nằm trong ngữ cảnh, nó vẫn trả lời câu hỏi về thuốc cũ
+                // dù lệnh đã gọi tên chủ đề mới và lượt người dùng đã mang tham
+                // chiếu đã giải quyết. Vì vậy các chủ đề cũ bị giữ lại trong lượt này
+                // — tin nhắn không có nội dung chỉ có thể chỉ đến đoạn hội thoại ngay
+                // phía trên, và phần không có mặt thì không thể trả lời.
                 $history = $this->keepLatestExchange($history);
             }
 
@@ -5602,13 +5602,13 @@ PROMPT;
     }
 
     /**
-     * Lich su cuoc tro chuyen theo cai nha cung cap nen thay.
+     * Lịch sử cuộc trò chuyện theo cái nhà cung cấp nên thấy.
      *
-     * Hai loai nhieu da lam model tra loi sai cau hoi: cac thong bao "nha cung cap
-     * AI khong kha dung" (khong co noi dung, nhung de lai cau hoi bi thay duong nhu
-     * chua duoc tra loi) va cac lan gui lai giong het ma khach gui sau do, co the
-     * chiem phan lon cua so bang mot chu de da bo cuoc. Ca hai van duoc giu trong
-     * database va tren UI - chung chi bi bo khoi cua so dua cho AI.
+     * Hai loại nhiễu đã làm model trả lời sai câu hỏi: các thông báo "nhà cung cấp
+     * AI không khả dụng" (không có nội dung, nhưng để lại câu hỏi bị thay dường như
+     * chưa được trả lời) và các lần gửi lại giống hết mà khách gửi sau đó, có thể
+     * chiếm phần lớn cửa sổ bằng một chủ đề đã bỏ cuộc. Cả hai vẫn được giữ trong
+     * database và trên UI - chúng chỉ bị bỏ khỏi cửa sổ đưa cho AI.
      *
      * @param array<int, mixed> $previousMessages
      * @return array<int, array{role: string, content: string}>
@@ -5636,8 +5636,8 @@ PROMPT;
                 continue;
             }
 
-            // Rut cac luot cung role lien tiep xuong thanh cach dien dat moi nhat.
-            // Dieu nay cung giu cac role xen ke, dieu che do Anthropic messages can.
+            // Rút các lượt cùng role liên tiếp xuống thành cách diễn đạt mới nhất.
+            // Điều này cũng giữ các role xen kẽ, điều chế mà Anthropic messages cần.
             $lastIndex = count($history) - 1;
             if ($lastIndex >= 0 && $history[$lastIndex]['role'] === $role) {
                 $history[$lastIndex]['content'] = $content;
@@ -5657,9 +5657,9 @@ PROMPT;
     }
 
     /**
-     * Cac luot tro ly chi xin loi vi nha cung cap khong kha dung. Cac loai du phong
-     * khac (tra danh muc sau loi nha cung cap, hang rao y khoa cap cuu) co noi dung
-     * that va duoc giu lai trong cua so.
+     * Các lượt trợ lý chỉ xin lỗi vì nhà cung cấp không khả dụng. Các loại dự phòng
+     * khác (trả danh mục sau lỗi nhà cung cấp, hàng rào y khoa cấp cứu) có nội dung
+     * thật và được giữ lại trong cửa sổ.
      */
     protected function isUninformativeFallbackTurn(array $message): bool
     {
@@ -5681,10 +5681,10 @@ PROMPT;
     }
 
     /**
-     * Chu de moi nhat khach da neu ra, dung de giai quyet cac cau hoi rut gon
-     * ("co on khong?") ma neu khong model se gan vao bat ky chu de cu nao trong
-     * nhu chua duoc tra loi — case da bao cao da tra loi mot cau hoi ve thuoc tu
-     * bon luot truoc thay vi danh sach thuoc ngay phia tren.
+     * Chủ đề mới nhất khách đã nêu ra, dùng để giải quyết các câu hỏi rút gọn
+     * ("cơm ổn không?") mà nếu không model sẽ gắn vào bất kỳ chủ đề cũ nào trông
+     * như chưa được trả lời — case đã báo cáo đã trả lời một câu hỏi về thuốc từ
+     * bốn lượt trước thay vì danh sách thuốc ngay phía trên.
      *
      * @param array<int, array{role: string, content: string}> $history
      */
@@ -5707,8 +5707,8 @@ PROMPT;
     }
 
     /**
-     * Cap user/assistant cuoi cung, la ngu canh duy nhat ma mot cau hoi rut gon
-     * co the chi den.
+     * Cặp user/assistant cuối cùng, là ngữ cảnh duy nhất mà một câu hỏi rút gọn
+     * có thể chỉ đến.
      *
      * @param array<int, array{role: string, content: string}> $history
      * @return array<int, array{role: string, content: string}>
@@ -5725,14 +5725,14 @@ PROMPT;
     }
 
     /**
-     * Mot tin nhan ngan khong mang chu de rieng nao sau khi tu xoa da bo,
-     * nen chi co the doc dua vao luot truoc.
+     * Một tin nhắn ngắn không mang chủ đề riêng nào sau khi từ xóa đã bỏ,
+     * nên chỉ có thể đọc dựa vào lượt trước.
      */
     /**
-     * QUERY_NOISE_TOKENS da fold, de danh sach token so sanh voi van ban fold se khop.
+     * QUERY_NOISE_TOKENS đã fold, để danh sách token so sánh với văn bản fold sẽ khớp.
      *
-     * Hang so giu ca cach viet co dau va khong dau; tokenizeNormalizedIntentText fold,
-     * nen "san"/"pham" den dang "san"/"pham" va khong bao gio khop voi ban ghi goc.
+     * Hằng số giữ cả cách viết có dấu và không dấu; tokenizeNormalizedIntentText fold,
+     * nên "sản"/"phẩm" đến dạng "san"/"pham" và không bao giờ khớp với bản ghi gốc.
      *
      * @return array<int, string>
      */
@@ -5752,17 +5752,17 @@ PROMPT;
         }
 
         $tokens = $this->tokenizeNormalizedIntentText($normalized);
-        // Muoi, chu khong phai sau: mot cau hoi rut gon dien dat lich su
-        // ("tom tat lai theo dang table giup toi nhe") mang tam token, va khong token
-        // nao co chu de. Danh sach cho phep phia duoi moi la thu quyet dinh that,
-        // nen gioi han nay chi de chan viec quet mot doan van dai.
+        // Mười, chứ không phải sáu: một câu hỏi rút gọn diễn đạt lịch sự
+        // ("tóm tắt lại theo dạng table giúp tôi nhé") mang tám token, và không token
+        // nào có chủ đề. Danh sách cho phép phía dưới mới là thứ quyết định thật,
+        // nên giới hạn này chỉ để chặn việc quét một đoạn văn dài.
         if (empty($tokens) || count($tokens) > 10) {
             return false;
         }
 
-        // Cac tu nhieu ("san pham", "cho", "xem") cung khong mang chu de, va da bi
-        // loai khoi truy van tim kiem vi cung ly do. Cho phep o day de
-        // "cho xem link san pham di" duoc giai quyet dung nhu mot cau hoi rut gon.
+        // Các từ nhiễu ("sản phẩm", "cho", "xem") cũng không mang chủ đề, và đã bị
+        // loại khỏi truy vấn tìm kiếm vì cùng lý do. Cho phép ở đây để
+        // "cho xem link san pham di" được giải quyết đúng như một câu hỏi rút gọn.
         return $this->onlyContainsTokens(
             $tokens,
             array_merge(self::ELLIPTICAL_FOLLOW_UP_TOKENS, $this->normalizedNoiseTokens())
@@ -5770,7 +5770,7 @@ PROMPT;
     }
 
     /**
-     * Kiem tra truy van co lien quan den trieu chung hay khong.
+     * Kiểm tra truy vấn có liên quan đến triệu chứng hay không.
      */
     protected function isSymptomRelatedQuery(string $query): bool
     {
@@ -5794,9 +5794,9 @@ PROMPT;
     }
 
     /**
-     * "dau", "cam", "om" va "ho" trung voi cac tu thong thuong sau khi dau bi go
-     * ("o dau", "nuoc cam", "cam on", "ho"), nen chung duoc khop tai day
-     * thay vi qua danh sach tu khoa khong phan biet dau.
+     * "đau", "cảm", "ốm" và "ho" trùng với các từ thông thường sau khi dấu bị gỡ
+     * ("ở đâu", "nước cam", "cảm ơn", "hố"), nên chúng được khớp tại đây
+     * thay vì qua danh sách từ khóa không phân biệt dấu.
      */
     protected function containsAmbiguousSymptomWord(string $query): bool
     {
@@ -5805,7 +5805,7 @@ PROMPT;
             return false;
         }
 
-        // Khi nguoi dung go co dau, cach viet co dau la chuan.
+        // Khi người dùng gõ có dấu, cách viết có dấu là chuẩn.
         if ($lower !== Str::lower(Str::ascii($lower))) {
             return preg_match('/(?<!\p{L})(?:đau|ốm|ho)(?!\p{L})/u', $lower) === 1
                 || preg_match('/(?<!\p{L})cảm(?!\p{L})(?!\s+(?:ơn|thấy|nhận|giác|tình|xúc|ứng))/u', $lower) === 1;
@@ -5815,28 +5815,28 @@ PROMPT;
     }
 
     /**
-     * Cach viet khong dau van giu su nhieu nghia, nen moi tu ung cu vien chi duoc
-     * chap nhan khi cac tu xung quanh khong danh dau nghia khong phai trieu chung.
+     * Cách viết không dấu vẫn giữ sự nhiều nghĩa, nên mỗi từ ứng cử viên chỉ được
+     * chấp nhận khi các từ xung quanh không đánh dấu nghĩa không phải triệu chứng.
      */
     protected function containsUnaccentedSymptomWord(string $normalizedMessage): bool
     {
         $guards = [
-            // "o dau", "bat dau", "dau tien", "dau thang"
+            // "ở đâu", "bắt đầu", "đầu tiên", "đầu tháng"
             'dau' => [
                 'before' => ['o', 've', 'tu', 'den', 'toi', 'noi', 'bat', 'khu'],
                 'after' => ['tien', 'nam', 'thang', 'tuan', 'ky', 'bep'],
             ],
-            // "nuoc cam", "cam on", "cam thay", "cam ung"
+            // "nước cam", "cảm ơn", "cảm thấy", "cảm ứng"
             'cam' => [
                 'before' => ['nuoc', 'trai', 'qua', 'ly', 'coc', 'mui', 'vitamin'],
                 'after' => ['on', 'thay', 'nhan', 'giac', 'tinh', 'xuc', 'ung'],
             ],
-            // "om nhau", "om chat"
+            // "ốm nhau", "ốm chát"
             'om' => [
                 'before' => [],
                 'after' => ['nhau', 'chat', 'lay'],
             ],
-            // "ho tro", "ho ten", "ho noi", "ho khau"
+            // "hỗ trợ", "họ tên", "hộ khẩu", "hố sâu"
             'ho' => [
                 'before' => ['nha', 'ma'],
                 'after' => ['tro', 'ten', 'hang', 'khau', 'so', 'noi', 'ay', 'do', 'nay', 'la', 'ngheo', 'gia'],
@@ -5873,7 +5873,7 @@ PROMPT;
             return false;
         }
 
-        // Markdown link: [text](https://...)
+        // Markdown link: [văn bản](https://...)
         if (preg_match('/^\[[^\]]+\]\((https?:\/\/[^\s)]+)\)$/iu', $trimmed) === 1) {
             return true;
         }
@@ -5882,7 +5882,7 @@ PROMPT;
             return true;
         }
 
-        // Payload dang URL tran, khong kem ngu canh cau van ben canh.
+        // Payload dạng URL trần, không kèm ngữ cảnh câu văn bên cạnh.
         if (preg_match('/^(https?:\/\/|www\.)\S+$/iu', $trimmed) === 1) {
             return true;
         }
@@ -5891,7 +5891,7 @@ PROMPT;
     }
 
     /**
-     * Kiem tra cau tra loi co chua loi khuyen y khoa hay khong.
+     * Kiểm tra câu trả lời có chứa lời khuyên y khoa hay không.
      */
     protected function containsMedicalAdvice(string $response): bool
     {
@@ -5912,7 +5912,7 @@ PROMPT;
     }
 
     /**
-     * Tim san pham dua tren chuoi truy van.
+     * Tìm sản phẩm dựa trên chuỗi truy vấn.
      */
     public function searchProducts(string $query): Collection
     {
@@ -6026,12 +6026,12 @@ PROMPT;
     }
 
     /**
-     * Phuong an cuoi truoc khi cham diem ten fuzzy: thu lai tim kiem tu khoa tren
-     * cac phan ngan dan cua truy van, dai nhat truoc.
+     * Phương án cuối trước khi chấm điểm tên fuzzy: thử lại tìm kiếm từ khóa trên
+     * các phần ngắn dần của truy vấn, dài nhất trước.
      *
-     * Cac tang o tren khop nguyen cum, nen mot tu thua lam chim tim kiem -
-     * "da day" tim ra bon loai thuoc trong khi "dau da day" ra khong gi,
-     * du ton kho tra loi cho ca hai la nhu nhau.
+     * Các tầng ở trên khớp nguyên cụm, nên một từ thừa làm chìm tìm kiếm -
+     * "dạ dày" tìm ra bốn loại thuốc trong khi "đau dạ dày" ra không gì,
+     * dù tồn kho trả lời cho cả hai là như nhau.
      */
     protected function searchProductsByNarrowingQuery(string $query): Collection
     {
@@ -6065,16 +6065,16 @@ PROMPT;
     }
 
     /**
-     * Chi giu lai cac dong ma cum tu thuc su xuat hien nhu mot tu hoan chinh.
+     * Chỉ giữ lại các dòng mà cụm từ thực sự xuất hiện như một từ hoàn chỉnh.
      *
-     * LIKE quyet dinh do nhay dau qua collation, va utf8mb4_unicode_ci cua MySQL
-     * bo qua hoan toan dau tieng Viet, nen `%thu thai%` da khop "hap thu thai tru"
-     * trong van ban duoc hoc cua thuoc tham vi — cau hoi ve que thu thai tra loi
-     * bang thuoc da day. Khop substring la nua con lai: "bao nhieu" trung
-     * "trung hoa luong acid dich vi bao nhieu".
+     * LIKE quyết định độ nhạy dấu qua collation, và utf8mb4_unicode_ci của MySQL
+     * bỏ qua hoàn toàn dấu tiếng Việt, nên `%thu thai%` đã khớp "hap thu thai tru"
+     * trong văn bản được học của thuốc tham vị — câu hỏi về que thử thai trả lời
+     * bằng thuốc dạ dày. Khớp substring là nửa còn lại: "bao nhiêu" trúng
+     * "trung hòa lượng acid dịch vị bao nhiêu".
      *
-     * Dau tieng Viet chi duoc ep buat khi khach tu go co dau, nen "dau da day"
-     * van tim ra "dau da day" trong khi "thu thai" khong con trung "thu thai" nua.
+     * Dấu tiếng Việt chỉ được ép buộc khi khách tự gõ có dấu, nên "đau dạ dày"
+     * vẫn tìm ra "đau dạ dày" trong khi "thụ thai" không còn trúng "thu thai" nữa.
      */
     protected function keepGenuineMatches(Collection $sanPhams, string $phrase): Collection
     {
@@ -6105,8 +6105,8 @@ PROMPT;
             return false;
         }
 
-        // Go khong dau: fold ca hai ben, chinh dieu nay cho phep khach tim
-        // "dau da day". Go co dau: dau phai song sot qua buoc khop.
+        // Gõ không dấu: fold cả hai bên, chính điều này cho phép khách tìm
+        // "đau dạ dày". Gõ có dấu: dấu phải sống sót qua bước khớp.
         if ($this->normalizeIntentText($phrase) === mb_strtolower($phrase, 'UTF-8')) {
             return VietnameseText::containsWord($this->normalizeIntentText($haystack), $phrase);
         }
@@ -6118,7 +6118,7 @@ PROMPT;
     }
 
     /**
-     * Goi y san pham dua tren trieu chung.
+     * Gợi ý sản phẩm dựa trên triệu chứng.
      */
     public function recommendBySymptoms(string $symptoms): array
     {
@@ -6188,11 +6188,11 @@ PROMPT;
     }
 
     /**
-     * Tao don hang nhap tu cac san pham da nhan dien.
+     * Tạo đơn hàng nháp từ các sản phẩm đã nhận diện.
      *
-     * @param array $sanPhams Mang san pham kem so luong
-     * @param int $userId ID nguoi dung
-     * @return array Du lieu don nhap kem ket qua kiem tra
+     * @param array $sanPhams Mảng sản phẩm kèm số lượng
+     * @param int $userId ID người dùng
+     * @return array Dữ liệu đơn nháp kèm kết quả kiểm tra
      * @throws \Exception
      */
     public function createDraftOrder(array $sanPhams, int $userId): array

@@ -18,7 +18,7 @@ use Maatwebsite\Excel\Facades\Excel;
 class SanPhamController extends Controller
 {
     /**
-     * Hien thi danh sach san pham.
+     * Hiển thị danh sách sản phẩm.
      */
     public function index()
     {
@@ -27,7 +27,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Hien thi form tao san pham moi.
+     * Hiển thị form tạo sản phẩm mới.
      */
     public function create()
     {
@@ -37,7 +37,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Luu san pham moi tao vao storage.
+     * Lưu sản phẩm mới tạo vào storage.
      */
     public function store(SanPhamRequest $request)
     {
@@ -46,7 +46,7 @@ class SanPhamController extends Controller
         $data['ma_san_pham'] = TaoMaSanPham::maSanPhamTheoDanhMuc($danhMuc);
         $uploadedImage = null;
 
-        // Xu ly tai len anh
+        // Xử lý tải lên ảnh
         if ($request->hasFile('image')) {
             $uploadedImage = $this->handleImageUpload($request->file('image'));
             $data['hinh_anh'] = $uploadedImage;
@@ -72,7 +72,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Hien thi san pham chi dinh.
+     * Hiển thị sản phẩm chỉ định.
      */
     public function show(SanPham $product)
     {
@@ -82,7 +82,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Hien thi form sua san pham chi dinh.
+     * Hiển thị form sửa sản phẩm chỉ định.
      */
     public function edit(SanPham $product)
     {
@@ -92,7 +92,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Cap nhat san pham chi dinh trong storage.
+     * Cập nhật sản phẩm chỉ định trong storage.
      */
     public function update(SanPhamRequest $request, SanPham $product)
     {
@@ -100,7 +100,7 @@ class SanPhamController extends Controller
         $oldImage = $product->hinh_anh;
         $newImage = null;
 
-        // Xu ly tai len anh
+        // Xử lý tải lên ảnh
         if ($request->hasFile('image')) {
             $newImage = $this->handleImageUpload($request->file('image'));
             $data['hinh_anh'] = $newImage;
@@ -133,7 +133,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Xoa san pham chi dinh khoi storage (soft delete).
+     * Xoá sản phẩm chỉ định khỏi storage (soft delete).
      */
     public function destroy(SanPham $product)
     {
@@ -146,29 +146,29 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Lay du lieu san pham cho DataTables.
+     * Lấy dữ liệu sản phẩm cho DataTables.
      */
     public function data(Request $request)
     {
-        // Tong so ban ghi - dem TRUOC khi dung query
+        // Tổng số bản ghi - đếm TRƯỚC khi dựng query
         $totalRecords = SanPham::count();
 
         $query = SanPham::query();
 
-        // Loc theo DanhMuc
+        // Lọc theo DanhMuc
         if ($request->has('MaDM') && $request->MaDM != '') {
             $query->where('ma_dm', $request->MaDM);
         }
 
-        // Tim kiem
+        // Tìm kiếm
         if ($request->has('search') && $request->search['value']) {
             $query->search($request->search['value']);
         }
 
-        // So ban ghi sau khi loc
+        // Số bản ghi sau khi lọc
         $filteredRecords = $query->count();
 
-        // Cac sort key DataTables client gui ve (giu nguyen) duoc anh xa sang cac cot da doi ten.
+        // Các sort key DataTables client gửi về (giữ nguyên) được ánh xạ sang các cột đã đổi tên.
         $allowedOrderColumns = [
             'MaSP' => 'ma_sp',
             'product_code' => 'ma_san_pham',
@@ -180,7 +180,7 @@ class SanPhamController extends Controller
             'category.name' => 'category.name',
         ];
 
-        // Sap xep
+        // Sắp xếp
         if ($request->has('order')) {
             $columnIndex = (int) $request->input('order.0.column', 0);
             $requestedColumn = (string) $request->input("columns.$columnIndex.name", 'ma_sp');
@@ -196,12 +196,12 @@ class SanPhamController extends Controller
             }
         }
         
-        // Phan trang - CHI tai nhung ban ghi can cho trang hien tai
+        // Phân trang - CHỈ tải những bản ghi cần cho trang hiện tại
         $start = max(0, $request->integer('start', 0));
         $length = min(max($request->integer('length', 10), 1), 100);
         $sanPhams = $query->with('danhMuc')->skip($start)->take($length)->get();
 
-        // Dinh dang du lieu - tra ve du lieu tho thay vi HTML
+        // Định dạng dữ liệu - trả về dữ liệu thô thay vì HTML
         $data = $sanPhams->map(function($product) {
             return [
                 'MaSP' => $product->ma_sp,
@@ -242,26 +242,26 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Xu ly tai len anh.
+     * Xử lý tải lên ảnh.
      *
      * @param \Illuminate\Http\UploadedFile $file
      * @return string
      */
     private function handleImageUpload($file): string
     {
-        // Tao ten file duy nhat
+        // Tạo tên file duy nhất
         $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
 
-        // Luu vao thu muc public/products
+        // Lưu vào thư mục public/products
         $file->storeAs('products', $filename, 'public');
 
-        // Tra ve duong dan tuong doi voi storage disk (kem prefix products/)
+        // Trả về đường dẫn tương đối với storage disk (kèm prefix products/)
         return 'products/' . $filename;
     }
 
     /**
-     * Anh xa cac key form da validate sang ten cot tieng Viet cua san_phams.
-     * Contract cua form (name/price/...) giu nguyen; chi cac key storage thay doi.
+     * Ánh xạ các key form đã validate sang tên cột tiếng Việt của san_phams.
+     * Contract của form (name/price/...) giữ nguyên; chỉ các key storage thay đổi.
      */
     private function productPayload(array $validated): array
     {
@@ -279,7 +279,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Giu lo san pham chinh co the chinh sua dong bo voi cac field san pham.
+     * Giữ lô sản phẩm chính có thể chỉnh sửa đồng bộ với các field sản phẩm.
      */
     private function syncPrimaryBatch(SanPham $product, array $data): void
     {

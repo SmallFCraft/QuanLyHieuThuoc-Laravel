@@ -37,20 +37,20 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Giao mot luot chatbot cho worker hang doi va tra loi ngay.
+     * Giao một lượt chatbot cho worker hàng đợi và trả lời ngay.
      *
-     * Luc truoc loi goi AI chay truc tiep, giu mot process PHP toi da AI_TIMEOUT
-     * cong nua nha cung cap du phong. Server dev chi co mot process nen dieu nay
-     * chan moi trang khac: mot khach cho bot tra loi la ca site bi dong bang.
+     * Lúc trước lời gọi AI chạy trực tiếp, giữ một process PHP tối đa AI_TIMEOUT
+     * cộng nửa nhà cung cấp dự phòng. Server dev chỉ có một process nên điều này
+     * chặn mọi trang khác: một khách chờ bot trả lời là cả site bị đóng băng.
      *
-     * Hinh dang response phu thuoc vao queue driver, co chu y:
-     *  - worker dang chay       -> 202 kem job id de poll;
-     *  - driver `sync`          -> job da chay xong, tra ve cau tra loi day du
-     *                              ngay tai day giong het nhu truoc.
+     * Hình dạng response phụ thuộc vào queue driver, có chủ ý:
+     *  - worker đang chạy       -> 202 kèm job id để poll;
+     *  - driver `sync`          -> job đã chạy xong, trả về câu trả lời đầy đủ
+     *                              ngay tại đây giống hệt như trước.
      */
     public function sendMessage(Request $request, AiJobService $aiJobs): JsonResponse
     {
-        // Kiem tra xac thuc truoc
+        // Kiểm tra xác thực trước
         if (!auth()->check()) {
             return response()->json([
                 'success' => false,
@@ -82,9 +82,9 @@ class TroLyChatbotController extends Controller
         $userId = (int) auth()->id();
         $sessionId = $this->getSessionId();
 
-        // Browser goi yeu cau nay khi polling cho thay khong worker nao bao gio
-        // nhan job truoc do. Job bi bo leo duoc huu tro truoc de worker muon
-        // khong the dang mot cau tra loi thu hai cho cung cau hoi.
+        // Browser gọi yêu cầu này khi polling cho thấy không worker nào bao giờ
+        // nhận job trước đó. Job bị bỏ leo được hưu trí trước để worker muộn
+        // không thể đăng một câu trả lời thứ hai cho cùng câu hỏi.
         $sync = $request->boolean('sync');
 
         if ($sync) {
@@ -123,10 +123,10 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Tien do cua bat ky job AI nao trong hang doi — luot chat hoac viet lai loi khuyen sang loc.
+     * Tiến độ của bất kỳ job AI nào trong hàng đợi — lượt chat hoặc viết lại lời khuyên sàng lọc.
      *
-     * uuid la identifier cong khai, khong phai capability token: AiJobService gioi
-     * han moi truy van vao khach dang dang nhap, nen job cua nguoi khac la 404.
+     * uuid là identifier công khai, không phải capability token: AiJobService giới
+     * hạn mỗi truy vấn vào khách đang đăng nhập, nên job của người khác là 404.
      */
     public function pollJob(Request $request, AiJobService $aiJobs, string $uuid): JsonResponse
     {
@@ -163,8 +163,8 @@ class TroLyChatbotController extends Controller
             ]);
         }
 
-        // Khach da nhan dung. Khong phai loi: browser da go bo bong chat dang cho,
-        // nen chi can biet rang no co the dung polling.
+        // Khách đã nhấn dừng. Không phải lỗi: browser đã gỡ bỏ bong bóng chat đang chờ,
+        // nên chỉ cần biết rằng nó có thể dừng polling.
         if ($state['status'] === 'cancelled') {
             return response()->json([
                 'success' => false,
@@ -182,11 +182,11 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Dung mot luot ma khach khong con muon nua.
+     * Dừng một lượt mà khách không còn muốn nữa.
      *
-     * Chi abort fetch o browser se de worker chay tiep va cau tra loi roi vao
-     * `chat_messages` — khach se thay cau tra loi cho cau hoi ho da huy o lan
-     * tai lai sau. Huu tro dong ban ghi moi la cach lam cho lenh dung co that.
+     * Chỉ abort fetch ở browser sẽ để worker chạy tiếp và câu trả lời rơi vào
+     * `chat_messages` — khách sẽ thấy câu trả lời cho câu hỏi họ đã huỷ ở lần
+     * tải lại sau. Hưu trí dòng bản ghi mới là cách làm cho lệnh dừng có thật.
      */
     public function cancelJob(Request $request, AiJobService $aiJobs, string $uuid): JsonResponse
     {
@@ -199,8 +199,8 @@ class TroLyChatbotController extends Controller
             ], 401);
         }
 
-        // Gioi han vao khach dang dang nhap: uuid la identifier cong khai, nen khong
-        // co check nay bat ky ai cung co the ha luot chat cua khach khac.
+        // Giới hạn vào khách đang đăng nhập: uuid là identifier công khai, nên không
+        // có check này bất kỳ ai cũng có thể hạ lượt chat của khách khác.
         $job = AiJob::where('uuid', $uuid)->where('ma_nd', (int) auth()->id())->first();
 
         if ($job === null) {
@@ -234,17 +234,17 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Ngu canh hoi thoai cho luot AI.
+     * Ngữ cảnh hội thoại cho lượt AI.
      *
-     * Session id va lich su den tu server, khong bao gio tu request body:
-     * session id do client cung cap se cho mot khach doc thread cua khach khac.
+     * Session id và lịch sử đến từ server, không bao giờ từ request body:
+     * session id do client cung cấp sẽ cho một khách đọc thread của khách khác.
      *
-     * Ca hai danh sach phai giu nguyen la danh sach lien tuc theo thu tu thoi gian.
-     * Chi reverse() mot minh giu lai cac key giam dan, ma json_encode bien thanh
-     * object, va cot json `ai_jobs.payload` tra ve cac key object sap tang dan -
-     * worker hang doi khi do giao cho model ca cuoc tro chuyen moi nhat truoc,
-     * nen mot cau hoi theo ngan ("co on khong?") duoc tra loi dua tren tin nhan
-     * cu nhat trong cua so thay vi tin nhan moi nhat.
+     * Cả hai danh sách phải giữ nguyên là danh sách liên tục theo thứ tự thời gian.
+     * Chỉ reverse() một mình giữ lại các key giảm dần, mà json_encode biến thành
+     * object, và cột json `ai_jobs.payload` trả về các key object sắp tăng dần -
+     * worker hàng đợi khi đó giao cho model cả cuộc trò chuyện mới nhất trước,
+     * nên một câu hỏi theo ngắn ("có ổn không?") được trả lời dựa trên tin nhắn
+     * cũ nhất trong cửa sổ thay vì tin nhắn mới nhất.
      *
      * @return array<string, mixed>
      */
@@ -297,14 +297,14 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Tai len va xu ly anh don thuoc hoac hoa don.
+     * Tải lên và xử lý ảnh đơn thuốc hoặc hoá đơn.
      *
      * @param Request $request
      * @return JsonResponse
      */
     public function uploadImage(Request $request): JsonResponse
     {
-        // Kiem tra xac thuc truoc
+        // Kiểm tra xác thực trước
         if (!auth()->check()) {
             return response()->json([
                 'success' => false,
@@ -353,7 +353,7 @@ class TroLyChatbotController extends Controller
                 'show_disclaimer' => false,
             ]);
             
-            // Xu ly anh theo loai
+            // Xử lý ảnh theo loại
             if ($type === 'prescription') {
                 $result = $this->nhanDienHinhAnhService->xuLyDonThuoc($anh, $userId);
             } else {
@@ -367,8 +367,8 @@ class TroLyChatbotController extends Controller
                             'type' => $type,
                             'status' => 'failed',
                             'error' => $result['error'] ?? null,
-                            // File da duoc luu truoc khi phan tich chay, nen anh bi tu choi
-                            // van con du lieu de hien thi sau khi tai lai trang.
+                            // File đã được lưu trước khi phân tích chạy, nên ảnh bị từ chối
+                            // vẫn còn dữ liệu để hiển thị sau khi tải lại trang.
                             'image_id' => $this->nhanDienHinhAnhService->maAnhLuuCuoi(),
                         ],
                     ],
@@ -379,7 +379,7 @@ class TroLyChatbotController extends Controller
                 ]), 400);
             }
             
-            // Tao don hang nhap tu cac san pham da nhan dien
+            // Tạo đơn hàng nhập từ các sản phẩm đã nhận diện
             $recognizedProducts = $result['recognized_products'] ?? [];
             $draftOrder = null;
             
@@ -398,15 +398,15 @@ class TroLyChatbotController extends Controller
                         'status' => 'processed',
                         'recognized_count' => count($recognizedProducts),
                         'ocr_text' => $result['ocr_text'] ?? null,
-                        // Cho lich su chat render lai anh tai len sau khi tai lai trang.
-                        // Bong chat truc tuyen hien blob: URL, die mat cung voi trang.
+                        // Cho lịch sử chat render lại ảnh tải lên sau khi tải lại trang.
+                        // Bong bóng chat trực tuyến hiện blob: URL, chết mất cùng với trang.
                         'image_id' => $result['image_id'] ?? $this->nhanDienHinhAnhService->maAnhLuuCuoi(),
                     ],
                 ],
             ]);
 
-            // Tra loi caption ("day la thuoc gi?") dua tren noi dung anh doc duoc,
-            // quay ve tom tat nhan dien xac dinh khi khong co cau tra loi.
+            // Trả lời caption ("đây là thuốc gì?") dựa trên nội dung ảnh đọc được,
+            // quay về tóm tắt nhận diện xác định khi không có câu trả lời.
             $imageAnswer = $this->chatbotService->answerImageQuestion(
                 $imageMessage,
                 (string) ($result['ocr_text'] ?? ''),
@@ -422,17 +422,17 @@ class TroLyChatbotController extends Controller
                 'session_id' => $sessionId,
                 'role' => 'assistant',
                 'content' => $messageContent,
-                // Dong catalog phang, cung hinh dang ma luong van ban luu va widget
-                // render. Luu wrapper cua khopSanPham() o day da lam moi card san pham
-                // doc undefined sau khi tai lai va hien "0 d" kem icon placeholder.
+                // Dòng catalog phẳng, cùng hình dạng mà luồng văn bản lưu và widget
+                // render. Lưu wrapper của khopSanPham() ở đây đã làm mỗi card sản phẩm
+                // đọc undefined sau khi tải lại và hiện "0 đ" kèm icon placeholder.
                 'products' => $this->normalizeProductsForWidget($recognizedProducts),
                 'metadata' => [
                     'draft_order' => $draftOrder,
                     'ocr_text' => $result['ocr_text'] ?? null,
                     'disclaimer' => $imageAnswer['disclaimer'] ?? null,
                     'debug' => $imageAnswer['debug'] ?? null,
-                    // Ten da phan tich, confidence va cac dong khong khop kem goi y:
-                    // du lieu chan doan cho trace session quan tri, khong phai du lieu render.
+                    // Tên đã phân tích, confidence và các dòng không khớp kèm gợi ý:
+                    // dữ liệu chẩn đoán cho trace session quản trị, không phải dữ liệu render.
                     'image_recognition' => $recognizedProducts,
                 ],
                 'show_disclaimer' => (bool) ($imageAnswer['show_disclaimer'] ?? false)
@@ -477,7 +477,7 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Lay lich su chat cho session hien tai.
+     * Lấy lịch sử chat cho session hiện tại.
      *
      * @param Request $request
      * @return JsonResponse
@@ -523,15 +523,15 @@ class TroLyChatbotController extends Controller
                     return [
                         'role' => $msg->role,
                         'content' => $msg->content,
-                        // Chuan hoa ca khi doc: cac session ghi truoc khi hinh dang duoc
-                        // sua van giu wrapper cua khopSanPham().
+                        // Chuẩn hoá cả khi đọc: các session ghi trước khi hình dạng được
+                        // sửa vẫn giữ wrapper của khopSanPham().
                         'products' => $this->normalizeProductsForWidget($msg->products),
                         'categories' => $msg->metadata['categories'] ?? [],
                         'triage_handoff' => $msg->metadata['triage_handoff'] ?? null,
                         'show_disclaimer' => $msg->show_disclaimer,
                         'disclaimer' => $msg->metadata['disclaimer'] ?? null,
-                        // Khong co khi retention da xoa file, nen bong chat ha cap thanh
-                        // van ban thay vi icon anh loi.
+                        // Không có khi retention đã xoá file, nên bong chat hạ cấp thành
+                        // văn bản thay vì icon ảnh lỗi.
                         'hasImage' => $imageUrl !== null,
                         'imageUrl' => $imageUrl,
                         'created_at' => $msg->created_at->format('Y-m-d H:i:s')
@@ -562,9 +562,9 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * URL khong can chu ky cho cac anh tai len duoc trang lich su nay tham chieu, key theo
-     * MaAnh. Mot truy van cho ca trang, va chi nhung dong van con file: retention
-     * xoa anh sau chatbot.images.cleanup_after gio.
+     * URL không cần chữ ký cho các ảnh tải lên được trang lịch sử này tham chiếu, key theo
+     * MaAnh. Một truy vấn cho cả trang, và chỉ những dòng vẫn còn file: retention
+     * xoá ảnh sau chatbot.images.cleanup_after giờ.
      *
      * @param \Illuminate\Support\Collection<int, TinNhanChat> $cacTinNhan
      * @return array<int, string>
@@ -592,11 +592,11 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Phuc vu mot trong nhung anh chatbot ma khach tu tai len.
+     * Phục vụ một trong những ảnh chatbot mà khách tự tải lên.
      *
-     * Gioi han vao chu so huu, khong phai session: lich su song sot qua session
-     * chat moi, va MaAnh lien tuc neu khong se cho bat ky nguoi dang nhap nao
-     * xem lan luot moi anh don thuoc tren he thong.
+     * Giới hạn vào chủ sở hữu, không phải session: lịch sử sống sót qua session
+     * chat mới, và MaAnh liên tục nếu không sẽ cho bất kỳ người đăng nhập nào
+     * xem lẫn lượt mọi ảnh đơn thuốc trên hệ thống.
      */
     public function image(AnhChatbot $image)
     {
@@ -609,9 +609,9 @@ class TroLyChatbotController extends Controller
             'Content-Type' => $image->mime_type ?: 'image/jpeg',
         ]);
 
-        // setPrivate() thay vi header Cache-Control: BinaryFileResponse tinh lai
-        // directive va bien max-age don gian thanh `public`, cho phep proxy dung chung
-        // cache anh don thuoc cua ai do.
+        // setPrivate() thay vì header Cache-Control: BinaryFileResponse tính lại
+        // directive và biến max-age đơn giản thành `public`, cho phép proxy dùng chung
+        // cache ảnh đơn thuốc của ai đó.
         $response->setPrivate();
         $response->setMaxAge(300);
 
@@ -619,7 +619,7 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Xoa lich su chat cho session hien tai.
+     * Xoá lịch sử chat cho session hiện tại.
      *
      * @param Request $request
      * @return JsonResponse
@@ -671,7 +671,7 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Them san pham vao gio hang tu chatbot.
+     * Thêm sản phẩm vào giỏ hàng từ chatbot.
      *
      * @param Request $request
      * @return JsonResponse
@@ -693,7 +693,7 @@ class TroLyChatbotController extends Controller
             $sanPham = \App\Models\SanPham::findOrFail($validated['MaSP']);
             $quantity = $validated['quantity'] ?? 1;
 
-            // Kiem tra san pham
+            // Kiểm tra sản phẩm
             if ($sanPham->isExpired()) {
                 return response()->json([
                     'success' => false,
@@ -708,7 +708,7 @@ class TroLyChatbotController extends Controller
                 ], 422);
             }
 
-            // Them vao gio hang trong session (cung gio ma GioHangController dung)
+            // Thêm vào giỏ hàng trong session (cùng giỏ mà GioHangController dùng)
             $cart = session()->get('cart', []);
             $currentQty = $cart[$sanPham->ma_sp] ?? 0;
             $newQty = $currentQty + $quantity;
@@ -720,9 +720,9 @@ class TroLyChatbotController extends Controller
                 ], 422);
             }
 
-            // Cung gate an toan thuoc voi GioHangController::add. Endpoint nay ghi vao
-            // cung gio hang trong session, nen bo qua check o day se lam phep block
-            // bi vuot qua thong qua widget chat.
+            // Cùng gate an toàn thuốc với GioHangController::add. Endpoint này ghi vào
+            // cùng giỏ hàng trong session, nên bỏ qua check ở đây sẽ làm phép block
+            // bị vượt qua thông qua widget chat.
             $userId = (int) auth()->id();
             $confirmed = $request->boolean('confirm_warning');
             $safety = $anToanThuoc->kiemTraThemVaoGio($sanPham, CartLine::rowsFrom($cart), $userId);
@@ -743,7 +743,7 @@ class TroLyChatbotController extends Controller
                 $anToanThuoc->ghiNhatKyBoQua($userId, $sanPham, $safety['warnings']);
             }
 
-            // Xay dung tom tat gio hang cho response
+            // Xây dựng tóm tắt giỏ hàng cho response
             $cartSummary = $this->getCartSummary();
 
             return response()->json([
@@ -768,7 +768,7 @@ class TroLyChatbotController extends Controller
     }
     
     /**
-     * Lay tom tat gio hang hien tai.
+     * Lấy tóm tắt giỏ hàng hiện tại.
      *
      * @param Request $request
      * @return JsonResponse
@@ -793,7 +793,7 @@ class TroLyChatbotController extends Controller
     }
     
     /**
-     * Cap nhat so luong san pham trong gio hang.
+     * Cập nhật số lượng sản phẩm trong giỏ hàng.
      *
      * @param Request $request
      * @return JsonResponse
@@ -811,7 +811,7 @@ class TroLyChatbotController extends Controller
             
             $cart = session()->get('cart', []);
             
-            // Xoa khi so luong la 0
+            // Xoá khi số lượng là 0
             if ($quantity === 0) {
                 unset($cart[$sanPham->ma_sp]);
                 session()->put('cart', $cart);
@@ -823,7 +823,7 @@ class TroLyChatbotController extends Controller
                 ]);
             }
             
-            // Kiem tra ton kho
+            // Kiểm tra tồn kho
             if ($sanPham->so_luong_ton < $quantity) {
                 return response()->json([
                     'success' => false,
@@ -854,7 +854,7 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Dat hang truc tiep tu chatbot.
+     * Đặt hàng trực tiếp từ chatbot.
      *
      * @param Request $request
      * @return JsonResponse
@@ -907,7 +907,7 @@ class TroLyChatbotController extends Controller
                     Cache::forget($completedKey);
                 }
 
-                // Dung ThanhToanService co san de tao don hang an toan trong transaction
+                // Dùng ThanhToanService có sẵn để tạo đơn hàng an toàn trong transaction
                 $thanhToanService = app(\App\Services\ThanhToanService::class);
                 $donHang = $thanhToanService->xuLyThanhToan(
                     CartLine::rowsFrom($cart),
@@ -924,7 +924,7 @@ class TroLyChatbotController extends Controller
                 Cache::put($completedKey, $donHang->ma_dh, now()->addMinutes(10));
                 session()->forget('cart');
 
-                // Ghi nhat kiem toan
+                // Ghi nhật kiểm toán
                 app(NhatKyKiemToanService::class)->ghi(
                     action: 'chatbot_order_placed',
                     modelType: DonHang::class,
@@ -964,7 +964,7 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Lay tom tat gio hang kem chi tiet san pham.
+     * Lấy tóm tắt giỏ hàng kèm chi tiết sản phẩm.
      *
      * @return array
      */
@@ -1036,7 +1036,7 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Lay hoac tao session ID cho nguoi dung hien tai.
+     * Lấy hoặc tạo session ID cho người dùng hiện tại.
      *
      * @return string
      */
@@ -1073,8 +1073,8 @@ class TroLyChatbotController extends Controller
                 continue;
             }
 
-            // Wrapper nhan dien, khong phai cac dong da render: luong hoi theo can
-            // parsed_name va cac dong khong khop, ma viec lam phang da mat di.
+            // Wrapper nhận diện, không phải các dòng đã render: luồng hỏi theo cần
+            // parsed_name và các dòng không khớp, mà việc làm phẳng đã mất đi.
             $recognition = $tinNhan['metadata']['image_recognition'] ?? [];
             if (is_array($recognition) && !empty($recognition)) {
                 return $recognition;
@@ -1090,13 +1090,13 @@ class TroLyChatbotController extends Controller
     }
 
     /**
-     * Cac dong catalog phang ma widget render (`product.name`, `product.price`,
-     * `product.image_url`), tu bat ky hinh dang nao tung duoc luu tren tin nhan.
+     * Các dòng catalog phẳng mà widget render (`product.name`, `product.price`,
+     * `product.image_url`), từ bất kỳ hình dạng nào từng được lưu trên tin nhắn.
      *
-     * khopSanPham() tra ve mot wrapper — `{parsed_name, matched, product:{...}}` — trong khi
-     * luong van ban luu cac dong truc tiep. Luu wrapper cho luot anh da lam moi card
-     * doc undefined va render "0 d" kem icon placeholder, nen ham nay chay ca khi GHI
-     * lan khi DOC: cac session truoc khi sua van giu wrapper.
+     * khopSanPham() trả về một wrapper — `{parsed_name, matched, product:{...}}` — trong khi
+     * luồng văn bản lưu các dòng trực tiếp. Lưu wrapper cho lượt ảnh đã làm mỗi card
+     * đọc undefined và render "0 đ" kèm icon placeholder, nên hàm này chạy cả khi GHI
+     * lẫn khi ĐỌC: các session trước khi sửa vẫn giữ wrapper.
      *
      * @param mixed $sanPhams
      * @return array<int, array<string, mixed>>
@@ -1121,8 +1121,8 @@ class TroLyChatbotController extends Controller
                 continue;
             }
 
-            // Dong khong khop khong co dong catalog nao de render; ten da phan tich va
-            // goi y cua chung da co trong van ban cau tra loi.
+            // Dòng không khớp không có dòng catalog nào để render; tên đã phân tích và
+            // gợi ý của chúng đã có trong văn bản câu trả lời.
             if (($item['matched'] ?? false) !== true) {
                 continue;
             }

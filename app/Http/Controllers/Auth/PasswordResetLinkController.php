@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class PasswordResetLinkController extends Controller
 {
     /**
-     * Hien thi view yeu cau link dat lai mat khau.
+     * Hiển thị view yêu cầu link đặt lại mật khẩu.
      */
     public function create(): View
     {
@@ -20,7 +20,7 @@ class PasswordResetLinkController extends Controller
     }
 
     /**
-     * Xu ly mot request link dat lai mat khau den.
+     * Xử lý một request link đặt lại mật khẩu đến.
      *
      * @throws ValidationException
      */
@@ -30,9 +30,9 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        // Se gui link dat lai mat khau cho nguoi dung nay. Sau khi da thu gui
-        // link, se xem xet response roi thay thong bao can hien cho nguoi dung.
-        // Cuoi cung se tra ra mot response hop le.
+        // Sẽ gửi link đặt lại mật khẩu cho người dùng này. Sau khi đã thử gửi
+        // link, sẽ xem xét response rồi thay thông báo cần hiện cho người dùng.
+        // Cuối cùng sẽ trả ra một response hợp lệ.
         $status = Password::sendResetLink(
             $request->only('email')
         );

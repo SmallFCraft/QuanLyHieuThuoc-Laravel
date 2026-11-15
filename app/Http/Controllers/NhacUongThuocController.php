@@ -12,10 +12,10 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Phia khach hang cua nhac uong thuoc va theo doi sau tu van.
+ * Phía khách hàng của nhắc uống thuốc và theo dõi sau tư vấn.
  *
- * Moi hanh dong duoc gioi han vao nguoi dung da xac thuc: nhac uong id va triage
- * session id di trong email, nen quyen so huu phai duoc kiem tra lai phia server.
+ * Mỗi hành động được giới hạn vào người dùng đã xác thực: nhắc uống id và triage
+ * session id đi trong email, nên quyền sở hữu phải được kiểm tra lại phía server.
  */
 class NhacUongThuocController extends Controller
 {
@@ -49,8 +49,8 @@ class NhacUongThuocController extends Controller
                 ->with('error', __('messages.reminder.not_found'));
         }
 
-        // Chi huy lich nay. Cung mot san pham co the nam trong hai khoa tu hai don hang
-        // (don goc va don mua them), va huy mot khoa khong duoc dung khoa kia.
+        // Chỉ huỷ lịch này. Cùng một sản phẩm có thể nằm trong hai khoá từ hai đơn hàng
+        // (đơn gốc và đơn mua thêm), và huỷ một khoá không được đụng khoá kia.
         $this->nhacUongThuocService->huyLichNhac($nhacUong);
 
         return redirect()->route('nhac-uong.index')
@@ -58,10 +58,10 @@ class NhacUongThuocController extends Controller
     }
 
     /**
-     * Trang xac nhan cho link theo doi trong email.
+     * Trang xác nhận cho link theo dõi trong email.
      *
-     * Link la mot GET co chu ky khong thay doi gi, nen mail scanner va link
-     * prefetcher khong the tra loi thay benh nhan. Cau tra loi la POST ben duoi.
+     * Link là một GET có chữ ký không thay đổi gì, nên mail scanner và link
+     * prefetcher không thể trả lời thay bệnh nhân. Câu trả lời là POST bên dưới.
      */
     public function followUpConfirm(Request $request, int $MaSL): View|RedirectResponse
     {
@@ -88,7 +88,7 @@ class NhacUongThuocController extends Controller
     }
 
     /**
-     * Cau tra loi "Da do" / "Chua do", gui tu trang xac nhan.
+     * Câu trả lời "Đã đỡ" / "Chưa đỡ", gửi từ trang xác nhận.
      */
     public function followUpResponse(Request $request, int $MaSL): RedirectResponse
     {
@@ -112,8 +112,8 @@ class NhacUongThuocController extends Controller
                 ->with('success', __('messages.reminder.response_already_answered'));
         }
 
-        // Layout chi render `success` va `error`; loi khuyen chuyen tuyen phai hien
-        // duoc, nen no dung kenh `error` thay vi mot key im lang.
+        // Layout chỉ render `success` và `error`; lời khuyên chuyển tuyến phải hiện
+        // được, nên nó dùng kênh `error` thay vì một key im lặng.
         return redirect()->route('sang-loc.ket-qua', $phien->ma_sl)
             ->with($result['improved'] ? 'success' : 'error', $result['message']);
     }

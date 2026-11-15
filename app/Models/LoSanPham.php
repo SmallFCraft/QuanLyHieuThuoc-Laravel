@@ -16,7 +16,7 @@ class LoSanPham extends Model
     protected $primaryKey = 'ma_lo';
 
     /**
-     * Cac thuoc tinh cho phep gan hang loat.
+     * Các thuộc tính cho phép gán hàng loạt.
      *
      * @var array<int, string>
      */
@@ -29,7 +29,7 @@ class LoSanPham extends Model
     ];
 
     /**
-     * Cac thuoc tinh nen ep kieu.
+     * Các thuộc tính nên ép kiểu.
      *
      * @var array<string, string>
      */
@@ -40,7 +40,7 @@ class LoSanPham extends Model
     ];
 
     /**
-     * San pham ma lo nay thuoc ve.
+     * Sản phẩm mà lô này thuộc về.
      */
     public function sanPham()
     {
@@ -48,7 +48,7 @@ class LoSanPham extends Model
     }
 
     /**
-     * Cac chi tiet don hang dung lo san pham nay.
+     * Các chi tiết đơn hàng dùng lô sản phẩm này.
      */
     public function chiTietDonHangs()
     {
@@ -56,7 +56,7 @@ class LoSanPham extends Model
     }
 
     /**
-     * Kiem tra lo san pham da het han.
+     * Kiểm tra lô sản phẩm đã hết hạn.
      *
      * @return bool
      */
@@ -66,7 +66,7 @@ class LoSanPham extends Model
     }
 
     /**
-     * Kiem tra lo san pham sap het han.
+     * Kiểm tra lô sản phẩm sắp hết hạn.
      *
      * @param int $days
      * @return bool
@@ -77,13 +77,13 @@ class LoSanPham extends Model
             return false;
         }
 
-        // Carbon 3 tra ve hieu co dau, nen goi diffInDays() tren ngay muon hon se cho
-        // ket qua am va `<= $days` khop voi moi ngay tuong lai.
+        // Carbon 3 trả về hiệu có dấu, nên gọi diffInDays() trên ngày muộn hơn sẽ cho
+        // kết quả âm và `<= $days` khớp với mọi ngày tương lai.
         return Carbon::now()->diffInDays($this->ngay_het_han, true) <= $days;
     }
 
     /**
-     * Kiem tra lo san pham co ton kho thap.
+     * Kiểm tra lô sản phẩm có tồn kho thấp.
      *
      * @return bool
      */
@@ -93,7 +93,7 @@ class LoSanPham extends Model
     }
 
     /**
-     * Gioi han truy van chi lay cac lo san pham chua het han.
+     * Giới hạn truy vấn chỉ lấy các lô sản phẩm chưa hết hạn.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -104,7 +104,7 @@ class LoSanPham extends Model
     }
 
     /**
-     * Gioi han truy van chi lay cac lo san pham con ton kho.
+     * Giới hạn truy vấn chỉ lấy các lô sản phẩm còn tồn kho.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -115,7 +115,7 @@ class LoSanPham extends Model
     }
 
     /**
-     * Sap xep truy van theo FEFO (First Expired, First Out — het han truoc xuat truoc).
+     * Sắp xếp truy vấn theo FEFO (First Expired, First Out — hết hạn trước xuất trước).
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder

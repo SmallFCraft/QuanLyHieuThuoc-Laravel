@@ -19,13 +19,13 @@ class DonHangController extends Controller
     }
 
     /**
-     * Display a listing of orders.
+     * Hiển thị danh sách đơn hàng.
      */
     public function index(Request $request)
     {
         $query = DonHang::with(['nguoiDung', 'chiTietDonHangs']);
 
-        // Loc theo trang thai neu co tham so
+        // Lọc theo trạng thái nếu có tham số
         if ($request->has('status') && $request->status) {
             $query->where('trang_thai', $request->status);
         }
@@ -36,7 +36,7 @@ class DonHangController extends Controller
     }
 
     /**
-     * Display the specified order.
+     * Hiển thị đơn hàng chỉ định.
      */
     public function show($MaDH)
     {
@@ -57,7 +57,7 @@ class DonHangController extends Controller
     }
 
     /**
-     * Update the order status.
+     * Cập nhật trạng thái đơn hàng.
      */
     public function updateStatus(Request $request, $MaDH)
     {
@@ -80,7 +80,7 @@ class DonHangController extends Controller
     }
 
     /**
-     * Cancel the order.
+     * Huỷ đơn hàng.
      */
     public function cancel($MaDH)
     {

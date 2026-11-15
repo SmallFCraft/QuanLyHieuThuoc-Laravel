@@ -14,21 +14,21 @@ class AiJob extends Model
     public const KIND_TRIAGE_BRIEFING = 'triage_briefing';
 
     /**
-     * Khong duoc worker nao nhan sau thoi gian nay nghia la se khong co worker nao den.
+     * Không được worker nào nhận sau thời gian này nghĩa là sẽ không có worker nào đến.
      *
-     * Do theo thoi diem nhan, khong phai thoi gian chay: worker nhan cong viec va danh
-     * dau thanh `running`, con `isStranded()` tra ve false cho moi thu khong phai
-     * `queued`. Nguong phai vuot qua do tre nhan cua worker: worker daemon nhan trong
-     * vong mot giay, nhung worker cron moi phut tren hosting chia se (`queue:work
-     * --stop-when-empty`) chi nhan duoc cong viec o tick ke tiep — cach toi 60s cong
-     * thoi gian khoi dong. Gia tri 12s lam moi cong viec thua cuoc dua nay: trang ket
-     * qua bo cuoc cong viec va xoa khoi hang doi vai giay truoc tick.
+     * Đo theo thời điểm nhận, không phải thời gian chạy: worker nhận công việc và đánh
+     * dấu thành `running`, còn `isStranded()` trả về false cho mọi thứ không phải
+     * `queued`. Ngưỡng phải vượt qua độ trễ nhận của worker: worker daemon nhận trong
+     * vòng một giây, nhưng worker cron mỗi phút trên hosting chia sẻ (`queue:work
+     * --stop-when-empty`) chỉ nhận được công việc ở tick kế tiếp — cách tới 60s cộng
+     * thời gian khởi động. Giá trị 12s làm mọi công việc thua cuộc đua này: trang kết
+     * quả bỏ cuộc công việc và xoá khỏi hàng đợi vài giây trước tick.
      */
     public const SYNC_FALLBACK_SECONDS = 75;
 
     /**
-     * Cong viec `running` gio hon thoi gian nay da mat worker, nen khong con tinh la
-     * bang chung co worker dang song. Khop voi XuLyTinNhanChatbot::$timeout.
+     * Công việc `running` già hơn thời gian này đã mất worker, nên không còn tính là
+     * bằng chứng có worker đang sống. Khớp với XuLyTinNhanChatbot::$timeout.
      */
     public const WORKER_ALIVE_SECONDS = 120;
 
@@ -66,15 +66,15 @@ class AiJob extends Model
     }
 
     /**
-     * Van nam trong hang doi dai den muc khong the co worker nao dang chay. Cong viec
-     * `running` chi don gian la mot loi goi AI cham va khong duoc nhan ban lai.
+     * Vẫn nằm trong hàng đợi dài đến mức không thể có worker nào đang chạy. Công việc
+     * `running` chỉ đơn giản là một lời gọi AI chậm và không được nhân bản lại.
      *
-     * Rieng bai test do tuoi la khong du: voi mot worker va ngan sach 45s+45s cua
-     * nha cung cap, mot cong viec co the hop le nam doi sau cong viec dang chay lau
-     * hon nhieu so voi SYNC_FALLBACK_SECONDS. Vi vay cong viec nam doi sau mot worker
-     * ro rang con song — cong viec khac cua cung khach dang `running` va moi hon
-     * WORKER_ALIVE_SECONDS — la dang cho, khong phai bi bo roi, va chay no inline chi
-     * chan dev server mot tien trinh vo van.
+     * Riêng bài test độ tuổi là không đủ: với một worker và ngân sách 45s+45s của
+     * nhà cung cấp, một công việc có thể hợp lệ nằm đợi sau công việc đang chạy lâu
+     * hơn nhiều so với SYNC_FALLBACK_SECONDS. Vì vậy công việc nằm đợi sau một worker
+     * rõ ràng còn sống — công việc khác của cùng khách đang `running` và mới hơn
+     * WORKER_ALIVE_SECONDS — là đang chờ, không phải bị bỏ rơi, và chạy nó inline chỉ
+     * chặn dev server một tiến trình vô văn.
      */
     public function isStranded(): bool
     {
@@ -90,9 +90,9 @@ class AiJob extends Model
     }
 
     /**
-     * Bang chung mot worker dang tieu thu hang doi luc nay: cong viec vua dat trang
-     * thai `running` gan day. Gioi han trong pham vi khach nay, de mot tenant bi ket
-     * khong the giu cong viec cua khach khac nam trong trang thai "waiting".
+     * Bằng chứng một worker đang tiêu thụ hàng đợi lúc này: công việc vừa đạt trạng
+     * thái `running` gần đây. Giới hạn trong phạm vi khách này, để một tenant bị kẹt
+     * không thể giữ công việc của khách khác nằm trong trạng thái "waiting".
      */
     protected function hasLiveWorker(): bool
     {

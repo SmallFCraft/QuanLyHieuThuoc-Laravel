@@ -20,7 +20,7 @@ class ThanhToanController extends Controller
     }
 
     /**
-     * Hien thi trang checkout.
+     * Hiển thị trang checkout.
      */
     public function index(AnToanThuocService $anToanThuoc)
     {
@@ -30,7 +30,7 @@ class ThanhToanController extends Controller
             return redirect()->route('gio-hang.index')->with('error', 'Giỏ hàng trống.');
         }
 
-        // TOI UU: Tai moi san pham trong 1 truy van thay vi N+1
+        // TỐI ƯU: Tải mỗi sản phẩm trong 1 truy vấn thay vì N+1
         $productIds = array_keys($cart);
         $sanPhams = SanPham::whereIn('ma_sp', $productIds)
             ->notExpired()
@@ -54,8 +54,8 @@ class ThanhToanController extends Controller
             }
         }
 
-        // Chi mang tinh thong tin: khach da xac nhan moi canh bao chan khi san pham
-        // duoc them vao, nen checkout khong bao gio bi chan tai day.
+        // Chỉ mang tính thông tin: khách đã xác nhận mỗi cảnh báo chặn khi sản phẩm
+        // được thêm vào, nên checkout không bao giờ bị chặn tại đây.
         $canhBaoThuoc = $anToanThuoc->kiemTraGioHang(
             CartLine::rowsFrom($cart),
             (int) auth()->id()
@@ -65,7 +65,7 @@ class ThanhToanController extends Controller
     }
 
     /**
-     * Xu ly checkout.
+     * Xử lý checkout.
      */
     public function process(Request $request)
     {
@@ -135,7 +135,7 @@ class ThanhToanController extends Controller
     }
 
     /**
-     * Hien thi trang thanh cong cua don hang.
+     * Hiển thị trang thành công của đơn hàng.
      */
     public function success($MaDH)
     {

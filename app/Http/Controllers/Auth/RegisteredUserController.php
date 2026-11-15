@@ -16,7 +16,7 @@ use Illuminate\View\View;
 class RegisteredUserController extends Controller
 {
     /**
-     * Hien thi view dang ky.
+     * Hiển thị view đăng ký.
      */
     public function create(): View
     {
@@ -24,7 +24,7 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Xu ly mot request dang ky den.
+     * Xử lý một request đăng ký đến.
      *
      * @throws ValidationException
      */

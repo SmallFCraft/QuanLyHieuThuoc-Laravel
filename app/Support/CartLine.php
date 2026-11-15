@@ -3,9 +3,9 @@
 namespace App\Support;
 
 /**
- * Gio hang trong session duoc luu nhu `[ma_sp => quantity]`, nhung AnToanThuocService va
- * ThanhToanService dung cac dong ban ghi. Giu phep chuyen doi tai day nghia la hinh dang
- * duoc dinh nghia mot lan thay vi trong moi controller cham vao gio hang.
+ * Giỏ hàng trong session được lưu như `[ma_sp => quantity]`, nhưng AnToanThuocService và
+ * ThanhToanService cần các dòng bản ghi. Giữ phép chuyển đổi tại đây nghĩa là hình dạng
+ * được định nghĩa một lần thay vì trong mỗi controller chạm vào giỏ hàng.
  */
 final class CartLine
 {

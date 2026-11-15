@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 class ThanhToanService
 {
     /**
-     * Xu ly checkout voi an toan transaction.
+     * Xử lý checkout với an toàn transaction.
      *
      * @param array $cartItems
      * @param int $userId
@@ -22,13 +22,13 @@ class ThanhToanService
      */
     public function xuLyThanhToan(array $cartItems, int $userId, array $shippingInfo): DonHang
     {
-        // TOI UU: Tai moi san pham trong 1 truy van thay vi N+1
+        // TỐI ƯU: Tải mỗi sản phẩm trong 1 truy vấn thay vì N+1
         $cacMaSanPham = array_column($cartItems, 'ma_sp');
         $sanPhams = SanPham::whereIn('ma_sp', $cacMaSanPham)
             ->get()
             ->keyBy('ma_sp');
 
-        // Kiem tra nhanh TRUOC transaction (fail fast)
+        // Kiểm tra nhanh TRƯỚC transaction (fail fast)
         $cacLoi = [];
         $tongTien = 0;
 
@@ -40,7 +40,7 @@ class ThanhToanService
                 continue;
             }
 
-            // Kiem tra tong ton kho tren moi lo
+            // Kiểm tra tổng tồn kho trên mỗi lô
             $tongTon = LoSanPham::where('ma_sp', $sanPham->ma_sp)
                 ->inStock()
                 ->notExpired()
@@ -60,7 +60,7 @@ class ThanhToanService
         DB::beginTransaction();
 
         try {
-            // Create order
+            // Tạo đơn hàng
             $donHang = DonHang::create([
                 'ma_nd' => $userId,
                 'tong_tien' => $tongTien,
@@ -71,12 +71,12 @@ class ThanhToanService
                 'ghi_chu' => $shippingInfo['notes'] ?? null,
             ]);
 
-            // Tao chi tiet don hang va cap nhat ton kho theo chien luoc FEFO
+            // Tạo chi tiết đơn hàng và cập nhật tồn kho theo chiến lược FEFO
             foreach ($cartItems as $item) {
                 $soLuongCon = $item['quantity'];
                 $maSanPham = $item['ma_sp'];
 
-                // Get batches using FEFO (First Expired, First Out)
+                // Lấy các lô theo FEFO (First Expired, First Out)
                 $cacLo = LoSanPham::where('ma_sp', $maSanPham)
                     ->inStock()
                     ->notExpired()
@@ -89,13 +89,13 @@ class ThanhToanService
                     throw new \Exception("Sản phẩm {$sanPham->ten} không đủ số lượng trong kho.");
                 }
 
-                // Deduct from batches following FEFO
+                // Trừ từ các lô theo FEFO
                 foreach ($cacLo as $lo) {
                     if ($soLuongCon <= 0) break;
 
                     $soLuongTru = min($soLuongCon, $lo->so_luong_ton);
 
-                    // Tao chi tiet don hang cho lo nay
+                    // Tạo chi tiết đơn hàng cho lô này
                     ChiTietDonHang::create([
                         'ma_dh' => $donHang->ma_dh,
                         'ma_sp' => $maSanPham,
@@ -105,7 +105,7 @@ class ThanhToanService
                         'so_lo' => $lo->so_lo,
                     ]);
 
-                    // Deduct stock from batch
+                    // Trừ tồn kho từ lô
                     $lo->so_luong_ton -= $soLuongTru;
                     $lo->save();
 

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 class DonHangService
 {
     /**
-     * Cap nhat trang thai don hang kem kiem tra.
+     * Cập nhật trạng thái đơn hàng kèm kiểm tra.
      *
      * @param int $orderId
      * @param string $newStatus
@@ -39,8 +39,8 @@ class DonHangService
                 'ma_nd' => $userId
             ]);
 
-            // Idempotent (updateOrCreate tren ma_dh + ma_sp), nen mot thay doi trang thai
-            // bi phat lai khong the nhan doi lich uong thuoc cua benh nhan.
+            // Idempotent (updateOrCreate trên ma_dh + ma_sp), nên một thay đổi trạng thái
+            // bị phát lại không thể nhân đôi lịch uống thuốc của bệnh nhân.
             if ($newStatus === 'Completed' && $trangThaiCu !== 'Completed') {
                 app(NhacUongThuocService::class)->taoTuDonHang($donHang);
             }
@@ -50,7 +50,7 @@ class DonHangService
     }
 
     /**
-     * Huy don hang va khoi phuc ton kho.
+     * Hủy đơn hàng và khôi phục tồn kho.
      *
      * @param int $orderId
      * @param int $userId
@@ -64,26 +64,26 @@ class DonHangService
         try {
             $donHang = DonHang::with('chiTietDonHangs')->lockForUpdate()->findOrFail($orderId);
 
-            // Chi don hang dang Pending moi duoc huy
+            // Chỉ đơn hàng đang Pending mới được hủy
             if ($donHang->trang_thai !== 'Pending') {
                 throw new \Exception('Chỉ có thể hủy đơn hàng ở trạng thái Pending.');
             }
 
             $cacMaSanPhamAnhHuong = [];
 
-            // Khoi phuc ton kho cho moi item don hang (theo lo)
+            // Khôi phục tồn kho cho mỗi item đơn hàng (theo lô)
             foreach ($donHang->chiTietDonHangs as $item) {
                 $cacMaSanPhamAnhHuong[] = $item->ma_sp;
 
                 if ($item->ma_lo) {
-                    // Khoi phuc vao lo cu the
+                    // Khôi phục vào lô cụ thể
                     $lo = LoSanPham::lockForUpdate()->find($item->ma_lo);
                     if ($lo) {
                         $lo->so_luong_ton += $item->so_luong;
                         $lo->save();
                     }
                 } else {
-                    // Khong co ma_lo: uu tien lo trung so lo (SanPhamObserver tao lo khi tao SP)
+                    // Không có ma_lo: ưu tiên lô trùng số lô (SanPhamObserver tạo lô khi tạo SP)
                     $lo = LoSanPham::query()
                         ->where('ma_sp', $item->ma_sp)
                         ->where('so_lo', $item->so_lo)
@@ -117,7 +117,7 @@ class DonHangService
                 $sanPham->save();
             }
 
-            // Cap nhat trang thai don hang
+            // Cập nhật trạng thái đơn hàng
             $donHang->trang_thai = 'Cancelled';
             $donHang->save();
 
@@ -144,7 +144,7 @@ class DonHangService
     }
 
     /**
-     * Kiem tra chuyen trang thai co duoc phep hay khong.
+     * Kiểm tra chuyển trạng thái có được phép hay không.
      *
      * @param string $currentStatus
      * @param string $newStatus

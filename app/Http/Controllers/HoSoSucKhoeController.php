@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Redirect;
 class HoSoSucKhoeController extends Controller
 {
     /**
-     * Cac field ma *noi dung* cua chung la du lieu suc khoe. Chi ten va so luong muc
-     * cua chung duoc phep den nhat ky kiam toan — khong bao gio gia tri.
+     * Các field mà *nội dung* của chúng là dữ liệu sức khoẻ. Chỉ tên và số lượng mục
+     * của chúng được phép đến nhật ký kiểm toán — không bao giờ giá trị.
      */
     protected const SENSITIVE_LISTS = ['allergies', 'chronic_conditions', 'current_medications'];
 
@@ -27,8 +27,8 @@ class HoSoSucKhoeController extends Controller
             ? ($hoSo?->consented_at ?? now())
             : null;
 
-        // Tach khoi consented_at: bo tick la mot viec rut lai dong y AI that su,
-        // ke ca khi dong y canh bao an toan phia duoi van con tick.
+        // Tách khỏi consented_at: bỏ tick là một việc rút lại đồng ý AI thật sự,
+        // kể cả khi đồng ý cảnh báo an toàn phía dưới vẫn còn tick.
         $attributes['ai_consent_at'] = $request->boolean('ai_consent')
             ? ($hoSo?->ai_consent_at ?? now())
             : null;
@@ -75,7 +75,7 @@ class HoSoSucKhoeController extends Controller
     }
 
     /**
-     * Ten cac field ma gia tri cua chung khac voi nhung gi dang luu.
+     * Tên các field mà giá trị của chúng khác với những gì đang lưu.
      *
      * @return array<int, string>
      */
@@ -115,8 +115,8 @@ class HoSoSucKhoeController extends Controller
     }
 
     /**
-     * Payload audit chi gom so dem: van ban di ung va benh man tinh khong duoc duoc
-     * ghi vao audit_logs duoi dang trong.
+     * Payload audit chỉ gom số đếm: văn bản dị ứng và bệnh mạn tính không bao giờ được
+     * ghi vào audit_logs dưới dạng rõ.
      *
      * @return array<string, mixed>
      */

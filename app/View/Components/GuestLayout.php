@@ -8,7 +8,7 @@ use Illuminate\View\View;
 class GuestLayout extends Component
 {
     /**
-     * Lay view / noi dung dai dien cho component.
+     * Lấy view / nội dung đại diện cho component.
      */
     public function render(): View
     {

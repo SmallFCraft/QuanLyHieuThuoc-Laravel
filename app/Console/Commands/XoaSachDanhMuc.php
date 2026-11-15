@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Xoa sach catalog san pham va moi thu tro den no.
+ * Xóa sạch catalog sản phẩm và mọi thứ trỏ đến nó.
  *
- * Khong the hoan tac. chi_tiet_don_hangs.ma_sp la foreign key chan (restrict), nen cac bang
- * phai di theo thu tu phu thuoc neu khong lenh xoa se dung luoi chang. Lich su don hang
- * di cung catalog vi mot dong don hang khong the ton tai khong co dong san pham.
+ * Không thể hoàn tác. chi_tiet_don_hangs.ma_sp là foreign key chặn (restrict), nên các bảng
+ * phải đi theo thứ tự phụ thuộc nếu không lệnh xóa sẽ dừng nửa đường. Lịch sử đơn hàng
+ * đi cùng catalog vì một dòng đơn hàng không thể tồn tại không có dòng sản phẩm.
  */
 class XoaSachDanhMuc extends Command
 {
@@ -26,11 +26,11 @@ class XoaSachDanhMuc extends Command
     protected $description = 'Xoá toàn bộ sản phẩm, danh mục, đơn hàng và ảnh sản phẩm (không thể hoàn tác)';
 
     /**
-     * Thu tu xoa quan trong: moi bang duoc liet ke tai day duoc tham chieu boi cac bang phia tren.
+     * Thứ tự xóa quan trọng: mỗi bảng được liệt kê tại đây được tham chiếu bởi các bảng phía trên.
      *
-     * truy_van_tim_kiems khong co foreign key den san_phams, nhung no giu cac tu khoa ma
-     * cac pill trending quang ba — de lai chung se tro den mot catalog khong con
-     * ton tai, va khach bam vao se roi tren trang ket qua trong.
+     * truy_van_tim_kiems không có foreign key đến san_phams, nhưng nó giữ các từ khóa mà
+     * các pill trending quảng bá — để lại chúng sẽ trỏ đến một catalog không còn
+     * tồn tại, và khách bấm vào sẽ rơi trên trang kết quả trống.
      */
     private const TABLES = [
         'chi_tiet_don_hangs',
@@ -44,10 +44,10 @@ class XoaSachDanhMuc extends Command
     ];
 
     /**
-     * Snapshot JSON cua san pham, giu tren cac ban ghi song lau hon catalog. Neu de
-     * du lieu thi chung se render link den cac product id khong con ton tai.
-     * Ten cot la cac key JSON payload cua cac bang nay — khong doi boi viec
-     * doi ten schema.
+     * Snapshot JSON của sản phẩm, giữ trên các bản ghi sống lâu hơn catalog. Nếu để
+     * dữ liệu thì chúng sẽ render link đến các product id không còn tồn tại.
+     * Tên cột là các key JSON payload của các bảng này — không đổi bởi việc
+     * đổi tên schema.
      *
      * @var array<string, array{0: string, 1: string}> table => [column, empty value]
      */
@@ -116,9 +116,9 @@ class XoaSachDanhMuc extends Command
     }
 
     /**
-     * Dung truncate thay vi delete de key auto-increment chay lai tu dau, giu catalog
-     * crawled duoc danh so tu 1. Khong the chay trong transaction tren MySQL, va no
-     * bo qua foreign keys, nen cac check duoc nang len quanh no va luon duoc khoi phuc.
+     * Dùng truncate thay vì delete để key auto-increment chạy lại từ đầu, giữ catalog
+     * crawled được đánh số từ 1. Không thể chạy trong transaction trên MySQL, và nó
+     * bỏ qua foreign keys, nên các check được nâng lên quanh nó và luôn được khôi phục.
      */
     private function truncateTables(): void
     {
@@ -167,8 +167,8 @@ class XoaSachDanhMuc extends Command
     }
 
     /**
-     * Chi anh tai len cuc bo nam tren disk. San pham crawled luu URL CDN Long Chau,
-     * khong co gi de xoa.
+     * Chỉ ảnh tải lên cục bộ nằm trên disk. Sản phẩm crawled lưu URL CDN Long Châu,
+     * không có gì để xóa.
      */
     private function productImages(): \Illuminate\Support\Collection
     {

@@ -12,15 +12,15 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Chuan hoa chuoi Web Speech nghe duoc thanh mot tu khoa tim kiem dung duoc.
+ * Chuẩn hoá chuỗi Web Speech nghe được thành một từ khoá tìm kiếm dùng được.
  *
- * Bon tang, re truoc dat sau. Mot cau khop duoc o tang re khong bao gio di toi
- * tang dat — do la dieu giu cho tinh nang chiu duoc ngan nguoi dung cung luc, va
- * la bat bien ma ChuanHoaTimKiemGiongNoiTest khoa lai.
+ * Bốn tầng, rẻ trước đắt sau. Một câu khớp được ở tầng rẻ không bao giờ đi tới
+ * tầng đắt — đó là điều giữ cho tính năng chịu được ngàn người dùng cùng lúc, và
+ * là bất biến mà ChuanHoaTimKiemGiongNoiTest khoá lại.
  *
- * Nhan dien chay trong browser: service nay chi thay text. Do 2026-09-01, ca hai
- * AI provider cua repo deu khong co STT tieng Viet dung duoc — mot model tra "pm",
- * mot model bia ten thuoc khong ton tai.
+ * Nhận diện chạy trong browser: service này chỉ thấy text. Đo 2026-09-01, cả hai
+ * AI provider của repo đều không có STT tiếng Việt dùng được — một model trả "pm",
+ * một model bịa tên thuốc không tồn tại.
  */
 class ChuanHoaTimKiemGiongNoi
 {
@@ -29,19 +29,19 @@ class ChuanHoaTimKiemGiongNoi
     public const SOURCE_AI = 'ai';
     public const SOURCE_RAW = 'raw';
 
-    /** Cum mo dau dai nhat trong LEAD_PHRASES ("toi muon tim" — ba tu). */
+    /** Cụm mở đầu dài nhất trong LEAD_PHRASES ("tôi muốn tìm" — ba từ). */
     private const MAX_LEAD_WORDS = 3;
 
     /**
-     * Cum mo dau mang y dinh, khong mang tu khoa. Viet co dau cho nguoi doc;
-     * cumMoDau() fold lai truoc khi so.
+     * Cụm mở đầu mang ý định, không mang từ khoá. Viết có dấu cho người đọc;
+     * cumMoDau() fold lại trước khi so.
      *
-     * Co y KHONG co "co", "con", "ban co". Chung la mot am tiet ngan va fold() gop
-     * chung voi nhung tu mang nghia: fold("con") = fold("con") = "con", fold("co") =
-     * fold("co") = fold("co") = "co". Do duoc khi thu: "con toi bi sot" mat chu ngu
-     * thanh "toi bi sot", va te hon, "con la gien" (collagen doc roi am) thanh
-     * "La gien" — cat dut chinh ten thuoc. Mot cum menh lenh chi dang bo khi no
-     * khong the la mot phan cua ten hang.
+     * Cố ý KHÔNG có "có", "còn", "bạn có". Chúng là một âm tiết ngắn và fold() gộp
+     * chúng với những từ mang nghĩa: fold("còn") = fold("con") = "con", fold("có") =
+     * fold("cơ") = fold("cỏ") = "co". Đo được khi thử: "con tôi bị sốt" mất chủ ngữ
+     * thành "tôi bị sốt", và tệ hơn, "côn la gien" (collagen đọc rời âm) thành
+     * "La gien" — cắt đứt chính tên thuốc. Một cụm mệnh lệnh chỉ đáng bỏ khi nó
+     * không thể là một phần của tên hàng.
      */
     private const LEAD_PHRASES = [
         'tìm', 'tìm kiếm', 'tìm giúp tôi', 'tìm cho tôi', 'tìm cho mình',
@@ -54,38 +54,38 @@ class ChuanHoaTimKiemGiongNoi
     /** @var array<string, true>|null */
     private static ?array $cumMoDau = null;
 
-    /** Diem cong theo nguon cua cum, de ten san pham thang mot token trung. */
+    /** Điểm cộng theo nguồn của cụm, để tên sản phẩm thắng một token trùng. */
     private const KIND_BONUS = ['product' => 20, 'category' => 10, 'token' => 0];
 
-    /** So cum ung vien dua vao prompt. Nhieu hon la tra tien token cho nhieu. */
+    /** Số cụm ứng viên đưa vào prompt. Nhiều hơn là trả tiền token cho nhiễu. */
     private const AI_CANDIDATES = 40;
 
-    /** Gia tri cache cho mot cau ma AI cung khong giup duoc. */
+    /** Giá trị cache cho một câu mà AI cũng không giúp được. */
     private const AI_NO_HELP = "\0no-help";
 
     /**
-     * Ghi nho "tu nay co trong ten san pham khong" trong mot luot chuanHoa().
+     * Ghi nhớ "từ này có trong tên sản phẩm không" trong một lượt chuanHoa().
      *
-     * Service duoc resolve moi request nen bo nho nay chet theo request — khong phai
-     * cache dai han, chi de mot luot khong hoi DB cung mot tu bon lan.
+     * Service được resolve mỗi request nên bộ nhớ này chết theo request — không phải
+     * cache dài hạn, chỉ để một lượt không hỏi DB cùng một từ bốn lần.
      *
      * @var array<string, bool>
      */
     private array $tuTrongTen = [];
 
-    /** Ung vien T1 da loai, giu lai cho prompt AI trong cung mot luot chuanHoa(). */
+    /** Ứng viên T1 đã loại, giữ lại cho prompt AI trong cùng một lượt chuanHoa(). */
     private ?array $phanDuPhienAm = null;
 
     /**
-     * @param array<int, string> $alternatives Web Speech tra toi da 3, tot nhat truoc.
+     * @param array<int, string> $alternatives Web Speech trả tối đa 3, tốt nhất trước.
      * @return array{text: string, heard: string, source: string, confident: bool}
      */
     public function chuanHoa(array $alternatives): array
     {
-        // heard giu nguyen dau cau va cum menh lenh — nut "Dung nguyen van" can dung
-        // chu khach noi. Nhung ky tu dieu khien thi khong phai chu ai noi. Thay bang
-        // khoang trang nhu catDauCau(), vi cung mot ly do: xoa han thi
-        // "thuoc\x07ha sot" dinh thanh "thuocha sot".
+        // heard giữ nguyên dấu câu và cụm mệnh lệnh — nút "Dùng nguyên văn" cần đúng
+        // chữ khách nói. Nhưng ký tự điều khiển thì không phải chữ ai nói. Thay bằng
+        // khoảng trắng như catDauCau(), vì cùng một lý do: xoá hẳn thì
+        // "thuốc\x07hạ sốt" dính thành "thuốchạ sốt".
         $heard = trim(preg_replace('/\p{C}+/u', ' ', (string) ($alternatives[0] ?? '')) ?? '');
         $alternatives = $this->donDep($alternatives);
 
@@ -95,9 +95,9 @@ class ChuanHoaTimKiemGiongNoi
 
         foreach ($alternatives as $alternative) {
             if ($this->laTruyVanThat($alternative)) {
-                // confident khong con nghia "mot tang da tra ra chu" ma la "chu do
-                // dung duoc tren catalog". Client dung co nay de noi "Nghe duoc" hay
-                // "Doan la", nen mot co de dai la mot loi noi doi tren giao dien.
+                // confident không còn nghĩa "một tầng đã trả ra chữ" mà là "chữ đó
+                // đứng được trên catalog". Client dùng cờ này để nói "Nghe được" hay
+                // "Đoán là", nên một cờ dễ dãi là một lời nói dối trên giao diện.
                 return $this->ketQua(
                     $alternative,
                     $heard,
@@ -135,46 +135,46 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Dau cau o hai dau bi cat; dau cau giua cau thi khong — "omega-3" va
-     * "vitamin B6" la ten hang, khong phai cau co dau.
+     * Dấu câu ở hai đầu bị cắt; dấu câu giữa câu thì không — "omega-3" và
+     * "vitamin B6" là tên hàng, không phải câu có dấu.
      *
-     * Chrome vi-VN LUON cham het cau, nen khong cat la de dau cham di vao o tim kiem,
-     * vao `?q=` va vao nhan "Xem tat ca ket qua cho …". fold() bo dau cau luc so khop
-     * nhung chuoi tra ve cho khach thi khong di qua fold().
+     * Chrome vi-VN LUÔN chấm hết câu, nên không cắt là để dấu chấm đi vào ô tìm kiếm,
+     * vào `?q=` và vào nhãn "Xem tất cả kết quả cho …". fold() bỏ dấu câu lúc so khớp
+     * nhưng chuỗi trả về cho khách thì không đi qua fold().
      */
     private function catDauCau(string $value): string
     {
-        // \p{C} truoc \p{P}: ky tu dieu khien khong phai dau cau, nen bo cu de
-        // "\x07abc" di nguyen vao o tim kiem va vao ?q=. Bo o moi vi tri, khong chi
-        // hai dau — khong co ky tu dieu khien nao mang nghia trong mot ten thuoc.
+        // \p{C} trước \p{P}: ký tự điều khiển không phải dấu câu, nên bộ cũ để
+        // "\x07abc" đi nguyên vào ô tìm kiếm và vào ?q=. Bỏ ở mọi vị trí, không chỉ
+        // hai đầu — không có ký tự điều khiển nào mang nghĩa trong một tên thuốc.
         //
-        // Thay bang KHOANG TRANG, khong phai chuoi rong: do 2026-09-02, xoa han thi
-        // "thuoc\x07ha sot" dinh thanh "thuocha sot" — mot tu khong co trong catalog,
-        // tuc la doi mot loi hien thi thanh mot loi khop. Ky tu dieu khien ngan cach
-        // chu khong noi. Hai dau do regex duoi va trim() don.
+        // Thay bằng KHOẢNG TRẮNG, không phải chuỗi rỗng: đo 2026-09-02, xoá hẳn thì
+        // "thuốc\x07hạ sốt" dính thành "thuốchạ sốt" — một từ không có trong catalog,
+        // tức là đổi một lỗi hiển thị thành một lỗi khớp. Ký tự điều khiển ngăn cách
+        // chứ không nối. Hai đầu do regex dưới và trim() dọn.
         $value = preg_replace('/\p{C}+/u', ' ', $value) ?? $value;
 
         return preg_replace('/^[\p{P}\s]+|[\p{P}\s]+$/u', '', $value) ?? trim($value);
     }
 
     /**
-     * Bo cum mo dau mang y dinh chu khong mang tu khoa.
+     * Bỏ cụm mở đầu mang ý định chứ không mang từ khoá.
      *
-     * Do tren catalog: tu `tim` khop 81 san pham (tim la co quan), `cho` khop 639,
-     * `toi` khop 87. Nen "Tim giup toi men vi sinh" duoc T0 tuyen bo exact nho chinh
-     * tu menh lenh roi dung — tang phien am khong bao gio chay de sua phan khach hoi.
+     * Đo trên catalog: từ `tim` khớp 81 sản phẩm (tim là cơ quan), `cho` khớp 639,
+     * `toi` khớp 87. Nên "Tìm giúp tôi men vi sinh" được T0 tuyên bố exact nhờ chính
+     * từ mệnh lệnh rồi dừng — tầng phiên âm không bao giờ chạy để sửa phần khách hỏi.
      *
-     * So tren chuoi da fold vi khach noi co dau, va dai truoc ngan sau vi neu khong
-     * thi `tim` an truoc `tim kiem`. Chi bo khi phan con lai van la mot truy van:
-     * khach noi dung mot tu "Tim" thi do la tat ca nhung gi ta co.
+     * So trên chuỗi đã fold vì khách nói có dấu, và dài trước ngắn sau vì nếu không
+     * thì `tim` ăn trước `tim kiem`. Chỉ bỏ khi phần còn lại vẫn là một truy vấn:
+     * khách nói đúng một từ "Tìm" thì đó là tất cả những gì ta có.
      */
     private function boCumMoDau(string $value): string
     {
         $words = preg_split('/\s+/', $value, -1, PREG_SPLIT_NO_EMPTY) ?: [];
         $phrases = self::cumMoDau();
 
-        // Fold tung tu rieng, khong fold ca cau: fold() tach "omega-3" thanh hai tu,
-        // va mot chi so lech thi cat mat phan khach that su hoi.
+        // Fold từng từ riêng, không fold cả câu: fold() tách "omega-3" thành hai từ,
+        // và một chỉ số lệch thì cắt mất phần khách thật sự hỏi.
         $folded = array_map(fn (string $word) => VietnameseText::fold($word), $words);
 
         for ($take = min(count($words) - 1, self::MAX_LEAD_WORDS); $take >= 1; $take--) {
@@ -189,8 +189,8 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Khoa la dang da fold, nen bang ben duoi viet co dau cho nguoi doc: them mot cum
-     * moi khong can biet fold() tra ra gi.
+     * Khoá là dạng đã fold, nên bảng bên dưới viết có dấu cho người đọc: thêm một cụm
+     * mới không cần biết fold() trả ra gì.
      *
      * @return array<string, true>
      */
@@ -203,49 +203,49 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Cum nay da dung san, khong co gi de sua.
+     * Cụm này đã đúng sẵn, không có gì để sửa.
      *
-     * Day la cau hoi cua T0 — "chuoi nay co can sua khong" — chu khong phai "chuoi nay
-     * co lien quan catalog khong". Hai cau hoi khac nhau, va tra loi sai cau thu nhat
-     * bang cau thu hai la loi goc cua ca tang.
+     * Đây là câu hỏi của T0 — "chuỗi này có cần sửa không" — chứ không phải "chuỗi này
+     * có liên quan catalog không". Hai câu hỏi khác nhau, và trả lời sai câu thứ nhất
+     * bằng câu thứ hai là lỗi gốc của cả tầng.
      *
-     * KHONG dung SanPham::storefrontSearch() lam cong, du no la ham tim kiem that cua
-     * shop. Do 2026-09-02 tren catalog 3.146 san pham: no khop CHUOI CON (`la` nam
-     * trong "Salonpas", "Calcium") va chi can tung tu khop dau do, ke ca trong
-     * `ingredients_folded`. Nen "e a e a" khop 3.146 san pham (ca catalog), "la la la
-     * la" 1.271, "ba la bu la" 125 — va T0 tuyen bo `exact` + `confident: true` cho
-     * tieng on roi dung, khien tang phien am va tang AI khong bao gio chay.
+     * KHÔNG dùng SanPham::storefrontSearch() làm cổng, dù nó là hàm tìm kiếm thật của
+     * shop. Đo 2026-09-02 trên catalog 3.146 sản phẩm: nó khớp CHUỖI CON (`la` nằm
+     * trong "Salonpas", "Calcium") và chỉ cần từng từ khớp đâu đó, kể cả trong
+     * `ingredients_folded`. Nên "ê a ê a" khớp 3.146 sản phẩm (cả catalog), "lá la la
+     * la" 1.271, "ba la bù la" 125 — và T0 tuyên bố `exact` + `confident: true` cho
+     * tiếng ồn rồi dừng, khiến tầng phiên âm và tầng AI không bao giờ chạy.
      *
-     * Hai dieu kien o day, moi dieu kien co so do rieng. Tap kiem: 12 cau vo nghia
-     * (phai chan), 9 cau noi dung (phai nhan), 57 dap an that cua corpus (phai nhan),
-     * 66 cau nghe lech (phai chan de T1 chay).
+     * Hai điều kiện ở đây, mỗi điều kiện có số đo riêng. Tập kiểm: 12 câu vô nghĩa
+     * (phải chặn), 9 câu nói đúng (phải nhận), 57 đáp án thật của corpus (phải nhận),
+     * 66 câu nghe lệch (phải chặn để T1 chạy).
      *
-     *   long (storefrontSearch)     0/12   9/9   57/57   —
-     *   AND moi tu, tron tu         9/12   9/9   54/57   <- mat dap an that
-     *   moi tu DAI phai khop       10/12   9/9   57/57   15/66
-     *   + qua nua cau la tu dai    12/12   9/9   57/57   19/66  <- dung cai nay
+     *   lỏng (storefrontSearch)     0/12   9/9   57/57   —
+     *   AND mọi từ, trọn từ         9/12   9/9   54/57   <- mất đáp án thật
+     *   mọi từ DÀI phải khớp       10/12   9/9   57/57   15/66
+     *   + quá nửa câu là từ dài    12/12   9/9   57/57   19/66  <- dùng cái này
      *
-     * Phuong an AND bi loai vi catalog viet khac cach khach noi: 0 san pham nao co ca
-     * "khau trang" va "y te" trong ten, trong khi "khau trang y te" la cach khach hoi
-     * va co 8 san pham dung y.
+     * Phương án AND bị loại vì catalog viết khác cách khách nói: 0 sản phẩm nào có cả
+     * "khau trang" và "y te" trong tên, trong khi "khẩu trang y tế" là cách khách hỏi
+     * và có 8 sản phẩm đúng ý.
      *
-     * Dieu kien qua-nua chan mot cau toan am tiet vun qua cong nho vai tu khop ngau
-     * nhien: "pa ra xe ta mon nam tram" chi co 3/7 tu duoc xet, ca ba khop, nen ten
-     * thuoc doc roi khong bao gio duoc ghep lai.
+     * Điều kiện quá-nửa chặn một câu toàn âm tiết vụn qua cổng nhờ vài từ khớp ngẫu
+     * nhiên: "pa ra xe ta mon năm trăm" chỉ có 3/7 từ được xét, cả ba khớp, nên tên
+     * thuốc đọc rời không bao giờ được ghép lại.
      *
-     * Chat o day an toan vi T0 khong con la cua cuoi: truot T0 thi xuong T1 (co cong
-     * rieng, xem khopPhienAm), roi AI, roi nguyen van. Chuoi khach noi khong bao
-     * gio mat — chi khac o cho he thong co tuyen bo chac chan hay khong.
+     * Chặt ở đây an toàn vì T0 không còn là cửa cuối: trượt T0 thì xuống T1 (có cổng
+     * riêng, xem khopPhienAm), rồi AI, rồi nguyên văn. Chuỗi khách nói không bao
+     * giờ mất — chỉ khác ở chỗ hệ thống có tuyên bố chắc chắn hay không.
      */
     private function laTruyVanThat(string $term): bool
     {
         $all = array_unique(SanPham::searchWords($term));
 
-        // Cong so luong TRUOC moi truy van: T1 co max_windows chan, T0 thi khong co gi.
-        // tenCoTu() la mot truy van cho moi TU PHAN BIET, hai trong bon nhanh LIKE
-        // cua no khong dung duoc index name_folded. Do 2026-09-02: 3 alternative x 50 tu
-        // THAT trong catalog ton 100 truy van / 284ms — duong ngat som ben duoi chi cuu
-        // duoc cau co tu truot, con cau toan tu that thi tra du gia.
+        // Cổng số lượng TRƯỚC mọi truy vấn: T1 có max_windows chặn, T0 thì không có gì.
+        // tenCoTu() là một truy vấn cho mỗi TỪ PHÂN BIỆT, hai trong bốn nhánh LIKE
+        // của nó không dùng được index name_folded. Đo 2026-09-02: 3 alternative x 50 từ
+        // THẬT trong catalog tốn 100 truy vấn / 284ms — đường ngắt sớm bên dưới chỉ cứu
+        // được câu có từ trượt, còn câu toàn từ thật thì trả đủ giá.
         if (count($all) > (int) config('search.voice.t0_max_words', 12)) {
             return false;
         }
@@ -266,27 +266,27 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Tu nao ngan hon the thi khong du de mot minh chung minh cum la that.
+     * Từ nào ngắn hơn thế thì không đủ để một mình chứng minh cụm là thật.
      *
-     * Do duoc: cau vo nghia toan am tiet ngan ("la", "lo", "ba", "bu") va chung chi
-     * khop vi `LIKE '%la%'` khop CHUOI CON cua "Salonpas", "Calcium". Tu mang nghia
-     * trong catalog thi dai hon.
+     * Đo được: câu vô nghĩa toàn âm tiết ngắn ("la", "lo", "ba", "bu") và chúng chỉ
+     * khớp vì `LIKE '%la%'` khớp CHUỖI CON của "Salonpas", "Calcium". Từ mang nghĩa
+     * trong catalog thì dài hơn.
      */
     private const MEANINGFUL_WORD_LENGTH = 3;
 
     /**
-     * Them dieu kien "tu nay la mot TU TRON trong name_folded" vao mot query.
+     * Thêm điều kiện "từ này là một TỪ TRỌN trong name_folded" vào một query.
      *
-     * Bon mau LIKE thay cho mot `%tu%`, vi `%la%` khop ca "Salonpas". `ten_khong_dau`
-     * da fold nen cac tu cach nhau dung mot khoang trang.
+     * Bốn mẫu LIKE thay cho một `%tu%`, vì `%la%` khớp cả "Salonpas". `ten_khong_dau`
+     * đã fold nên các từ cách nhau đúng một khoảng trắng.
      *
-     * Bon LIKE chu khong phai RLIKE hay concat(): bo test chay tren sqlite :memory:
-     * (phpunit.xml) con production la MySQL, va cach nay la cach duy nhat da kiem
-     * chay dung tren ca hai.
+     * Bốn LIKE chứ không phải RLIKE hay concat(): bộ test chạy trên sqlite :memory:
+     * (phpunit.xml) còn production là MySQL, và cách này là cách duy nhất đã kiểm
+     * chạy đúng trên cả hai.
      *
-     * Mot cho duy nhat giu luat khop-tu-tron: dieuKienTuTrongTen() hoi MOT tu, tuCungXuatHien()
-     * chong N dieu kien len cung mot query de hoi "cung mot san pham". Hai ban sao cua
-     * bon dong LIKE nay la hai cho phai sua khi luat doi.
+     * Một chỗ duy nhất giữ luật khớp-từ-trọn: dieuKienTuTrongTen() hỏi MỘT từ, tuCungXuatHien()
+     * chồng N điều kiện lên cùng một query để hỏi "cùng một sản phẩm". Hai bản sao của
+     * bốn dòng LIKE này là hai chỗ phải sửa khi luật đổi.
      */
     private function dieuKienTuTrongTen($query, string $word): void
     {
@@ -301,12 +301,12 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Tu nay xuat hien nhu mot TU TRON trong ten san pham nao.
+     * Từ này xuất hiện như một TỪ TRỌN trong tên sản phẩm nào.
      *
-     * Ghi nho ket qua theo tu trong suot mot luot chuanHoa(): laTruyVanThat() va
-     * demTuTrongTen() hoi ve cung nhung tu do nhieu lan — T0 hoi chuoi goc, roi T1 hoi
-     * lai chuoi goc va chuoi da sua. Do duoc 2026-09-02: "thuac ha soc" ton 6 truy van
-     * ma 4 trong so do lap lai cung mot tu.
+     * Ghi nhớ kết quả theo từ trong suốt một lượt chuanHoa(): laTruyVanThat() và
+     * demTuTrongTen() hỏi về cùng những từ đó nhiều lần — T0 hỏi chuỗi gốc, rồi T1 hỏi
+     * lại chuỗi gốc và chuỗi đã sửa. Đo được 2026-09-02: "thuấc hạ sốc" tốn 6 truy vấn
+     * mà 4 trong số đó lặp lại cùng một từ.
      */
     private function tenCoTu(string $word): bool
     {
@@ -321,7 +321,7 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Thay doan nghe lech bang cum trong catalog co khoa phien am tuong duong.
+     * Thay đoạn nghe lệch bằng cụm trong catalog có khoá phiên âm tương đương.
      */
     private function khopPhienAm(array $alternatives): ?string
     {
@@ -333,10 +333,10 @@ class ChuanHoaTimKiemGiongNoi
 
         $candidates = $this->traCuu($windows);
 
-        // Docblock cua ungVienChoPrompt() noi "mot truy van phuc vu ca hai tang";
-        // truoc day no tu goi lai cuaSo() + traCuu(), nen that ra la hai. Ghi ngay
-        // sau traCuu() chu khong o cho return: bon trong nam duong ra cua ham nay tra
-        // null SAU traCuu(), va dung nhung duong do moi la luc hoiAi() duoc goi.
+        // Docblock của ungVienChoPrompt() nói "một truy vấn phục vụ cả hai tầng";
+        // trước đây nó tự gọi lại cuaSo() + traCuu(), nên thật ra là hai. Ghi ngay
+        // sau traCuu() chứ không ở chỗ return: bốn trong năm đường ra của hàm này trả
+        // null SAU traCuu(), và đúng những đường đó mới là lúc hoiAi() được gọi.
         $this->phanDuPhienAm = ['windows' => $windows, 'candidates' => $candidates];
 
         if ($candidates->isEmpty()) {
@@ -363,25 +363,25 @@ class ChuanHoaTimKiemGiongNoi
             return null;
         }
 
-        // Chi doan nghe lech bi thay; phan con lai cua cau giu nguyen, vi khach co
-        // the da noi them boi canh ("cho em be") ma catalog khong chua.
+        // Chỉ đoạn nghe lệch bị thay; phần còn lại của câu giữ nguyên, vì khách có
+        // thể đã nói thêm bối cảnh ("cho em bé") mà catalog không chứa.
         $fixed = $this->thayThe($best['window'], $best['term']);
 
-        // Ban da sua phai HON ban goc, khong chi khac no. Do duoc 2026-09-02: siet
-        // cong T0 ma khong co buoc nay lam tong corpus tut 52/94 xuong 38/94 — chan
-        // o T0 chi day chuoi xuong T1, va T1 von tuyen bo confident bat ke ket qua.
-        // He qua that: "ba la bu la" thanh "ba la bu la", "uoc gi" thanh "uot gi".
+        // Bản đã sửa phải HƠN bản gốc, không chỉ khác nó. Đo được 2026-09-02: siết
+        // cổng T0 mà không có bước này làm tổng corpus tụt 52/94 xuống 38/94 — chặn
+        // ở T0 chỉ đẩy chuỗi xuống T1, và T1 vốn tuyên bố confident bất kể kết quả.
+        // Hệ quả thật: "ba la bù la" thành "bã la bù la", "ước gì" thành "ướt gì".
         return $this->demTuTrongTen($fixed) > $this->demTuTrongTen($best['window']['source'])
             ? $fixed
             : null;
     }
 
     /**
-     * Bao nhieu tu du dai cua cum khop tron tu trong ten san pham.
+     * Bao nhiêu từ đủ dài của cụm khớp trọn từ trong tên sản phẩm.
      *
-     * Thuoc de so ban goc voi ban da sua: sua dung thi so tu khop tang, sua bua thi
-     * khong. Dung chung tenCoTu() va nguong do dai voi laTruyVanThat() nen hai tang
-     * do cung mot thu va khong mau thuan nhau.
+     * Thước để so bản gốc với bản đã sửa: sửa đúng thì số từ khớp tăng, sửa bừa thì
+     * không. Dùng chung tenCoTu() và ngưỡng độ dài với laTruyVanThat() nên hai tầng
+     * đo cùng một thứ và không mâu thuẫn nhau.
      */
     private function demTuTrongTen(string $term): int
     {
@@ -401,19 +401,19 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Moi tu du dai cua cum cung nam trong ten cua MOT san pham.
+     * Mọi từ đủ dài của cụm cùng nằm trong tên của MỘT sản phẩm.
      *
-     * Day la dieu kien ma commit 5bd1889 hua ("require a real product-name match")
-     * nhung chua ship: cong da ship la so sanh tuong doi demTuTrongTen($fixed) >
-     * demTuTrongTen($source), nen "Par xe ta mon nam tram" di qua vi 4 > 3.
+     * Đây là điều kiện mà commit 5bd1889 hứa ("require a real product-name match")
+     * nhưng chưa ship: cổng đã ship là so sánh tương đối demTuTrongTen($fixed) >
+     * demTuTrongTen($source), nên "Par xê ta môn năm trăm" đi qua vì 4 > 3.
      *
-     * MOT truy van cho ca cum, khong phai N nhu tenCoTu(): cac dieu kien AND
-     * chong nhau trong cung mot cau lenh. Khong thay laTruyVanThat() — no co tinh long
-     * de "khau trang y te" (0 san pham co ca 4 tu trong TEN) van tim duoc qua
-     * ingredients_folded. Cong nay chi quyet dinh CO, khong quyet dinh chuoi tra ve.
+     * MỘT truy vấn cho cả cụm, không phải N như tenCoTu(): các điều kiện AND
+     * chồng nhau trong cùng một câu lệnh. Không thay laTruyVanThat() — nó cố tình lỏng
+     * để "khẩu trang y tế" (0 sản phẩm có cả 4 từ trong TÊN) vẫn tìm được qua
+     * ingredients_folded. Cổng này chỉ quyết định CỜ, không quyết định chuỗi trả về.
      *
-     * Do tren catalog that 2026-09-02: ket qua sai 33 -> 14, confident-ma-catalog-rong
-     * 15 -> 1, coverage giu nguyen 55/94, 4 ca dung bi ha co oan.
+     * Đo trên catalog thật 2026-09-02: kết quả sai 33 -> 14, confident-mà-catalog-rỗng
+     * 15 -> 1, coverage giữ nguyên 55/94, 4 ca đúng bị hạ cờ oan.
      */
     private function tuCungXuatHien(string $term): bool
     {
@@ -436,10 +436,10 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Cua so 1-N tu lien nhau, dai truoc ngan sau, gop trung qua moi alternative.
+     * Cửa sổ 1-N từ liền nhau, dài trước ngắn sau, gộp trùng qua mọi alternative.
      *
-     * Be rong va so cua so doc tu config vi phai noi cung nhau: vong lap di dai-truoc
-     * nen cap hep tieu het ngan sach ngay o tang dai nhat, xem config/search.php.
+     * Bề rộng và số cửa sổ đọc từ config vì phải nới cùng nhau: vòng lặp đi dài-trước
+     * nên cap hẹp tiêu hết ngân sách ngay ở tầng dài nhất, xem config/search.php.
      *
      * @return array<string, array{key: string, text: string, source: string}>
      */
@@ -458,10 +458,10 @@ class ChuanHoaTimKiemGiongNoi
                     $text = implode(' ', array_slice($words, $i, $size));
                     $key = PhienAmTiengViet::khoa($text);
 
-                    // $taken++ SAU khi loai: khoa rong va khoa trung khong sinh ung
-                    // vien nao, nen tinh chung vao ngan sach la thu hep vung phu ma
-                    // khong duoc gi. Ba alternative cua Web Speech gan giong nhau nen
-                    // phan lon cua so la ban sao.
+                    // $taken++ SAU khi loại: khoá rỗng và khoá trùng không sinh ứng
+                    // viên nào, nên tính chúng vào ngân sách là thu hẹp vùng phủ mà
+                    // không được gì. Ba alternative của Web Speech gần giống nhau nên
+                    // phần lớn cửa sổ là bản sao.
                     if ($key === '' || isset($windows[$key])) {
                         continue;
                     }
@@ -477,17 +477,17 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Mot truy van cho ca tang: khop khit bang phonetic_key, khop gan bang
-     * block_key. within() la ham PHP nen bo loc tho phai lam trong SQL, khong thi
-     * moi request nap ca index ra bo nho.
+     * Một truy vấn cho cả tầng: khớp khít bằng phonetic_key, khớp gần bằng
+     * block_key. ganNhau() là hàm PHP nên bộ lọc thô phải làm trong SQL, không thì
+     * mỗi request nạp cả index ra bộ nhớ.
      */
     private function traCuu(array $windows): Collection
     {
         $keys = array_keys($windows);
-        // Callback tuong minh: array_filter() khong callback bo "0" vi no falsy. Chi
-        // xay ra khi ca khoa phien am cua mot cua so la dung mot ky tu "0" (blockKey
-        // tra 2 ky tu cho moi chuoi dai hon, va 2 ky tu thi khong bao gio falsy), nen
-        // day la bit mot cai bay tiem an chu khong phai mot ca da gap.
+        // Callback tường minh: array_filter() không callback bỏ "0" vì nó falsy. Chỉ
+        // xảy ra khi cả khoá phiên âm của một cửa sổ là đúng một ký tự "0" (khoaKhoi
+        // trả 2 ký tự cho mọi chuỗi dài hơn, và 2 ký tự thì không bao giờ falsy), nên
+        // đây là bịt một cái bẫy tiềm ẩn chứ không phải một ca đã gặp.
         $blocks = array_values(array_unique(array_filter(
             array_map(fn (array $window) => PhienAmTiengViet::khoaKhoi($window['key']), $windows),
             fn (?string $block) => $block !== null && $block !== ''
@@ -506,8 +506,8 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Diem chi xep thu tu giua cac ung vien within() DA nhan — khong quyet dinh
-     * nhan hay loai. Tron hai viec do lai la cach "vitamin C" thanh "vitamin D".
+     * Điểm chỉ xếp thứ tự giữa các ứng viên ganNhau() ĐÃ nhận — không quyết định
+     * nhận hay loại. Trộn hai việc đó lại là cách "vitamin C" thành "vitamin D".
      */
     private function diem(array $window, PhienAmGiongNoi $candidate): int
     {
@@ -529,18 +529,18 @@ class ChuanHoaTimKiemGiongNoi
 
         $replaced = str_ireplace($window['text'], $term, $whole, $count);
 
-        // Cua so duoc sinh tu chuoi da fold nen no khong luon xuat hien nguyen van
-        // trong cau goc ("soc" vs "sot"). Khong thay duoc thi dung cum trong catalog:
-        // no la phan mang thong tin, phan con lai chi la boi canh.
+        // Cửa sổ được sinh từ chuỗi đã fold nên nó không luôn xuất hiện nguyên văn
+        // trong câu gốc ("sốc" vs "sốt"). Không thay được thì dùng cụm trong catalog:
+        // nó là phần mang thông tin, phần còn lại chỉ là bối cảnh.
         return $count > 0 ? $replaced : $term;
     }
 
     /**
-     * Tang cuoi truoc khi tra nguyen van: nho AI chon tu khoa tu danh sach ung vien.
+     * Tầng cuối trước khi trả nguyên văn: nhờ AI chọn từ khoá từ danh sách ứng viên.
      *
-     * Bon van chan, moi van co test rieng: chi chay khi hai tang dau truot, cache
-     * 24h, mot khoa lock cho moi cau, va mot circuit breaker. Khong co chung thi
-     * 1.000 luot/phut la 1.000 loi goi/phut vao mot provider do duoc mat 18-26s.
+     * Bốn van chặn, mỗi van có test riêng: chỉ chạy khi hai tầng đầu trượt, cache
+     * 24h, một khoá lock cho mỗi câu, và một circuit breaker. Không có chúng thì
+     * 1.000 lượt/phút là 1.000 lời gọi/phút vào một provider đo được mất 18-26s.
      */
     private function hoiAi(array $alternatives): ?string
     {
@@ -555,14 +555,14 @@ class ChuanHoaTimKiemGiongNoi
             return $cached === self::AI_NO_HELP ? null : $cached;
         }
 
-        // block(3): 100 nguoi noi cung mot cau thi mot nguoi goi, 99 nguoi con lai
-        // cho roi doc cache. Bang cache_locks da ton tai nen day la khoa that.
+        // block(3): 100 người nói cùng một câu thì một người gọi, 99 người còn lại
+        // chờ rồi đọc cache. Bảng cache_locks đã tồn tại nên đây là khoá thật.
         $lock = Cache::lock($cacheKey . ':lock', 10);
 
         try {
             $lock->block(3);
         } catch (Throwable) {
-            // Khong lay duoc khoa trong 3s: tra nguyen van thay vi xep hang them.
+            // Không lấy được khoá trong 3s: trả nguyên văn thay vì xếp hàng thêm.
             return null;
         }
 
@@ -620,10 +620,10 @@ class ChuanHoaTimKiemGiongNoi
     {
         $candidates = $this->ungVienChoPrompt($alternatives);
 
-        // Mot dong, trong dau nhay: chuoi nguoi dung noi KHONG duoc tu thanh mot muc
-        // trong danh sach. Xuong dong song sot qua catDauCau() (dau cau giua
-        // cau thi khong bi cat), nen "abc\nCum co trong catalog gan giong nhat:\n- X"
-        // gia duoc dung cai tieu de ma systemPrompt() bao model tin.
+        // Một dòng, trong dấu nháy: chuỗi người dùng nói KHÔNG được tự thành một mục
+        // trong danh sách. Xuống dòng sống sót qua catDauCau() (dấu câu giữa
+        // câu thì không bị cắt), nên "abc\nCụm có trong catalog gần giống nhất:\n- X"
+        // giả được đúng cái tiêu đề mà systemPrompt() bảo model tin.
         $line = fn (string $value) => '- "' . str_replace(["\r", "\n", '"'], [' ', ' ', "'"], $value) . '"';
 
         return implode("\n", array_filter([
@@ -636,9 +636,9 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Ung vien cho prompt la chinh nhung dong within() da LOAI o T1 — chung gan ve
-     * phien am nhung chua du gan de nhan tu dong. Nho vay mot truy van phuc vu ca
-     * hai tang.
+     * Ứng viên cho prompt là chính những dòng ganNhau() đã LOẠI ở T1 — chúng gần về
+     * phiên âm nhưng chưa đủ gần để nhận tự động. Nhờ vậy một truy vấn phục vụ cả
+     * hai tầng.
      *
      * @return array<int, string>
      */
@@ -663,9 +663,9 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Luat §2.2 cua spec: chuoi AI tra ve chi duoc dung neu no that su tim ra thu
-     * gi trong catalog. Do duoc provider tra "parasitome" cho "paracetamol" — trong
-     * app nha thuoc, mot ten thuoc bia khong duoc di toi o tim kiem.
+     * Luật §2.2 của spec: chuỗi AI trả về chỉ được dùng nếu nó thật sự tìm ra thứ
+     * gì trong catalog. Đo được provider trả "parasitome" cho "paracetamol" — trong
+     * app nhà thuốc, một tên thuốc bịa không được đi tới ô tìm kiếm.
      */
     private function doiChieuCatalog(string $answer): ?string
     {
@@ -675,10 +675,10 @@ class ChuanHoaTimKiemGiongNoi
             return null;
         }
 
-        // laTruyVanThat(), khong phai catalogHas(): AI duoc dua danh sach ung vien nen
-        // cau tra loi cua no phai khop catalog tron ven, khong phai khop mot tu. Voi
-        // tieu chi long, do duoc provider tra "ba la bu la" va lop kiem nay NHAN, vi
-        // chuoi do "tim ra" 125 san pham qua LIKE chuoi con.
+        // laTruyVanThat(), không phải catalogHas(): AI được đưa danh sách ứng viên nên
+        // câu trả lời của nó phải khớp catalog trọn vẹn, không phải khớp một từ. Với
+        // tiêu chí lỏng, đo được provider trả "ba la bù la" và lớp kiểm này NHẬN, vì
+        // chuỗi đó "tìm ra" 125 sản phẩm qua LIKE chuỗi con.
         if ($this->laTruyVanThat($answer)) {
             return $answer;
         }
@@ -695,22 +695,22 @@ class ChuanHoaTimKiemGiongNoi
     }
 
     /**
-     * Bo dem tu het han theo cua so, nen breaker tu dong lai ma khong can job nao.
+     * Bộ đếm tự hết hạn theo cửa sổ, nên breaker tự đóng lại mà không cần job nào.
      */
     private function ghiNhanThatBai(): void
     {
         $window = (int) config('search.voice.breaker_window', 300);
 
-        // add() truoc roi increment(): increment() tren khoa chua ton tai khong dat
-        // duoc TTL, va mot bo dem khong TTL la mot breaker mo vinh vien.
+        // add() trước rồi increment(): increment() trên khoá chưa tồn tại không đặt
+        // được TTL, và một bộ đếm không TTL là một breaker mở vĩnh viễn.
         Cache::add('voice:norm:ai_failures', 0, $window);
         $failures = (int) Cache::increment('voice:norm:ai_failures');
         $threshold = max(1, (int) config('search.voice.breaker_failures', 5));
 
-        // Chi log o dung lan vuot nguong, khong log moi lan that bai sau do: tu day
-        // tang AI tat trong $window giay va khong co dau vet nao khac. Truoc day
-        // "tang AI dang bi breaker chan" khong phan biet duoc voi "khong cau nao can
-        // toi no".
+        // Chỉ log ở đúng lần vượt ngưỡng, không log mỗi lần thất bại sau đó: từ đây
+        // tầng AI tắt trong $window giây và không có dấu vết nào khác. Trước đây
+        // "tầng AI đang bị breaker chặn" không phân biệt được với "không câu nào cần
+        // tới nó".
         if ($failures === $threshold) {
             Log::warning('Voice search AI breaker opened', [
                 'failures' => $failures,

@@ -25,7 +25,7 @@ class HoSoSucKhoe extends Model
     ];
 
     protected $casts = [
-        // Du lieu suc khoe la nhay cam: ma hoa khi luu, giai ma chi khi doc.
+        // Dữ liệu sức khoẻ là nhạy cảm: mã hoá khi lưu, giải mã chỉ khi đọc.
         'allergies' => 'encrypted:array',
         'chronic_conditions' => 'encrypted:array',
         'current_medications' => 'encrypted:array',
@@ -50,8 +50,8 @@ class HoSoSucKhoe extends Model
     }
 
     /**
-     * Khong thu gi trong ho so nay duoc phep anh huong den sang loc hoac kiem tra
-     * an toan truoc khi nguoi da dong y ro rang.
+     * Không thứ gì trong hồ sơ này được phép ảnh hưởng đến sàng lọc hoặc kiểm tra
+     * an toàn trước khi người đã đồng ý rõ ràng.
      */
     public function hasConsented(): bool
     {
@@ -59,8 +59,8 @@ class HoSoSucKhoe extends Model
     }
 
     /**
-     * Rieng biet voi hasConsented(): dong y cho duoc si doc ho so khong phai la dong y
-     * gui du lieu do den mot nha cung cap AI.
+     * Riêng biệt với hasConsented(): đồng ý cho dược sĩ đọc hồ sơ không phải là đồng ý
+     * gửi dữ liệu đó đến một nhà cung cấp AI.
      */
     public function hasAiConsent(): bool
     {
@@ -68,17 +68,17 @@ class HoSoSucKhoe extends Model
     }
 
     /**
-     * Nhung gi nguoi go vao truong tag de co nghia "khong co gi khai bao".
+     * Những gì người gõ vào trường tag để có nghĩa "không có gì khai báo".
      *
-     * Khong phai tien su y khoa: mot chu "Khong" thu van trong danh sach di ung lam
-     * knownTerms() khong con rong, va dieu do lam SangLocYTeService::isStepCoveredByProfile()
-     * bo qua buoc 4 cua tro ly — nen sang loc khong bao gio hoi ve benh man tinh, di ung,
-     * co thai hay cho con bu, de roi mot vong hoi lam ro hoi thay.
+     * Không phải tiền sử y khoa: một chữ "Không" giữ vẫn trong danh sách dị ứng làm
+     * knownTerms() không còn rỗng, và điều đó làm SangLocYTeService::isStepCoveredByProfile()
+     * bỏ qua bước 4 của trợ lý — nên sàng lọc không bao giờ hỏi về bệnh mạn tính, dị ứng,
+     * có thai hay cho con bú, để rồi một vòng hỏi làm rõ hỏi thay.
      *
-     * Dong thoi gi cot da ma hoa sach se, vi AnToanThuocService doc `allergies` truc tiep
-     * va quay ve so khop chuoi con voi ten san pham cho tu khoa tu 4 ky tu tro len.
-     * "Khong" fold ra chuoi 5 ky tu, nen chi cach mot ten san pham xui la chan gio hang
-     * voi mot canh bao di ung vo co.
+     * Đồng thời giữ cột đã mã hoá sạch sẽ, vì AnToanThuocService đọc `allergies` trực tiếp
+     * và quay về so khớp chuỗi con với tên sản phẩm cho từ khoá từ 4 ký tự trở lên.
+     * "Không" fold ra chuỗi 5 ký tự, nên chỉ cách một tên sản phẩm xui là chặn giỏ hàng
+     * với một cảnh báo dị ứng vô cơ.
      */
     public const NEGATION_TERMS = [
         'khong', 'khong co', 'khong co gi', 'khong bi gi', 'ko', 'ko co', 'ko co gi',
@@ -87,8 +87,8 @@ class HoSoSucKhoe extends Model
     ];
 
     /**
-     * fold() loai dau cau, nen "N/A", "N.A." va "-" deu hoac roi vao danh sach tren
-     * hoac fold ra chuoi rong.
+     * fold() loại dấu câu, nên "N/A", "N.A." và "-" đều hoặc rơi vào danh sách trên
+     * hoặc fold ra chuỗi rỗng.
      */
     public static function isNegationTerm(string $term): bool
     {
@@ -98,8 +98,8 @@ class HoSoSucKhoe extends Model
     }
 
     /**
-     * Danh sach da lam phang, viet thuong, cua moi tu khoa ma cac kiem tra an toan
-     * dung de so khop.
+     * Danh sách đã làm phẳng, viết thường, của mỗi từ khoá mà các kiểm tra an toàn
+     * dùng để so khớp.
      */
     public function knownTerms(): array
     {
@@ -122,8 +122,8 @@ class HoSoSucKhoe extends Model
     }
 
     /**
-     * Ho so da duoc dong y cua mot nguoi dung, hoac null. Bon noi goi can dung dung
-     * truy van nay, nen luat "chi doc khi co dong y" nam tai mot cho duy nhat.
+     * Hồ sơ đã được đồng ý của một người dùng, hoặc null. Bốn nơi gọi cần đúng dùng
+     * truy vấn này, nên luật "chỉ đọc khi có đồng ý" nằm tại một chỗ duy nhất.
      */
     public static function consentedFor(int $userId): ?self
     {

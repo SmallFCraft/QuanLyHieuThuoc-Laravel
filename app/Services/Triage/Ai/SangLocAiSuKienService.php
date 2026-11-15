@@ -10,35 +10,35 @@ use App\Support\VietnameseText;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Trich xuat chi tiet AI cho wizard sang loc.
+ * Trích xuất chi tiết AI cho wizard sàng lọc.
  *
- * Model doc nhung gi khach hang go va de nghi cac chi tiet co cau truc. No KHONG
- * quyet dinh gi het: SangLocYTeService chay quy tac hai lan — mot lan tren
- * chi tiet suy tu regex, mot lan tren chi tiet hop AI — va giu phia nghiem hon.
- * Mot chi tiet bi a tu hoac chen vao vi vay chi co the lam ket qua
- * nghiem hon, chu khong bao gio roi bo hon.
+ * Model đọc những gì khách hàng gõ và đề nghị các chi tiết có cấu trúc. Nó KHÔNG
+ * quyết định gì hết: SangLocYTeService chạy quy tắc hai lần — một lần trên
+ * chi tiết suy từ regex, một lần trên chi tiết hợp AI — và giữ phía nghiêm hơn.
+ * Một chi tiết bịa tự hoặc chèn vào vì vậy chỉ có thể làm kết quả
+ * nghiêm hơn, chứ không bao giờ nới lỏng hơn.
  *
- * Moi gia tri tra ve duoc xac minh voi database hoac mot khoang so
- * truoc khi roi khoi lop nay. Ma trieu chung khong ton tai bi bo.
+ * Mỗi giá trị trả về được xác minh với database hoặc một khoảng số
+ * trước khi rời khỏi lớp này. Mã triệu chứng không tồn tại bị bỏ.
  */
 class SangLocAiSuKienService extends SangLocAiService
 {
-    /** Tuoi noi ro vuot muc nay la loi go, chu khong phai benh nhan. */
+    /** Tuổi nêu rõ vượt mức này là lỗi gõ, chứ không phải bệnh nhân. */
     private const MAX_AGE_YEARS = 120;
 
-    /** ~10 tuoi. Dai hon muc nay khong phai truong hop sang loc. */
+    /** ~10 tuổi. Dài hơn mức này không phải trường hợp sàng lọc. */
     private const MAX_DURATION_DAYS = 3650;
 
     private const MAX_CLARIFY_LENGTH = 200;
 
     /**
-     * Tu khoa regex khong dau theo moi chu de ma tai khoan co the da co cau tra loi.
+     * Từ khoá regex không dấu theo mỗi chủ đề mà tài khoản có thể đã có câu trả lời.
      *
-     * Mot pattern theo chu de thay vi danh sach cum, vi model dien dat cung cau hoi
-     * khac nhau moi vong ("Anh/chi nam nay bao nhieu tuoi a?" hoac "Cho em
-     * biet tuoi cua nguoi benh"). "da dung thuoc gi cho trieu chung nay" chu dich
-     * KHONG phai chu de thuoc: thuoc trong ho so la thuoc khach hang dung hang ngay,
-     * chu khong phai thuoc ho da dung cho phan nan nay.
+     * Một pattern theo chủ đề thay vì danh sách cụm, vì model diễn đạt cùng câu hỏi
+     * khác nhau mỗi vòng ("Anh/chị năm nay bao nhiêu tuổi ạ?" hoặc "Cho em
+     * biết tuổi của người bệnh"). "đã dùng thuốc gì cho triệu chứng này" cố ý
+     * KHÔNG phải chủ đề thuốc: thuốc trong hồ sơ là thuốc khách hàng dùng hằng ngày,
+     * chứ không phải thuốc họ đã dùng cho phần nàn này.
      */
     private const TOPIC_PATTERNS = [
         'age' => '/(?<![a-z0-9])(tuoi|nam sinh|ngay sinh|sinh nam)(?![a-z0-9])/',
@@ -48,35 +48,35 @@ class SangLocAiSuKienService extends SangLocAiService
     ];
 
     /**
-     * Cau hoi tuoi tre con phai duoc giu: tuoi benh nhan duoc noi ro uu tien hon
-     * birth_date cua chu tai khoan (xem SangLocYTeService::resolveAge), nen khi phan nan
-     * ve mot tre con thi tuoi tai khoan khong phai chi tiet da biet.
+     * Câu hỏi tuổi trẻ con phải được giữ: tuổi bệnh nhân được nêu rõ ưu tiên hơn
+     * birth_date của chủ tài khoản (xem SangLocYTeService::resolveAge), nên khi phần nàn
+     * về một trẻ con thì tuổi tài khoản không phải chi tiết đã biết.
      *
-     * Khop tren van ban chu thuong CO dau, khong bao gio tren dang khong dau:
-     * khong dau bien "con sot" (tre sot) thanh "con sot" (ban sot), nen cau tra loi vong 1 cua khach
-     * duoc doc thanh phan nan cua tre, tuoi tai khoan bi bo vi khong phu hop,
-     * va model hoi lai ngay sinh ma ho so da co.
+     * Khớp trên văn bản chữ thường CÓ dấu, không bao giờ trên dạng không dấu:
+     * không dấu biến "còn sốt" (trẻ sốt) thành "con sốt" (bạn sốt), nên câu trả lời vòng 1 của khách
+     * được đọc thành phần nàn của trẻ, tuổi tài khoản bị bỏ vì không phù hợp,
+     * và model hỏi lại ngày sinh mà hồ sơ đã có.
      */
     private const CHILD_MARKERS = '/(?<![\p{L}\d])(bé|be|con|trẻ|tre|cháu|chau|sơ sinh|so sinh)(?![\p{L}\d])/iu';
 
     /**
-     * Cau hoi ve khach hang da dung gi CHO PHAN NAN NAY, tren van ban khong dau.
+     * Câu hỏi về khách hàng đã dùng gì CHO PHẦN NÀN NÀY, trên văn bản không dấu.
      *
-     * Chu dich tach khoi TOPIC_PATTERNS['medications']: chu de kia phu danh sach thuoc
-     * hang ngay trong ho so, chu de nay phu "da dung thuoc gi va no co giup
-     * khong" — duoc hoi ca ba vong cua phien 52 voi ba cau tra loi deu
-     * noi khong dung thuoc gi.
+     * Cố ý tách khỏi TOPIC_PATTERNS['medications']: chủ đề kia phủ danh sách thuốc
+     * hằng ngày trong hồ sơ, chủ đề này phủ "đã dùng thuốc gì và nó có giúp
+     * không" — được hỏi cả ba vòng của phiên 52 với ba câu trả lời đều
+     * nói không dùng thuốc gì.
      */
     private const MEDICATION_QUESTION = '/(?<![a-z0-9])(uong thuoc|dung thuoc|thuoc gi|thuoc nao)(?![a-z0-9])/';
 
-    /** Chu de thay the trong tap da phu dinh; thuat ngu trieu chung khong bao gio bang no. */
+    /** Chủ đề thay thế trong tập đã phủ định; thuật ngữ triệu chứng không bao giờ bằng nó. */
     private const MEDICATION_TOPIC = '@medication';
 
     /**
-     * Cac dau hieu model hoi bang ten not. Tu dien co
-     * "buon non" / "non oi" / "non ra mau" nhung khong co "not" don le, va khong co gi
-     * cho "lu du", nen "Co kem not khong a?" bi phu dinh khong ghi thuat ngu nao va vong
-     * sau hoi lai.
+     * Các dấu hiệu model hỏi bằng tên trần. Từ điển có
+     * "buồn nôn" / "nôn ói" / "nôn ra máu" nhưng không có "nôn" đơn lẻ, và không có gì
+     * cho "lừ đừ", nên "Có kèm nôn không ạ?" bị phủ định không ghi thuật ngữ nào và vòng
+     * sau hỏi lại.
      *
      * @var array<int, string>
      */
@@ -91,7 +91,7 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Co the chay trong form POST cua wizard, nen giu ngan sach fail-fast.
+     * Có thể chạy trong form POST của wizard, nên giữ ngân sách fail-fast.
      */
     protected function timeoutSeconds(): int
     {
@@ -99,11 +99,11 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Cac chi tiet da xac minh do model de nghi, hoac null khi tat, khong kha dung, hoac
-     * khong dung duoc.
+     * Các chi tiết đã xác minh do model đề nghị, hoặc null khi tắt, không khả dụng, hoặc
+     * không dùng được.
      *
-     * @param  array<int, string>  $allowedCodes  Gia tri `medical_symptoms.code` dang hoat dong.
-     *                                            Truyen vao nen lop nay khong them truy van nao.
+     * @param  array<int, string>  $allowedCodes  Giá trị `medical_symptoms.code` đang hoạt động.
+     *                                            Truyền vào nên lớp này không thêm truy vấn nào.
      * @return array{
      *     symptom_codes: array<int, string>,
      *     duration_days: int|null,
@@ -124,10 +124,10 @@ class SangLocAiSuKienService extends SangLocAiService
 
         $startedAt = microtime(true);
 
-        // Cac chi tiet tai khoan seam nay duoc tai dung, va cac cau tra loi wizard cung khong duoc
-        // hoi lai. Ca hai doc truoc lan goi; bo loc phia duoi dung
-        // cung danh sach, nen mot chu de khong the bi bo khoi prompt ma van duoc hoi,
-        // hoac nguoc lai.
+        // Các chi tiết tài khoản seam này được tái dùng, và các câu trả lời wizard cũng không được
+        // hỏi lại. Cả hai đọc trước lần gọi; bộ lọc phía dưới dùng
+        // cùng danh sách, nên một chủ đề không thể bị bỏ khỏi prompt mà vẫn được hỏi,
+        // hoặc ngược lại.
         $known = $this->knownFacts($phien, $text);
 
         try {
@@ -164,14 +164,14 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Hop chi tiet AI vao cac chi tiet all dinh cho lan chay quy tac thu hai.
+     * Hợp chi tiết AI vào các chi tiết all định cho lần chạy quy tắc thứ hai.
      *
-     * Bao thu chi theo mot huong:
-     *  - gia tri AI null khong bao gio xoa gia tri nhanh regex tim duoc;
-     *  - co nguy hiem boolean la OR, nen model co the nang nguy hiem chu khong bao gio
-     *    duoc xoa mot co (AI "khong mang thai" khong duoc ghi de ho so da dong y).
-     * Gia tri so thi lay tu model khi co — dung la muc dich cua viec
-     * trich xuat — con an toan den tu phep so sanh hai nhanh, chu khong phai tai day.
+     * Bảo thủ chỉ theo một hướng:
+     *  - giá trị AI null không bao giờ xoá giá trị nhánh regex tìm được;
+     *  - cờ nguy hiểm boolean là OR, nên model có thể nâng nguy hiểm chứ không bao giờ
+     *    được xoá một cờ (AI "không mang thai" không được ghi đè hồ sơ đã đồng ý).
+     * Giá trị số thì lấy từ model khi có — đúng là mục đích của việc
+     * trích xuất — còn an toàn đến từ phép so sánh hai nhánh, chứ không phải tại đây.
      *
      * @param  array<string, mixed>  $regexFacts
      * @param  array<string, mixed>  $aiFacts
@@ -229,15 +229,15 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Phan nan cong cau hoi-dap cua moi vong truoc, cong nhung gi tai khoan da
-     * tra loi — nen model co the xac nhan chi tiet da biet thay vi hoi lai.
+     * Phần nàn cộng câu hỏi-đáp của mỗi vòng trước, cộng những gì tài khoản đã
+     * trả lời — nên model có thể xác nhận chi tiết đã biết thay vì hỏi lại.
      *
-     * Neu khong co cau tra loi truoc do, model hoi lai nhung gi khach hang da noi,
-     * dieu do lam ban mot vong chi nhu mot form chu khong phai mot
-     * cuoc tu van.
+     * Nếu không có câu trả lời trước đó, model hỏi lại những gì khách hàng đã nói,
+     * điều đó làm bản một vòng chỉ như một form chứ không phải một
+     * cuộc tư vấn.
      *
      * @param  array<int, array{question: string, answer: string}>  $wizardTranscript
-     * @param  array<string, string>  $knownFacts  doc duoc cho nguoi, da duoc loc
+     * @param  array<string, string>  $knownFacts  đọc được cho người, đã được lọc
      */
     protected function buildUserMessage(
         PhienSangLoc $phien,
@@ -345,7 +345,7 @@ class SangLocAiSuKienService extends SangLocAiService
     /**
      * @param  array<string, mixed>  $raw
      * @param  array<int, string>  $allowedCodes
-     * @param  array<int, string>  $knownTopics  Cac chu de tai khoan da tra loi.
+     * @param  array<int, string>  $knownTopics  Các chủ đề tài khoản đã trả lời.
      * @return array<string, mixed>
      */
     protected function validate(array $raw, array $allowedCodes, array $knownTopics = [], array $deniedTerms = []): array
@@ -354,8 +354,8 @@ class SangLocAiSuKienService extends SangLocAiService
         $wantsMore = $this->nullableBool($raw['needs_more_info'] ?? null);
 
         return [
-            // Danh sach trang tren database: mot ma bia ra ve cau truc la
-            // khong the hanh dong duoc, va cach nay khong ton truy van them.
+            // Danh sách trắng trên database: một mã bịa ra về cấu trúc là
+            // không thể hành động được, và cách này không tốn truy vấn thêm.
             'symptom_codes' => array_values(array_intersect(
                 array_map(fn ($code) => (string) $code, (array) ($raw['symptom_codes'] ?? [])),
                 $allowedCodes
@@ -366,15 +366,15 @@ class SangLocAiSuKienService extends SangLocAiService
             'pregnant' => $this->nullableBool($raw['pregnant'] ?? null),
             'breastfeeding' => $this->nullableBool($raw['breastfeeding'] ?? null),
             'clarify_questions' => $wantsMore === false ? [] : $questions,
-            // false ro rang dung cac vong; truong thieu ve phia "con cau hoi",
-            // cung la cach ban mot vong truoc day hoat dong.
+            // false rõ ràng dừng các vòng; trường thiếu rơi về phía "có câu hỏi",
+            // cũng là cách bản một vòng trước đây hoạt động.
             'needs_more_info' => $wantsMore ?? ($questions !== []),
         ];
     }
 
     /**
-     * Thang thang nam khi ca hai co mat: dung la trong hop hai nghia
-     * nhanh regex doc sai, va "be 8 thang" khong duoc thanh 8 tuoi.
+     * Tháng thắng năm khi cả hai có mặt: đúng là trong hợp hai nghĩa
+     * nhánh regex đọc sai, và "bé 8 tháng" không được thành 8 tuổi.
      *
      * @param  array<string, mixed>  $raw
      */
@@ -401,8 +401,8 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * null giu nguyen chu roi ve false: "khong noi" va "noi la
-     * khong" la hai khac nhau, va gopThanTrong() xu ly chung khac nhau.
+     * null giữ nguyên chứ rơi về false: "không nói" và "nói là
+     * không" là hai khác nhau, và gopThanTrong() xử lý chúng khác nhau.
      */
     protected function nullableBool(mixed $value): ?bool
     {
@@ -433,15 +433,15 @@ class SangLocAiSuKienService extends SangLocAiService
                     return false;
                 }
 
-                // Do thu te: model hoi lai "sot" ba vong lien tiep sau khi
-                // khach hang tra loi "khong" cho mot cau hoi nhon den no. Chi dan trong prompt
-                // chong lai bi bo qua, nen server ap dung thay.
+                // Đo thực tế: model hỏi lại "sốt" ba vòng liên tiếp sau khi
+                // khách hàng trả lời "không" cho một câu hỏi nhọn đến nó. Chỉ dặn trong prompt
+                // chống lại bị bỏ qua, nên server áp dụng thay.
                 if ($this->asksDeniedTerm($question, $deniedTerms)) {
                     return false;
                 }
 
-                // Cau hoi duoc render thanh label cua form, nen no khong duoc mang link
-                // hay cu phap template.
+                // Câu hỏi được render thành label của form, nên nó không được mang link
+                // hay cú pháp template.
                 return ! preg_match('#https?://|www\.|[{}<>]#u', $question);
             })
             ->unique()
@@ -451,14 +451,14 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Tu vung trieu chung khach hang da phu dinh.
+     * Từ vựng triệu chứng khách hàng đã phủ định.
      *
-     * Mot cau hoi chi bi bo khi moi trieu chung no nhon deu bi phu dinh —
-     * "co thay kho tho hoac dau nguc khong?" con song khi chi "kho tho" bi phu dinh,
-     * vi phan dau nguc van la thong tin moi. Cham diem do tuong tu da duoc thu
-     * tren cac vong that va bi loai: chong lap token dat cau trung that
-     * "co bi sot khong?" (0.33) duoi hai cau khong lien quan (0.50), nen khong
-     * nguong nao tach duoc chung. Thuat ngu tu dien thi tach duoc.
+     * Một câu hỏi chỉ bị bỏ khi mọi triệu chứng nó nhọn đều bị phủ định —
+     * "có thấy khó thở hoặc đau ngực không?" còn sống khi chỉ "khó thở" bị phủ định,
+     * vì phần đau ngực vẫn là thông tin mới. Chấm điểm độ tương tự đã được thử
+     * trên các vòng thật và bị loại: chồng lấp token đặt câu trùng thật
+     * "có bị sốt không?" (0.33) dưới hai câu không liên quan (0.50), nên không
+     * ngưỡng nào tách được chúng. Thuật ngữ từ điển thì tách được.
      *
      * @return array<int, string>
      */
@@ -469,8 +469,8 @@ class SangLocAiSuKienService extends SangLocAiService
         foreach ($phien->clarifyHistory() as $pair) {
             $answer = (string) ($pair['answer'] ?? '');
 
-            // "nhung" lam lan phu dinh chi phu mot phan cau tra loi ("Khong, nhung co
-            // sot"); ghi cac trieu chung do la phu dinh se an mot cau hoi that.
+            // "nhưng" làm lần phủ định chỉ phủ một phần câu trả lời ("Không, nhưng có
+            // sốt"); ghi các triệu chứng đó là phủ định sẽ ăn một câu hỏi thật.
             if ($answer === '' || ! VietnameseText::isDenial($answer)
                 || VietnameseText::containsWord(VietnameseText::fold($answer), 'nhung')) {
                 continue;
@@ -478,8 +478,8 @@ class SangLocAiSuKienService extends SangLocAiService
 
             $foldedQuestion = VietnameseText::fold((string) ($pair['question'] ?? ''));
 
-            // Cau hoi thuoc da tra loi khong can trieu chung de khop: "chua
-            // uong a" giai quyet ma khong can noi khong dung thuoc gi.
+            // Câu hỏi thuốc đã trả lời không cần triệu chứng để khớp: "chưa
+            // uống ạ" giải quyết mà không cần nói không dùng thuốc gì.
             if (preg_match(self::MEDICATION_QUESTION, $foldedQuestion) === 1) {
                 $terms[self::MEDICATION_TOPIC] = self::MEDICATION_TOPIC;
             }
@@ -495,9 +495,9 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Nua moi-ten-phai-khop cua deniedSymptomTerms(): cau hoi bi bo qua chi khi
-     * no nhon mot thuat ngu da phu dinh va khong nhon them gi ma khach hang
-     * van co the bi hoi duoc.
+     * Nửa mọi-tên-phải-khớp của deniedSymptomTerms(): câu hỏi bị bỏ qua chỉ khi
+     * nó nhọn một thuật ngữ đã phủ định và không nhọn thêm gì mà khách hàng
+     * vẫn có thể bị hỏi được.
      *
      * @param  array<int, string>  $deniedTerms
      */
@@ -509,8 +509,8 @@ class SangLocAiSuKienService extends SangLocAiService
 
         $folded = VietnameseText::fold($question);
 
-        // Thuoc la mot chu de nguyen, chu khong phai thuat ngu cau hoi liet ke cung
-        // trieu chung: cau hoi ve no la cau lap lai cua cau da phu dinh, the thoi.
+        // Thuốc là một chủ đề nguyên, chứ không phải thuật ngữ câu hỏi liệt kê cùng
+        // triệu chứng: câu hỏi về nó là câu lặp lại của câu đã phủ định, thế thôi.
         if (in_array(self::MEDICATION_TOPIC, $deniedTerms, true)
             && preg_match(self::MEDICATION_QUESTION, $folded) === 1) {
             return true;
@@ -518,8 +518,8 @@ class SangLocAiSuKienService extends SangLocAiService
 
         foreach ($this->clarifySymptomTerms() as $term) {
             if (VietnameseText::containsWord($folded, $term) && ! in_array($term, $deniedTerms, true)) {
-                // Trieu chung khach hang chua noi den: cau hoi van con
-                // co gi de hoi.
+                // Triệu chứng khách hàng chưa nói đến: câu hỏi vẫn còn
+                // có gì để hỏi.
                 return false;
             }
         }
@@ -534,8 +534,8 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Ten trieu chung va ten khac, dai thuan tien hon tu vung WWHAM chung
-     * ma cau hoi dung de dung. Doc mot lan moi request.
+     * Tên triệu chứng và tên khác, dài thuận tiện hơn từ vựng WWHAM chung
+     * mà câu hỏi dùng để dựng. Đọc một lần mỗi request.
      *
      * @return array<int, string>
      */
@@ -556,17 +556,17 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * He thong da biet gi ve khach hang nay, duoi hai dang: dong prompt
-     * model doc duoc, va key chu de ma cau hoi phai bi bo.
+     * Hệ thống đã biết gì về khách hàng này, dưới hai dạng: dòng prompt
+     * model đọc được, và key chủ đề mà câu hỏi phải bị bỏ.
      *
-     * Tuoi den tu `users.birth_date` va khong can dong y — do la du lieu tai khoan
-     * khach hang nhap cho ung dung nay, chu khong phai truong ho so suc khoe. Cac truong ho so
-     * can dong y AI RIENG, chu khong phai `consented_at` chung: dong y do
-     * gioi han muc dich cho kiem tra chung chi dinh huong duoc si, va gui cung
-     * gia tri do cho model thu ba la mot hanh dong khac.
+     * Tuổi đến từ `users.birth_date` và không cần đồng ý — đó là dữ liệu tài khoản
+     * khách hàng nhập cho ứng dụng này, chứ không phải trường hồ sơ sức khoẻ. Các trường hồ sơ
+     * cần đồng ý AI RIÊNG, chứ không phải `consented_at` chung: đồng ý đó
+     * giới hạn mục đích cho kiểm tra chung chỉ định hướng dược sĩ, và gửi cùng
+     * giá trị đó cho model thứ ba là một hành động khác.
      *
-     * Tra ve `prompt` rong cho khach hang he thong khong biet gi la
-     * thu giu nhanh khong chang gi byte-identical.
+     * Trả về `prompt` rỗng cho khách hàng hệ thống không biết gì là
+     * thứ giữ nhánh không thay đổi byte-identical.
      *
      * @return array{prompt: array<string, string>, topics: array<int, string>}
      */
@@ -577,8 +577,8 @@ class SangLocAiSuKienService extends SangLocAiService
 
         $aboutAChild = preg_match(self::CHILD_MARKERS, $text) === 1;
 
-        // Tuoi tre con khong phai tuoi tai khoan, nen chu de van mo — model
-        // van phai hoi trieu chung cua ai va nguoi do bao nhieu tuoi.
+        // Tuổi trẻ con không phải tuổi tài khoản, nên chủ đề vẫn mở — model
+        // vẫn phải hỏi triệu chứng của ai và người đó bao nhiêu tuổi.
         $age = $aboutAChild ? null : $phien->nguoiDung?->ageInYears();
 
         if ($age !== null) {
@@ -589,9 +589,9 @@ class SangLocAiSuKienService extends SangLocAiService
         $profile = $this->consentedAiProfile($phien);
 
         if ($profile !== null) {
-            // Chi nhan, khong bao gio gia tri. An mot cau hoi can model biet
-            // chu de da duoc tra loi, chu khong phai cau tra loi la gi — va van ban y khoa
-            // ma hoa khong can de bo mot cau hoi khoi form.
+            // Chỉ nhãn, không bao giờ giá trị. Ẩn một câu hỏi cần model biết
+            // chủ đề đã được trả lời, chứ không phải câu trả lời là gì — và văn bản y khoa
+            // mã hoá không cần để bỏ một câu hỏi khỏi form.
             $covered = [
                 'allergies' => 'Dị ứng',
                 'chronic' => 'Bệnh nền',
@@ -622,7 +622,7 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Ho so suc khoe seam nay duoc gui cho nha cung cap, hoac null.
+     * Hồ sơ sức khoẻ seam này được gửi cho nhà cung cấp, hoặc null.
      */
     protected function consentedAiProfile(PhienSangLoc $phien): ?HoSoSucKhoe
     {
@@ -636,7 +636,7 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Cac pattern cho chu de tai khoan da tra loi.
+     * Các pattern cho chủ đề tài khoản đã trả lời.
      *
      * @param  array<int, string>  $topics
      * @return array<string, string>
@@ -647,7 +647,7 @@ class SangLocAiSuKienService extends SangLocAiService
     }
 
     /**
-     * Cong khi cau hoi hoi ve mot chu de tai khoan da tra loi.
+     * Đúng khi câu hỏi hỏi về một chủ đề tài khoản đã trả lời.
      *
      * @param  array<string, string>  $patterns
      */
@@ -685,7 +685,7 @@ class SangLocAiSuKienService extends SangLocAiService
             'triage_ai_facts',
             $facts['provider'] ?? [],
             $durationMs,
-            // Chi ma va dang. Khong bao gio prompt, khong bao gio van ban phan nan.
+            // Chỉ mã và dạng. Không bao giờ prompt, không bao giờ văn bản phần nàn.
             [
                 'ai_status' => 'ok',
                 'symptom_codes' => $facts['symptom_codes'],

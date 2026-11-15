@@ -15,7 +15,7 @@ class TheoDoiSauSangLocMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    /** Long enough for a patient who reads mail late, short enough to expire. */
+    /** Đủ dài cho một bệnh nhân đọc mail muộn, đủ ngắn để hết hạn. */
     private const LINK_VALID_DAYS = 14;
 
     public function __construct(
@@ -44,9 +44,9 @@ class TheoDoiSauSangLocMail extends Mailable implements ShouldQueue
     }
 
     /**
-     * A signed GET link to a confirmation page, not the mutation itself: mail
-     * scanners and link prefetchers open every URL in an email, so recording the
-     * answer straight from the link would answer for the patient.
+     * Một link GET đã ký đến một trang xác nhận, không phải chính mutation: mail
+     * scanner và link prefetcher mở mọi URL trong email, nên ghi nhận câu trả lời
+     * thẳng từ link sẽ trả lời thay bệnh nhân.
      */
     private function responseUrl(bool $improved): string
     {

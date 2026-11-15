@@ -12,12 +12,12 @@ use Carbon\Carbon;
 class TonKhoService
 {
     /**
-     * Dieu chinh so luong ton kho cho mot san pham.
+     * Điều chỉnh số lượng tồn kho cho một sản phẩm.
      *
      * @param int $productId
-     * @param int $quantity Duong de tang, am de giam
-     * @param string $reason Ma ly do cho viec dieu chinh
-     * @param int $userId Nguoi thuc hien dieu chinh
+     * @param int $quantity Dương để tăng, âm để giảm
+     * @param string $reason Mã lý do cho việc điều chỉnh
+     * @param int $userId Người thực hiện điều chỉnh
      * @return bool
      * @throws \Exception
      */
@@ -42,7 +42,7 @@ class TonKhoService
             if ($coCacLo) {
                 $this->apDungBienDoTonLo($sanPham, $quantity);
                 $soLuongMoi = (int) $sanPham->cacLo()->sum('so_luong_ton');
-                // Dong bo stock_quantity sang bang san_phams de dam bao tinh nhat quan
+                // Đồng bộ stock_quantity sang bảng san_phams để đảm bảo tính nhất quán
                 DB::table('san_phams')
                     ->where('ma_sp', $sanPham->ma_sp)
                     ->update(['so_luong_ton' => $soLuongMoi, 'updated_at' => now()]);
@@ -77,7 +77,7 @@ class TonKhoService
     }
 
     /**
-     * Ap dung mot bien do ton kho tren cac lo san pham (FEFO khi giam).
+     * Áp dụng một biến động tồn kho trên các lô sản phẩm (FEFO khi giảm).
      *
      * @throws \Exception
      */
@@ -126,9 +126,9 @@ class TonKhoService
     }
 
     /**
-     * Kiem tra cac san pham het han trong so ngay chi dinh.
+     * Kiểm tra các sản phẩm hết hạn trong số ngày chỉ định.
      *
-     * @param int $daysThreshold So ngay can kiem tra (mac dinh 30)
+     * @param int $daysThreshold Số ngày cần kiểm tra (mặc định 30)
      * @return Collection
      */
     public function kiemTraHetHan(int $daysThreshold = 30): Collection
@@ -141,7 +141,7 @@ class TonKhoService
     }
 
     /**
-     * Lay cac san pham ton kho thap (so luong <= diem dat lai hang).
+     * Lấy các sản phẩm tồn kho thấp (số lượng <= điểm đặt lại hàng).
      *
      * @return Collection
      */
@@ -154,11 +154,11 @@ class TonKhoService
     }
 
     /**
-     * Lay thong ke tong quan ton kho.
+     * Lấy thống kê tổng quan tồn kho.
      *
-     * Ten key khop voi nhung gi admin/inventory/index.blade.php doc. View quay ve
-     * `?? 0`, nen doi ten tai day se hien bon the so 0 phia tren mot bang liet ke
-     * dung nhung dong dang duoc dem, ma khong gi bao loi lon trao.
+     * Tên key khớp với những gì admin/inventory/index.blade.php đọc. View quay về
+     * `?? 0`, nên đổi tên tại đây sẽ hiện bốn thẻ số 0 phía trên một bảng liệt kê
+     * chính các dòng đang được đếm, mà không gì báo lỗi ồn ào.
      *
      * @return array
      */

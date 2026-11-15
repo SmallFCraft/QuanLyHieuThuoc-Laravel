@@ -13,7 +13,7 @@ use Illuminate\Support\ServiceProvider;
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Dang ky bat ky dich vu ung dung nao.
+     * Đăng ký bất kỳ dịch vụ ứng dụng nào.
      */
     public function register(): void
     {
@@ -21,15 +21,15 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Khoi dong bat ky dich vu ung dung nao.
+     * Khởi động bất kỳ dịch vụ ứng dụng nào.
      */
     public function boot(): void
     {
         SanPham::observe(SanPhamObserver::class);
 
         View::composer(['layouts.app', 'layouts.guest'], function ($view) {
-            // browsable(): dropdown truoc day liet ke moi danh muc, ke ca nhung
-            // danh muc khong con ton kho — chung mo ra trang san pham trong.
+            // browsable(): dropdown trước đây liệt kê mỗi danh mục, kể cả những
+            // danh mục không còn tồn kho — chúng mở ra trang sản phẩm trống.
             $view->with('navCategories', Cache::remember(
                 DanhMuc::NAV_CACHE_KEY,
                 now()->addMinutes(10),
@@ -49,9 +49,9 @@ class AppServiceProvider extends ServiceProvider
                     ->get()
             ));
 
-            // Du lieu cho panel tim kiem, nhung thang vao trang thay vi goi them mot
-            // endpoint: panel mo la hien ngay, khong cho mang, va HTML da duoc Blade
-            // escape. Ca ba khoi deu sau cache nen chi phi la 2 query moi 10 phut.
+            // Dữ liệu cho panel tìm kiếm, nhưng thẳng vào trang thay vì gọi thêm một
+            // endpoint: panel mở là hiện ngay, không chờ mạng, và HTML đã được Blade
+            // escape. Cả ba khối đều sau cache nên chi phí là 2 query mỗi 10 phút.
             $view->with('searchTrending', TruyVanTimKiem::trending());
 
             $view->with('searchPanelProducts', Cache::remember(

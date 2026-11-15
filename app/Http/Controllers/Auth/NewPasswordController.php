@@ -17,7 +17,7 @@ use Illuminate\View\View;
 class NewPasswordController extends Controller
 {
     /**
-     * Hien thi view dat lai mat khau.
+     * Hiển thị view đặt lại mật khẩu.
      */
     public function create(Request $request): View
     {
@@ -25,7 +25,7 @@ class NewPasswordController extends Controller
     }
 
     /**
-     * Xu ly mot request mat khau moi den.
+     * Xử lý một request mật khẩu mới đến.
      *
      * @throws ValidationException
      */
@@ -37,9 +37,9 @@ class NewPasswordController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        // Tai day se thu dat lai mat khau cua nguoi dung. Neu thanh cong se
-        // cap nhat mat khau tren model NguoiDung that va luu vao
-        // database. Neu khong se phan tich loi va tra ve response.
+        // Tại đây sẽ thử đặt lại mật khẩu của người dùng. Nếu thành công sẽ
+        // cập nhật mật khẩu trên model NguoiDung thật và lưu vào
+        // database. Nếu không sẽ phân tích lỗi và trả về response.
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (NguoiDung $nguoiDung) use ($request) {
@@ -52,9 +52,9 @@ class NewPasswordController extends Controller
             }
         );
 
-        // Neu mat khau duoc dat lai thanh cong, se redirect nguoi dung ve
-        // view trang chu da xac thuc cua app. Neu co loi co the
-        // redirect ho ve cho ho den voi thong bao loi cua ho.
+        // Nếu mật khẩu được đặt lại thành công, sẽ redirect người dùng về
+        // view trang chủ đã xác thực của app. Nếu có lỗi có thể
+        // redirect họ về cho họ đến với thông báo lỗi của họ.
         return $status == Password::PASSWORD_RESET
                     ? redirect()->route('login')->with('status', __($status))
                     : back()->withInput($request->only('email'))

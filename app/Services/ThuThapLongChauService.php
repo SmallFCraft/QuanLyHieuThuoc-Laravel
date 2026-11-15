@@ -13,11 +13,11 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
- * Tai catalog Nha Thuoc Long Chau.
+ * Tải catalog Nhà Thuốc Long Châu.
  *
- * Long Chau phat hanh cac trang da render, nen HTTP thuan la du — khong can browser va
- * khong can AI trich xuat. Sitemaps cung danh sach URL, va moi trang mang san pham cua no
- * duoi dang JSON, ma LongChauProduct anh xa.
+ * Long Châu phát hành các trang đã render, nên HTTP thuần là đủ — không cần browser và
+ * không cần AI trích xuất. Sitemaps cung danh sách URL, và mỗi trang mang sản phẩm của nó
+ * dưới dạng JSON, mà LongChauProduct ánh xạ.
  */
 class ThuThapLongChauService
 {
@@ -43,7 +43,7 @@ class ThuThapLongChauService
     }
 
     /**
-     * @return array<string> cac sitemap key ma danhSachUrlSanPham() chap nhan
+     * @return array<string> các sitemap key mà danhSachUrlSanPham() chấp nhận
      */
     public function danhSachSiteMap(): array
     {
@@ -51,7 +51,7 @@ class ThuThapLongChauService
     }
 
     /**
-     * URL san pham tu cac sitemap duoc chi ten, da loai trung va giu thu tu sitemap.
+     * URL sản phẩm từ các sitemap được chỉ tên, đã loại trùng và giữ thứ tự sitemap.
      *
      * @param  array<string>  $keys
      * @return array<string>
@@ -94,11 +94,11 @@ class ThuThapLongChauService
     }
 
     /**
-     * Tai tung URL va giao moi san pham dung duoc cho callback.
+     * Tải từng URL và giao mỗi sản phẩm dùng được cho callback.
      *
-     * Cac trang duoc tai theo cac batch dong thoi nho, co nghi giua cac batch. Trang
-     * that bai duoc dem va bo qua: mot URL chet trong hang nghin URL khong duoc ket
-     * thuc lan chay.
+     * Các trang được tải theo các batch đồng thời nhỏ, có nghỉ giữa các batch. Trang
+     * thất bại được đếm và bỏ qua: một URL chết trong hàng nghìn URL không được kết
+     * thúc lượt chạy.
      *
      * @param  array<string>  $urls
      * @param  Closure(LongChauProduct, string): void  $onProduct
@@ -179,9 +179,9 @@ class ThuThapLongChauService
     }
 
     /**
-     * Cac trang doc lap khong co __NEXT_DATA__ la URL chet. Mot ti le lon nghia la Long
-     * Chau da doi cach render, va tiep tuc se khong import gi trong khi van bao cao
-     * thanh cong — nen lan chay dung lai va noi ra dieu do.
+     * Các trang độc lập không có __NEXT_DATA__ là URL chết. Một tỷ lệ lớn nghĩa là Long
+     * Châu đã đổi cách render, và tiếp tục sẽ không import gì trong khi vẫn báo cáo
+     * thành công — nên lượt chạy dừng lại và nói ra điều đó.
      *
      * @param  array{fetched:int, no_json:int}  $stats
      */
@@ -234,11 +234,11 @@ class ThuThapLongChauService
     }
 
     /**
-     * Cloudflare chan theo TLS fingerprint: Guzzle (libcurl-OpenSSL) bi 403 trong khi
-     * curl.exe (schannel) qua duoc. Khi Guzzle tra 403, fetch lai bang curl.exe va
-     * boc ket qua thanh Response gia lap de khong doi duong xu ly phan hoi.
-     * ponytail: chi chay khi Guzzle bi chan; neu site go muc chan thi nhanh nay
-     * khong bao gio vao. Doi sang cURL handler tu chon TLS backend neu can loai bo.
+     * Cloudflare chặn theo TLS fingerprint: Guzzle (libcurl-OpenSSL) bị 403 trong khi
+     * curl.exe (schannel) qua được. Khi Guzzle trả 403, fetch lại bằng curl.exe và
+     * bọc kết quả thành Response giả lập để không đổi đường xử lý phản hồi.
+     * ponytail: chỉ chạy khi Guzzle bị chặn; nếu site gỡ mức chặn thì nhánh này
+     * không bao giờ vào. Đổi sang cURL handler tự chọn TLS backend nếu cần loại bỏ.
      */
     private function phanHoiQuaCurl(string $url): Response
     {
@@ -257,8 +257,8 @@ class ThuThapLongChauService
     }
 
     /**
-     * Trang landing section nhu /thuoc chia se sitemap voi san pham nhung khong chua
-     * payload san pham, nen chung duoc loai truoc khi bat ky trang nao duoc tai.
+     * Trang landing section như /thuoc chia sẻ sitemap với sản phẩm nhưng không chứa
+     * payload sản phẩm, nên chúng được loại trước khi bất kỳ trang nào được tải.
      *
      * @return array<string>
      */

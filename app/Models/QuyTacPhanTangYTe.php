@@ -45,7 +45,7 @@ class QuyTacPhanTangYTe extends Model
     }
 
     /**
-     * Luat cu the hon mang do uu tien cao hon va phai thang qua cac luat chung.
+     * Luật cụ thể hơn mang độ ưu tiên cao hơn và phải thắng qua các luật chung.
      */
     public function scopeMostSpecificFirst($query)
     {

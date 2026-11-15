@@ -13,7 +13,7 @@ use Maatwebsite\Excel\Facades\Excel;
 class NguoiDungController extends Controller
 {
     /**
-     * Display a listing of users
+     * Hiển thị danh sách người dùng
      */
     public function index()
     {
@@ -32,7 +32,7 @@ class NguoiDungController extends Controller
     }
 
     /**
-     * Store a newly created user
+     * Lưu người dùng mới tạo
      */
     public function store(Request $request)
     {
@@ -64,7 +64,7 @@ class NguoiDungController extends Controller
     }
 
     /**
-     * Update the specified user
+     * Cập nhật người dùng chỉ định
      */
     public function update(Request $request, $MaKH)
     {
@@ -99,7 +99,7 @@ class NguoiDungController extends Controller
     }
 
     /**
-     * Update user status (activate/deactivate)
+     * Cập nhật trạng thái người dùng (kích hoạt/vô hiệu hoá)
      */
     public function updateStatus(Request $request, $MaKH)
     {

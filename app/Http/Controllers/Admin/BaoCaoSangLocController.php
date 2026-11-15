@@ -47,8 +47,8 @@ class BaoCaoSangLocController extends Controller
     }
 
     /**
-     * Quan tri vien chi thay nhung gi triage da ghi. Ho so suc khoe thuoc ve duoc si
-     * xu ly truong hop, nen khong cho nao o day cham vao user_health_profiles.
+     * Quản trị viên chỉ thấy những gì triage đã ghi. Hồ sơ sức khoẻ thuộc về dược sĩ
+     * xử lý trường hợp, nên không chỗ nào ở đây chạm vào user_health_profiles.
      */
     public function show(int $MaSL)
     {
@@ -110,7 +110,7 @@ class BaoCaoSangLocController extends Controller
     }
 
     /**
-     * Cau tra loi wizard duoc luu duoi cac key may; bao cao hien nhan tieng Viet.
+     * Câu trả lời wizard được lưu dưới các key máy; báo cáo hiện nhãn tiếng Việt.
      */
     private function collectedAnswers(PhienSangLoc $phien): array
     {

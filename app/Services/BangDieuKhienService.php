@@ -10,7 +10,7 @@ use Carbon\Carbon;
 class BangDieuKhienService
 {
     /**
-     * Lay tong doanh thu trong thang hien tai
+     * Lấy tổng doanh thu trong tháng hiện tại
      */
     public function layDoanhThuThang(): float
     {
@@ -23,7 +23,7 @@ class BangDieuKhienService
     }
 
     /**
-     * Lay so don hang nhom theo trang thai
+     * Lấy số đơn hàng nhóm theo trạng thái
      */
     public function laySoDonTheoTrangThai(): array
     {
@@ -32,7 +32,7 @@ class BangDieuKhienService
             ->pluck('count', 'trang_thai')
             ->toArray();
 
-        // Dam bao moi trang thai deu co mat
+        // Đảm bảo mỗi trạng thái đều có mặt
         $cacTrangThai = ['Pending', 'Delivering', 'Completed', 'Cancelled'];
         $ketQua = [];
         foreach ($cacTrangThai as $trangThai) {
@@ -43,7 +43,7 @@ class BangDieuKhienService
     }
 
     /**
-     * Lay so san pham sap het han trong so ngay chi dinh
+     * Lấy số sản phẩm sắp hết hạn trong số ngày chỉ định
      */
     public function laySoSanPhamSapHetHan(int $soNgay = 30): int
     {
@@ -56,7 +56,7 @@ class BangDieuKhienService
     }
 
     /**
-     * Lay so san pham ton kho thap
+     * Lấy số sản phẩm tồn kho thấp
      */
     public function laySoSanPhamSapHet(): int
     {
@@ -65,7 +65,7 @@ class BangDieuKhienService
     }
 
     /**
-     * Lay du lieu doanh thu theo ngay cho bieu do (N ngay qua)
+     * Lấy dữ liệu doanh thu theo ngày cho biểu đồ (N ngày qua)
      */
     public function layBieuDoDoanhThuNgay(int $soNgay = 30): array
     {
@@ -84,7 +84,7 @@ class BangDieuKhienService
             ->pluck('revenue', 'date')
             ->toArray();
 
-        // Dien cac ngay thieu bang 0
+        // Điền các ngày thiếu bằng 0
         $nhan = [];
         $duLieu = [];
         for ($i = $soNgay - 1; $i >= 0; $i--) {
@@ -100,7 +100,7 @@ class BangDieuKhienService
     }
 
     /**
-     * Lay phan bo trang thai don hang cho bieu do tron
+     * Lấy phân bố trạng thái đơn hàng cho biểu đồ tròn
      */
     public function layPhanBoTrangThaiDon(): array
     {
@@ -113,7 +113,7 @@ class BangDieuKhienService
     }
 
     /**
-     * Lay san pham ban chay nhat (theo so luong ban)
+     * Lấy sản phẩm bán chạy nhất (theo số lượng bán)
      */
     public function laySanPhamBanChay(int $gioiHan = 10): array
     {

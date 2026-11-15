@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 class DuocSiMiddleware
 {
     /**
-     * Xu ly mot request den.
+     * Xử lý một request đến.
      *
      * @param  Closure(Request): (Response)  $next
      */

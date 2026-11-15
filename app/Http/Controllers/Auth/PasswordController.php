@@ -11,7 +11,7 @@ use Illuminate\Validation\Rules\Password;
 class PasswordController extends Controller
 {
     /**
-     * Cap nhat mat khau cua nguoi dung.
+     * Cập nhật mật khẩu của người dùng.
      */
     public function update(Request $request): RedirectResponse
     {

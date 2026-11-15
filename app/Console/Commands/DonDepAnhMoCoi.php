@@ -10,21 +10,21 @@ use Carbon\Carbon;
 class DonDepAnhMoCoi extends Command
 {
     /**
-     * Ten va chu ky cua lenh console.
+     * Tên và chu kỳ của lệnh console.
      *
      * @var string
      */
     protected $signature = 'images:cleanup {--days=30 : Delete images from products soft-deleted more than X days ago}';
 
     /**
-     * The console command description.
+     * Mô tả lệnh console.
      *
      * @var string
      */
     protected $description = 'Clean up orphaned product images from soft-deleted products';
 
     /**
-     * Thuc thi lenh console.
+     * Thực thi lệnh console.
      */
     public function handle(): int
     {

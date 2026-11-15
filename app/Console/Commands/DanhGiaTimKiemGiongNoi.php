@@ -7,17 +7,17 @@ use App\Services\ChuanHoaTimKiemGiongNoi;
 use Illuminate\Console\Command;
 
 /**
- * Diem so cua tim kiem bang giong noi tren tap 94 ca that.
+ * Điểm số của tìm kiếm bằng giọng nói trên tập 94 ca thật.
  *
- * Vi sao la mot lenh chu khong phai mot test: day la so DO, khong phai dieu kien
- * dung/sai. No di xuong khi catalog doi ma khong co ai sua gi ca, nen de trong CI
- * dang assert la lam suite do vi ly do sai. `--floor` va `--lies` de dung nhu mot
- * cong khi can: mac dinh chinh la so nen do ngay 2026-09-02.
+ * Vì sao là một lệnh chứ không phải một test: đây là số ĐO, không phải điều kiện
+ * đúng/sai. Nó đi xuống khi catalog đổi mà không có ai sửa gì cả, nên để trong CI
+ * dạng assert là làm suite đỏ vì lý do sai. `--floor` và `--lies` để dùng như một
+ * cổng khi cần: mặc định chính là số nền đo ngày 2026-09-02.
  *
- * THUOC DO — xem them dau tests/fixtures/voice-search-corpus.php:
- *   coverage : |A ∩ B| >= |B| / 2, voi A = ma_sp cua normalize, B = ma_sp cua intended
- *   lies     : confident === true ma ca do KHONG dat — he thong noi doi khach
- *   conf_zero: confident === true ma catalog tra 0 san pham
+ * THƯỚC ĐO — xem thêm đầu tests/fixtures/voice-search-corpus.php:
+ *   coverage : |A ∩ B| >= |B| / 2, với A = ma_sp của normalize, B = ma_sp của intended
+ *   lies     : confident === true mà ca đó KHÔNG đạt — hệ thống nói dối khách
+ *   conf_zero: confident === true mà catalog trả 0 sản phẩm
  */
 class DanhGiaTimKiemGiongNoi extends Command
 {
@@ -30,8 +30,8 @@ class DanhGiaTimKiemGiongNoi extends Command
 
     public function handle(ChuanHoaTimKiemGiongNoi $normalizer): int
     {
-        // Tang AI tat: no khong tat dinh nen so do se nhay giua hai lan chay, va
-        // hai tang re la phan duy nhat repo nay kiem soat duoc.
+        // Tầng AI tắt: nó không tất định nên số đo sẽ nhảy giữa hai lần chạy, và
+        // hai tầng rẻ là phần duy nhất repo này kiểm soát được.
         config(['search.voice.ai' => false]);
 
         $corpus = require base_path('tests/fixtures/voice-search-corpus.php');
@@ -42,8 +42,8 @@ class DanhGiaTimKiemGiongNoi extends Command
         $failures = [];
 
         foreach ($corpus as $case) {
-            // Instance moi moi ca: memo $wordInName song trong mot luot normalize(),
-            // dung lai instance la do cache chu khong do tinh nang.
+            // Instance mới mỗi ca: memo $wordInName sống trong một lượt normalize(),
+            // dùng lại instance là đo cache chứ không đo tính năng.
             $result = app(ChuanHoaTimKiemGiongNoi::class)->chuanHoa($case['alternatives']);
             $category = $case['category'];
             $byCategory[$category] ??= ['n' => 0, 'ok' => 0];
@@ -135,7 +135,7 @@ class DanhGiaTimKiemGiongNoi extends Command
         $this->line("lies          = {$lies}");
         $this->line("confident + 0 = {$confidentZero}");
 
-        // Nhom noi doi len truoc: do la nhom hai khach, khong phai nhom truot.
+        // Nhóm nói dối lên trước: đó là nhóm hại khách, không phải nhóm trượt.
         usort($failures, fn (array $a, array $b) => ($b['confident'] <=> $a['confident']));
 
         foreach (array_slice($failures, 0, 15) as $failure) {

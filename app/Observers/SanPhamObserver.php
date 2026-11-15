@@ -9,11 +9,11 @@ use App\Models\LoSanPham;
 class SanPhamObserver
 {
     /**
-     * Handle the SanPham "created" event.
+     * Xử lý sự kiện "created" của SanPham.
      */
     public function created(SanPham $sanPham): void
     {
-        // Auto-create a batch when product is created
+        // Tự tạo một lô khi sản phẩm được tạo
         if ($sanPham->so_lo && $sanPham->ngay_het_han) {
             LoSanPham::create([
                 'ma_sp' => $sanPham->ma_sp,
@@ -28,7 +28,7 @@ class SanPhamObserver
     }
 
     /**
-     * Handle the SanPham "updated" event.
+     * Xử lý sự kiện "updated" của SanPham.
      */
     public function updated(SanPham $sanPham): void
     {
@@ -36,7 +36,7 @@ class SanPhamObserver
     }
 
     /**
-     * Handle the SanPham "deleted" event.
+     * Xử lý sự kiện "deleted" của SanPham.
      */
     public function deleted(SanPham $sanPham): void
     {
@@ -44,7 +44,7 @@ class SanPhamObserver
     }
 
     /**
-     * Handle the SanPham "restored" event.
+     * Xử lý sự kiện "restored" của SanPham.
      */
     public function restored(SanPham $sanPham): void
     {
@@ -52,7 +52,7 @@ class SanPhamObserver
     }
 
     /**
-     * Handle the SanPham "force deleted" event.
+     * Xử lý sự kiện "force deleted" của SanPham.
      */
     public function forceDeleted(SanPham $sanPham): void
     {

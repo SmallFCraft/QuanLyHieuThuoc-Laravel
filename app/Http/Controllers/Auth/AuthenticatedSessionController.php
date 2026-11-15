@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Hien thi view dang nhap.
+     * Hiển thị view đăng nhập.
      */
     public function create(): View
     {
@@ -20,7 +20,7 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Xu ly mot request xac thuc den.
+     * Xử lý một request xác thực đến.
      */
     public function store(DangNhapRequest $request): RedirectResponse
     {
@@ -34,7 +34,7 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Huy mot phien lam viec da xac thuc.
+     * Huỷ một phiên làm việc đã xác thực.
      */
     public function destroy(Request $request): RedirectResponse
     {

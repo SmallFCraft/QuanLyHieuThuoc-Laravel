@@ -59,13 +59,13 @@ class NhacUongThuoc extends Model
     }
 
     /**
-     * Nhac uong duoc rai deu trong gio thuc (08:00–20:00) thay vi qua dem, de khong
-     * ai bi danh thuc luc 3 gio sang vi mot lieu paracetamol.
+     * Nhắc uống được rải đều trong giờ thức (08:00–20:00) thay vì qua đêm, để không
+     * ai bị đánh thức lúc 3 giờ sáng vì một liều paracetamol.
      *
-     * Khung gio nhac tiep do tu hien tai, khong phai tu ngay den han da luu: sau mot
-     * gian doan cua scheduler hay worker, ngay da luu co the chi la thoi diem tuong
-     * lai cach nhieu gio hoac nhieu ngay, va buoc tuan tu tu do se bom mot loat mail,
-     * moi lieu uong lo mat mot mail.
+     * Khung giờ nhắc tiếp đo từ hiện tại, không phải từ ngày đến hạn đã lưu: sau một
+     * gián đoạn của scheduler hay worker, ngày đã lưu có thể chỉ là thời điểm tương
+     * lai cách nhiều giờ hoặc nhiều ngày, và bước tuần tự từ đó sẽ bơm một loạt mail,
+     * mỗi liều uống lỡ mất một mail.
      */
     public function advanceSchedule(): void
     {

@@ -9,30 +9,30 @@ use App\Support\VietnameseText;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Ghi du lieu catalog crawled vao san_phams va danh_mucs.
+ * Ghi dữ liệu catalog crawled vào san_phams và danh_mucs.
  *
- * Hai lop du lieu gap nhau tai day. Cac field catalog (ten, gia, thanh phan, cach dung,
- * anh, danh muc) thuoc ve nguon va duoc lam moi moi lan crawl. Cac field ton kho
- * (so lo, han dung, so luong) thuoc ve nha thuoc: lan nhap dau tien seed mot gia tri
- * cho de dong hoan chinh, va cac lan nhap sau de nguyen nhung gi nhan vien da nhap.
+ * Hai lớp dữ liệu gặp nhau tại đây. Các field catalog (tên, giá, thành phần, cách dùng,
+ * ảnh, danh mục) thuộc về nguồn và được làm mới mỗi lần crawl. Các field tồn kho
+ * (số lô, hạn dùng, số lượng) thuộc về nhà thuốc: lần nhập đầu tiên seed một giá trị
+ * cho để dòng hoàn chỉnh, và các lần nhập sau để nguyên những gì nhân viên đã nhập.
  */
 class NhapSanPhamService
 {
-    /** Ton kho cho truoc, chi duoc ghi khi san pham duoc tao lan dau. */
+    /** Tồn kho cho trước, chỉ được ghi khi sản phẩm được tạo lần đầu. */
     private const SEED_STOCK_MIN = 0;
     private const SEED_STOCK_MAX = 200;
     private const SEED_REORDER_MIN = 10;
     private const SEED_REORDER_MAX = 30;
 
-    /** @var array<string, int> ten danh muc da fold => ma_dm, tranh mot lookup cho moi san pham */
+    /** @var array<string, int> tên danh mục đã fold => ma_dm, tránh một lookup cho mỗi sản phẩm */
     private array $maDanhMuc = [];
 
-    /** @var array<string> ten hien thi cua cac danh muc lan chay nay phai tao */
+    /** @var array<string> tên hiển thị của các danh mục lượt chạy này phải tạo */
     private array $danhMucMoi = [];
 
     /**
-     * Tao hoac lam moi mot san pham. An toan de goi nhieu lan cho cung ban ghi nguon:
-     * no phan giai ve cung mot dong.
+     * Tạo hoặc làm mới một sản phẩm. An toàn để gọi nhiều lần cho cùng bản ghi nguồn:
+     * nó phân giải về cùng một dòng.
      */
     public function nhap(LongChauProduct $source): SanPham
     {
@@ -51,8 +51,8 @@ class NhapSanPhamService
     }
 
     /**
-     * Reset cache danh muc theo tung lan chay. Cac lan crawl dai neu khong se giu
-     * nhung id ma quan tri vien co the da xoa giua lan chay.
+     * Reset cache danh mục theo từng lượt chạy. Các lần crawl dài nếu không sẽ giữ
+     * những id mà quản trị viên có thể đã xóa giữa lượt chạy.
      */
     public function quenDanhMuc(): void
     {
@@ -61,9 +61,9 @@ class NhapSanPhamService
     }
 
     /**
-     * Ten hien thi cua cac danh muc lan chay nay da tao, de lenh co the bao cao
-     * chung. Mot lan crawl am tham tao danh muc la nguyen nhan dau tien lam catalog
-     * drift thanh hai dong "Co xuong khop".
+     * Tên hiển thị của các danh mục lượt chạy này đã tạo, để lệnh có thể báo cáo
+     * chúng. Một lần crawl mù quáng tạo danh mục là nguyên nhân đầu tiên làm catalog
+     * drift thành hai dòng "Cơ xương khớp".
      *
      * @return array<string>
      */
@@ -74,8 +74,8 @@ class NhapSanPhamService
 
     private function tao(LongChauProduct $source, int $categoryId, string $batchNumber): SanPham
     {
-        // ProductObserver::created() doc so_lo va ngay_het_han de dung dong lo_san_phams
-        // tuong ung, nen ca hai phai duoc gan khi insert.
+        // ProductObserver::created() đọc so_lo và ngay_het_han để dựng dòng lo_san_phams
+        // tương ứng, nên cả hai phải được gán khi insert.
         return SanPham::create([
             'ma_dm' => $categoryId,
             'ten' => $source->name,
@@ -92,9 +92,9 @@ class NhapSanPhamService
     }
 
     /**
-     * Chi cac field catalog. So luong ton kho, diem dat lai hang va ngay het han duoc
-     * de nguyen vi nha thuoc co the da sua chung tu lan crawl truoc, va ghi de ton kho
-     * that bang mot con so ngau nhien se lam hong FEFO.
+     * Chỉ các field catalog. Số lượng tồn kho, điểm đặt lại hàng và ngày hết hạn được
+     * để nguyên vì nhà thuốc có thể đã sửa chúng từ lần crawl trước, và ghi đè tồn kho
+     * thật bằng một con số ngẫu nhiên sẽ làm hỏng FEFO.
      */
     private function lamMoi(SanPham $sanPham, LongChauProduct $source, int $categoryId): SanPham
     {
@@ -116,14 +116,14 @@ class NhapSanPhamService
     }
 
     /**
-     * Danh muc den tu breadcrumb cua chinh Long Chau. Khop tren ten da fold, chu khong
-     * phai ten tho: nguon phat hanh cung breadcrumb cap 2 nhu ca hai "Co - xuong - khop"
-     * (thuoc Thuoc) va "Co xuong khop" (thuoc Thuc pham chuc
-     * nang), va khop theo ten tho da lam crawl tao mot danh muc cho moi cach viet, dieu
-     * do chia 114 san pham thanh hai dong tren storefront ma khach doc nhu mot.
+     * Danh mục đến từ breadcrumb của chính Long Châu. Khớp trên tên đã fold, chứ không
+     * phải tên thô: nguồn phát hành cùng breadcrumb cấp 2 như cả hai "Cơ - xương - khớp"
+     * (thuốc Thuốc) và "Cơ xương khớp" (thuốc Thực phẩm chức
+     * năng), và khớp theo tên thô đã làm crawl tạo một danh mục cho mỗi cách viết, điều
+     * đó chia 114 sản phẩm thành hai dòng trên storefront mà khách đọc như một.
      *
-     * Cach viet dau tien duoc thay giu ten hien thi; DanhMuc::booted() dien ma
-     * va cot folded.
+     * Cách viết đầu tiên được thấy giữ tên hiển thị; DanhMuc::booted() điền mã
+     * và cột folded.
      */
     private function phanGiaiMaDanhMuc(string $name): int
     {

@@ -3,29 +3,29 @@
 namespace App\Support;
 
 /**
- * Key phien am cho tim kiem giong noi tieng Viet.
+ * Key phiên âm cho tìm kiếm giọng nói tiếng Việt.
  *
- * Gop vung mien co chu y: nguoi noi mien Nam goi "thuac ha soc" va catalog co
- * "thuoc ha sot" phai tao cung mot key, neu khong tim kiem giong noi chi hoat
- * dong voi accent ma nhan dien cua browser dung den da duoc hieu chinh.
+ * Gộp vùng miền có chủ ý: người nói miền Nam nói "thuấc hạ sốc" và catalog có
+ * "thuốc hạ sốt" phải tạo cùng một key, nếu không tìm kiếm giọng nói chỉ hoạt
+ * động với accent mà nhận diện của browser dùng đến đã được hiệu chỉnh.
  */
 final class PhienAmTiengViet
 {
-    /** Key phang dai hon so nay khong bao gio tham gia vao viec khop gan dung. */
+    /** Key phẳng dài hơn số này không bao giờ tham gia vào việc khớp gần đúng. */
     private const MAX_BLOCK_LENGTH = 24;
 
     private const BLOCK_LENGTH = 2;
 
     /**
-     * Mot am tiet ngan nhu vay mang toan bo nghia phan biet cua mot cum tu.
-     * Da do luong: bat ky do dung chap nao cho phep mot trong chung lech se gop
-     * "vitamin C" voi "vitamin D".
+     * Một âm tiết ngắn như vậy mang toàn bộ nghĩa phân biệt của một cụm từ.
+     * Đã đo lường: bất kỳ độ dung chấp nào cho phép một trong chúng lệch sẽ gộp
+     * "vitamin C" với "vitamin D".
      */
     private const ATOMIC_SYLLABLE = 2;
 
     /**
-     * Van dau, phuong an dai nhat truoc. Moi quy tac neo tai dau tu va thay the
-     * mot lan, nen marker hoa da viet truoc se chan cac pattern phia sau.
+     * Vần đầu, phương án dài nhất trước. Mỗi quy tắc neo tại đầu từ và thay thế
+     * một lần, nên marker hoa đã viết trước sẽ chặn các pattern phía sau.
      */
     private const ONSETS = [
         '/^(?:tr|ch)/' => 'C',
@@ -37,11 +37,11 @@ final class PhienAmTiengViet
     ];
 
     /**
-     * Van (am gop). Phai chay truoc cac am cuoi — xem syllable().
+     * Vần (âm gộp). Phải chạy trước các âm cuối — xem amTiet().
      *
-     * Thu tu trong bang cung quan trong, cung ly do do: `uo` se an phan "uo"
-     * cua "uoi" va de lai mot `i` khong quy tac nao nhan, nen "muoi" tao key `mUi`
-     * trong khi "moi" tao `mO` va cap nay khong con khop. Van dai nhat truoc.
+     * Thứ tự trong bảng cũng quan trọng, cùng lý do đo: `uo` sẽ ăn phần "uo"
+     * của "uối" và để lại một `i` không quy tắc nào nhận, nên "muối" tạo key `mUi`
+     * trong khi "mới" tạo `mO` và cặp này không còn khớp. Vần dài nhất trước.
      */
     private const RIMES = [
         '/iee|ie|ye|ia/' => 'I',
@@ -55,8 +55,8 @@ final class PhienAmTiengViet
     ];
 
     /**
-     * Nua ky tu don cua ONSETS, dang bang dich thuc don gian — dung boi coarse()
-     * de ap dung lai cac lop ky tu o nhung vi tri khong phai dau tu.
+     * Nửa ký tự đơn của ONSETS, dạng bảng dịch thực đơn giản — dùng bởi dangTho()
+     * để áp dụng lại các lớp ký tự ở những vị trí không phải đầu từ.
      */
     private const MID_WORD_ONSETS = [
         's' => 'S', 'x' => 'S',
@@ -85,24 +85,24 @@ final class PhienAmTiengViet
             $syllable = preg_replace($pattern, $marker, $syllable, 1) ?? $syllable;
         }
 
-        // x o giua tu doc nhu s: "canxi" va "can si" la mot tu duoc doc hai cach.
+        // x ở giữa từ đọc như s: "canxi" và "can si" là một từ được đọc hai cách.
         $syllable = str_replace('x', 'S', $syllable);
 
         foreach (self::RIMES as $pattern => $marker) {
             $syllable = preg_replace($pattern, $marker, $syllable) ?? $syllable;
         }
 
-        // Sau cac van, khong bao gio truoc: `t$ => T` neu khong se an phan am cuoi
-        // cua "uot", de "uo" khong the khop voi van cua chinh no.
+        // Sau các vần, không bao giờ trước: `t$ => T` nếu không sẽ ăn phần âm cuối
+        // của "uốt", để "uo" không thể khớp với vần của chính nó.
         foreach (self::CODAS as $pattern => $marker) {
             $syllable = preg_replace($pattern, $marker, $syllable) ?? $syllable;
         }
 
         $syllable = strtr($syllable, self::VOWELS);
 
-        // Chi voi chu cai: mot ky tu lap lai la mot am ("oo" -> "o"), nhung chu so
-        // lap lai la lieu luong. Gop chu so da lam "500" va "50" cung mot key, va ca
-        // hai du ngan de within() sau do chap nhan chung la mot san pham.
+        // Chỉ với chữ cái: một ký tự lặp lại là một âm ("oo" -> "o"), nhưng chữ số
+        // lặp lại là liều lượng. Gộp chữ số đã làm "500" và "50" cùng một key, và cả
+        // hai đủ ngắn để ganNhau() sau đó chấp nhận chúng là một sản phẩm.
         return preg_replace('/([^0-9])\1+/', '$1', $syllable) ?? $syllable;
     }
 
@@ -114,20 +114,20 @@ final class PhienAmTiengViet
             return null;
         }
 
-        // Case-fold co chu y, khac voi phonetic_key: day la bo loc SQL tho, within()
-        // moi la bo loc chinh xac. Da do luong: "tiu" tao key `tiu` va
-        // "tieu" tao key `tIu`, nen prefix phan biet hoa thuong dua chung vao hai block
-        // 'ti' va 'tI' va orWhereIn khong bao gio nap ung cu vien ma within() chap nhan.
-        // Fold chi mo rong tap ung cu vien; within() van tu choi nhung ket qua khong dung.
+        // Case-fold có chủ ý, khác với phonetic_key: đây là bộ lọc SQL thô, ganNhau()
+        // mới là bộ lọc chính xác. Đã đo lường: "tiu" tạo key `tiu` và
+        // "tiêu" tạo key `tIu`, nên prefix phân biệt hoa thường đưa chúng vào hai block
+        // 'ti' và 'tI' và orWhereIn không bao giờ nạp ứng cử viên mà ganNhau() chấp nhận.
+        // Fold chỉ mở rộng tập ứng cử viên; ganNhau() vẫn từ chối những kết quả không đúng.
         return strtolower(substr($flat, 0, self::BLOCK_LENGTH));
     }
 
     /**
-     * Hai key mo ta cung mot cum tu duoc noi ra.
+     * Hai key mô tả cùng một cụm từ được nói ra.
      *
-     * So sanh theo tung am tiet thay vi nhu mot chuoi: mot budget khoang cach duy nhat
-     * tren ca key da gop "vitamin C" voi "vitamin D" o moi nguong duoc do, va trong
-     * mot nha thuoc thi do la cach sai khong duoc phep.
+     * So sánh theo từng âm tiết thay vì như một chuỗi: một budget khoảng cách duy nhất
+     * trên cả key đã gộp "vitamin C" với "vitamin D" ở mọi ngưỡng được đo, và trong
+     * một nhà thuốc thì đó là cách sai không được phép.
      */
     public static function ganNhau(string $a, string $b): bool
     {
@@ -157,10 +157,10 @@ final class PhienAmTiengViet
                     return false;
                 }
 
-                // Chu so la so luong, khong phai phat am — khong accent nao doc
-                // 500 nhu 50. Da do luong: "500mg" so voi "50mg" la lev 1 tren mot
-                // budget max(1, 5/4) = 1, nen hai lieu luong da bi gop. Don vi
-                // roi vi cung cach: "500mg" so voi "500ml" cung la lev 1.
+                // Chữ số là số lượng, không phải phát âm — không accent nào đọc
+                // 500 như 50. Đã đo lường: "500mg" so với "50mg" là lev 1 trên một
+                // budget max(1, 5/4) = 1, nên hai liều lượng đã bị gộp. Đơn vị
+                // rò rỉ theo cùng cách: "500mg" so với "500ml" cũng là lev 1.
                 if (self::chuSo($syllable) !== '' || self::chuSo($other) !== '') {
                     return false;
                 }
@@ -171,14 +171,14 @@ final class PhienAmTiengViet
             return $distance <= max(1, intdiv(strlen(self::boKhoangTrang($a)), 4));
         }
 
-        // So am tiet khac nhau: nguoi noi da tach mot thanh vai tu
-        // ("pa ra xe ta mon"), nen chi key phang moi so sanh duoc.
+        // Số âm tiết khác nhau: người nói đã tách một thành vài từ
+        // ("pa ra xe ta mon"), nên chỉ key phẳng mới so sánh được.
         $flatA = self::boKhoangTrang($a);
 
-        // Tach mot am tiet van khong duoc xuyen qua lieu luong: "500mg" doc thanh
-        // "50 mg" la lev 1 tren key phang. Chi ap dung khi ca hai ben deu co
-        // chu so — "omega 3" so voi "o me ga ba" doc chu so ra thanh tu,
-        // va cap do phai tiep tuc khop.
+        // Tách một âm tiết vẫn không được xuyên qua liều lượng: "500mg" đọc thành
+        // "50 mg" là lev 1 trên key phẳng. Chỉ áp dụng khi cả hai bên đều có
+        // chữ số — "omega 3" so với "ô mê ga ba" đọc chữ số ra thành từ,
+        // và cặp đó phải tiếp tục khớp.
         $digitsA = self::chuSo($a);
         $digitsB = self::chuSo($b);
 
@@ -190,19 +190,19 @@ final class PhienAmTiengViet
             return true;
         }
 
-        // Luot hai tren dang tho hon. syllable() chi ap dung cac lop ky tu §4.1
-        // tai dau tu, nen ten doc tung am tiet tich luy chung tung lan cho moi am tiet
-        // trong khi ten catalog da noi lai chi tich luy mot lan trong toan bo:
-        // "pa na don" tao key `pa La DoN` so voi `panadol`, lev 3 tren budget
-        // 2. Ap dung lai cung cac lop tai moi vi tri cho hai ben thang hang va
-        // cung phuc hoi "sa lon pat", "ni gio ran" va "con la gien".
+        // Lượt hai trên dạng thô hơn. amTiet() chỉ áp dụng các lớp ký tự §4.1
+        // tại đầu từ, nên tên đọc từng âm tiết tích luỹ chung từng lần cho mỗi âm tiết
+        // trong khi tên catalog đã nối lại chỉ tích luỹ một lần trong toàn bộ:
+        // "pa na đôn" tạo key `pa La DoN` so với `panadol`, lev 3 trên budget
+        // 2. Áp dụng lại cùng các lớp tại mỗi vị trí cho hai bên thẳng hàng và
+        // cũng phục hồi "sa lón pát", "ni giô ran" và "côn la gien".
         //
-        // Mo rong budget khoang cach khong lam duoc viec nay: cap phan biet gan nhat
-        // ma phai dung cach nhau ("vitamin e" / "betadine") nam o lev 4 tren 8,
-        // cung ty le voi cac cach doc thuong hieu phai khop, nen khong nguong nao
-        // phan biet duoc chung. Da do luong tren dang tho thay vi: khong co cap moi
-        // nao bi gop tren 26 ten san pham phan biet, va chi mot cap moi tren toan bo
-        // index da dung — "Naturals" voi "Nature's", mot dong san pham.
+        // Mở rộng budget khoảng cách không làm được việc này: cặp phân biệt gần nhất
+        // mà phải đứng cách nhau ("vitamin e" / "betadine") nằm ở lev 4 trên 8,
+        // cùng tỷ lệ với các cách đọc thương hiệu phải khớp, nên không ngưỡng nào
+        // phân biệt được chúng. Đã đo lường trên dạng thô thay vì: không có cặp mới
+        // nào bị gộp trên 26 tên sản phẩm phân biệt, và chỉ một cặp mới trên toàn bộ
+        // index đã dựng — "Naturals" với "Nature's", một dòng sản phẩm.
         $coarseA = self::dangTho($flatA);
 
         return levenshtein($coarseA, self::dangTho(self::boKhoangTrang($b)))
@@ -220,13 +220,13 @@ final class PhienAmTiengViet
     }
 
     /**
-     * Cac lop ky tu §4.1 duoc ap dung lai tai moi vi tri, khong chi tai dau tu.
-     * Chi cac ky tu thuong con sot lai duoc bien doi: marker hoa la lop ma syllable()
-     * da quyet dinh, va viet lai chung se gop `C` vao `K` va gop cac lop ma bang
-     * co chu y giu rieng.
+     * Các lớp ký tự §4.1 được áp dụng lại tại mỗi vị trí, không chỉ tại đầu từ.
+     * Chỉ các ký tự thường còn sót lại được biến đổi: marker hoa là lớp mà amTiet()
+     * đã quyết định, và viết lại chúng sẽ gộp `C` vào `K` và gộp các lớp mà bảng
+     * có chủ ý giữ riêng.
      *
-     * Chi dung khi so sanh — khong bao gio luu tru. `phonetic_key` va `block_key`
-     * giu hinh dang rieng cua chung, nen viec nay khong can rebuild index.
+     * Chỉ dùng khi so sánh — không bao giờ lưu trữ. `phonetic_key` và `block_key`
+     * giữ hình dạng riêng của chúng, nên việc này không cần rebuild index.
      */
     private static function dangTho(string $flatKey): string
     {

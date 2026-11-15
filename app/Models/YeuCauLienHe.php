@@ -14,7 +14,7 @@ class YeuCauLienHe extends Model
     protected $primaryKey = 'ma_lh';
 
     /**
-     * Cac thuoc tinh cho phep gan hang loat.
+     * Các thuộc tính cho phép gán hàng loạt.
      *
      * @var array<int, string>
      */
@@ -27,7 +27,7 @@ class YeuCauLienHe extends Model
     ];
 
     /**
-     * Cac thuoc tinh nen ep kieu.
+     * Các thuộc tính nên ép kiểu.
      *
      * @var array<string, string>
      */

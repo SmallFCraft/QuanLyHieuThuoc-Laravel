@@ -8,25 +8,25 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Ban tra loi do AI soan cho hang doi xem lai cua duoc si.
+ * Bản trả lời do AI soạn cho hàng đợi xem lại của dược sĩ.
  *
- * Ban soan khong bao gio duoc luu va khong bao gio tu toi khach hang: controller
- * chi dien truoc o tra loi, nen duoc si van phai doc,
- * sua va gui duoi ten chinh ho. Nguoi do la nguoi kiem tra.
+ * Bản soạn không bao giờ được lưu và không bao giờ tự tới khách hàng: controller
+ * chỉ điền trước ô trả lời, nên dược sĩ vẫn phải đọc,
+ * sửa và gửi dưới tên chính họ. Người đó là người kiểm tra.
  *
- * Du lieu ho so suc khoe chi den nha cung cap qua SangLocAiNguCanhService,
- * ham gat no tren dong y AI ro rang. Prompt ket qua co dinh cua controller
- * van la quan quyen an toan; ngu canh nay chi la thong tin bo tro.
+ * Dữ liệu hồ sơ sức khoẻ chỉ đến nhà cung cấp qua SangLocAiNguCanhService,
+ * hàm gạt nó trên đồng ý AI rõ ràng. Prompt kết quả cố định của controller
+ * vẫn là quan quyền an toàn; ngữ cảnh này chỉ là thông tin bổ trợ.
  */
 class SangLocAiSoanLoiService extends SangLocAiService
 {
     private const MAX_DRAFT_LENGTH = 2000;
 
     /**
-     * Constructor injection giong SangLocAiTomTatService. An toan o day vi cung
-     * ly do nhu ben do: khong gi giai seam nay truoc khi co cau hinh bat, va
-     * chinh SangLocAiNguCanhService khong co constructor nem loi — AiProviderService,
-     * ham nem khi khong co cau hinh AI, duoc giai moi lan goi va giu nguyen.
+     * Constructor injection giống SangLocAiTomTatService. An toàn ở đây vì cùng
+     * lý do như bên đó: không gì giải seam này trước khi có cấu hình bật, và
+     * chính SangLocAiNguCanhService không có constructor ném lỗi — AiProviderService,
+     * hàm ném khi không có cấu hình AI, được giải mỗi lần gọi và giữ nguyên.
      */
     public function __construct(
         protected NhatKyKiemToanService $nhatKyKiemToanService,
@@ -41,7 +41,7 @@ class SangLocAiSoanLoiService extends SangLocAiService
     }
 
     /**
-     * Co the chay trong form POST cua duoc si, nen giu ngan sach fail-fast.
+     * Có thể chạy trong form POST của dược sĩ, nên giữ ngân sách fail-fast.
      */
     protected function timeoutSeconds(): int
     {
@@ -49,10 +49,10 @@ class SangLocAiSoanLoiService extends SangLocAiService
     }
 
     /**
-     * Ban tra loi tieng Viet, hoac null khi nha cung cap khong kha dung hoac
-     * output khong qua kiem tra do dai.
+     * Bản trả lời tiếng Việt, hoặc null khi nhà cung cấp không khả dụng hoặc
+     * output không qua kiểm tra độ dài.
      *
-     * @param  array<int, string>  $cacTenTrieuChung  Ten trieu chung tieng Viet, da duoc giai
+     * @param  array<int, string>  $cacTenTrieuChung  Tên triệu chứng tiếng Việt, đã được giải
      */
     public function soanLoiTraLoi(PhienSangLoc $phien, array $cacTenTrieuChung): ?string
     {
@@ -111,8 +111,8 @@ class SangLocAiSoanLoiService extends SangLocAiService
     }
 
     /**
-     * Du lieu suy tu quy tac, ten trieu chung/co do, va ngu canh benh nhan tuy chon
-     * (tuoi, ho so suc khoe dong y, va lich su sang loc gan day trong hang rao).
+     * Dữ liệu suy từ quy tắc, tên triệu chứng/cờ đỏ, và ngữ cảnh bệnh nhân tuỳ chọn
+     * (tuổi, hồ sơ sức khoẻ đồng ý, và lịch sử sàng lọc gần đây trong hàng rào).
      */
     protected function buildPrompt(PhienSangLoc $phien, array $cacTenTrieuChung): string
     {

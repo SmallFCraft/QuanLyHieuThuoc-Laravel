@@ -13,34 +13,34 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Quyet dinh ket qua cua mot bo cau hoi da hoan thanh, ngoai web request.
+ * Quyết định kết quả của một bộ câu hỏi đã hoàn thành, ngoài web request.
  *
- * Do tren nha cung cap da cau hinh, mot loi goi trich duyet su tht mat 11-30s
- * (trung vi ~14s). Voi ngan sach dong bo 8s cu thi gan nhu luon bi timeout, va
- * timeout khong chi la cham — no im lang lam mat cac su tht tu AI, nen nguoi benh
- * noi "may nam nay roi" bi tinh la mot ngay, va vong hoi lam ro theo sau can phai
- * xuat hien thi khong bao gio xuat hien vi `canHoiLamRo()` khong co ket qua AI de
- * doc. Tro ly trong nhu da nhay tu "vong 1/3" thang den trang ket qua.
+ * Đo trên nhà cung cấp đã cấu hình, một lệnh gọi trích duyệt sự thật mất 11-30s
+ * (trung vị ~14s). Với ngân sách đồng bộ 8s cũ thì gần như luôn bị timeout, và
+ * timeout không chỉ là chậm — nó im lặng làm mất các sự thật từ AI, nên người bệnh
+ * nói "mấy năm nay rồi" bị tính là một ngày, và vòng hỏi làm rõ theo sau cần phải
+ * xuất hiện thì không bao giờ xuất hiện vì `canHoiLamRo()` không có kết quả AI để
+ * đọc. Wizard trong như đã nhảy từ "vòng 1/3" thẳng đến trang kết quả.
  *
- * Tri hoan viec nay la an toan — va khac voi viec tri hoan viec viet lai loi khuyen —
- * vi nguoi benh DOI no: trang ket qua khong duoc hien cho toi khi cong viec da quyet
- * dinh. Vi vay ket luan khong bao gio bi sua lai sau khi ho da doc, va do la luat giu
- * viec trich duyet su tht khoi nen nen hang doi o nhung cho khac.
+ * Trì hoãn việc này là an toàn — và khác với việc trì hoãn việc viết lại lời khuyên —
+ * vì người bệnh ĐỢI nó: trang kết quả không được hiện cho tới khi công việc đã quyết
+ * định. Vì vậy kết luận không bao giờ bị sửa lại sau khi họ đã đọc, và đó là luật giữ
+ * việc trích duyệt sự thật khỏi chạy nền ở những chỗ khác.
  *
- * Cong viec khong tu quyet dinh gi. No goi dung cac ham danhGia() / canHoiLamRo()
- * / hoanTat() ma controller truoc day goi inline.
+ * Công việc không tự quyết định gì. Nó gọi đúng các hàm danhGia() / canHoiLamRo()
+ * / hoanTat() mà controller trước đây gọi inline.
  */
 class XuLyDanhGiaSangLoc implements ShouldQueue
 {
     use Queueable;
 
     /**
-     * Chi mot lan thu. Thu lai se goi nha cung cap them lan nua va co the dua cho
-     * nguoi benh mot ket luan khac cho cung cac cau tra loi.
+     * Chỉ một lần thử. Thử lại sẽ gọi nhà cung cấp thêm lần nữa và có thể đưa cho
+     * người bệnh một kết luận khác cho cùng các câu trả lời.
      */
     public int $tries = 1;
 
-    /** Cao hon do tre lon nhat da do duoc cua nha cung cap cong nha cung cap du phong. */
+    /** Cao hơn độ trễ lớn nhất đã đo được của nhà cung cấp cộng nhà cung cấp dự phòng. */
     public int $timeout = 120;
 
     public function __construct(public string $uuid)
@@ -65,8 +65,8 @@ class XuLyDanhGiaSangLoc implements ShouldQueue
 
         $jobs->markRunning($job);
 
-        // NhatKyKiemToanService doc Auth::id(); khong co dong nay thi worker ghi cac
-        // dong kiem toan voi khach null, dut lien ket voi nguoi dang duoc sang loc.
+        // NhatKyKiemToanService đọc Auth::id(); không có dòng này thì worker ghi các
+        // dòng kiểm toán với khách null, đứt liên kết với người đang được sàng lọc.
         Auth::onceUsingId((int) $job->ma_nd);
 
         try {
@@ -81,16 +81,16 @@ class XuLyDanhGiaSangLoc implements ShouldQueue
 
             $phien = $triage->hoanTat($phien, $result);
 
-            // Chi session id, khong bao gio la URL: worker khong co request den, nen
-            // route() se dung link tu APP_URL va gui trinh duyet den host hoac port
-            // sai. Controller moi bien no thanh URL.
+            // Chỉ session id, không bao giờ là URL: worker không có request đến, nên
+            // route() sẽ dựng link từ APP_URL và gửi trình duyệt đến host hoặc port
+            // sai. Controller mới biến nó thành URL.
             $jobs->markDone($job, [
                 'next' => 'result',
                 'ma_sl' => $phien->ma_sl,
             ]);
 
-            // Viet lai loi khuyen la cong viec rieng: no chay sau khi ket luan da an
-            // dinh va khong duoc giu nguoi benh lai khi ho dang doc.
+            // Viết lại lời khuyên là công việc riêng: nó chạy sau khi kết luận đã cố
+            // định và không được giữ người bệnh lại khi họ đang đọc.
             $jobs->dispatchAdviceRewriteIfEligible($phien);
         } catch (\Throwable $exception) {
             Log::error('Triage evaluation job failed', [

@@ -10,7 +10,7 @@ use Illuminate\View\View;
 class EmailVerificationPromptController extends Controller
 {
     /**
-     * Hien thi nhac xac minh email.
+     * Hiển thị nhắc xác minh email.
      */
     public function __invoke(Request $request): RedirectResponse|View
     {

@@ -59,10 +59,10 @@ class PhienSangLoc extends Model
     public const TOTAL_STEPS = 5;
 
     /**
-     * Vong hoi lam ro la mot cuoc doi thaoi co gioi han, khong phai mot lan doan mo:
-     * moi vong deu nhin thay cac cau tra loi truoc. Tran la diem dung cung — 3 vong
-     * x 3 cau hoi da nhieu hon nhung gi mot duoc si hoi tai quay thuoc, va mot vong
-     * lap khong gioi han se de model cho nguoi benh tra loi mai mai.
+     * Vòng hỏi làm rõ là một cuộc đối thoại có giới hạn, không phải một lần đoán mò:
+     * mỗi vòng đều nhìn thấy các câu trả lời trước. Trần là điểm dừng cứng — 3 vòng
+     * x 3 câu hỏi đã nhiều hơn những gì một dược sĩ hỏi tại quầy thuốc, và một vòng
+     * lặp không giới hạn sẽ để model cho người bệnh trả lời mãi mãi.
      */
     public const MAX_CLARIFY_ROUNDS = 3;
     public const MAX_CLARIFY_QUESTIONS_PER_ROUND = 3;
@@ -100,16 +100,16 @@ class PhienSangLoc extends Model
     }
 
     /**
-     * Cac so lieu do luoc dang sau phien nay, dung cho danh sach so duoc phep trong
-     * prompt cua briefing. analysisMetrics() cua controller tinh cung mot diem so cho
-     * bieu do; ban copy nay giu nhung con so ma model duoc phep dan.
+     * Các số liệu đo lường đằng sau phiên này, dùng cho danh sách số được phép trong
+     * prompt của briefing. analysisMetrics() của controller tính cùng một điểm số cho
+     * biểu đồ; bản copy này giữ những con số mà model được phép dẫn.
      *
-     * Moi gia tri deu doc tu cot da luu vao co so du lieu — khong gi chay lai bo
-     * luat, khong gi suy ra tu ket qua cua model.
+     * Mọi giá trị đều đọc từ cột đã lưu vào cơ sở dữ liệu — không gì chạy lại bộ
+     * luật, không gì suy ra từ kết quả của model.
      *
-     * @return array<string, int|string> label => gia tri hien thi; key la tieng Viet
-     *                                      vi cac chuoi nay vao prompt cua model lam
-     *                                      danh sach so duoc phep.
+     * @return array<string, int|string> label => giá trị hiển thị; key là tiếng Việt
+     *                                      vì các chuỗi này vào prompt của model làm
+     *                                      danh sách số được phép.
      */
     public function analysisMetrics(): array
     {
@@ -154,7 +154,7 @@ class PhienSangLoc extends Model
     }
 
     /**
-     * Cac cau hoi cua vong hoi lam ro hien tai con chua duoc tra loi.
+     * Các câu hỏi của vòng hỏi làm rõ hiện tại còn chưa được trả lời.
      *
      * @return array<int, string>
      */
@@ -172,9 +172,9 @@ class PhienSangLoc extends Model
     }
 
     /**
-     * Cac cap cau hoi/cau tra loi tu moi vong da hoan thanh, cu nhat truoc. Cap cho
-     * prompt cua vong ke tiep de vong hoi lam ro dung tren cau tra loi truoc thay vi
-     * doan lai tu dau.
+     * Các cặp câu hỏi/câu trả lời từ mỗi vòng đã hoàn thành, cũ nhất trước. Cấp cho
+     * prompt của vòng kế tiếp để vòng hỏi làm rõ dựa trên câu trả lời trước thay vì
+     * đoán lại từ đầu.
      *
      * @return array<int, array{round: int, question: string, answer: string}>
      */

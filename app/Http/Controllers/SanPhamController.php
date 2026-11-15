@@ -11,17 +11,17 @@ use Illuminate\Support\Facades\Cache;
 
 class SanPhamController extends Controller
 {
-    /** San pham moi trang tren catalog, search va trang danh muc — ba cho phai bang nhau. */
+    /** Sản phẩm mỗi trang trên catalog, search và trang danh mục — ba chỗ phải bằng nhau. */
     private const PER_PAGE = 10;
 
     /**
-     * Hien thi catalog san pham cong khai.
+     * Hiển thị catalog sản phẩm công khai.
      */
     public function index(Request $request)
     {
-        // Array query (?q[]=x, ?category[]=1) khong phai do link nao trong app sinh, va
-        // ep mang sang chuoi la TypeError (500). 400, khong phai 404. Phai dung truoc
-        // moi phep doc tham so.
+        // Array query (?q[]=x, ?category[]=1) không phải do link nào trong app sinh, và
+        // ép mảng sang chuỗi là TypeError (500). 400, không phải 404. Phải đứng trước
+        // mọi phép đọc tham số.
         abort_if(
             is_array($request->query('q')) || is_array($request->query('category')),
             400
@@ -29,9 +29,9 @@ class SanPhamController extends Controller
 
         $tuKhoa = trim((string) $request->input('q', ''));
 
-        // where('ma_dm', ...) im lang tra mot danh sach rong 200 cho id khong ton tai,
-        // nen moi so tu dat la mot URL indexable. byCategory() dung findOrFail nen
-        // chi can chan o day. ?category= co tac dung, khong phai junk query.
+        // where('ma_dm', ...) im lặng trả một danh sách rỗng 200 cho id không tồn tại,
+        // nên mỗi số tự đặt là một URL indexable. byCategory() dùng findOrFail nên
+        // chỉ cần chặn ở đây. ?category= có tác dụng, không phải junk query.
         if ($request->filled('category')) {
             abort_unless(
                 DanhMuc::whereKey($request->input('category'))->exists(),
@@ -49,8 +49,8 @@ class SanPhamController extends Controller
             $truyVan->where('ma_dm', $request->input('category'));
         }
 
-        // Trang vuot qua trang cuoi la 404, khong phai mot trang rong 200. Tra ve
-        // dung paginator cho ca nhanh ajax ben duoi.
+        // Trang vượt qua trang cuối là 404, không phải một trang rỗng 200. Trả về
+        // đúng paginator cho cả nhánh ajax bên dưới.
         $sanPhams = $this->paginateOr404($truyVan, self::PER_PAGE);
 
         $danhMucs = $this->getFilterCategories();
@@ -65,7 +65,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Hien thi trang chi tiet mot san pham.
+     * Hiển thị trang chi tiết một sản phẩm.
      */
     public function show($maSanPham)
     {
@@ -73,7 +73,7 @@ class SanPhamController extends Controller
             ->notExpired()
             ->findOrFail($maSanPham);
 
-        // Tang luot xem
+        // Tăng lượt xem
         $sanPham->increment('luot_xem');
 
         $sanPhamLienQuan = SanPham::with('danhMuc')
@@ -89,7 +89,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Hien thi san pham theo danh muc.
+     * Hiển thị sản phẩm theo danh mục.
      */
     public function byCategory(Request $request, $maDanhMuc)
     {
@@ -113,7 +113,7 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Tim kiem san pham theo ten hoac hoat chat.
+     * Tìm kiếm sản phẩm theo tên hoặc hoạt chất.
      */
     public function search(Request $request)
     {
@@ -142,12 +142,12 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Dem mot luot tim cho khoi "Xu huong tim kiem".
+     * Đếm một lượt tìm cho khối "Xu hướng tìm kiếm".
      *
-     * Chi dem luot tim dau tien co ket qua: sang trang 2 la cung mot y dinh, va mot
-     * tu khoa khong ra san pham nao thi dua len trang chu chi dan nguoi sau vao mot
-     * trang trong. Ghi sau khi view da dung xong nen mot loi o day khong lam sap
-     * trang ket qua.
+     * Chỉ đếm lượt tìm đầu tiên có kết quả: sang trang 2 là cùng một ý định, và một
+     * từ khoá không ra sản phẩm nào thì đưa lên trang chủ chỉ dẫn người sau vào một
+     * trang trống. Ghi sau khi view đã dựng xong nên một lỗi ở đây không làm sập
+     * trang kết quả.
      */
     private function recordSearch(Request $request, string $tuKhoa, int $total): void
     {
@@ -159,10 +159,10 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Chi khoi ket qua, cho bo loc danh muc va phan trang chay khong tai lai trang.
+     * Chỉ khối kết quả, cho bộ lọc danh mục và phân trang chạy không tải lại trang.
      *
-     * Tra ve dung partial ma trang day du render, nen hai duong khong the lech nhau.
-     * Khong co JS thi cac link van la link that va nhanh nay khong bao gio chay.
+     * Trả về đúng partial mà trang đầy đủ render, nên hai đường không thể lệch nhau.
+     * Không có JS thì các link vẫn là link thật và nhánh này không bao giờ chạy.
      */
     private function resultsFragment($sanPhams, string $tuKhoa): \Illuminate\Http\JsonResponse
     {
@@ -176,14 +176,14 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Lay goi y tim kiem cho autocomplete.
+     * Lấy gợi ý tìm kiếm cho autocomplete.
      */
     public function suggestions(Request $request)
     {
         $term = trim((string) $request->input('q', ''));
 
-        // mb_strlen chu khong phai strlen: "d" la hai byte, nen gate theo do dai byte
-        // da de mot truy van mot ky tu di qua va khop gan ca catalog.
+        // mb_strlen chứ không phải strlen: "đ" là hai byte, nên gate theo độ dài byte
+        // đã để một truy vấn một ký tự đi qua và khớp gần cả catalog.
         if (mb_strlen($term) < 2 || SanPham::searchWords($term) === []) {
             return response()->json(['products' => [], 'categories' => []]);
         }
@@ -199,9 +199,9 @@ class SanPhamController extends Controller
 
         $folded = VietnameseText::fold($term);
 
-        // Loc trong PHP: ten danh muc can cung cach fold voi san pham, va chi co vai
-        // chuc danh muc phia sau mot cache, nen mot truy van moi lan go phim khong
-        // mua duoc gi.
+        // Lọc trong PHP: tên danh mục cần cùng cách fold với sản phẩm, và chỉ có vài
+        // chục danh mục phía sau một cache, nên một truy vấn mỗi lần gõ phím không
+        // mua được gì.
         $danhMucs = $this->getFilterCategories()
             ->filter(fn ($danhMuc) => str_contains(VietnameseText::fold($danhMuc->ten), $folded))
             ->take(3)
@@ -229,10 +229,10 @@ class SanPhamController extends Controller
     }
 
     /**
-     * Lay danh muc tu cache cho bo loc catalog cong khai.
+     * Lấy danh mục từ cache cho bộ lọc catalog công khai.
      *
-     * DanhMuc::scopeBrowsable() dung chung voi dropdown tren header, nen sidebar
-     * va nav luon liet ke cung cac danh muc cung thu tu.
+     * DanhMuc::scopeBrowsable() dùng chung với dropdown trên header, nên sidebar
+     * và nav luôn liệt kê cùng các danh mục cùng thứ tự.
      */
     protected function getFilterCategories()
     {
