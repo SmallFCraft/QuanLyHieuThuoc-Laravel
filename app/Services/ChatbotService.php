@@ -1325,6 +1325,9 @@ PROMPT;
             $responseText = preg_replace($patterns, '', $responseText) ?? $responseText;
         }
 
+        // Nhà cung cấp thỉnh thoảng nhả tiền tố chế độ agent ([MODE: EXECUTE]...)
+        // trước nội dung thật; đây là rác điều khiển, không phải chữ gửi khách.
+        $responseText = preg_replace('/^\s*\[MODE:\s*[A-Z_]+\]\s*/iu', '', $responseText) ?? $responseText;
         $responseText = $this->sanitizeInlineMathForPlainText($responseText);
         $responseText = $this->stripForeignScriptArtifacts($responseText);
         $responseText = $this->stripRedundantDisclaimer($responseText);

@@ -2332,6 +2332,23 @@ class ChatbotServiceTest extends TestCase
         }
     }
 
+    public function test_loi_tro_ly_cat_tien_to_mode_cua_nha_cung_cap(): void
+    {
+        $reflection = new \ReflectionClass($this->chatbotService);
+        $method = $reflection->getMethod('sanitizeAssistantResponse');
+        $method->setAccessible(true);
+
+        $cleaned = $method->invoke($this->chatbotService, "[MODE: EXECUTE]\n\nDạ em chào anh/chị, em có thể giúp gì cho anh/chị ạ?");
+
+        $this->assertStringNotContainsString('[MODE', $cleaned);
+        $this->assertStringStartsWith('Dạ em chào anh/chị', $cleaned);
+
+        $cleanedSameLine = $method->invoke($this->chatbotService, '[MODE: EXPLORE] Dạ em chào anh/chị ạ.');
+
+        $this->assertStringNotContainsString('[MODE', $cleanedSameLine);
+        $this->assertStringStartsWith('Dạ em chào anh/chị', $cleanedSameLine);
+    }
+
     public function test_loi_tro_ly_bo_mien_tru_bi_lap_lai_trong_van_ban(): void
     {
         $reflection = new \ReflectionClass($this->chatbotService);

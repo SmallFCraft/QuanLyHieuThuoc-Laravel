@@ -149,6 +149,9 @@ abstract class SangLocAiService
      */
     protected function stripMarkdown(string $text): string
     {
+        // Một số nhà cung cấp nhả tiền tố chế độ agent ([MODE: EXECUTE]...) trước
+        // nội dung thật; đây là rác điều khiển, không phải chữ gửi khách.
+        $text = preg_replace('/^\s*\[MODE:\s*[A-Z_]+\]\s*/iu', '', $text) ?? $text;
         $text = preg_replace('/^\s{0,3}#{1,6}\s*/mu', '', $text) ?? $text;
         $text = preg_replace('/(\*\*|__|\*|_|`)/u', '', $text) ?? $text;
         $text = preg_replace('/\[([^\]]*)\]\([^)]*\)/u', '$1', $text) ?? $text;

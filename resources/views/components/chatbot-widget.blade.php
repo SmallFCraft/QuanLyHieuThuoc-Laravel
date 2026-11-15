@@ -127,6 +127,22 @@
                     </div>
                 </div>
                 <p class="welcome-hint">{{ __('messages.chatbot.welcome_hint') }}</p>
+                @guest
+                <div class="mt-3 d-flex flex-column flex-sm-row gap-2" style="width: 100%;">
+                    <a href="{{ route('login') }}"
+                       class="btn btn-emerald text-white fw-semibold d-flex align-items-center justify-content-center gap-2 text-decoration-none"
+                       style="flex: 1; background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 10px 16px; border-radius: 10px; font-size: 0.875rem;">
+                        <span>🔑</span>
+                        <span>{{ __('messages.chatbot.login') }}</span>
+                    </a>
+                    <a href="/register"
+                       class="btn btn-outline-emerald fw-semibold d-flex align-items-center justify-content-center gap-2 text-decoration-none"
+                       style="flex: 1; background: white; color: #059669; border: 2px solid #10b981; padding: 10px 16px; border-radius: 10px; font-size: 0.875rem;">
+                        <span>✨</span>
+                        <span>{{ __('messages.chatbot.register') }}</span>
+                    </a>
+                </div>
+                @endguest
                 <div class="suggestion-chips">
                     <button @click="useSuggestion('{{ __('messages.chatbot.suggestion_1_text') }}')" class="suggestion-chip">
                         {{ __('messages.chatbot.suggestion_1') }}

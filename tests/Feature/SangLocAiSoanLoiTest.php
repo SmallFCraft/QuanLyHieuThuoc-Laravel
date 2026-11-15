@@ -222,6 +222,34 @@ class SangLocAiSoanLoiTest extends TestCase
         $this->assertStringContainsString('đi khám', $draft);
     }
 
+    public function test_tien_to_mode_cua_nha_cung_cap_bi_loai_bo(): void
+    {
+        $this->fakeProviderReply("[MODE: EXECUTE]\n\nDạ em chào anh/chị, tình trạng ho 3 ngày nay cần theo dõi thêm.");
+
+        $phien = $this->pendingSession();
+
+        $this->actingAs($this->pharmacist)->post(route('duoc-si.sang-loc.draft', $phien->ma_sl));
+
+        $draft = session('_old_input.pharmacist_note');
+
+        $this->assertStringNotContainsString('[MODE', $draft);
+        $this->assertStringStartsWith('Dạ em chào anh/chị', $draft);
+    }
+
+    public function test_tien_to_mode_khong_dau_xuong_dong_bi_loai_bo(): void
+    {
+        $this->fakeProviderReply('[MODE: EXPLORE] Dạ em chào anh/chị, em xin hỏi thêm vài thông tin.');
+
+        $phien = $this->pendingSession();
+
+        $this->actingAs($this->pharmacist)->post(route('duoc-si.sang-loc.draft', $phien->ma_sl));
+
+        $draft = session('_old_input.pharmacist_note');
+
+        $this->assertStringNotContainsString('[MODE', $draft);
+        $this->assertStringStartsWith('Dạ em chào anh/chị', $draft);
+    }
+
     public function test_dong_nhat_ky_ghi_nguon_goc_nhung_khong_ghi_noi_dung(): void
     {
         $this->fakeProviderReply('Dạ, em trả lời anh/chị như sau.');

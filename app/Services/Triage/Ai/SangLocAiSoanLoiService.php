@@ -106,6 +106,7 @@ class SangLocAiSoanLoiService extends SangLocAiService
             'Chỉ dùng dữ liệu được cung cấp. KHÔNG thêm chẩn đoán, không thêm tên thuốc,',
             'không thay đổi kết luận của hệ thống, không hứa hẹn kết quả điều trị.',
             'Luôn giữ lại ngưỡng cần đi khám nếu dữ liệu có nêu.',
+            'KHÔNG viết tiền tố dạng [MODE: ...] hay nhãn điều khiển nào ở đầu câu trả lời; bắt đầu ngay bằng nội dung lời nhắn.',
             'Trả về văn bản thuần, không markdown, không JSON, tối đa 250 từ.',
         ]);
     }
