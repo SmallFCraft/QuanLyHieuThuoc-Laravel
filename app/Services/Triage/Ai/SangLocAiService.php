@@ -58,6 +58,17 @@ abstract class SangLocAiService
     }
 
     /**
+     * Cùng timeoutSeconds nhưng bật ngân sách riêng cho từng nhà cung cấp: seam
+     * chạy trong worker (`vietLai`, `sinhNoiDung`) không có browser nào đang chờ,
+     * nên ngân sách chung ép fallback xuống phần dư của primary — thực tế là 1s —
+     * và mọi lần chuyển dự phòng thành thất bại chắc chắn.
+     */
+    protected function callProviderInWorker(AiProviderService $provider, array $messages, array $options = []): array
+    {
+        return $this->callProvider($provider, $messages, $options + ['dedicated_budgets' => true]);
+    }
+
+    /**
      * Đối số tool-call mà model trả về, hoặc null khi nó trả lời bằng văn bản
      * hoặc JSON hỏng.
      *

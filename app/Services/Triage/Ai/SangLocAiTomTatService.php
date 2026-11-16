@@ -127,7 +127,7 @@ class SangLocAiTomTatService extends SangLocAiService
         try {
             $provider = $this->provider();
 
-            $response = $this->callProvider($provider, [
+            $response = $this->callProviderInWorker($provider, [
                 ['role' => 'system', 'content' => $this->systemPrompt($phien, $honorific)],
                 ['role' => 'user', 'content' => $this->buildPrompt($phien, $cacUngVien)],
             ], [

@@ -72,9 +72,10 @@
         @endforeach
     </div>
 
-    {{-- Bars show what each factor contributed. Only non-zero factors get a bar;
-         the zero ones collapse into one line so the chart never shows empty rows. --}}
-    @if ($metrics['contributions'])
+    {{-- Bars show what each factor contributed. An all-zero case sits at the band's
+         floor by construction, so the plain-language note replaces four empty bars
+         that would read as a broken chart. --}}
+    @if ($metrics['contributions'] && collect($metrics['contributions'])->sum('points') > 0)
         <div class="health-contribution">
             <p class="small fw-semibold text-gray-700 mb-2">{{ __('messages.health.analysis_contribution_title') }}</p>
             @foreach ($metrics['contributions'] as $bar)
@@ -87,6 +88,10 @@
                 </div>
             @endforeach
         </div>
+    @elseif ($metrics['contributions'])
+        <p class="small mb-0" style="color: var(--health-ink-soft);">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>{{ __('messages.health.analysis_all_zero') }}
+        </p>
     @endif
 
     @if ($analysis !== [])

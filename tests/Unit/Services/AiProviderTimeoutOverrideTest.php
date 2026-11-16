@@ -177,6 +177,53 @@ class AiProviderTimeoutOverrideTest extends TestCase
     }
 
     /**
+     * The hosting incident: a worker job (advice rewrite, briefing) gave the primary
+     * the whole 45s budget, so the fallback received max(1, ceil(45-45)) = 1s and
+     * died at exactly 1001ms on every attempt — the briefing only succeeded because
+     * its 90s budget left the fallback 29s.
+     *
+     * Workers have no browser waiting on the request, so `dedicatedBudgets` opts out
+     * of the shared budget: every provider gets its own configured timeout.
+     */
+    public function test_ngan_sach_rieng_cho_moi_nha_cung_cap_khi_yeu_cau(): void
+    {
+        $this->configureProvider('chat_completions');
+        $this->configureFallbackProvider();
+
+        $service = $this->recordingService();
+        $service->providerBehaviour = 'burn-then-time-out';
+
+        try {
+            $service->chat([['role' => 'user', 'content' => 'ping']], ['timeout' => 2, 'dedicated_budgets' => true]);
+            $this->fail('Both providers still time out individually, so chat() must rethrow.');
+        } catch (ConnectionException) {
+            // Same shape as the shared-budget test: the timeouts, not the error, are the point.
+        }
+
+        // Dedicated budgets: the override governs the primary, the fallback keeps its
+        // own configured timeout — never the leftover of the first one.
+        $this->assertSame([2, 60], $service->recordedTimeouts);
+    }
+
+    /** The default stays the shared budget: 49 synchronous callers depend on it. */
+    public function test_mac_dinh_van_la_ngan_sach_chung_khi_khong_yeu_cau_rieng(): void
+    {
+        $this->configureProvider('chat_completions');
+        $this->configureFallbackProvider();
+
+        $service = $this->recordingService();
+        $service->providerBehaviour = 'burn-then-time-out';
+
+        try {
+            $service->chat([['role' => 'user', 'content' => 'ping']], ['timeout' => 2]);
+            $this->fail('Shared budget unchanged: both providers time out, chat() rethrows.');
+        } catch (ConnectionException) {
+        }
+
+        $this->assertSame([2, 1], $service->recordedTimeouts);
+    }
+
+    /**
      * A subclass that records the timeout each dispatch resolves, then returns a
      * canned response instead of touching the network.
      */

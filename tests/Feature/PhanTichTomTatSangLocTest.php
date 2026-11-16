@@ -107,6 +107,46 @@ class PhanTichTomTatSangLocTest extends TestCase
         $this->assertStringContainsString('health-gauge', $audit);
     }
 
+    /** Every factor at zero: the all-zero note replaces the four empty bars. */
+    public function test_mot_ca_khong_yeu_to_nao_hien_loi_giai_thay_bon_thanh_rong(): void
+    {
+        $phien = $this->triageSession([
+            'matched_symptoms' => ['sore_throat'],
+            'collected_data' => ['raw_symptom_text' => 'dau hong', 'duration_days' => 1],
+        ]);
+
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('sang-loc.ket-qua', $phien->ma_sl))
+            ->assertOk()
+            ->getContent();
+
+        $audit = substr($content, (int) strpos($content, 'id="briefing-analysis"'));
+        $this->assertStringContainsString(
+            __('messages.health.analysis_all_zero'),
+            $audit
+        );
+        $this->assertStringNotContainsString('health-contribution__row', $audit);
+    }
+
+    /** A factor above zero keeps the bars and must not read as the all-zero case. */
+    public function test_ca_co_yeu_tro_tang_diem_van_hien_cac_thanh(): void
+    {
+        $phien = $this->triageSession([
+            'triggered_red_flags' => [
+                ['code' => 'high_fever', 'name_vi' => 'Sốt cao', 'severity' => 'caution'],
+            ],
+        ]);
+
+        $content = $this->actingAs($this->nguoiDung)
+            ->get(route('sang-loc.ket-qua', $phien->ma_sl))
+            ->assertOk()
+            ->getContent();
+
+        $audit = substr($content, (int) strpos($content, 'id="briefing-analysis"'));
+        $this->assertStringContainsString('health-contribution__row', $audit);
+        $this->assertStringNotContainsString(__('messages.health.analysis_all_zero'), $audit);
+    }
+
     /** The score is banded: a self-care case can never read above 24. */
     public function test_the_score_stays_inside_the_outcome_band(): void
     {

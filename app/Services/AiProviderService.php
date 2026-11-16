@@ -65,7 +65,8 @@ class AiProviderService
             'chat',
             // Caller trong một request đồng bộ (triage, tìm kiếm giọng nói) xin một
             // budget cho cả lời gọi, chứ không phải một budget cho mỗi nhà cung cấp.
-            isset($options['timeout']) ? max(1, (int) $options['timeout']) : null
+            isset($options['timeout']) ? max(1, (int) $options['timeout']) : null,
+            (bool) ($options['dedicated_budgets'] ?? false)
         );
     }
 
@@ -229,14 +230,25 @@ class AiProviderService
      * dài hơn cả thời gian browser client chờ và dài hơn cả lifetime của lock cache
      * tìm kiếm giọng nói. Mỗi nhà cung cấp nhận phần còn lại của các nhà cung cấp trước,
      * sẵn 1 giây vì Guzzle đọc `timeout(0)` như "chờ mãi mãi".
+     *
+     * `$dedicatedBudgets` thoát ngân sách chung: mỗi nhà cung cấp dùng timeout cấu hình
+     * riêng của nó. Dành cho caller chạy trong worker — không browser nào đang chờ
+     * request, nên cắt timeout của fallback xuống phần dư (thực tế là 1s khi primary
+     * đốt hết ngân sách) chỉ biến mọi lần chuyển dự phòng thành thất bại chắc chắn.
      */
-    protected function runWithFailover(callable $callback, string $operation, ?int $budget = null): mixed
+    protected function runWithFailover(callable $callback, string $operation, ?int $budget = null, bool $dedicatedBudgets = false): mixed
     {
         $lastException = null;
         $startedAt = microtime(true);
 
         foreach ($this->providers as $index => $provider) {
-            if ($budget !== null) {
+            if ($dedicatedBudgets) {
+                // Per-provider budgets: index 0 honours the caller's override, later
+                // providers keep their configured timeout. No leftover arithmetic.
+                if ($index === 0 && $budget !== null) {
+                    $provider['timeout'] = $budget;
+                }
+            } elseif ($budget !== null) {
                 $provider['timeout'] = max(1, (int) ceil($budget - (microtime(true) - $startedAt)));
             }
 

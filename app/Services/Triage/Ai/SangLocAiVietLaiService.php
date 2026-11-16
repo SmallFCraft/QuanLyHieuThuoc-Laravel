@@ -77,7 +77,7 @@ class SangLocAiVietLaiService extends SangLocAiService
         try {
             $provider = $this->provider();
 
-            $response = $this->callProvider($provider, [
+            $response = $this->callProviderInWorker($provider, [
                 ['role' => 'system', 'content' => $this->systemPrompt(SangLocAiNguCanhService::honorificFor($phien->nguoiDung?->gioi_tinh))],
                 ['role' => 'user', 'content' => $this->buildPrompt($phien)],
             ]);

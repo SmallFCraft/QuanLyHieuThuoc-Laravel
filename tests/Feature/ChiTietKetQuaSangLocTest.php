@@ -245,11 +245,11 @@ class ChiTietKetQuaSangLocTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        // The recorded facts live in the analysis block (score + contribution bars)
-        // inside the basis tab; the symptom name must be Vietnamese, never the code.
+        // The recorded facts live in the analysis block (score + all-zero note, the
+        // wizard's headache case has every factor at zero) inside the basis tab; the
+        // symptom name must be Vietnamese, never the code.
         $this->assertStringContainsString(__('messages.health.analysis_title'), $content);
-        $this->assertStringContainsString(__('messages.health.analysis_factor_symptoms'), $content);
-        $this->assertStringContainsString(__('messages.health.analysis_factor_duration'), $content);
+        $this->assertStringContainsString(__('messages.health.analysis_all_zero'), $content);
         $this->assertStringContainsString('đau đầu', $content);
         $this->assertStringNotContainsString('headache', $content);
         // "No red flag" is why self-care was allowed, so it is stated.
