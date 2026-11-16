@@ -5,7 +5,7 @@
             <h2 class="profile-card__title">{{ __('messages.profile.info_title') }}</h2>
             <p class="profile-card__subtitle">{{ __('messages.profile.info_desc') }}</p>
         </div>
-        @if($user->email_verified_at)
+        @if($user->thoi_diem_xac_thuc_email)
             <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 d-none d-md-inline">
                 <i class="bi bi-shield-check me-1" aria-hidden="true"></i>{{ __('messages.profile.verified') }}
             </span>
@@ -19,13 +19,13 @@
         </div>
     @endif
 
-    {{-- data-profile-form: profile.js gắn kiểm tra khi blur và tự lưu nháp vào
-         localStorage, xoá nháp sau khi submit thành công. --}}
+    {{-- data-profile-form: profile.js gan kiem tra khi blur va tu luu nhap vao
+         localStorage, xoa nhap sau khi submit thanh cong. --}}
     <form method="POST"
-          action="{{ route('profile.update') }}"
+          action="{{ route('ho-so.update') }}"
           id="profileForm"
           data-profile-form
-          data-draft-key="pharmacy.profileDraft.{{ $user->MaKH }}"
+          data-draft-key="pharmacy.profileDraft.{{ $user->ma_nd }}"
           novalidate>
         @csrf
         @method('patch')
@@ -41,7 +41,7 @@
                            class="form-control @error('name') is-invalid @enderror"
                            id="name"
                            name="name"
-                           value="{{ old('name', $user->name) }}"
+                           value="{{ old('name', $user->ho_ten) }}"
                            placeholder="{{ __('messages.profile.name_placeholder') }}"
                            autocomplete="name"
                            data-validate="required"
@@ -91,7 +91,7 @@
                            class="form-control @error('birth_date') is-invalid @enderror"
                            id="birth_date"
                            name="birth_date"
-                           value="{{ old('birth_date', $user->birth_date?->format('Y-m-d')) }}"
+                           value="{{ old('birth_date', $user->ngay_sinh?->format('Y-m-d')) }}"
                            max="{{ now()->format('Y-m-d') }}"
                            data-validate="past-date"
                            data-message="{{ __('messages.profile.validation_birth_date_future') }}">
@@ -107,9 +107,9 @@
                     <span class="input-group-text"><i class="bi bi-person-standing" aria-hidden="true"></i></span>
                     <select class="form-select @error('gender') is-invalid @enderror" id="gender" name="gender">
                         <option value="">{{ __('messages.profile.select') }}</option>
-                        <option value="male" @selected(old('gender', $user->gender) === 'male')>{{ __('messages.profile.male') }}</option>
-                        <option value="female" @selected(old('gender', $user->gender) === 'female')>{{ __('messages.profile.female') }}</option>
-                        <option value="other" @selected(old('gender', $user->gender) === 'other')>{{ __('messages.profile.other') }}</option>
+                        <option value="male" @selected(old('gender', $user->gioi_tinh) === 'male')>{{ __('messages.profile.male') }}</option>
+                        <option value="female" @selected(old('gender', $user->gioi_tinh) === 'female')>{{ __('messages.profile.female') }}</option>
+                        <option value="other" @selected(old('gender', $user->gioi_tinh) === 'other')>{{ __('messages.profile.other') }}</option>
                     </select>
                 </div>
                 <div class="invalid-feedback" data-error-for="gender">@error('gender'){{ $message }}@enderror</div>
@@ -125,7 +125,7 @@
                            class="form-control @error('phone') is-invalid @enderror"
                            id="phone"
                            name="phone"
-                           value="{{ old('phone', $user->phone) }}"
+                           value="{{ old('phone', $user->so_dien_thoai) }}"
                            placeholder="0xxxxxxxxx"
                            inputmode="numeric"
                            maxlength="10"
@@ -147,7 +147,7 @@
                           rows="3"
                           maxlength="500"
                           autocomplete="street-address"
-                          placeholder="{{ __('messages.profile.address_placeholder') }}">{{ old('address', $user->address) }}</textarea>
+                          placeholder="{{ __('messages.profile.address_placeholder') }}">{{ old('address', $user->dia_chi) }}</textarea>
                 <div class="invalid-feedback" data-error-for="address">@error('address'){{ $message }}@enderror</div>
             </div>
         </div>
@@ -188,8 +188,8 @@
                 <span class="profile-overview-item__icon"><i class="bi bi-shield-check"></i></span>
                 <div>
                     <small class="text-gray-500 d-block" style="font-size: 0.75rem;">{{ __('messages.profile.status') }}</small>
-                    <p class="fw-semibold {{ $user->status === 'active' ? 'text-success' : 'text-secondary' }} mb-0 small">
-                        <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;" aria-hidden="true"></i>{{ $user->status === 'active' ? __('messages.auth.status_active') : __('messages.auth.status_inactive') }}
+                    <p class="fw-semibold {{ $user->trang_thai === 'active' ? 'text-success' : 'text-secondary' }} mb-0 small">
+                        <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;" aria-hidden="true"></i>{{ $user->trang_thai === 'active' ? __('messages.auth.status_active') : __('messages.auth.status_inactive') }}
                     </p>
                 </div>
             </div>

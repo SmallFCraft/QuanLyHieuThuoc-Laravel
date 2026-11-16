@@ -33,7 +33,7 @@ class AiProviderServiceTest extends TestCase
         config()->set('chatbot.ai.fallback.model', 'claude-sonnet-5');
     }
 
-    public function test_chat_completions_mode_posts_minimal_v1_payload(): void
+    public function test_che_do_chat_completions_gui_payload_v1_toi_thieu(): void
     {
         $this->configureProvider('chat_completions');
 
@@ -90,7 +90,7 @@ class AiProviderServiceTest extends TestCase
         });
     }
 
-    public function test_provider_timeout_config_is_loaded_and_normalized(): void
+    public function test_config_timeout_cua_nha_cung_cap_duoc_nap_va_chuan_hoa(): void
     {
         $this->configureProvider('chat_completions');
         config()->set('chatbot.ai.timeout', 12);
@@ -116,7 +116,7 @@ class AiProviderServiceTest extends TestCase
         $this->assertSame(1, $connectTimeout->getValue($service));
     }
 
-    public function test_responses_mode_normalizes_function_call_output(): void
+    public function test_che_do_responses_chuan_hoa_ket_qua_function_call(): void
     {
         $this->configureProvider('responses');
 
@@ -167,7 +167,7 @@ class AiProviderServiceTest extends TestCase
         });
     }
 
-    public function test_chat_completions_mode_posts_vision_payload(): void
+    public function test_che_do_chat_completions_gui_payload_vision(): void
     {
         $this->configureProvider('chat_completions');
 
@@ -202,7 +202,7 @@ class AiProviderServiceTest extends TestCase
         });
     }
 
-    public function test_responses_mode_posts_vision_payload(): void
+    public function test_che_do_responses_gui_payload_vision(): void
     {
         $this->configureProvider('responses');
 
@@ -230,7 +230,7 @@ class AiProviderServiceTest extends TestCase
         });
     }
 
-    public function test_unsupported_vision_model_is_classified(): void
+    public function test_model_khong_ho_tro_vision_duoc_phan_loai(): void
     {
         $this->configureProvider('chat_completions');
 
@@ -247,7 +247,7 @@ class AiProviderServiceTest extends TestCase
         (new AiProviderService())->analyzeImage('Read this image', base64_encode('image-bytes'), 'image/jpeg');
     }
 
-    public function test_a_mislabelled_image_is_not_reported_as_a_model_without_vision(): void
+    public function test_anh_sai_nhan_dang_khong_bao_la_model_khong_vision(): void
     {
         $this->configureProvider('anthropic_messages');
 
@@ -271,7 +271,7 @@ class AiProviderServiceTest extends TestCase
         }
     }
 
-    public function test_anthropic_messages_mode_posts_messages_payload(): void
+    public function test_che_do_anthropic_messages_gui_payload_messages(): void
     {
         $this->configureProvider('anthropic_messages');
 
@@ -327,7 +327,7 @@ class AiProviderServiceTest extends TestCase
         });
     }
 
-    public function test_anthropic_messages_mode_normalizes_tool_use_output(): void
+    public function test_che_do_anthropic_messages_chuan_hoa_ket_qua_tool_use(): void
     {
         $this->configureProvider('anthropic_messages');
 
@@ -357,7 +357,7 @@ class AiProviderServiceTest extends TestCase
         $this->assertSame(['query' => 'vitamin c'], json_decode($functionCall['arguments'] ?? '{}', true));
     }
 
-    public function test_anthropic_tool_use_arguments_are_scrubbed_of_parameter_markup(): void
+    public function test_arguments_tool_use_cua_anthropic_duoc_loc_bo_markup_parameter(): void
     {
         $this->configureProvider('anthropic_messages');
 
@@ -386,7 +386,7 @@ class AiProviderServiceTest extends TestCase
         $this->assertSame(['why' => 'Sốt cao hoặc nôn nhiều.'], json_decode($functionCall['arguments'] ?? '{}', true));
     }
 
-    public function test_anthropic_messages_mode_posts_vision_payload(): void
+    public function test_che_do_anthropic_messages_gui_payload_vision(): void
     {
         $this->configureProvider('anthropic_messages');
 
@@ -415,7 +415,7 @@ class AiProviderServiceTest extends TestCase
         });
     }
 
-    public function test_chat_fails_over_to_fallback_provider(): void
+    public function test_chat_chuyen_sang_nha_cung_cap_du_phong(): void
     {
         $this->configureProvider('chat_completions');
         $this->configureFallbackProvider();
@@ -449,7 +449,7 @@ class AiProviderServiceTest extends TestCase
      * schema. Read as a success, the caller stored a blank briefing and the page
      * showed nothing; as a failure it fails over to the next provider instead.
      */
-    public function test_an_empty_completion_fails_over_instead_of_reading_as_success(): void
+    public function test_ket_qua_rong_chuyen_du_phong_thay_vi_doc_la_thanh_cong(): void
     {
         $this->configureProvider('chat_completions');
         $this->configureFallbackProvider();
@@ -482,7 +482,7 @@ class AiProviderServiceTest extends TestCase
      * The other half of the same guard: an empty `content` is how every provider
      * returns a tool call, so the empty check must never fire on one.
      */
-    public function test_an_empty_content_with_a_tool_call_is_still_a_success(): void
+    public function test_content_rong_co_tool_call_van_la_thanh_cong(): void
     {
         $this->configureProvider('chat_completions');
 
@@ -518,7 +518,7 @@ class AiProviderServiceTest extends TestCase
      * swallowing to the next `>` in the payload deletes every field in between —
      * silently, because the result is still valid JSON.
      */
-    public function test_the_scrub_cannot_eat_a_neighbouring_field(): void
+    public function test_viec_loc_khong_an_truong_ben_canh(): void
     {
         $this->configureProvider('chat_completions');
 
@@ -557,7 +557,7 @@ class AiProviderServiceTest extends TestCase
      * warning, so every field of the tool call is lost. A non-string value must pass
      * through unchanged.
      */
-    public function test_arguments_returned_as_an_object_pass_through_unchanged(): void
+    public function test_arguments_tra_ve_dang_object_giu_nguyen(): void
     {
         $this->configureProvider('chat_completions');
 
@@ -595,7 +595,7 @@ class AiProviderServiceTest extends TestCase
      * arguments — chatbot queries, triage briefing, triage facts — so the scrub
      * belongs here, once, rather than in each service that happens to display them.
      */
-    public function test_tool_call_arguments_are_scrubbed_of_parameter_markup(): void
+    public function test_arguments_tool_call_duoc_loc_bo_markup_parameter(): void
     {
         $this->configureProvider('chat_completions');
 
@@ -632,7 +632,7 @@ class AiProviderServiceTest extends TestCase
     }
 
     /** The anthropic mode stands in front of the same class of dead upstream. */
-    public function test_an_empty_anthropic_response_also_fails_over(): void
+    public function test_phan_hoi_anthropic_rong_cung_chuyen_du_phong(): void
     {
         $this->configureProvider('anthropic_messages');
         $this->configureFallbackProvider();
@@ -654,7 +654,7 @@ class AiProviderServiceTest extends TestCase
         Http::assertSentCount(2);
     }
 
-    public function test_a_fallback_that_repeats_the_primary_endpoint_is_ignored(): void
+    public function test_du_phong_lap_lai_endpoint_chinh_bi_bo_qua(): void
     {
         $this->configureProvider('chat_completions');
         // Same host, same model, only the mode differs — the shape that costs the
@@ -681,7 +681,7 @@ class AiProviderServiceTest extends TestCase
         }
     }
 
-    public function test_chat_throws_when_every_provider_fails(): void
+    public function test_chat_nem_ngoai_le_khi_moi_nha_cung_cap_deu_loi(): void
     {
         $this->configureProvider('chat_completions');
         $this->configureFallbackProvider();
@@ -703,7 +703,7 @@ class AiProviderServiceTest extends TestCase
         }
     }
 
-    public function test_vision_fails_over_when_primary_model_has_no_vision(): void
+    public function test_vision_chuyen_du_phong_khi_model_chinh_khong_co_vision(): void
     {
         $this->configureProvider('chat_completions');
         $this->configureFallbackProvider();
@@ -723,7 +723,7 @@ class AiProviderServiceTest extends TestCase
         Http::assertSentCount(2);
     }
 
-    public function test_non_json_response_error_reports_status_and_body(): void
+    public function test_loi_phan_hoi_khong_phai_json_bao_status_va_noi_dung(): void
     {
         $this->configureProvider('anthropic_messages');
 
@@ -743,7 +743,7 @@ class AiProviderServiceTest extends TestCase
         }
     }
 
-    public function test_chat_fails_over_when_primary_connection_fails(): void
+    public function test_chat_chuyen_du_phong_khi_ket_noi_chinh_loi(): void
     {
         $this->configureProvider('chat_completions');
         $this->configureFallbackProvider();
@@ -762,7 +762,7 @@ class AiProviderServiceTest extends TestCase
         $this->assertSame(1, $service->describeLastProvider()['index']);
     }
 
-    public function test_fallback_provider_can_use_its_own_timeout(): void
+    public function test_nha_cung_cap_du_phong_dung_timeout_rieng(): void
     {
         $this->configureProvider('chat_completions');
         $this->configureFallbackProvider();
@@ -779,7 +779,7 @@ class AiProviderServiceTest extends TestCase
         $this->assertSame(60, $resolved[1]['timeout']);
     }
 
-    public function test_describe_providers_hides_api_keys(): void
+    public function test_describe_providers_an_api_key(): void
     {
         $this->configureProvider('anthropic_messages');
         $this->configureFallbackProvider('chat_completions');

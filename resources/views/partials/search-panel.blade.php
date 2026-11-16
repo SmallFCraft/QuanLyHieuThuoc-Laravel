@@ -1,14 +1,14 @@
 {{--
-    Dữ liệu cho panel tìm kiếm, nhúng một lần mỗi trang.
+    Du lieu cho panel tim kiem, nhung mot lan moi trang.
 
-    <template> chứ không phải <div>: nội dung không được render ra layout — nó là
-    nguồn để resources/js/search-autocomplete.js clone vào panel khi khách focus vào
-    ô tìm kiếm. Không có JS thì <template> không hiện gì và ô tìm kiếm vẫn submit
-    bình thường.
+    <template> chu khong phai <div>: noi dung khong duoc render ra layout — no la
+    nguon de resources/js/search-autocomplete.js clone vao panel khi khach focus vao
+    o tim kiem. Khong co JS thi <template> khong hien gi va o tim kiem van submit
+    binh thuong.
 
-    Nhúng thay vì gọi thêm một endpoint: panel mở là hiện ngay không chờ mạng, không
-    thêm một bucket throttle, và mọi chữ do khách gõ (từ khoá xu hướng) đã được Blade
-    escape ở đây thay vì nối chuỗi trong JS.
+    Nhung thay vi goi them mot endpoint: panel mo la hien ngay khong cho mang, khong
+    them mot bucket throttle, va moi chu do khach go (tu khoa xu huong) da duoc Blade
+    escape o day thay vi noi chuoi trong JS.
 --}}
 <template id="search-panel-data">
     @if($searchTrending->isNotEmpty())
@@ -18,7 +18,7 @@
             </h3>
             <div class="search-panel-pills">
                 @foreach($searchTrending as $term)
-                    <a class="search-panel-pill" href="{{ route('products.search', ['q' => $term]) }}" data-search-term="{{ $term }}">{{ $term }}</a>
+                    <a class="search-panel-pill" href="{{ route('san-pham.tim-kiem', ['q' => $term]) }}" data-search-term="{{ $term }}">{{ $term }}</a>
                 @endforeach
             </div>
         </section>
@@ -31,7 +31,7 @@
             </h3>
             <div class="search-panel-pills">
                 @foreach($navCategories->take(4) as $category)
-                    <a class="search-panel-pill search-panel-pill--muted" href="{{ route('products.index', ['category' => $category->MaDM]) }}">{{ $category->name }}</a>
+                    <a class="search-panel-pill search-panel-pill--muted" href="{{ route('san-pham.index', ['category' => $category->ma_dm]) }}">{{ $category->ten }}</a>
                 @endforeach
             </div>
         </section>
@@ -42,17 +42,17 @@
             <h3 class="search-panel-heading">
                 <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>{{ __('messages.search_most_viewed') }}
             </h3>
-            @foreach($searchPanelProducts as $product)
-                {{-- suggestion-item: dùng lại class mà điều hướng bàn phím của panel
-                     đã bắt, nên mũi tên lên/xuống đi qua cả ba sản phẩm này. --}}
-                <a class="suggestion-item product-item" href="{{ route('products.show', $product->MaSP) }}">
+            @foreach($searchPanelProducts as $sanPham)
+                {{-- suggestion-item: dung lai class ma dieu huong ban phim cua panel
+                     da bat, nen mui ten len/xuong di qua ca ba san pham nay. --}}
+                <a class="suggestion-item product-item" href="{{ route('san-pham.show', $sanPham->ma_sp) }}">
                     <div class="product-image" data-product-image-container style="position: relative;">
-                        <x-product-image :src="$product->image_url" :alt="$product->name" icon-size="1.5rem" />
+                        <x-product-image :src="$sanPham->image_url" :alt="$sanPham->ten" icon-size="1.5rem" />
                     </div>
                     <div class="product-info">
-                        <div class="product-name">{{ $product->name }}</div>
+                        <div class="product-name">{{ $sanPham->ten }}</div>
                         <div class="product-meta">
-                            <span class="product-price">{{ $product->formatted_price }}</span>
+                            <span class="product-price">{{ $sanPham->formatted_price }}</span>
                         </div>
                     </div>
                 </a>

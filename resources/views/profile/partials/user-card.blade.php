@@ -1,4 +1,4 @@
-{{-- Thẻ người dùng: ảnh đại diện, danh tính, số liệu nhanh. --}}
+{{-- The nguoi dung: anh dai dien, danh tinh, so lieu nhanh. --}}
 <div class="profile-card text-center mb-3" data-profile-user-card>
     <div class="profile-avatar-editor mb-3">
         <x-user-avatar :user="$user" :size="96" ring class="profile-avatar--lg" />
@@ -12,16 +12,16 @@
         </button>
     </div>
 
-    <h2 class="h6 fw-bold text-gray-900 mb-1">{{ $user->name }}</h2>
+    <h2 class="h6 fw-bold text-gray-900 mb-1">{{ $user->ho_ten }}</h2>
     <p class="text-gray-500 small mb-2 text-break">{{ $user->email }}</p>
     <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-3 py-2">
-        <i class="bi bi-shield-check me-1" aria-hidden="true"></i>{{ role_text($user->role) }}
+        <i class="bi bi-shield-check me-1" aria-hidden="true"></i>{{ role_text($user->vai_tro) }}
     </span>
 
-    {{-- Form ẩn: input file nằm ngoài luồng tab, nút camera ở trên mở nó.
-         enctype bắt buộc, thiếu thì file không bao giờ tới server. --}}
+    {{-- Form an: input file nam ngoai luong tab, nut camera o tren mo no.
+         enctype bat buoc, thieu thi file khong bao gio toi server. --}}
     <form method="POST"
-          action="{{ route('profile.avatar.update') }}"
+          action="{{ route('ho-so.anh-dai-dien.update') }}"
           enctype="multipart/form-data"
           class="d-none"
           data-avatar-form>
@@ -43,8 +43,8 @@
         <p class="invalid-feedback d-block text-center mb-0">{{ $message }}</p>
     @enderror
 
-    @if($user->avatar)
-        <form method="POST" action="{{ route('profile.avatar.destroy') }}" class="mt-2" data-avatar-remove-form>
+    @if($user->anh_dai_dien)
+        <form method="POST" action="{{ route('ho-so.anh-dai-dien.destroy') }}" class="mt-2" data-avatar-remove-form>
             @csrf
             @method('delete')
             <button type="submit"

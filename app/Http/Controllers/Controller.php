@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Builder;
 abstract class Controller
 {
     /**
-     * Phân trang mà trang vượt quá trang cuối là 404, không phải một trang rỗng 200.
+     * Phân trang mà trang vượt qua trang cuối là 404, không phải một trang rỗng 200.
      *
-     * Không có chặn này thì mỗi giá trị page là một URL hợp lệ dài hàng trăm KB, và
+     * Không có chặn này thì mỗi giá trị page là một URL hợp lệ đài hàng trăm KB, và
      * crawler sinh URL mới vô hạn.
      *
-     * Chỉ nhận số nguyên dương, đúng bằng những gì link phân trang thật có thể sinh
-     * ra. Paginator ép -5, abc, 02, 2.5 và số tràn về trang 1 nên so sánh một mình
+     * Chỉ nhận số nguyên dương, dùng bằng những gì link phân trang thật có thể sinh
+     * ra. Paginator ép -5, abc, 02, 2.5 và số trần về trang 1 nên so sánh một mình
      * nó không bắt được: từng giá trị vẫn là một URL 200 mới, cùng nội dung trang 1.
      */
     protected function paginateOr404(Builder $query, int $perPage): LengthAwarePaginator

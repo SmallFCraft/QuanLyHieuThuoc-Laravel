@@ -44,7 +44,7 @@ class VietnameseTextNegationTest extends TestCase
     }
 
     #[DataProvider('deniedProvider')]
-    public function test_a_denied_symptom_is_not_a_mention(string $sentence, string $needle): void
+    public function test_trieu_chung_bi_phu_dinh_khong_tinh_la_noi_den(string $sentence, string $needle): void
     {
         $this->assertFalse($this->affirms($sentence, $needle), $sentence);
     }
@@ -71,12 +71,12 @@ class VietnameseTextNegationTest extends TestCase
     }
 
     #[DataProvider('affirmedProvider')]
-    public function test_a_real_mention_still_counts(string $sentence, string $needle): void
+    public function test_noi_den_thuc_van_duoc_dem(string $sentence, string $needle): void
     {
         $this->assertTrue($this->affirms($sentence, $needle), $sentence);
     }
 
-    public function test_throat_aliases_survive_the_negation_check(): void
+    public function test_biet_dui_hong_song_sot_qua_kiem_tra_phu_dinh(): void
     {
         // "họng" folds to "hong", which is also a negation particle in some dialects.
         // Treating it as one would silence every sore-throat alias.
@@ -84,13 +84,13 @@ class VietnameseTextNegationTest extends TestCase
         $this->assertTrue($this->affirms('viêm họng mấy ngày rồi', 'viem hong'));
     }
 
-    public function test_word_boundaries_are_still_respected(): void
+    public function test_ranh_gioi_tu_van_duoc_ton_trong(): void
     {
         $this->assertFalse($this->affirms('tôi bị sốt rét', 'so'));
         $this->assertTrue($this->affirms('tôi bị sốt rét', 'sot ret'));
     }
 
-    public function test_empty_input_is_never_a_mention(): void
+    public function test_dau_vao_rong_khong_bao_gio_la_noi_den(): void
     {
         $this->assertFalse($this->affirms('', 'sot'));
         $this->assertFalse($this->affirms('tôi bị sốt', ''));

@@ -1,5 +1,5 @@
 @php
-    $healthProfile = $user->healthProfile;
+    $healthProfile = $user->hoSoSucKhoe;
     $tagValue = fn (string $field) => old($field, $healthProfile?->{$field} ?? []);
     $hasConsent = (bool) $healthProfile?->hasConsented();
 
@@ -73,7 +73,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('profile.health.update') }}" id="healthProfileForm">
+    <form method="POST" action="{{ route('ho-so.suc-khoe.update') }}" id="healthProfileForm">
         @csrf
         @method('put')
 
@@ -268,7 +268,7 @@
                     <button type="button" class="btn btn-light rounded-pill px-4 hp-btn m-0" data-bs-dismiss="modal">
                         {{ __('messages.health_profile.delete_cancel') }}
                     </button>
-                    <form method="POST" action="{{ route('profile.health.destroy') }}" class="m-0">
+                    <form method="POST" action="{{ route('ho-so.suc-khoe.destroy') }}" class="m-0">
                         @csrf
                         @method('delete')
                         <button type="submit" class="btn btn-danger rounded-pill px-4 hp-btn w-100">
@@ -287,8 +287,8 @@
 .health-profile-card {
     --hp-focus-ring: 0 0 0 3px rgba(16, 185, 129, 0.35);
 }
-/* hp-input dùng chung kích thước với .profile-page .form-control để tab này không
-   lệch khỏi các tab còn lại. 16px giữ iOS Safari khỏi phóng viewport khi focus. */
+/* hp-input dung chung kich thuoc voi .profile-page .form-control de tab nay khong
+   lech khoi cac tab con lai. 16px giu iOS Safari khoi phong viewport khi focus. */
 .hp-input,
 .hp-tag-input {
     min-height: var(--profile-field-height, 46px);

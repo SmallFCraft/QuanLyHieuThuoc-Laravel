@@ -12,7 +12,7 @@
                 <div class="d-flex justify-content-between align-items-start gap-3">
                     <div>
                         <p class="stat-label">{{ __('messages.admin.dashboard.monthly_revenue') }}</p>
-                        <h2 class="stat-value">{{ number_format($monthlyRevenue, 0, ',', '.') }}₫</h2>
+                        <h2 class="stat-value">{{ number_format($doanhThuThang, 0, ',', '.') }}₫</h2>
                     </div>
                     <div class="stat-icon">
                         <i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
@@ -26,7 +26,7 @@
                 <div class="d-flex justify-content-between align-items-start gap-3">
                     <div>
                         <p class="stat-label">{{ __('messages.admin.dashboard.pending_orders') }}</p>
-                        <h2 class="stat-value">{{ $orderCounts['Pending'] ?? 0 }}</h2>
+                        <h2 class="stat-value">{{ $soDonTheoTrangThai['Pending'] ?? 0 }}</h2>
                     </div>
                     <div class="stat-icon" style="background:#fff7ed;color:#b45309;">
                         <i class="bi bi-clock-history" aria-hidden="true"></i>
@@ -40,7 +40,7 @@
                 <div class="d-flex justify-content-between align-items-start gap-3">
                     <div>
                         <p class="stat-label">{{ __('messages.admin.dashboard.expiring_soon') }}</p>
-                        <h2 class="stat-value">{{ $expiringProductsCount }}</h2>
+                        <h2 class="stat-value">{{ $soSanPhamSapHetHan }}</h2>
                     </div>
                     <div class="stat-icon" style="background:#fef2f2;color:#b91c1c;">
                         <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
@@ -54,7 +54,7 @@
                 <div class="d-flex justify-content-between align-items-start gap-3">
                     <div>
                         <p class="stat-label">{{ __('messages.admin.dashboard.low_stock') }}</p>
-                        <h2 class="stat-value">{{ $lowStockCount }}</h2>
+                        <h2 class="stat-value">{{ $soSanPhamSapHet }}</h2>
                     </div>
                     <div class="stat-icon" style="background:#eff6ff;color:#1d4ed8;">
                         <i class="bi bi-box-seam" aria-hidden="true"></i>
@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
 
-    fetch('{{ route("admin.dashboard.revenue") }}')
+    fetch('{{ route("admin.bang-dieu-khien.doanh-thu") }}')
         .then(response => {
             if (!response.ok) throw new Error('Revenue chart request failed');
             return response.json();
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(() => showError('revenue', 'Không thể tải dữ liệu doanh thu.'));
 
-    fetch('{{ route("admin.dashboard.orderStatus") }}')
+    fetch('{{ route("admin.bang-dieu-khien.trang-thai-don") }}')
         .then(response => {
             if (!response.ok) throw new Error('Order status chart request failed');
             return response.json();
@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(() => showError('orderStatus', 'Không thể tải phân bố đơn hàng.'));
 
-    fetch('{{ route("admin.dashboard.topProducts") }}')
+    fetch('{{ route("admin.bang-dieu-khien.san-pham-ban-chay") }}')
         .then(response => {
             if (!response.ok) throw new Error('Top products chart request failed');
             return response.json();

@@ -4,7 +4,7 @@
  * The crawled catalog carries 51 categories, so both lists scroll inside a fixed
  * frame and a text box narrows them down. Matching runs on a folded copy of each
  * name rendered into data-folded by VietnameseText::fold(), the same helper the
- * product search uses — so "duoc my pham" finds "Dược mỹ phẩm" here too.
+ * product search uses — so "duoc my pham" finds "Duoc my pham" here too.
  *
  * Progressive enhancement: both lists are complete and usable in HTML, and the
  * mobile catalog panel opens and closes through <details> without any of this.
@@ -14,7 +14,7 @@ const FOLD_STRIPS = /[̀-ͯ]/g;
 /**
  * Folds typed input the way VietnameseText::fold() folds the haystack.
  *
- * The two agree on Vietnamese but not beyond it: PHP runs Str::ascii(), so "Ðông y"
+ * The two agree on Vietnamese but not beyond it: PHP runs Str::ascii(), so "Ðong y"
  * (U+00D0, not the Vietnamese U+0110) folds to "dong y" server-side and "ong y" here,
  * and "Vitamin B₁₂" to "vitamin b12" there but "vitamin b" here.
  *

@@ -211,8 +211,8 @@
         }
     }
 
-    /* 992-1199px: col-lg-3 chỉ còn 192px, padding 1.5rem của .p-4 ăn 48px nên ô
-       lọc còn 120px và placeholder bị cắt. */
+    /* 992-1199px: col-lg-3 chi con 192px, padding 1.5rem cua .p-4 an 48px nen o
+       loc con 120px va placeholder bi cat. */
     @media (min-width: 992px) and (max-width: 1199.98px) {
         .catalog-sidebar-card {
             padding: 0.85rem !important;
@@ -320,13 +320,13 @@
                 <h1 class="fw-bold text-gray-900 mb-1">{{ __('messages.products') }}</h1>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0 small">
-                        <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-emerald-600 text-decoration-none">{{ __('messages.home') }}</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('trang-chu') }}" class="text-emerald-600 text-decoration-none">{{ __('messages.home') }}</a></li>
                         <li class="breadcrumb-item active" aria-current="page">{{ __('messages.products') }}</li>
                     </ol>
                 </nav>
             </div>
             <div class="catalog-hero-metrics order-md-2">
-                <span><i class="bi bi-capsule-pill"></i> <span data-catalog-total>{{ $products->total() }}</span> {{ mb_strtolower(__('messages.products')) }}</span>
+                <span><i class="bi bi-capsule-pill"></i> <span data-catalog-total>{{ $sanPhams->total() }}</span> {{ mb_strtolower(__('messages.products')) }}</span>
                 <span><i class="bi bi-shield-check"></i> Chính hãng</span>
                 <span><i class="bi bi-lightning-charge"></i> Lọc nhanh</span>
             </div>
@@ -338,11 +338,11 @@
     <div class="container">
         @php
             $activeCategoryId = request('category');
-            $activeCategoryRoute = request()->route('MaDM');
+            $activeCategoryRoute = request()->route('ma_dm');
 
             if ($activeCategoryId === null && $activeCategoryRoute !== null) {
                 $activeCategoryId = is_object($activeCategoryRoute)
-                    ? ($activeCategoryRoute->MaDM ?? null)
+                    ? ($activeCategoryRoute->ma_dm ?? null)
                     : $activeCategoryRoute;
             }
         @endphp
@@ -350,20 +350,20 @@
             <!-- Sidebar Filters -->
             <div class="col-lg-3">
                 @php
-                    $activeCategory = $categories->firstWhere(
-                        fn ($cat) => $activeCategoryId !== null && (string) $activeCategoryId === (string) $cat->MaDM
+                    $activeCategory = $danhMucs->firstWhere(
+                        fn ($danhMucLoc) => $activeCategoryId !== null && (string) $activeCategoryId === (string) $danhMucLoc->ma_dm
                     );
-                    $maxCategoryCount = max(1, (int) $categories->max('products_count'));
-                    // Summed from the counts already loaded, not $products->total(): that
+                    $soSanPhamLonNhat = max(1, (int) $danhMucs->max('so_san_pham'));
+                    // Summed from the counts already loaded, not $sanPhams->total(): that
                     // one reflects the active filter, so the "all" row read 226 while
                     // sitting next to the category that holds those same 226.
-                    $catalogTotal = (int) $categories->sum('products_count');
+                    $tongSoSanPham = (int) $danhMucs->sum('so_san_pham');
                 @endphp
                 <details class="glass-card catalog-sidebar-card catalog-filter rounded-4 p-4 border-0 mb-4 position-sticky" data-catalog-filter>
                     <summary class="catalog-filter__toggle">
                         <i class="bi bi-funnel text-emerald-600" aria-hidden="true"></i>
                         <span>{{ __('messages.categories') }}</span>
-                        <span class="catalog-filter__toggle-current">{{ $activeCategory->name ?? __('messages.all') }}</span>
+                        <span class="catalog-filter__toggle-current">{{ $activeCategory->ten ?? __('messages.all') }}</span>
                         <i class="bi bi-chevron-down catalog-filter__toggle-chevron" aria-hidden="true"></i>
                     </summary>
 
@@ -372,7 +372,7 @@
                             <h2 class="catalog-filter__title">
                                 <i class="bi bi-funnel text-emerald-600" aria-hidden="true"></i>{{ __('messages.categories') }}
                             </h2>
-                            <span class="catalog-filter__total">{{ $categories->count() }}</span>
+                            <span class="catalog-filter__total">{{ $danhMucs->count() }}</span>
                         </div>
 
                         <div class="catalog-filter__search">
@@ -384,24 +384,24 @@
                         </div>
 
                         <div class="catalog-filter-list" data-catalog-filter-list>
-                            <a href="{{ route('products.index') }}"
+                            <a href="{{ route('san-pham.index') }}"
                                class="catalog-filter-link is-all {{ $activeCategoryId === null ? 'is-active' : '' }}"
                                @if($activeCategoryId === null) aria-current="page" @endif>
                                 <span class="catalog-filter-label">{{ __('messages.all') }}</span>
-                                <span class="catalog-filter-count">{{ $catalogTotal }}</span>
+                                <span class="catalog-filter-count">{{ $tongSoSanPham }}</span>
                             </a>
-                            @foreach($categories as $cat)
+                            @foreach($danhMucs as $danhMucLoc)
                                 @php
-                                    $isActiveCategory = $activeCategoryId !== null && (string) $activeCategoryId === (string) $cat->MaDM;
-                                    $depth = round($cat->products_count / $maxCategoryCount * 100);
+                                    $isActiveCategory = $activeCategoryId !== null && (string) $activeCategoryId === (string) $danhMucLoc->ma_dm;
+                                    $depth = round($danhMucLoc->so_san_pham / $soSanPhamLonNhat * 100);
                                 @endphp
-                                <a href="{{ route('products.index', ['category' => $cat->MaDM]) }}"
+                                <a href="{{ route('san-pham.index', ['category' => $danhMucLoc->ma_dm]) }}"
                                    class="catalog-filter-link {{ $isActiveCategory ? 'is-active' : '' }}"
                                    style="--depth: {{ $depth }}%"
-                                   data-folded="{{ \App\Support\VietnameseText::fold($cat->name) }}"
+                                   data-folded="{{ \App\Support\VietnameseText::fold($danhMucLoc->ten) }}"
                                    @if($isActiveCategory) aria-current="page" @endif>
-                                    <span class="catalog-filter-label">{{ $cat->name }}@if($loop->index < 3)<i class="bi bi-fire category-flame" aria-hidden="true"></i>@endif</span>
-                                    <span class="catalog-filter-count">{{ $cat->products_count }}</span>
+                                    <span class="catalog-filter-label">{{ $danhMucLoc->ten }}@if($loop->index < 3)<i class="bi bi-fire category-flame" aria-hidden="true"></i>@endif</span>
+                                    <span class="catalog-filter-count">{{ $danhMucLoc->so_san_pham }}</span>
                                 </a>
                             @endforeach
                             <p class="catalog-filter__empty" data-catalog-filter-empty>{{ __('messages.no_category_match') }}</p>
@@ -412,8 +412,8 @@
 
             <!-- Products Grid -->
             <div class="col-lg-9">
-                {{-- data-catalog-results: catalog-async.js thay đúng khối này khi người
-                     dùng chọn danh mục hoặc đổi trang, nên vị trí cuộn không đổi. --}}
+                {{-- data-catalog-results: catalog-async.js thay dung khoi nay khi nguoi
+                     dung chon danh muc hoac doi trang, nen vi tri cuon khong doi. --}}
                 <div data-catalog-results aria-live="polite">
                     @include('products.partials.results')
                 </div>

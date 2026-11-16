@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class ConfirmablePasswordController extends Controller
 {
     /**
-     * Show the confirm password view.
+     * Hiển thị view xác nhận mật khẩu.
      */
     public function show(): View
     {
@@ -20,7 +20,7 @@ class ConfirmablePasswordController extends Controller
     }
 
     /**
-     * Confirm the user's password.
+     * Xác nhận mật khẩu của người dùng.
      */
     public function store(Request $request): RedirectResponse
     {
@@ -35,6 +35,6 @@ class ConfirmablePasswordController extends Controller
 
         $request->session()->put('auth.password_confirmed_at', time());
 
-        return redirect()->intended(route('home', absolute: false));
+        return redirect()->intended(route('trang-chu', absolute: false));
     }
 }

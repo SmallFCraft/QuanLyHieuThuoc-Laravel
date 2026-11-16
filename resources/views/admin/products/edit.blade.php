@@ -2,7 +2,7 @@
 
 @section('title', 'Chỉnh Sửa Sản Phẩm')
 @section('page-title', 'Chỉnh Sửa Sản Phẩm')
-@section('page-subtitle', $product->name)
+@section('page-subtitle', $sanPham->ten)
 
 @section('content')
 <div class="container-fluid">
@@ -11,13 +11,13 @@
             <!-- Breadcrumb -->
             <nav aria-label="breadcrumb" class="mb-4">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('admin.products.index') }}">Sản Phẩm</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.bang-dieu-khien') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.san-pham.index') }}">Sản Phẩm</a></li>
                     <li class="breadcrumb-item active">Chỉnh Sửa</li>
                 </ol>
             </nav>
 
-            <form action="{{ route('admin.products.update', $product->MaSP) }}" method="POST" enctype="multipart/form-data" id="editProductForm">
+            <form action="{{ route('admin.san-pham.update', $sanPham->ma_sp) }}" method="POST" enctype="multipart/form-data" id="editProductForm">
                 @csrf
                 @method('PUT')
 
@@ -31,7 +31,7 @@
                             <div class="mb-3">
                                 <label for="name" class="form-label fw-medium">Tên Sản Phẩm <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control @error('name') is-invalid @enderror"
-                                    id="name" name="name" value="{{ old('name', $product->name) }}"
+                                    id="name" name="name" value="{{ old('name', $sanPham->ten) }}"
                                     placeholder="Nhập tên thuốc / sản phẩm..." required>
                                 @error('name')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -41,17 +41,17 @@
                             <!-- Category -->
                             <div class="mb-3">
                                 <label for="MaDM" class="form-label fw-medium">Danh Mục <span class="text-danger">*</span></label>
-                                <select class="form-select select2-basic @error('MaDM') is-invalid @enderror"
+                                <select class="form-select select2-basic @error('ma_dm') is-invalid @enderror"
                                     id="MaDM" name="MaDM" required>
                                     <option value="">-- Chọn danh mục --</option>
-                                    @foreach($categories as $category)
-                                        <option value="{{ $category->MaDM }}"
-                                            {{ old('MaDM', $product->MaDM) == $category->MaDM ? 'selected' : '' }}>
-                                            {{ $category->name }}
+                                    @foreach($danhMucs as $category)
+                                        <option value="{{ $category->ma_dm }}"
+                                            {{ old('ma_dm', $sanPham->ma_dm) == $category->ma_dm ? 'selected' : '' }}>
+                                            {{ $category->ten }}
                                         </option>
                                     @endforeach
                                 </select>
-                                @error('MaDM')
+                                @error('ma_dm')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -63,7 +63,7 @@
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-currency-exchange"></i></span>
                                         <input type="number" class="form-control @error('price') is-invalid @enderror"
-                                            id="price" name="price" value="{{ old('price', $product->price_vnd) }}"
+                                            id="price" name="price" value="{{ old('price', $sanPham->price_vnd) }}"
                                             placeholder="0" min="0" step="1" required>
                                         @error('price')
                                             <div class="invalid-feedback">{{ $message }}</div>
@@ -76,7 +76,7 @@
                                         <span class="input-group-text"><i class="bi bi-boxes"></i></span>
                                         <input type="number" class="form-control @error('stock_quantity') is-invalid @enderror"
                                             id="stock_quantity" name="stock_quantity"
-                                            value="{{ old('stock_quantity', $product->stock_quantity) }}"
+                                            value="{{ old('stock_quantity', $sanPham->so_luong_ton) }}"
                                             min="0" required>
                                         @error('stock_quantity')
                                             <div class="invalid-feedback">{{ $message }}</div>
@@ -91,7 +91,7 @@
                                     <label for="batch_number" class="form-label fw-medium">Số Lô <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control @error('batch_number') is-invalid @enderror"
                                         id="batch_number" name="batch_number"
-                                        value="{{ old('batch_number', $product->batch_number) }}"
+                                        value="{{ old('batch_number', $sanPham->so_lo) }}"
                                         placeholder="VD: LOT-2024-001" required>
                                     @error('batch_number')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -101,7 +101,7 @@
                                     <label for="reorder_point" class="form-label fw-medium">Ngưỡng Cảnh Báo Tồn Kho</label>
                                     <input type="number" class="form-control @error('reorder_point') is-invalid @enderror"
                                         id="reorder_point" name="reorder_point"
-                                        value="{{ old('reorder_point', $product->reorder_point) }}"
+                                        value="{{ old('reorder_point', $sanPham->muc_canh_bao) }}"
                                         min="0">
                                     @error('reorder_point')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -114,7 +114,7 @@
                                 <label for="expiration_date" class="form-label fw-medium">Hạn Sử Dụng <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control @error('expiration_date') is-invalid @enderror"
                                     id="expiration_date" name="expiration_date"
-                                    value="{{ old('expiration_date', $product->expiration_date->format('Y-m-d')) }}" required>
+                                    value="{{ old('expiration_date', $sanPham->ngay_het_han->format('Y-m-d')) }}" required>
                                 @error('expiration_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -129,7 +129,7 @@
                                 <label for="ingredients" class="form-label fw-medium">Thành Phần</label>
                                 <textarea class="form-control summernote @error('ingredients') is-invalid @enderror"
                                     id="ingredients" name="ingredients" rows="4"
-                                    placeholder="Liệt kê các thành phần chính của sản phẩm...">{{ old('ingredients', $product->ingredients) }}</textarea>
+                                    placeholder="Liệt kê các thành phần chính của sản phẩm...">{{ old('ingredients', $sanPham->thanh_phan) }}</textarea>
                                 @error('ingredients')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -139,7 +139,7 @@
                                 <label for="usage" class="form-label fw-medium">Hướng Dẫn Sử Dụng</label>
                                 <textarea class="form-control summernote @error('usage') is-invalid @enderror"
                                     id="usage" name="usage" rows="4"
-                                    placeholder="Hướng dẫn liều dùng, cách sử dụng...">{{ old('usage', $product->usage) }}</textarea>
+                                    placeholder="Hướng dẫn liều dùng, cách sử dụng...">{{ old('usage', $sanPham->cach_dung) }}</textarea>
                                 @error('usage')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -154,16 +154,16 @@
                             <h6 class="fw-bold mb-4" style="color: #064e3b;"><i class="bi bi-image me-2"></i>Hình Ảnh Sản Phẩm</h6>
 
                             <div class="text-center mb-3">
-                                <div id="imagePreviewContainer" class="mb-3" style="{{ $product->image_url ? '' : 'display: none;' }}">
+                                <div id="imagePreviewContainer" class="mb-3" style="{{ $sanPham->image_url ? '' : 'display: none;' }}">
                                     <img id="imagePreview"
-                                        src="{{ $product->image_url ?? '#' }}"
+                                        src="{{ $sanPham->image_url ?? '#' }}"
                                         alt="Preview"
                                         class="img-fluid rounded-3"
                                         style="max-height: 200px; object-fit: cover; width: 100%;"
                                         onerror="this.parentElement.style.display='none'; const placeholder = document.getElementById('imagePlaceholder'); placeholder.style.display='flex'; document.getElementById('imagePlaceholderIcon').className='bi bi-capsule fs-2 d-block mb-2 text-gray-300'; document.getElementById('imagePlaceholderText').textContent='Ảnh hiện tại không khả dụng. Nhấn để chọn ảnh mới';">
                                 </div>
                                 <div id="imagePlaceholder" class="border rounded-3 d-flex align-items-center justify-content-center"
-                                    style="height: 160px; background: #f8fafc; border-style: dashed !important; cursor: pointer; transition: 0.3s; {{ $product->image_url ? 'display: none;' : '' }}"
+                                    style="height: 160px; background: #f8fafc; border-style: dashed !important; cursor: pointer; transition: 0.3s; {{ $sanPham->image_url ? 'display: none;' : '' }}"
                                     onclick="document.getElementById('image').click()"
                                     ondragover="event.preventDefault(); this.style.backgroundColor='#d1fae5';"
                                     ondragleave="event.preventDefault(); this.style.backgroundColor='#f8fafc';"
@@ -175,7 +175,7 @@
                                 </div>
                             </div>
 
-                            @if($product->image_url)
+                            @if($sanPham->image_url)
                                 <div class="mb-2">
                                     <small class="text-muted"><i class="bi bi-check-circle text-success me-1"></i>Đã có ảnh. Chọn ảnh mới để thay thế.</small>
                                 </div>
@@ -196,15 +196,15 @@
                             <div class="small text-muted">
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Mã sản phẩm:</span>
-                                    <span class="fw-medium text-dark">{{ $product->display_code }}</span>
+                                    <span class="fw-medium text-dark">{{ $sanPham->display_code }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Ngày tạo:</span>
-                                    <span class="fw-medium text-dark">{{ $product->created_at->format('d/m/Y') }}</span>
+                                    <span class="fw-medium text-dark">{{ $sanPham->created_at->format('d/m/Y') }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between">
                                     <span>Cập nhật lần cuối:</span>
-                                    <span class="fw-medium text-dark">{{ $product->updated_at->format('d/m/Y') }}</span>
+                                    <span class="fw-medium text-dark">{{ $sanPham->updated_at->format('d/m/Y') }}</span>
                                 </div>
                             </div>
                         </div>
@@ -216,11 +216,11 @@
                                 <button type="submit" class="btn btn-primary btn-lg">
                                     <i class="bi bi-save me-2"></i>Lưu Thay Đổi
                                 </button>
-                                <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary">
+                                <a href="{{ route('admin.san-pham.index') }}" class="btn btn-outline-secondary">
                                     <i class="bi bi-arrow-left me-2"></i>Quay Lại
                                 </a>
                                 <hr class="my-1">
-                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete({{ $product->MaSP }})">
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete({{ $sanPham->ma_sp }})">
                                     <i class="bi bi-trash me-2"></i>Xóa Sản Phẩm Này
                                 </button>
                             </div>
@@ -230,7 +230,7 @@
             </form>
 
             <!-- Hidden Delete Form -->
-            <form id="deleteForm" action="{{ route('admin.products.destroy', $product->MaSP) }}" method="POST" style="display: none;">
+            <form id="deleteForm" action="{{ route('admin.san-pham.destroy', $sanPham->ma_sp) }}" method="POST" style="display: none;">
                 @csrf
                 @method('DELETE')
             </form>
@@ -278,7 +278,7 @@
                             text: response.message,
                             icon: 'success',
                         }).then(() => {
-                            window.location.href = '{{ route('admin.products.index') }}';
+                            window.location.href = '{{ route('admin.san-pham.index') }}';
                         });
                     },
                     error: function() {

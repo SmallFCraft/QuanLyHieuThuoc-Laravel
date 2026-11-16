@@ -9,23 +9,23 @@
             $appName = config('app.name', 'Nhà Thuốc Sinh Thái');
             $defaultDescription = __('messages.slogan');
 
-            if (request()->routeIs('products.show') && isset($product)) {
-                $defaultDescription = $product->name;
+            if (request()->routeIs('san-pham.show') && isset($sanPham)) {
+                $defaultDescription = $sanPham->ten;
 
-                if (!empty($product->ingredients)) {
-                    $defaultDescription .= '. Thành phần: ' . $product->ingredients;
-                } elseif (!empty($product->usage)) {
-                    $defaultDescription .= '. Công dụng: ' . $product->usage;
+                if (!empty($sanPham->thanh_phan)) {
+                    $defaultDescription .= '. Thành phần: ' . $sanPham->thanh_phan;
+                } elseif (!empty($sanPham->cach_dung)) {
+                    $defaultDescription .= '. Công dụng: ' . $sanPham->cach_dung;
                 }
 
                 $defaultDescription .= '. Mua tại ' . $appName . '.';
-            } elseif (request()->routeIs('products.search') && !empty($searchTerm)) {
+            } elseif (request()->routeIs('san-pham.tim-kiem') && !empty($searchTerm)) {
                 $defaultDescription = 'Kết quả tìm kiếm cho "' . $searchTerm . '" tại ' . $appName . '. Khám phá dược phẩm và sản phẩm chăm sóc sức khỏe chính hãng.';
-            } elseif (request()->routeIs('products.category') && isset($category)) {
-                $defaultDescription = 'Khám phá danh mục ' . $category->name . ' tại ' . $appName . ' với các sản phẩm chính hãng, thông tin rõ ràng và hỗ trợ tư vấn tận tâm.';
-            } elseif (request()->routeIs('products.index')) {
+            } elseif (request()->routeIs('san-pham.danh-muc') && isset($category)) {
+                $defaultDescription = 'Khám phá danh mục ' . $category->ten . ' tại ' . $appName . ' với các sản phẩm chính hãng, thông tin rõ ràng và hỗ trợ tư vấn tận tâm.';
+            } elseif (request()->routeIs('san-pham.index')) {
                 $defaultDescription = 'Khám phá danh mục thuốc, dược phẩm và sản phẩm chăm sóc sức khỏe tại ' . $appName . '. Nguồn gốc minh bạch, hỗ trợ tư vấn nhanh chóng.';
-            } elseif (request()->routeIs('contact')) {
+            } elseif (request()->routeIs('lien-he')) {
                 $defaultDescription = 'Liên hệ ' . $appName . ' để được hỗ trợ về sản phẩm, đơn hàng và tư vấn chăm sóc sức khỏe.';
             }
 
@@ -40,8 +40,8 @@
             $defaultMetaImage = asset('images/logo.png');
             $metaImage = trim($__env->yieldContent(
                 'meta_image',
-                request()->routeIs('products.show') && isset($product) && !empty($product->image_url)
-                    ? $product->image_url
+                request()->routeIs('san-pham.show') && isset($sanPham) && !empty($sanPham->image_url)
+                    ? $sanPham->image_url
                     : $defaultMetaImage
             ));
 
@@ -54,7 +54,7 @@
 
             $metaType = trim($__env->yieldContent(
                 'meta_type',
-                request()->routeIs('products.show') ? 'product' : 'website'
+                request()->routeIs('san-pham.show') ? 'product' : 'website'
             ));
 
             $defaultRobots = request()->routeIs([
@@ -69,12 +69,12 @@
                 'products.search',
             ]) ? 'noindex, nofollow' : 'index, follow';
 
-            // Trang 2 trở đi của một danh sách chỉ là lát cắt của cùng một tài liệu.
-            // noindex để công cụ không thu thập lại, nhưng vẫn follow để crawler đi
-            // ngược về trang gốc — không dùng nofollow vì sẽ cắt luôn đường tới sản phẩm.
-            // Chỉ chỉnh mặc định: yieldContent('meta_robots') của view vẫn thắng.
-            // filter_var, không phải (int): paginator nhận "2" nhưng từ chối "2.5",
-            // "02", "1e1", còn (int) ép cả nhóm đó sang 2 — trang 1 mà bị noindex.
+            // Trang 2 tro di cua mot danh sach chi la lat cat cua cung mot tai lieu.
+            // noindex de cong cu khong thu thap lai, nhung van follow de crawler di
+            // nguoc ve trang goc — khong dung nofollow vi se cat luon duong toi san pham.
+            // Chi chinh mac dinh: yieldContent('meta_robots') cua view van thang.
+            // filter_var, khong phai (int): paginator nhan "2" nhung tu choi "2.5",
+            // "02", "1e1", con (int) ep ca nhom do sang 2 — trang 1 ma bi noindex.
             $pageParam = request()->query('page');
             if ($defaultRobots === 'index, follow'
                 && is_string($pageParam)
@@ -84,8 +84,8 @@
             }
 
             $metaRobots = trim($__env->yieldContent('meta_robots', $defaultRobots));
-            // `q` cũng gập về: mỗi chuỗi tìm trên /products là một URL indexable mới.
-            // Trang kết quả thật nằm ở /search, nơi đã noindex; /products?q= chỉ là bản sao.
+            // `q` cung gap ve: moi chuoi tim tren /products la mot URL indexable moi.
+            // Trang ket qua that nam o /search, noi da noindex; /products?q= chi la ban sao.
             $metaCanonical = trim($__env->yieldContent(
                 'meta_canonical',
                 request()->fullUrlWithoutQuery(['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'page', 'q'])
@@ -93,8 +93,8 @@
             $metaLocale = app()->getLocale() === 'vi' ? 'vi_VN' : app()->getLocale();
             $metaImageAlt = trim($__env->yieldContent(
                 'meta_image_alt',
-                request()->routeIs('products.show') && isset($product)
-                    ? $product->name . ' - ' . $appName
+                request()->routeIs('san-pham.show') && isset($sanPham)
+                    ? $sanPham->ten . ' - ' . $appName
                     : $appName . ' logo'
             ));
 
@@ -126,27 +126,27 @@
                 '@context' => 'https://schema.org',
                 '@type' => 'WebSite',
                 'name' => $appName,
-                'url' => route('home'),
+                'url' => route('trang-chu'),
                 'inLanguage' => app()->getLocale(),
                 'potentialAction' => [
                     '@type' => 'SearchAction',
-                    'target' => route('products.search') . '?q={search_term_string}',
+                    'target' => route('san-pham.tim-kiem') . '?q={search_term_string}',
                     'query-input' => 'required name=search_term_string',
                 ],
             ];
 
             $productSchema = null;
-            if (request()->routeIs('products.show') && isset($product)) {
+            if (request()->routeIs('san-pham.show') && isset($sanPham)) {
                 $productSchema = [
                     '@context' => 'https://schema.org',
                     '@type' => 'Product',
-                    'name' => $product->name,
+                    'name' => $sanPham->ten,
                     'description' => $metaDescription,
                     'image' => [$metaImage],
                     // product_code, not batch_number: the batch is an internal
                     // inventory record and search engines index this markup.
-                    'sku' => $product->product_code ?: (string) $product->MaSP,
-                    'category' => $product->category->name ?? null,
+                    'sku' => $sanPham->ma_san_pham ?: (string) $sanPham->ma_sp,
+                    'category' => $sanPham->danhMuc->ten ?? null,
                     'brand' => [
                         '@type' => 'Brand',
                         'name' => $appName,
@@ -154,8 +154,8 @@
                     'offers' => [
                         '@type' => 'Offer',
                         'priceCurrency' => 'VND',
-                        'price' => $product->price_vnd,
-                        'availability' => $product->stock_quantity > 0
+                        'price' => $sanPham->price_vnd,
+                        'availability' => $sanPham->so_luong_ton > 0
                             ? 'https://schema.org/InStock'
                             : 'https://schema.org/OutOfStock',
                         'url' => request()->url(),
@@ -235,11 +235,11 @@
 
         window.PharmacyFavorites = {
                 authenticated: @json(auth()->check()),
-                idsUrl: @json(route('favorites.ids')),
-                sectionUrl: @json(route('favorites.section')),
-                syncUrl: @json(route('favorites.sync')),
-                toggleUrlTemplate: @json(route('favorites.toggle', ['product' => '__PRODUCT_ID__'])),
-                destroyUrlTemplate: @json(route('favorites.destroy', ['product' => '__PRODUCT_ID__'])),
+                idsUrl: @json(route('yeu-thich.ids')),
+                sectionUrl: @json(route('yeu-thich.section')),
+                syncUrl: @json(route('yeu-thich.sync')),
+                toggleUrlTemplate: @json(route('yeu-thich.toggle', ['product' => '__PRODUCT_ID__'])),
+                destroyUrlTemplate: @json(route('yeu-thich.destroy', ['product' => '__PRODUCT_ID__'])),
                 loginUrl: @json(route('login')),
             };
 
@@ -535,9 +535,9 @@
             .navbar-collapse.collapse.show { visibility: visible !important; display: block; }
             .navbar-collapse.collapsing { visibility: visible !important; }
 
-            /* Ô tìm kiếm duy nhất của app, nằm giữa logo và burger ở mọi khổ. Không giới
-               hạn trên: dưới lg nó lấy hết chỗ còn lại, trên lg dừng ở 500px để nav link
-               còn chỗ. */
+            /* O tim kiem duy nhat cua app, nam giua logo va burger o moi kho. Khong gioi
+               han tren: duoi lg no lay het cho con lai, tren lg dung o 500px de nav link
+               con cho. */
             .header-search { min-width: 0; }
             .header-search input {
                 height: 42px;
@@ -549,8 +549,8 @@
                 box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
             }
 
-            /* Thanh header. Trước đây là inline style; chuyển ra class vì inline thắng
-               stylesheet, nên không thể override theo trạng thái cuộn. */
+            /* Thanh header. Truoc day la inline style; chuyen ra class vi inline thang
+               stylesheet, nen khong the override theo trang thai cuon. */
             .site-header {
                 background: rgba(255, 255, 255, 0.95);
                 backdrop-filter: blur(16px);
@@ -563,12 +563,12 @@
                             padding-bottom 0.26s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
-            /* Cuộn quá 64px thì thanh nổi rõ hơn khỏi nội dung phía sau.
-               resources/js/header-scroll.js đặt data-header-scrolled trên <html>; ở đây
-               chỉ có CSS, không JS nào chạy theo từng frame cuộn.
+            /* Cuon qua 64px thi thanh noi ro hon khoi noi dung phia sau.
+               resources/js/header-scroll.js dat data-header-scrolled tren <html>; o day
+               chi co CSS, khong JS nao chay theo tung frame cuon.
 
-               Hai khai báo này chỉ paint, không layout, nên áp cho mọi khổ. Phần nhường
-               chỗ ngang thì chỉ dưới lg — xem khối media dưới. */
+               Hai khai bao nay chi paint, khong layout, nen ap cho moi kho. Phan nhuong
+               cho ngang thi chi duoi lg — xem khoi media duoi. */
             :root[data-header-scrolled] .site-header {
                 background: rgba(255, 255, 255, 0.98);
                 backdrop-filter: blur(22px);
@@ -577,7 +577,7 @@
             }
 
             @media (prefers-reduced-motion: reduce) {
-                /* Trạng thái vẫn đổi, chỉ bỏ phần chuyển động. */
+                /* Trang thai van doi, chi bo phan chuyen dong. */
                 .site-header,
                 .navbar-brand,
                 .header-search,
@@ -592,28 +592,28 @@
                 .navbar-brand { font-size: 1.1rem; }
                 .navbar-brand img { height: 36px !important; }
 
-                /* Cuộn quá 64px: logo nhường hết chỗ ngang cho ô tìm kiếm và thanh gọn
-                   lại. Chỉ dưới lg — trên desktop ô đã dừng ở 500px và còn nav link bên
-                   phải, nên bỏ logo ở đó là mất thương hiệu mà không đổi được gì.
+                /* Cuon qua 64px: logo nhuong het cho ngang cho o tim kiem va thanh gon
+                   lai. Chi duoi lg — tren desktop o da dung o 500px va con nav link ben
+                   phai, nen bo logo o do la mat thuong hieu ma khong doi duoc gi.
 
-                   Nav là position: fixed nên đổi padding của nó không đẩy nội dung
-                   trang: main giữ nguyên padding-top: 86px. Reflow gói trong ba phần tử
-                   của thanh, một lần mỗi lần vượt ngưỡng — không phải mỗi frame cuộn. */
-                /* transition KHÔNG khai lại ở đây: khối reduced-motion ở trên cùng
-                   specificity nhưng đứng trước trong source order, nên khai lại là ghi
-                   đè nó — đo 2026-09-02 ở 375px, prefers-reduced-motion vẫn thấy
-                   padding-top trong transition-property. Chuyển động thật thì đã bị
-                   quy tắc `*` toàn cục trong storefront.css:2140 ép về 0.01ms, nên đây
-                   là dọn một khai báo tự mâu thuẫn, không phải sửa một lỗi thấy được.
-                   Khai báo gốc ở trên đã phủ khổ này. */
+                   Nav la position: fixed nen doi padding cua no khong day noi dung
+                   trang: main giu nguyen padding-top: 86px. Reflow goi trong ba phan tu
+                   cua thanh, mot lan moi lan vuot nguong — khong phai moi frame cuon. */
+                /* transition KHONG khai lai o day: khoi reduced-motion o tren cung
+                   specificity nhung dung truoc trong source order, nen khai lai la ghi
+                   de no — do 2026-09-02 o 375px, prefers-reduced-motion van thay
+                   padding-top trong transition-property. Chuyen dong that thi da bi
+                   quy tac `*` toan cuc trong storefront.css:2140 ep ve 0.01ms, nen day
+                   la don mot khai bao tu mau thuan, khong phai sua mot loi thay duoc.
+                   Khai bao goc o tren da phu kho nay. */
                 :root[data-header-scrolled] .site-header {
                     padding-top: 0.35rem;
                     padding-bottom: 0.35rem;
                 }
 
-                /* max-width, không phải display: none — 0 là trạng thái animate được,
-                   còn display thì nhảy. visibility: hidden để logo rời tab order và a11y
-                   tree, chứ không thành một link vô hình vẫn bấm được. */
+                /* max-width, khong phai display: none — 0 la trang thai animate duoc,
+                   con display thi nhay. visibility: hidden de logo roi tab order va a11y
+                   tree, chu khong thanh mot link vo hinh van bam duoc. */
                 .navbar-brand {
                     max-width: 120px;
                     transition: max-width 0.26s cubic-bezier(0.4, 0, 0.2, 1),
@@ -789,41 +789,41 @@
         @stack('styles')
     </head>
     <body class="bg-gray-50 text-gray-800">
-        {{-- Mốc đo cho resources/js/header-scroll.js: khi khối này trôi hết lên trên
-             viewport thì scrollY đã vượt 64px và header chuyển sang trạng thái gọn.
-             absolute + aria-hidden nên nó không chiếm chỗ và không có gì để đọc.
-             Cao 64px chứ không phải 1px: IntersectionObserver lấy mẫu theo frame nên
-             một phần tử 1px bị bỏ lỡ ở fractional pixel (zoom, DPR lẻ). --}}
+        {{-- Moc do cho resources/js/header-scroll.js: khi khoi nay troi het len tren
+             viewport thi scrollY da vuot 64px va header chuyen sang trang thai gon.
+             absolute + aria-hidden nen no khong chiem cho va khong co gi de doc.
+             Cao 64px chu khong phai 1px: IntersectionObserver lay mau theo frame nen
+             mot phan tu 1px bi bo lo o fractional pixel (zoom, DPR le). --}}
         <div data-header-sentinel aria-hidden="true" style="position: absolute; top: 0; left: 0; width: 1px; height: 64px; pointer-events: none;"></div>
 
         <!-- Navigation -->
         <nav class="navbar navbar-expand-lg fixed-top site-header">
             <div class="container-fluid px-3 px-lg-4 d-flex flex-nowrap align-items-center justify-content-between">
                 <!-- Branding -->
-                <a class="navbar-brand d-flex align-items-center overflow-hidden flex-shrink-0" href="{{ route('home') }}" aria-label="{{ __('messages.app_name') }}" style="white-space: nowrap;">
+                <a class="navbar-brand d-flex align-items-center overflow-hidden flex-shrink-0" href="{{ route('trang-chu') }}" aria-label="{{ __('messages.app_name') }}" style="white-space: nowrap;">
                     {{-- The square mark, not the old 2816x1536 lockup: at 40px the letters
                          inside that artwork were illegible and the file was 1,516 KB. The
                          name beside it is live text, so it stays selectable and localised.
                          Below lg the live text is hidden for the search bar, so the link
                          carries its own aria-label rather than relying on alt text. --}}
                     <img src="{{ asset('images/logo-icon.svg') }}" alt="" class="me-2 flex-shrink-0" width="40" height="40" style="height: 40px; width: auto; transition: transform 0.3s ease;">
-                    {{-- Dưới lg chỉ còn logo: dải 320-991px phải nhường hết chỗ ngang cho ô
-                         tìm kiếm, vốn là lối vào chính của cả trang. --}}
+                    {{-- Duoi lg chi con logo: dai 320-991px phai nhuong het cho ngang cho o
+                         tim kiem, von la loi vao chinh cua ca trang. --}}
                     <span class="text-emerald-700 text-truncate d-none d-lg-inline fw-bold" style="font-size: 1.15rem;">{{ __('messages.app_name') }}</span>
                 </a>
 
-                {{-- Ô tìm kiếm duy nhất của cả app, ngay trên hàng header ở mọi khổ màn hình.
-                     Trước đây có ba ô — header, trang chủ, trang catalog — cùng post một `q`,
-                     phải có JS ẩn bớt cho khỏi hiện hai ô một lúc. --}}
+                {{-- O tim kiem duy nhat cua ca app, ngay tren hang header o moi kho man hinh.
+                     Truoc day co ba o — header, trang chu, trang catalog — cung post mot `q`,
+                     phai co JS an bot cho khoi hien hai o mot luc. --}}
                 <div class="header-search flex-grow-1 mx-2 mx-lg-4">
-                    <form action="{{ route('products.search') }}" method="GET" class="w-100 position-relative" role="search" aria-label="{{ __('messages.search_placeholder') }}">
+                    <form action="{{ route('san-pham.tim-kiem') }}" method="GET" class="w-100 position-relative" role="search" aria-label="{{ __('messages.search_placeholder') }}">
                         <label for="header-search" class="visually-hidden">{{ __('messages.search_placeholder') }}</label>
                         <input type="search" id="header-search" name="q" value="{{ request('q') }}" class="form-control rounded-pill border-0 ps-4 pe-5 shadow-sm" placeholder="{{ __('messages.search_mobile_placeholder') }}" autocomplete="off">
-                        {{-- Icon kính lúp và nút micro dùng CHUNG ô 48px của `pe-5`, chỉ một
-                             cái hiện. voice-search.js đặt data-voice-ready trên <html> khi
-                             browser có SpeechRecognition; CSS đổi chỗ theo đó. Nhờ vậy lòng
-                             trong ô không đổi một pixel — search-placeholder.js đo chỗ đó để
-                             chọn bộ chuỗi, và ở 375px nó chỉ còn ~122px. --}}
+                        {{-- Icon kinh lup va nut micro dung CHUNG o 48px cua `pe-5`, chi mot
+                             cai hien. voice-search.js dat data-voice-ready tren <html> khi
+                             browser co SpeechRecognition; CSS doi cho theo do. Nho vay long
+                             trong o khong doi mot pixel — search-placeholder.js do cho do de
+                             chon bo chuoi, va o 375px no chi con ~122px. --}}
                         <i class="bi bi-search header-search-icon text-emerald-600" aria-hidden="true"></i>
                         @if(config('search.voice.enabled', true))
                             <button type="button" class="header-search-mic" data-voice-search
@@ -844,7 +844,7 @@
                     <ul class="navbar-nav align-items-lg-center">
                         <!-- Home Link -->
                         <li class="nav-item">
-                            <a class="nav-link text-gray-700 {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">
+                            <a class="nav-link text-gray-700 {{ request()->routeIs('trang-chu') ? 'active' : '' }}" href="{{ route('trang-chu') }}">
                                 <i class="bi bi-house-door me-1"></i>{{ __('messages.home') }}
                             </a>
                         </li>
@@ -856,18 +856,18 @@
                             </a>
                             @php
                                 $activeCategoryId = request('category');
-                                $activeCategoryRoute = request()->route('MaDM');
+                                $activeCategoryRoute = request()->route('ma_dm');
 
                                 if ($activeCategoryId === null && $activeCategoryRoute !== null) {
                                     $activeCategoryId = is_object($activeCategoryRoute)
-                                        ? ($activeCategoryRoute->MaDM ?? null)
+                                        ? ($activeCategoryRoute->ma_dm ?? null)
                                         : $activeCategoryRoute;
                                 }
                             @endphp
                             <ul class="dropdown-menu nav-categories-menu rounded-4 mt-2" data-catalog-filter>
                                 @php
-                                    $navMaxCount = max(1, (int) $navCategories->max('products_count'));
-                                    $navTotal = (int) $navCategories->sum('products_count');
+                                    $navMaxCount = max(1, (int) $navCategories->max('so_san_pham'));
+                                    $navTotal = (int) $navCategories->sum('so_san_pham');
                                 @endphp
                                 <li class="list-unstyled">
                                     <div class="nav-categories-head">
@@ -888,19 +888,19 @@
                                 @endif
                                 <li class="list-unstyled">
                                     <div class="nav-categories-list" data-catalog-filter-list>
-                                        @forelse($navCategories as $cat)
+                                        @forelse($navCategories as $danhMucNav)
                                             @php
-                                                $isActiveCategory = $activeCategoryId !== null && (string) $activeCategoryId === (string) $cat->MaDM;
+                                                $isActiveCategory = $activeCategoryId !== null && (string) $activeCategoryId === (string) $danhMucNav->ma_dm;
                                             @endphp
                                             <a
                                                 class="dropdown-item nav-category-link {{ $isActiveCategory ? 'is-active' : '' }}"
-                                                href="{{ route('products.index', ['category' => $cat->MaDM]) }}"
-                                                style="--depth: {{ round($cat->products_count / $navMaxCount * 100) }}%"
-                                                data-folded="{{ \App\Support\VietnameseText::fold($cat->name) }}"
+                                                href="{{ route('san-pham.index', ['category' => $danhMucNav->ma_dm]) }}"
+                                                style="--depth: {{ round($danhMucNav->so_san_pham / $navMaxCount * 100) }}%"
+                                                data-folded="{{ \App\Support\VietnameseText::fold($danhMucNav->ten) }}"
                                                 @if($isActiveCategory) aria-current="page" @endif
                                             >
-                                                <span class="nav-category-title">{{ $cat->name }}@if($loop->index < 3)<i class="bi bi-fire category-flame" aria-hidden="true"></i>@endif</span>
-                                                <span class="nav-category-count">{{ $cat->products_count }}</span>
+                                                <span class="nav-category-title">{{ $danhMucNav->ten }}@if($loop->index < 3)<i class="bi bi-fire category-flame" aria-hidden="true"></i>@endif</span>
+                                                <span class="nav-category-count">{{ $danhMucNav->so_san_pham }}</span>
                                             </a>
                                         @empty
                                             <span class="px-3 py-2 text-muted small text-center">{{ __('messages.loading_categories') }}</span>
@@ -910,7 +910,7 @@
                                 </li>
                                 <li><hr class="dropdown-divider nav-categories-divider"></li>
                                 <li>
-                                    <a class="dropdown-item nav-categories-cta" href="{{ route('products.index') }}">
+                                    <a class="dropdown-item nav-categories-cta" href="{{ route('san-pham.index') }}">
                                         <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>
                                         <span>{{ __('messages.all_products') }}</span>
                                         <span class="nav-categories-cta-count">{{ $navTotal }}</span>
@@ -921,14 +921,14 @@
 
                         <!-- Health Triage Link -->
                         <li class="nav-item">
-                            <a class="nav-link text-gray-700 {{ request()->routeIs('health.*') ? 'active' : '' }}" href="{{ route('health.check') }}">
+                            <a class="nav-link text-gray-700 {{ request()->routeIs('sang-loc.*') ? 'active' : '' }}" href="{{ route('sang-loc.kiem-tra') }}">
                                 <i class="bi bi-clipboard2-pulse me-1" aria-hidden="true"></i>{{ __('messages.health.nav') }}
                             </a>
                         </li>
 
                         <!-- Support Link -->
                         <li class="nav-item">
-                            <a class="nav-link text-gray-700 {{ request()->routeIs('contact') ? 'active' : '' }}" href="{{ route('contact') }}">
+                            <a class="nav-link text-gray-700 {{ request()->routeIs('lien-he') ? 'active' : '' }}" href="{{ route('lien-he') }}">
                                 <i class="bi bi-headset me-1"></i>{{ __('messages.contact') }}
                             </a>
                         </li>
@@ -938,7 +938,7 @@
                         
                         <!-- Cart -->
                         <li class="nav-item">
-                            <a class="nav-link text-gray-700 position-relative {{ request()->routeIs('cart.*') ? 'active' : '' }}" href="{{ route('cart.index') }}">
+                            <a class="nav-link text-gray-700 position-relative {{ request()->routeIs('gio-hang.*') ? 'active' : '' }}" href="{{ route('gio-hang.index') }}">
                                 <i class="bi bi-cart3 fs-5 me-1"></i>
                                 <span class="d-lg-none">{{ __('messages.cart.title') }}</span>
                                 @php $cartCount = session('cart') ? count(session('cart')) : 0; @endphp
@@ -960,18 +960,18 @@
                                         <div class="d-flex align-items-center gap-2 mb-2">
                                             <x-user-avatar :user="auth()->user()" :size="40" ring />
                                             <div class="flex-grow-1 overflow-hidden">
-                                                <p class="mb-0 fw-bold text-gray-900 text-truncate">{{ auth()->user()->name }}</p>
+                                                <p class="mb-0 fw-bold text-gray-900 text-truncate">{{ auth()->user()->ho_ten }}</p>
                                                 <p class="mb-0 small text-gray-600 text-truncate">{{ auth()->user()->email }}</p>
                                             </div>
                                         </div>
                                         <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-2 py-1 small">
-                                            <i class="bi bi-shield-check me-1"></i>{{ auth()->user()->role === 'Administrator' ? __('messages.role_administrator') : __('messages.role_user') }}
+                                            <i class="bi bi-shield-check me-1"></i>{{ auth()->user()->vai_tro === 'Administrator' ? __('messages.role_administrator') : __('messages.role_user') }}
                                         </span>
                                     </div>
                                     
-                                    @if(auth()->user()->role === 'Administrator')
+                                    @if(auth()->user()->vai_tro === 'Administrator')
                                         <li>
-                                            <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('admin.dashboard') }}" style="transition: all 0.2s;">
+                                            <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('admin.bang-dieu-khien') }}" style="transition: all 0.2s;">
                                                 <i class="bi bi-speedometer2 text-emerald-600"></i>
                                                 <span class="fw-medium">{{ __('messages.dashboard') }}</span>
                                             </a>
@@ -980,21 +980,21 @@
                                     @endif
                                     
                                     <li>
-                                        <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('profile.edit') }}" style="transition: all 0.2s;">
+                                        <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('ho-so.edit') }}" style="transition: all 0.2s;">
                                             <i class="bi bi-person text-gray-500"></i>
                                             <span>{{ __('messages.my_profile') }}</span>
                                         </a>
                                     </li>
                                     
                                     <li>
-                                        <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('profile.edit') }}#orders" style="transition: all 0.2s;">
+                                        <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('ho-so.edit') }}#orders" style="transition: all 0.2s;">
                                             <i class="bi bi-bag text-gray-500"></i>
                                             <span>{{ __('messages.my_orders') }}</span>
                                         </a>
                                     </li>
                                     
                                     <li>
-                                        <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('profile.edit') }}#settings" style="transition: all 0.2s;">
+                                        <a class="dropdown-item py-2 px-3 rounded-3 d-flex align-items-center gap-2" href="{{ route('ho-so.edit') }}#settings" style="transition: all 0.2s;">
                                             <i class="bi bi-gear text-gray-500"></i>
                                             <span>{{ __('messages.settings') }}</span>
                                         </a>
@@ -1035,7 +1035,7 @@
             {{-- Flashed drug warnings render wherever the user was sent back to. Scoping
                  this to the cart page meant a warning raised from a product listing was
                  flashed, consumed and never shown. --}}
-            @if(session('drug_warnings') && !request()->routeIs('cart.index', 'checkout.index'))
+            @if(session('drug_warnings') && !request()->routeIs('gio-hang.index', 'thanh-toan.index'))
                 <div class="container pt-3">
                     <div class="glass-card rounded-4 border-0 p-3 p-md-4">
                         <x-drug-warnings :warnings="session('drug_warnings')" compact />
@@ -1077,7 +1077,7 @@
                         <!-- Brand Column -->
                         <div class="col-lg-4 col-md-6">
                             <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);">
-                                <a class="d-flex align-items-center mb-3 text-decoration-none" href="{{ route('home') }}">
+                                <a class="d-flex align-items-center mb-3 text-decoration-none" href="{{ route('trang-chu') }}">
                                     <img src="{{ asset('images/logo-icon.svg') }}" alt="" class="me-2" width="40" height="40" style="height: 40px; width: auto;">
                                     <span class="fs-5 fw-bold text-emerald-800">{{ __('messages.app_name') }}</span>
                                 </a>
@@ -1101,7 +1101,7 @@
                         <!-- Links Columns -->
                         <div class="col-lg-8 col-md-6">
                             <div class="row g-3 h-100">
-                                <!-- Danh mục -->
+                                <!-- Danh muc -->
                                 <div class="col-md-4 col-6">
                                     <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
                                         {{-- h2, not h6: these are the footer's own top-level
@@ -1114,14 +1114,14 @@
                                         <ul class="list-unstyled mb-0">
                                             @forelse($footerCategories as $fCat)
                                             <li class="{{ !$loop->last ? 'mb-2' : 'mb-0' }}">
-                                                <a href="{{ route('products.index', ['category' => $fCat->MaDM]) }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                <a href="{{ route('san-pham.index', ['category' => $fCat->ma_dm]) }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
-                                                    {{ $fCat->name }}
+                                                    {{ $fCat->ten }}
                                                 </a>
                                             </li>
                                             @empty
                                             <li class="mb-0">
-                                                <a href="{{ route('products.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                <a href="{{ route('san-pham.index') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
                                                     {{ __('messages.all_products') }}
                                                 </a>
@@ -1131,7 +1131,7 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Hỗ trợ -->
+                                <!-- Ho tro -->
                                 <div class="col-md-4 col-6">
                                     <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
                                         {{-- h2, not h6: these are the footer's own top-level
@@ -1161,7 +1161,7 @@
                                                 </a>
                                             </li>
                                             <li class="mb-0">
-                                                <a href="{{ route('contact') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
+                                                <a href="{{ route('lien-he') }}" class="text-gray-600 text-decoration-none d-flex align-items-center small hover-text-emerald-600 transition-all">
                                                     <i class="bi bi-chevron-right text-emerald-500 me-1" style="font-size: 0.7rem;"></i>
                                                     {{ __('messages.contact_now') }}
                                                 </a>
@@ -1170,7 +1170,7 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Liên hệ -->
+                                <!-- Lien he -->
                                 <div class="col-md-4 col-12">
                                     <div class="glass-card p-4 rounded-4 border-0 h-100" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);">
                                         {{-- h2, not h6: these are the footer's own top-level
@@ -1284,8 +1284,8 @@
         <!-- Chatbot Widget (Available for all users, login required to use) -->
         <x-chatbot-widget />
 
-        {{-- Nguồn cho panel tìm kiếm + chuỗi giao diện của nó. Một lần mỗi trang: cả
-             ba ô tìm kiếm dùng chung một <template>. --}}
+        {{-- Nguon cho panel tim kiem + chuoi giao dien cua no. Mot lan moi trang: ca
+             ba o tim kiem dung chung mot <template>. --}}
         @include('partials.search-panel')
 
         <script>
@@ -1306,7 +1306,7 @@
         @if(config('search.voice.enabled', true))
             <script>
                 window.PharmacyVoiceLang = {
-                    url: @json(route('voice.normalize')),
+                    url: @json(route('tim-kiem-giong-noi.chuan-hoa')),
                     start: @json(__('messages.voice_start')),
                     listening: @json(__('messages.voice_listening')),
                     working: @json(__('messages.voice_working')),

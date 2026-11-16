@@ -457,7 +457,7 @@
         border: 0;
     }
 
-    /* Once-a-day emphasis of that same text, plus whatever the "Xem lại" link reopens.
+    /* Once-a-day emphasis of that same text, plus whatever the "Xem lai" link reopens.
 
        A real modal, because the point is to be read once before the tool is used. Fixed
        overlay rather than a corner sheet: a sheet was measured covering the first

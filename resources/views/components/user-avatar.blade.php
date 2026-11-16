@@ -1,6 +1,6 @@
-{{-- Ảnh đại diện. Trước đây gọi ui-avatars.com trên mỗi lần tải trang: một phụ
-     thuộc bên ngoài chỉ để vẽ một chữ cái, đồng thời gửi tên người dùng ra ngoài.
-     Giờ dùng ảnh tự tải lên, không có thì vẽ chữ cái đầu bằng CSS. --}}
+{{-- Anh dai dien. Truoc day goi ui-avatars.com tren moi lan tai trang: mot phu
+     thuoc ben ngoai chi de ve mot chu cai, dong thoi gui ten nguoi dung ra ngoai.
+     Gio dung anh tu tai len, khong co thi ve chu cai dau bang CSS. --}}
 @props(['user', 'size' => 40, 'ring' => false])
 
 @php
@@ -10,7 +10,7 @@
 
 @if($url)
     <img src="{{ $url }}"
-         alt="{{ $user->name }}"
+         alt="{{ $user->ho_ten }}"
          width="{{ $px }}" height="{{ $px }}"
          loading="lazy"
          {{ $attributes->class(['profile-avatar', 'profile-avatar--ring' => $ring]) }}

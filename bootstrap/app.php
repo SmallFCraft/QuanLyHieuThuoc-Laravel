@@ -14,9 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         // Register middleware aliases
         $middleware->alias([
-            'admin' => \App\Http\Middleware\AdminMiddleware::class,
-            'pharmacist' => \App\Http\Middleware\PharmacistMiddleware::class,
-            'audit' => \App\Http\Middleware\AuditLogMiddleware::class,
+            'admin' => \App\Http\Middleware\QuanTriMiddleware::class,
+            'pharmacist' => \App\Http\Middleware\DuocSiMiddleware::class,
+            'audit' => \App\Http\Middleware\NhatKyKiemToanMiddleware::class,
         ]);
         
         // Add global middleware

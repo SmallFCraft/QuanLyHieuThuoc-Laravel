@@ -5,7 +5,7 @@
 @import './storefront.css';
 /* Import Search Autocomplete Styles */
 @import './search-autocomplete.css';
-/* Trang tài khoản: một bảng style thay cho các khối <style> rải trong từng partial */
+/* Trang tai khoan: mot bang style thay cho cac khoi <style> rai trong tung partial */
 @import './profile.css';
 
 @tailwind base;
@@ -51,8 +51,8 @@ html, body, * {
     scrollbar-color: #10b981 #f8fafc !important;
 }
 
-/* Placeholder dài hơn ô bị cắt giữa nét chữ (mặc định text-overflow: clip).
-   Đặt trên element, không phải ::placeholder — Chromium bỏ qua khai báo ở pseudo-element. */
+/* Placeholder dai hon o bi cat giua net chu (mac dinh text-overflow: clip).
+   Dat tren element, khong phai ::placeholder — Chromium bo qua khai bao o pseudo-element. */
 input,
 textarea {
     text-overflow: ellipsis;

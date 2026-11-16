@@ -2,58 +2,58 @@
 
 namespace App\Services;
 
-use App\Jobs\ProcessChatbotMessage;
-use App\Jobs\ProcessTriageAdviceRewrite;
-use App\Jobs\ProcessTriageBriefing;
-use App\Jobs\ProcessTriageEvaluation;
+use App\Jobs\XuLyTinNhanChatbot;
+use App\Jobs\XuLyVietLaiLoiKhuyen;
+use App\Jobs\XuLyTomTatSangLoc;
+use App\Jobs\XuLyDanhGiaSangLoc;
 use App\Models\AiJob;
-use App\Models\TriageSession;
-use App\Services\Triage\Ai\TriageAiAdviceService;
-use App\Services\Triage\Ai\TriageAiBriefingService;
+use App\Models\PhienSangLoc;
+use App\Services\Triage\Ai\SangLocAiVietLaiService;
+use App\Services\Triage\Ai\SangLocAiTomTatService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Hands AI work to a queue worker and reports its state back to the browser.
+ * Giao công việc AI cho worker hàng đợi và báo trạng thái trở lại browser.
  *
- * The point is latency, not throughput: an AI call can hold a PHP process for the
- * full AI_TIMEOUT (plus the fallback provider), and the dev server runs a single
- * process, so one chat message blocks the whole site. Moving the call out of the
- * request keeps every page responsive.
+ * Vấn đề ở đó là latency, chứ không phải throughput: một lời gọi AI có thể giữ một
+ * process PHP trong toàn bộ AI_TIMEOUT (cộng nửa nhà cung cấp dự phòng), và server
+ * dev chỉ chạy một process, nên một tin nhắn chat chặn cả site. Đưa lời gọi ra khỏi
+ * request giữ mỗi trang responsive.
  *
- * The queue driver decides the shape of the response, not this class: on `sync`
- * the job has already finished by the time dispatch() returns, so the caller can
- * answer in the same request. That is what makes the test suite and a
- * worker-less install behave identically to the old synchronous code.
+ * Queue driver quyết định hình dạng của response, chứ không phải class này: trên `sync`
+ * job đã chạy xong trước khi dispatch() trả về, nên caller có thể trả lời trong cùng
+ * request. Đó là thứ làm test suite và một install không có worker hoạt động giống
+ * hệt code đồng bộ cũ.
  */
 class AiJobService
 {
     public function __construct(
-        protected AuditLogService $auditLogService,
+        protected NhatKyKiemToanService $nhatKyKiemToanService,
     ) {}
 
     /**
-     * @param  array<string, mixed>  $context  Already-built chat context. Stored as-is:
-     *                                         it holds the same message rows that are in `chat_messages` anyway, and
-     *                                         CleanupAiJobs wipes it after 24h.
-     * @param  bool  $sync  Run the job in this request instead of queueing it. Used when
-     *                      the browser detected that no worker picked the previous job up.
+     * @param  array<string, mixed>  $context  Ngữ cảnh chat đã dựng sẵn. Lưu nguyên vẹn:
+     *                                         nó giữ cùng các dòng tin nhắn mà `chat_messages` đang có, và
+     *                                         DonDepCongViecAi xoá nó sau 24h.
+     * @param  bool  $sync  Chạy job trong request này thay vì đưa vào hàng đợi. Dùng khi
+     *                      browser phát hiện không worker nào nhận job trước đó.
      */
     public function dispatchChat(
         int $userId,
-        string $message,
+        string $tinNhan,
         array $context,
         string $sessionId,
         bool $sync = false
     ): AiJob {
         $job = AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $userId,
+            'ma_nd' => $userId,
             'kind' => AiJob::KIND_CHAT,
             'status' => 'queued',
             'payload' => [
-                'message' => $message,
+                'message' => $tinNhan,
                 'context' => $context,
                 'session_id' => $sessionId,
             ],
@@ -62,74 +62,74 @@ class AiJobService
         $this->audit($job, 'ai_job_dispatched');
 
         if ($sync) {
-            ProcessChatbotMessage::dispatchSync($job->uuid);
+            XuLyTinNhanChatbot::dispatchSync($job->uuid);
         } else {
-            ProcessChatbotMessage::dispatch($job->uuid);
+            XuLyTinNhanChatbot::dispatch($job->uuid);
         }
 
         return $job->refresh();
     }
 
     /**
-     * Defer the outcome decision for a completed questionnaire.
+     * Trả lại quyết định kết quả cho một phiếu khai báo đã hoàn thành.
      *
-     * The payload is only the session id: the service reads the answers from the row.
-     * The patient waits on this job, so the conclusion is never revised after they
-     * have read it — see ProcessTriageEvaluation.
+     * Payload chỉ là session id: service đọc câu trả lời từ dòng bản ghi.
+     * Bệnh nhân chờ job này, nên kết luận không bao giờ được sửa sau khi họ
+     * đã đọc — xem XuLyDanhGiaSangLoc.
      */
-    public function dispatchEvaluation(TriageSession $session): AiJob
+    public function dispatchEvaluation(PhienSangLoc $phien): AiJob
     {
         $job = AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'ma_nd' => $phien->ma_nd,
             'kind' => AiJob::KIND_TRIAGE_EVALUATION,
             'status' => 'queued',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
 
-        // Queued, not run inline: the caller falls back to deciding in-request when
-        // polling shows no worker ever picked the job up.
-        ProcessTriageEvaluation::dispatch($job->uuid);
+        // Đưa vào hàng đợi, không chạy trực tiếp: caller quay về quyết định trong request
+        // khi polling cho thấy không worker nào bao giờ nhận job.
+        XuLyDanhGiaSangLoc::dispatch($job->uuid);
 
         return $job->refresh();
     }
 
     /**
-     * Defer the advice rewrite for a session that is already finalised.
+     * Trả lại việc viết lại lời khuyên cho một session đã được định lôi.
      *
-     * The payload is only the session id: no customer free text, no profile field.
-     * TriageAiAdviceService reads what it needs from the row itself.
+     * Payload chỉ là session id: không có văn bản tự do của khách, không có field hồ sơ.
+     * SangLocAiVietLaiService tự đọc những gì cần từ dòng bản ghi.
      */
-    public function dispatchAdviceRewrite(TriageSession $session): AiJob
+    public function dispatchAdviceRewrite(PhienSangLoc $phien): AiJob
     {
         $job = AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'ma_nd' => $phien->ma_nd,
             'kind' => AiJob::KIND_TRIAGE_ADVICE,
             'status' => 'queued',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
 
-        ProcessTriageAdviceRewrite::dispatch($job->uuid);
+        XuLyVietLaiLoiKhuyen::dispatch($job->uuid);
 
         return $job->refresh();
     }
 
     /**
-     * Queue the rewrite only when this session is actually eligible for one, and
-     * never let a queue failure cost the patient their result.
+     * Chỉ đưa việc viết lại vào hàng đợi khi session này thực sự đủ điều kiện, và
+     * không bao giờ để lỗi hàng đợi mất đi kết quả của bệnh nhân.
      */
-    public function dispatchAdviceRewriteIfEligible(TriageSession $session): ?AiJob
+    public function dispatchAdviceRewriteIfEligible(PhienSangLoc $phien): ?AiJob
     {
-        if (! app(TriageAiAdviceService::class)->isEligible($session)) {
+        if (! app(SangLocAiVietLaiService::class)->duDieuKien($phien)) {
             return null;
         }
 
         try {
-            return $this->dispatchAdviceRewrite($session);
+            return $this->dispatchAdviceRewrite($phien);
         } catch (\Throwable $exception) {
             Log::warning('Triage advice rewrite skipped', [
-                'MaSL' => $session->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -138,42 +138,42 @@ class AiJobService
     }
 
     /**
-     * Defer the detailed result-page briefing for a finalised session.
+     * Trả lại briefing chi tiết cho trang kết quả của một session đã định lôi.
      *
-     * Separate job from the advice rewrite on purpose: this call asks for six
-     * sections and a product pick, so it is much slower, and the two must not share
-     * a failure. The payload is only the session id.
+     * Job riêng khỏi việc viết lại lời khuyên là có chủ ý: lời gọi này xin sáu
+     * section và một sản phẩm lựa chọn, nên chậm hơn nhiều, và hai việc không được
+     * chia sẻ một lời. Payload chỉ là session id.
      */
-    public function dispatchBriefing(TriageSession $session): AiJob
+    public function dispatchBriefing(PhienSangLoc $phien): AiJob
     {
         $job = AiJob::create([
             'uuid' => (string) Str::uuid(),
-            'MaKH' => $session->MaKH,
+            'ma_nd' => $phien->ma_nd,
             'kind' => AiJob::KIND_TRIAGE_BRIEFING,
             'status' => 'queued',
-            'payload' => ['MaSL' => $session->MaSL],
+            'payload' => ['ma_sl' => $phien->ma_sl],
         ]);
 
-        ProcessTriageBriefing::dispatch($job->uuid);
+        XuLyTomTatSangLoc::dispatch($job->uuid);
 
         return $job->refresh();
     }
 
     /**
-     * Queue the briefing only when the session is eligible, and never let a queue
-     * failure cost the patient their result.
+     * Chỉ đưa briefing vào hàng đợi khi session đủ điều kiện, và không bao giờ để
+     * lỗi hàng đợi mất đi kết quả của bệnh nhân.
      */
-    public function dispatchBriefingIfEligible(TriageSession $session): ?AiJob
+    public function dispatchBriefingIfEligible(PhienSangLoc $phien): ?AiJob
     {
-        if (! app(TriageAiBriefingService::class)->isEligible($session)) {
+        if (! app(SangLocAiTomTatService::class)->duDieuKien($phien)) {
             return null;
         }
 
         try {
-            return $this->dispatchBriefing($session);
+            return $this->dispatchBriefing($phien);
         } catch (\Throwable $exception) {
             Log::warning('Triage briefing skipped', [
-                'MaSL' => $session->MaSL,
+                'ma_sl' => $phien->ma_sl,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -182,17 +182,17 @@ class AiJobService
     }
 
     /**
-     * Job state for the browser, scoped to its owner.
+     * Trạng thái job cho browser, giới hạn vào chủ sở hữu.
      *
-     * The uuid is a public identifier, not a capability token, so ownership is
-     * re-checked here rather than trusted from the URL.
+     * uuid là identifier công khai, không phải capability token, nên quyền sở hữu
+     * được kiểm tra lại tại đây thay vì tin vào URL.
      *
-     * @return array<string, mixed>|null null when the job does not exist or belongs
-     *                                   to someone else — both answer 404.
+     * @return array<string, mixed>|null null khi job không tồn tại hoặc thuộc về
+     *                                   người khác — cả hai đều trả 404.
      */
     public function poll(string $uuid, int $userId): ?array
     {
-        $job = AiJob::where('uuid', $uuid)->where('MaKH', $userId)->first();
+        $job = AiJob::where('uuid', $uuid)->where('ma_nd', $userId)->first();
 
         if ($job === null) {
             return null;
@@ -202,10 +202,10 @@ class AiJobService
             'status' => $job->status,
             'result' => $job->status === 'done' ? $job->result : null,
             'error' => $job->status === 'failed' ? ($job->error ?: null) : null,
-            // Lets the browser stop polling a worker that was never started. What it does
-            // next is the caller's choice: chat retries synchronously, but the triage
-            // result page cannot — its briefing takes ~60-90s, far past a web request —
-            // so it swaps in a "not available this time" notice instead.
+            // Cho browser dừng polling một worker mà bao giờ không được khởi động. Gợi ý tiếp
+            // theo là lựa chọn của caller: chat thử lại đồng bộ, nhưng trang kết quả triage
+            // không thể — briefing của nó mất ~60-90s, xa hơn mọi web request — nên nó
+            // thay bằng thông báo "lần này không khả dụng".
             'stranded' => $job->isStranded(),
             'elapsed_ms' => $job->created_at === null
                 ? 0
@@ -214,8 +214,8 @@ class AiJobService
     }
 
     /**
-     * Retire a job the browser gave up on, so the row does not stay `queued`
-     * forever and a late worker cannot post a second answer for the same message.
+     * Hưu trí một job mà browser đã bỏ cuộc, để dòng bản ghi không nằm `queued`
+     * mãi mãi và worker muộn không thể đăng câu trả lời thứ hai cho cùng tin nhắn.
      */
     public function abandon(AiJob $job, string $reason): void
     {
@@ -223,12 +223,12 @@ class AiJobService
     }
 
     /**
-     * Retire a turn the customer pressed stop on.
+     * Hưu trí một lượt mà khách đã nhấn dừng.
      *
-     * `cancelled`, not `failed`: a late poll must not paint an error the customer never
-     * caused, and ProcessChatbotMessage re-reads the row after the provider answers, so
-     * a stopped turn never reaches `chat_messages` — the transcript keeps matching what
-     * the customer actually saw.
+     * `cancelled`, không phải `failed`: poll muộn không được vẽ ra một lỗi mà khách
+     * không bao giờ gây ra, và XuLyTinNhanChatbot đọc lại dòng bản ghi sau khi nhà cung cấp
+     * trả lời, nên lượt bị dừng không bao giờ đến `chat_messages` — bảng chuyển thoại
+     * vẫn giữ khớp với những gì khách thực sự đã thấy.
      */
     public function cancel(AiJob $job): void
     {
@@ -252,9 +252,9 @@ class AiJobService
             return;
         }
 
-        // The queue entry goes with it. Left pending, a worker starting later finds the
-        // row already finished and returns early — harmless for chat, which has already
-        // answered synchronously, but it accumulates dead rows in `jobs` forever.
+        // Dòng trong hàng đợi đi cùng nó. Nếu để pending, worker khởi động sau sẽ thấy
+        // dòng bản ghi đã xong và trả về sớm — vô hại với chat, hàng đã trả lời đồng bộ,
+        // nhưng nó tích luỹ các dòng chết trong `jobs` mãi mãi.
         $this->discardQueuedWork($job->uuid);
 
         $job->forceFill([
@@ -273,9 +273,9 @@ class AiJobService
     }
 
     /**
-     * Drop the pending queue entry carrying this uuid, so a retired AiJob and the queue
-     * agree. Only the database driver stores rows we can reach; on `sync` there is
-     * nothing pending by definition.
+     * Xoá dòng hàng đợi đang chờ mang uuid này, để AiJob đã hưu trí và hàng đợi đồng nhất.
+     * Chỉ database driver lưu các dòng mà ta chạm được; trên `sync` theo định nghĩa
+     * không có gì đang chờ.
      */
     public function discardQueuedWork(string $uuid): int
     {
@@ -285,7 +285,7 @@ class AiJobService
             return 0;
         }
 
-        // The uuid is embedded in the serialized job payload, and it is unique.
+        // uuid được nhúng trong payload job đã serialize, và nó là duy nhất.
         return DB::table((string) config("queue.connections.{$connection}.table", 'jobs'))
             ->where('payload', 'like', '%'.$uuid.'%')
             ->delete();
@@ -316,7 +316,7 @@ class AiJobService
     {
         $job->forceFill([
             'status' => 'failed',
-            // Truncated: a provider can return a whole HTML error page.
+            // Cắt bớt: nhà cung cấp có thể trả về cả một trang lỗi HTML.
             'error' => Str::limit($error, 1000),
             'finished_at' => now(),
         ])->save();
@@ -325,25 +325,25 @@ class AiJobService
     }
 
     /**
-     * Status, kind and timing only — never the payload or the customer's words.
+     * Chỉ status, kind và thời gian — không bao giờ payload hay lời nói của khách.
      */
     protected function audit(AiJob $job, string $action): void
     {
         try {
-            $this->auditLogService->log(
+            $this->nhatKyKiemToanService->ghi(
                 action: $action,
                 modelType: AiJob::class,
-                modelId: $job->MaAJ,
+                modelId: $job->ma_aj,
                 oldValues: null,
                 newValues: [
-                    'MaKH' => $job->MaKH,
+                    'ma_nd' => $job->ma_nd,
                     'kind' => $job->kind,
                     'status' => $job->status,
                     'attempts' => $job->attempts,
                 ],
-                // Written from a queue worker as often as from a request, so the
-                // owner comes from the job row rather than the guard.
-                userId: $job->MaKH
+                // Viết từ worker hàng đợi không kém hơn viết từ request, nên chủ sở hữu
+                // đến từ dòng bản ghi job chứ không phải từ guard.
+                userId: $job->ma_nd
             );
         } catch (\Throwable $exception) {
             Log::warning('AI job audit failed', [

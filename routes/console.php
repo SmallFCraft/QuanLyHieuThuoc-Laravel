@@ -24,10 +24,10 @@ Schedule::command('triage:follow-up')->daily()->at('09:00')->withoutOverlapping(
 // which contains what the customer typed.
 Schedule::command('ai-jobs:cleanup')->hourly()->withoutOverlapping();
 
-// Catalog refresh from Nhà Thuốc Long Châu. Weekly, not hourly: drug listings move
+// Catalog refresh from Nha Thuoc Long Chau. Weekly, not hourly: drug listings move
 // slowly, and a tighter loop only raises the chance of being rate-limited.
 Schedule::command('crawl:longchau')->weekly()->sundays()->at('04:00')->withoutOverlapping();
 
-// Sau crawl:longchau (04:00) một tiếng: index phiên âm bám theo catalog mới ngay cả
-// khi crawler kết thúc bất thường và không kịp tự gọi.
+// Sau crawl:longchau (04:00) mot tieng: index phien am bam theo catalog moi ngay ca
+// khi crawler ket thuc bat thuong va khong kip tu goi.
 Schedule::command('voice:build-phonetics')->weekly()->sundays()->at('05:00')->withoutOverlapping();

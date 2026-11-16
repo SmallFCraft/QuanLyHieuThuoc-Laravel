@@ -11,19 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('order_items', function (Blueprint $table) {
-            $table->id('MaCTDH');
-            $table->foreignId('MaDH')->constrained('orders', 'MaDH')->onDelete('cascade');
-            $table->foreignId('MaSP')->constrained('products', 'MaSP')->onDelete('restrict');
-            $table->foreignId('MaLo')->nullable()->constrained('product_batches', 'MaLo')->onDelete('set null');
-            $table->integer('quantity');
-            $table->decimal('unit_price', 10, 2);
-            $table->string('batch_number', 100);
+        Schema::create('chi_tiet_don_hangs', function (Blueprint $table) {
+            $table->id('ma_ctdh');
+            $table->foreignId('ma_dh')->constrained('don_hangs', 'ma_dh')->onDelete('cascade');
+            $table->foreignId('ma_sp')->constrained('san_phams', 'ma_sp')->onDelete('restrict');
+            $table->foreignId('ma_lo')->nullable()->constrained('lo_san_phams', 'ma_lo')->onDelete('set null');
+            $table->integer('so_luong');
+            $table->decimal('don_gia', 10, 2);
+            $table->string('so_lo', 100);
             $table->timestamps();
 
-            $table->index('MaSP', 'order_items_masp_index');
-            $table->index(['MaDH', 'MaSP'], 'order_items_madh_masp_idx');
-            $table->index(['MaLo', 'MaSP'], 'order_items_malo_masp_idx');
+            $table->index('ma_sp', 'chi_tiet_don_hangs_ma_sp_index');
+            $table->index(['ma_dh', 'ma_sp'], 'chi_tiet_don_hangs_ma_dh_ma_sp_idx');
+            $table->index(['ma_lo', 'ma_sp'], 'chi_tiet_don_hangs_ma_lo_ma_sp_idx');
         });
     }
 
@@ -32,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('order_items');
+        Schema::dropIfExists('chi_tiet_don_hangs');
     }
 };

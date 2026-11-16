@@ -68,7 +68,7 @@
         </div>
 
         <div class="admin-toolbar">
-            <form method="GET" action="{{ route('admin.chatSessions.index') }}" class="row g-2 flex-grow-1 align-items-end">
+            <form method="GET" action="{{ route('admin.phien-chat.index') }}" class="row g-2 flex-grow-1 align-items-end">
                 <div class="col-12 col-lg-8 col-xl-9">
                     <label class="form-label" for="chatSessionSearch">
                         <i class="bi bi-search me-1" aria-hidden="true"></i>Tìm theo mã phiên, tên, email hoặc mã user
@@ -87,7 +87,7 @@
                         <i class="bi bi-search me-1" aria-hidden="true"></i>Tìm kiếm
                     </button>
                     @if($search !== '')
-                        <a class="btn btn-outline-secondary flex-fill" href="{{ route('admin.chatSessions.index') }}">
+                        <a class="btn btn-outline-secondary flex-fill" href="{{ route('admin.phien-chat.index') }}">
                             <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Xóa lọc
                         </a>
                     @endif
@@ -122,8 +122,8 @@
                             $displayId = 'CHAT-' . strtoupper(substr($session->session_id, 0, 8));
                             $startedAt = \Carbon\Carbon::parse($session->started_at);
                             $lastMessageAt = \Carbon\Carbon::parse($session->last_message_at);
-                            $userName = $session->user?->name ?? 'Không rõ';
-                            $userMeta = $session->user?->email ?? 'User #' . $session->MaKH;
+                            $userName = $session->nguoiDung?->ho_ten ?? 'Không rõ';
+                            $userMeta = $session->nguoiDung?->email ?? 'User #' . $session->ma_nd;
                         @endphp
                         <tr>
                             <td>
@@ -146,7 +146,7 @@
                                 <time datetime="{{ $lastMessageAt->toIso8601String() }}">{{ $lastMessageAt->format('d/m/Y H:i') }}</time>
                             </td>
                             <td class="text-center">
-                                <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.chatSessions.show', $session->session_id) }}" aria-label="Xem hội thoại {{ $displayId }}">
+                                <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.phien-chat.show', $session->session_id) }}" aria-label="Xem hội thoại {{ $displayId }}">
                                     <i class="bi bi-eye me-1" aria-hidden="true"></i>Xem
                                 </a>
                             </td>
@@ -161,8 +161,8 @@
                 @php
                     $displayId = 'CHAT-' . strtoupper(substr($session->session_id, 0, 8));
                     $lastMessageAt = \Carbon\Carbon::parse($session->last_message_at);
-                    $userName = $session->user?->name ?? 'Không rõ';
-                    $userMeta = $session->user?->email ?? 'User #' . $session->MaKH;
+                    $userName = $session->nguoiDung?->ho_ten ?? 'Không rõ';
+                    $userMeta = $session->nguoiDung?->email ?? 'User #' . $session->ma_nd;
                 @endphp
                 <article class="admin-mobile-item">
                     <div class="d-flex justify-content-between gap-3">
@@ -175,7 +175,7 @@
                         <span class="badge text-bg-light align-self-start">{{ number_format((int) $session->messages_count) }} tin</span>
                     </div>
                     <div class="small text-secondary mt-2">Cập nhật: {{ $lastMessageAt->format('d/m/Y H:i') }}</div>
-                    <a class="btn btn-sm btn-outline-primary w-100 mt-3" href="{{ route('admin.chatSessions.show', $session->session_id) }}">
+                    <a class="btn btn-sm btn-outline-primary w-100 mt-3" href="{{ route('admin.phien-chat.show', $session->session_id) }}">
                         <i class="bi bi-eye me-1" aria-hidden="true"></i>Xem hội thoại
                     </a>
                 </article>

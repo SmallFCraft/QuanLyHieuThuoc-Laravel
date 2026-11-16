@@ -14,7 +14,7 @@
     $filled = collect($sections)->filter(fn ($meta, $key) => !empty($briefing[$key]));
 
     // The briefing's own product picks are rendered by the shared product list in the
-    // "Thuốc & chăm sóc" tab, merged with the rule engine's. Rendering them here as
+    // "Thuoc & cham soc" tab, merged with the rule engine's. Rendering them here as
     // well put the same medicine on the page twice under two different labels.
 
     // Jump links. Six sections of prose is several screens on a phone, and the whole

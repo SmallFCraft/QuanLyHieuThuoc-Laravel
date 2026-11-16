@@ -31,9 +31,9 @@
 
         @include('health.partials.trail', ['answeredSteps' => $answeredSteps])
 
-        <form method="POST" action="{{ route('health.clarify') }}" data-triage-form>
+        <form method="POST" action="{{ route('sang-loc.lam-ro') }}" data-triage-form>
             @csrf
-            <input type="hidden" name="triage_session_id" value="{{ $session->MaSL }}">
+            <input type="hidden" name="triage_session_id" value="{{ $session->ma_sl }}">
 
             {{-- Unnamed default button first, same reason as the step form: Enter must
                  not activate the Skip button and throw the answers away. --}}
@@ -93,9 +93,9 @@
 
         {{-- Quick-pick buttons: each submits the form immediately.
              Plain form POST, so the wizard works with JavaScript off. --}}
-        <form method="POST" action="{{ route('health.answer') }}" id="triage-form" data-triage-form>
+        <form method="POST" action="{{ route('sang-loc.tra-loi') }}" id="triage-form" data-triage-form>
             @csrf
-            <input type="hidden" name="triage_session_id" value="{{ $session->MaSL }}">
+            <input type="hidden" name="triage_session_id" value="{{ $session->ma_sl }}">
             <input type="hidden" name="step" value="{{ $question['step'] }}">
 
             {{-- The form's default button, and deliberately the FIRST submit button in
@@ -104,7 +104,7 @@
                  option and posted `option_answer=<first option>` alongside the typed
                  `answer` — the patient typed one complaint and the wizard recorded
                  another. It carries no name, so Enter posts only what was typed.
-                 Inert to assistive tech: the visible "Tiếp tục" button does the same job. --}}
+                 Inert to assistive tech: the visible "Tiep tuc" button does the same job. --}}
             <button type="submit" class="visually-hidden" tabindex="-1" aria-hidden="true">
                 {{ __('messages.health.btn_next') }}
             </button>
@@ -230,9 +230,9 @@
     </div>
 
     {{-- Separate form: nesting forms is invalid HTML, so Back lives outside --}}
-    <form method="POST" action="{{ route('health.back') }}" id="triage-back-form" class="d-none" data-triage-form data-triage-direction="back">
+    <form method="POST" action="{{ route('sang-loc.quay-lai') }}" id="triage-back-form" class="d-none" data-triage-form data-triage-direction="back">
         @csrf
-        <input type="hidden" name="triage_session_id" value="{{ $session->MaSL }}">
+        <input type="hidden" name="triage_session_id" value="{{ $session->ma_sl }}">
     </form>
 @else
     {{-- Reachable when the profile answered everything: send them straight to evaluation --}}
@@ -241,10 +241,10 @@
             {{ __('messages.health.page_title') }}
         </h2>
         <p class="text-gray-700 mb-4">{{ __('messages.health.page_subtitle') }}</p>
-        <form method="POST" action="{{ route('health.answer') }}" data-triage-form>
+        <form method="POST" action="{{ route('sang-loc.tra-loi') }}" data-triage-form>
             @csrf
-            <input type="hidden" name="triage_session_id" value="{{ $session->MaSL }}">
-            <input type="hidden" name="step" value="{{ \App\Models\TriageSession::TOTAL_STEPS }}">
+            <input type="hidden" name="triage_session_id" value="{{ $session->ma_sl }}">
+            <input type="hidden" name="step" value="{{ \App\Models\PhienSangLoc::TOTAL_STEPS }}">
             <input type="hidden" name="skipped" value="1">
             <button type="submit"
                     class="health-btn health-btn-primary"

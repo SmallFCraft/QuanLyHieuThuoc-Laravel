@@ -52,45 +52,45 @@
                 <div class="col-sm-6">
                     <div class="rounded-3 p-3" style="background: rgba(16,185,129,0.06);">
                         <small class="text-gray-500 d-block mb-1">{{ __('messages.checkout.order_id') }}</small>
-                        <span class="fw-bold text-gray-800">#{{ $order->MaDH }}</span>
+                        <span class="fw-bold text-gray-800">#{{ $donHang->ma_dh }}</span>
                     </div>
                 </div>
                 <div class="col-sm-6">
                     <div class="rounded-3 p-3" style="background: rgba(16,185,129,0.06);">
                         <small class="text-gray-500 d-block mb-1">{{ __('messages.checkout.order_date') }}</small>
-                        <span class="fw-bold text-gray-800">{{ $order->formatted_created_at }}</span>
+                        <span class="fw-bold text-gray-800">{{ $donHang->formatted_created_at }}</span>
                     </div>
                 </div>
                 <div class="col-sm-6">
                     <div class="rounded-3 p-3" style="background: rgba(245,158,11,0.06);">
                         <small class="text-gray-500 d-block mb-1">{{ __('messages.checkout.status') }}</small>
                         <span class="badge bg-warning bg-opacity-10 text-warning-emphasis rounded-pill px-3 py-2">
-                            <i class="bi bi-clock-history me-1"></i>{{ order_status_text($order->status) }}
+                            <i class="bi bi-clock-history me-1"></i>{{ order_status_text($donHang->trang_thai) }}
                         </span>
                     </div>
                 </div>
                 <div class="col-sm-6">
                     <div class="rounded-3 p-3" style="background: rgba(16,185,129,0.06);">
                         <small class="text-gray-500 d-block mb-1">{{ __('messages.checkout.total_amount') }}</small>
-                        <span class="fw-bold text-emerald-700 fs-5">{{ $order->formatted_total }}</span>
+                        <span class="fw-bold text-emerald-700 fs-5">{{ $donHang->formatted_total }}</span>
                     </div>
                 </div>
             </div>
 
             <div class="mb-3">
                 <small class="text-gray-500 d-block mb-1"><i class="bi bi-geo-alt me-1"></i>{{ __('messages.checkout.shipping_address') }}</small>
-                <p class="fw-medium text-gray-800 mb-0">{{ $order->shipping_address }}</p>
+                <p class="fw-medium text-gray-800 mb-0">{{ $donHang->dia_chi_giao_hang }}</p>
             </div>
             <div class="mb-3">
                 <small class="text-gray-500 d-block mb-1"><i class="bi bi-telephone me-1"></i>{{ __('messages.checkout.phone') }}</small>
-                <p class="fw-medium text-gray-800 mb-0">{{ $order->shipping_phone }}</p>
+                <p class="fw-medium text-gray-800 mb-0">{{ $donHang->sdt_giao_hang }}</p>
             </div>
             
-            @if($order->delivery_time)
+            @if($donHang->thoi_gian_giao)
             <div class="mb-3">
                 <small class="text-gray-500 d-block mb-1"><i class="bi bi-clock me-1"></i>{{ __('messages.checkout.delivery_time') }}</small>
                 <p class="fw-medium text-gray-800 mb-0">
-                    @switch($order->delivery_time)
+                    @switch($donHang->thoi_gian_giao)
                         @case('morning') {{ __('messages.checkout.delivery_time_morning') }} @break
                         @case('afternoon') {{ __('messages.checkout.delivery_time_afternoon') }} @break
                         @case('evening') {{ __('messages.checkout.delivery_time_evening') }} @break
@@ -100,10 +100,10 @@
             </div>
             @endif
 
-            @if($order->order_notes)
+            @if($donHang->ghi_chu)
             <div>
                 <small class="text-gray-500 d-block mb-1"><i class="bi bi-journal-text me-1"></i>{{ __('messages.checkout.order_notes') }}</small>
-                <p class="fw-medium text-gray-800 mb-0">{{ $order->order_notes }}</p>
+                <p class="fw-medium text-gray-800 mb-0">{{ $donHang->ghi_chu }}</p>
             </div>
             @endif
         </div>
@@ -114,11 +114,11 @@
                 <i class="bi bi-bag-check text-emerald-600 me-2"></i>{{ __('messages.checkout.order_details') }}
             </h5>
             
-            @foreach($order->items as $item)
+            @foreach($donHang->chiTietDonHangs as $item)
                 <div class="d-flex justify-content-between align-items-center py-3 border-bottom" style="border-color: rgba(0,0,0,0.06) !important;">
                     <div>
-                        <p class="fw-medium text-gray-800 mb-0">{{ $item->product->name }}</p>
-                        <small class="text-gray-400">{{ number_format($item->unit_price, 0, ',', '.') }}₫ × {{ $item->quantity }}</small>
+                        <p class="fw-medium text-gray-800 mb-0">{{ $item->sanPham->ten }}</p>
+                        <small class="text-gray-400">{{ number_format($item->don_gia, 0, ',', '.') }}₫ × {{ $item->so_luong }}</small>
                     </div>
                     <span class="fw-bold text-gray-700">{{ $item->formatted_subtotal }}</span>
                 </div>
@@ -126,13 +126,13 @@
             
             <div class="d-flex justify-content-between align-items-center pt-4 mt-2">
                 <span class="fw-bold fs-5 text-gray-800">{{ __('messages.cart.total') }}</span>
-                <span class="fw-bold fs-4 text-emerald-700">{{ $order->formatted_total }}</span>
+                <span class="fw-bold fs-4 text-emerald-700">{{ $donHang->formatted_total }}</span>
             </div>
         </div>
 
         <!-- Action Buttons -->
         <div class="text-center">
-            <a href="{{ route('products.index') }}" class="btn btn-lg text-white fw-bold rounded-pill shadow px-5" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+            <a href="{{ route('san-pham.index') }}" class="btn btn-lg text-white fw-bold rounded-pill shadow px-5" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
                 <i class="bi bi-cart-plus me-2"></i>{{ __('messages.cart.continue_shopping') }}
             </a>
         </div>

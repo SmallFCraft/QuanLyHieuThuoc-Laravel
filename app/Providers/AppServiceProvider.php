@@ -2,10 +2,10 @@
 
 namespace App\Providers;
 
-use App\Models\Category;
-use App\Models\Product;
-use App\Models\SearchQuery;
-use App\Observers\ProductObserver;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\TruyVanTimKiem;
+use App\Observers\SanPhamObserver;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -13,7 +13,7 @@ use Illuminate\Support\ServiceProvider;
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Đăng ký bất kỳ dịch vụ ứng dụng nào.
      */
     public function register(): void
     {
@@ -21,47 +21,47 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Bootstrap any application services.
+     * Khởi động bất kỳ dịch vụ ứng dụng nào.
      */
     public function boot(): void
     {
-        Product::observe(ProductObserver::class);
+        SanPham::observe(SanPhamObserver::class);
 
         View::composer(['layouts.app', 'layouts.guest'], function ($view) {
-            // browsable(): the dropdown used to list every category, including any
-            // with nothing in stock — those opened an empty product page.
+            // browsable(): dropdown trước đây liệt kê mỗi danh mục, kể cả những
+            // danh mục không còn tồn kho — chúng mở ra trang sản phẩm trống.
             $view->with('navCategories', Cache::remember(
-                Category::NAV_CACHE_KEY,
+                DanhMuc::NAV_CACHE_KEY,
                 now()->addMinutes(10),
-                fn () => Category::query()
-                    ->select('MaDM', 'name')
+                fn () => DanhMuc::query()
+                    ->select('ma_dm', 'ten')
                     ->browsable()
                     ->get()
             ));
 
             $view->with('footerCategories', Cache::remember(
-                Category::FOOTER_CACHE_KEY,
+                DanhMuc::FOOTER_CACHE_KEY,
                 now()->addMinutes(10),
-                fn () => Category::query()
-                    ->withSum('products', 'views_count')
-                    ->orderByDesc('products_sum_views_count')
+                fn () => DanhMuc::query()
+                    ->withSum('sanPhams', 'luot_xem')
+                    ->orderByDesc('san_phams_sum_luot_xem')
                     ->limit(4)
                     ->get()
             ));
 
-            // Dữ liệu cho panel tìm kiếm, nhúng thẳng vào trang thay vì gọi thêm một
+            // Dữ liệu cho panel tìm kiếm, nhưng thẳng vào trang thay vì gọi thêm một
             // endpoint: panel mở là hiện ngay, không chờ mạng, và HTML đã được Blade
             // escape. Cả ba khối đều sau cache nên chi phí là 2 query mỗi 10 phút.
-            $view->with('searchTrending', SearchQuery::trending());
+            $view->with('searchTrending', TruyVanTimKiem::trending());
 
             $view->with('searchPanelProducts', Cache::remember(
-                Category::SEARCH_PANEL_PRODUCTS_CACHE_KEY,
+                DanhMuc::SEARCH_PANEL_PRODUCTS_CACHE_KEY,
                 now()->addMinutes(10),
-                fn () => Product::query()
-                    ->select('MaSP', 'name', 'MaDM', 'price', 'image')
+                fn () => SanPham::query()
+                    ->select('ma_sp', 'ten', 'ma_dm', 'gia', 'hinh_anh')
                     ->notExpired()
-                    ->where('stock_quantity', '>', 0)
-                    ->orderByDesc('views_count')
+                    ->where('so_luong_ton', '>', 0)
+                    ->orderByDesc('luot_xem')
                     ->limit(3)
                     ->get()
             ));

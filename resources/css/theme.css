@@ -68,7 +68,7 @@ html, body {
     scrollbar-color: var(--emerald-500) #f8fafc !important;
 }
 
-/* Body Background — không dùng fixed: repaint toàn nền mỗi lần cuộn gây giật (đặc biệt + nhiều backdrop-filter) */
+/* Body Background — khong dung fixed: repaint toan nen moi lan cuon gay giat (dac biet + nhieu backdrop-filter) */
 body {
     background: var(--background-gradient);
     background-attachment: scroll;

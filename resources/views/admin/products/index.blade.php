@@ -14,7 +14,7 @@
                 </h2>
                 <p class="admin-card__description">Dữ liệu tải theo trang để giữ bảng nhanh khi danh mục lớn.</p>
             </div>
-            <a href="{{ route('admin.products.create') }}" class="btn btn-success">
+            <a href="{{ route('admin.san-pham.create') }}" class="btn btn-success">
                 <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Thêm sản phẩm
             </a>
         </div>
@@ -26,8 +26,8 @@
                 </label>
                 <select id="categoryFilter" class="form-select">
                     <option value="">Tất cả danh mục</option>
-                    @foreach($categories as $category)
-                        <option value="{{ $category->MaDM }}">{{ $category->name }}</option>
+                    @foreach($danhMucs as $category)
+                        <option value="{{ $category->ma_dm }}">{{ $category->ten }}</option>
                     @endforeach
                 </select>
             </div>
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function () {
         serverSide: true,
         responsive: true,
         ajax: {
-            url: '{{ route('admin.products.data') }}',
+            url: '{{ route('admin.san-pham.data') }}',
             data: function (d) {
                 d.MaDM = $('#categoryFilter').val();
             }
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
         dom: '<"row align-items-center mb-3 g-2"<"col-md-4"l><"col-md-4"B><"col-md-4"f>>rt<"row align-items-center mt-3 g-2"<"col-md-6"i><"col-md-6"p>>',
         buttons: [
             window.AdminUI.excelButton({
-                url: '{{ route('admin.products.export') }}',
+                url: '{{ route('admin.san-pham.export') }}',
                 params: (dt) => ({
                     MaDM: $('#categoryFilter').val(),
                     q: dt.search(),

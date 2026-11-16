@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Helpers\VietnameseHelper;
-use App\Models\Category;
-use App\Models\MedicalRedFlag;
-use App\Models\MedicalSymptom;
-use App\Models\Product;
-use App\Models\User;
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use App\Models\CoDoYTe;
+use App\Models\NguoiDung;
+use App\Models\TrieuChungYTe;
 use App\Support\VietnameseText;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -16,28 +16,28 @@ use Illuminate\Support\Str;
 class ChatbotService
 {
     protected AiProviderService $aiService;
-    protected InventoryService $inventoryService;
-    protected CheckoutService $checkoutService;
-    protected AuditLogService $auditLogService;
+    protected TonKhoService $tonKhoService;
+    protected ThanhToanService $thanhToanService;
+    protected NhatKyKiemToanService $nhatKyKiemToanService;
 
     /**
-     * The widget turns a markdown link into a button only on an exact label match —
-     * see detailLinkPattern in components/chatbot-markdown-renderer.blade.php. Every
-     * product link must use this string verbatim or it renders as plain inline text.
+     * Widget chỉ biến markdown link thành nút bấm khi nhận khớp đúng chính xác nhãn
+     * — xem detailLinkPattern trong components/chatbot-markdown-renderer.blade.php.
+     * Mọi link sản phẩm phải dùng đúng chuỗi này, nếu không sẽ hiện như văn bản thường.
      */
     protected const PRODUCT_LINK_LABEL = 'Mở sản phẩm';
 
     /**
-     * Medical knowledge is read from the database once per request.
+     * Kiến thức y khoa được đọc từ database một lần mỗi request.
      */
     protected ?array $urgentKeywordsCache = null;
     protected ?array $symptomMapCache = null;
 
     /**
-     * Used only when `medical_red_flags` cannot be read. Mirrors the seeded
-     * chat_short_circuit rows so a database problem degrades urgent detection to
-     * the same decisions rather than a different set. Bare 'ngat' and 'nguy hiem'
-     * are deliberately absent: they fire on "ngắt lời", "việc này nguy hiểm không".
+     * Chỉ dùng khi không đọc được `medical_red_flags`. Đối xứng với các dòng
+     * chat_short_circuit đã seed để khi database có vấn đề, phát hiện cấp cứu
+     * vẫn ra quyết định giống như cũ chứ không phải một bộ khác. 'ngất' và
+     * 'nguy hiểm' được bỏ chủ ý: chúng kích hoạt trên "ngat loi", "viec nay nguy hiem khong".
      */
     protected const URGENT_KEYWORDS_FALLBACK = [
         'ung thu', 'giai doan cuoi', 'cap cuu', 'nguy kich', 'rat nguy hiem', 'khan cap',
@@ -50,7 +50,7 @@ class ChatbotService
     ];
 
     /**
-     * Same rationale as URGENT_KEYWORDS_FALLBACK, for `medical_symptoms`.
+     * Cùng lý do với URGENT_KEYWORDS_FALLBACK, áp dụng cho `medical_symptoms`.
      */
     protected const SYMPTOM_MAP_FALLBACK = [
         'sot xuat huyet' => 'sốt xuất huyết',
@@ -70,8 +70,8 @@ class ChatbotService
     ];
 
     /**
-     * Fallback guard words, used only when `medical_symptoms` cannot be read.
-     * The live values come from `medical_symptoms.guard_words`.
+     * Từ cảnh báo dự phòng, chỉ dùng khi không đọc được `medical_symptoms`.
+     * Giá trị thật lấy từ `medical_symptoms.guard_words`.
      */
     protected const AMBIGUOUS_ALIAS_GUARDS = [
         'sot' => ['nuoc', 'banh', 'mi', 'hu', 'chai', 'lo', 'goi', 'tuong', 'thit', 'nong', 'ruot'],
@@ -79,8 +79,8 @@ class ChatbotService
     ];
 
     /**
-     * System prompt for AI assistant in Vietnamese.
-     * Defines the role, responsibilities, and behavior of the pharmacy assistant.
+     * System prompt cho trợ lý AI, viết bằng tiếng Việt.
+     * Định nghĩa vai trò, nhiệm vụ và hành vi của trợ lý nhà thuốc.
      */
     protected const SYSTEM_PROMPT = <<<'PROMPT'
 Bạn là trợ lý AI của nhà thuốc Medicare Pharmacy.
@@ -119,14 +119,14 @@ PROMPT;
 
 
     /**
-     * Verbs and framing a customer wraps a catalog search in. Stripped before the
-     * keyword tiers run, because whatever survives is LIKE-matched against product
-     * text as one phrase: "kiếm thuốc ho" found nothing while "thuốc ho" finds five.
+     * Các động từ khung câu khách hàng bao quanh một lần tìm trên danh mục sản phẩm.
+     * Bỏ trước khi các tầng từ khóa chạy, vì phần còn lại được LIKE khớp như một
+     * cụm từ duy nhất: "kiem thuoc ho" không ra gì trong khi "thuoc ho" ra năm.
      *
-     * Accent-free spellings are listed only where they cannot collide with real
-     * catalog vocabulary. "tim" is absent even though "tìm" belongs here — it is also
-     * the heart, and the catalog has cardiac products; same for "tiem" ("tiêm",
-     * injectable) as a folding of "tiệm".
+     * Cách viết không dấu chỉ được liệt kê khi nó không thể trùng với từ vựng
+     * danh mục thật. "tim" không có mặt dù thuộc đây — nó cũng là "tìm" (trái tim),
+     * và danh mục có sản phẩm về tim mạch; tương tự "tiem" (tiệm, thuốc tiệm)
+     * khi fold từ "tiệm".
      */
     protected const SEARCH_STOP_WORDS = [
         'cho tôi hỏi', 'cho mình hỏi', 'tôi muốn tìm', 'tôi muốn mua', 'tôi cần tìm', 'tôi cần mua',
@@ -184,7 +184,7 @@ PROMPT;
     ];
 
     /**
-     * Competing pharmacy chains. Their stock is not visible to this assistant.
+     * Các chuỗi nhà thuốc cạnh tranh. Tồn kho của họ không hiện với trợ lý này.
      */
     protected const OTHER_PHARMACY_KEYWORDS = [
         'long chau', 'pharmacity', 'phano', 'eco pharma', 'nha thuoc viet',
@@ -192,8 +192,8 @@ PROMPT;
     ];
 
     /**
-     * Chain names that double as everyday Vietnamese words ("an khang thịnh
-     * vượng"), so they only count next to a pharmacy word.
+     * Tên chuỗi vừa trùng với từ Việt thông thường ("an khang thịnh vượng"),
+     * nên chỉ được tính khi có từ nhà thuốc đứng cạnh.
      */
     protected const OTHER_PHARMACY_AMBIGUOUS_KEYWORDS = [
         'an khang', 'trung son', 'guardian', 'my chau', 'vinh loi', 'phuc an khang',
@@ -204,8 +204,8 @@ PROMPT;
     ];
 
     /**
-     * Common Vietnamese place names, used to spot "nhà thuốc ... tại Đà Nẵng"
-     * style questions that are about a location rather than a product.
+     * Tên địa danh Việt thông dụng, dùng để nhận dạng các câu hỏi kiểu
+     * "nhà thuốc ... tại Đà Nẵng" là hỏi về địa điểm chứ không phải sản phẩm.
      */
     protected const VIETNAM_PLACE_KEYWORDS = [
         'da nang', 'ha noi', 'sai gon', 'ho chi minh', 'tphcm', 'hcm', 'hue', 'hoi an',
@@ -221,9 +221,8 @@ PROMPT;
     ];
 
     /**
-     * Wording that, on its own, only repeats the disclaimer box. Subtracted from a
-     * sentence by isBoilerplateDisclaimerSentence(): whatever is left decides
-     * whether the sentence carries real content.
+     * Cách diễn đạt khi dùng một mình chỉ lặp lại ở disclaimer. isBoilerplateDisclaimerSentence()
+     * trừ chunk này ra khỏi câu: phần còn lại quyết định câu đó có nội dung thật hay không.
      */
     protected const DISCLAIMER_BOILERPLATE_FRAGMENTS = [
         'noi dung do ai tao ra co the khong chinh xac',
@@ -244,40 +243,40 @@ PROMPT;
     ];
 
     /**
-     * Tokens that carry no topic. A message made only of these ("có ổn không?",
-     * "vậy được không?") can only be understood against the previous turn.
+     * Các token không mang chủ đề nào. Một tin nhắn chỉ gồm chúng ("cơm ổn không?",
+     * "vậy được không?") chỉ có thể hiểu được khi dựa vào lượt trước.
      */
     protected const ELLIPTICAL_FOLLOW_UP_TOKENS = [
         'co', 'khong', 'ko', 'hong', 'k', 'on', 'sao', 'vay', 'the', 'nao', 'gi',
         'duoc', 'chu', 'nhi', 'nhe', 'nha', 'a', 'ha', 'u', 'uh', 'oke', 'ok',
         'roi', 'thi', 'ma', 'day', 'do', 'nua', 'that', 'toi', 'minh', 'em',
         'anh', 'chi', 'ban', 'ai', 'la',
-        // "cho xem link sản phẩm đi" / "xem chi tiết đi" name no product of their
-        // own: they point at whatever the previous turn listed. Without these the
-        // message was searched as the literal query "cho link sản phẩm đi", found
-        // nothing, and the model invented product links instead.
+        // "cho xem link san pham di" / "xem chi tiết đi" không nêu tên sản phẩm nào
+        // của riêng chúng: chúng chỉ đến phần lượt trước đã liệt kê. Không có chúng,
+        // tin nhắn đã được tìm như truy vấn nguyên văn "cho link san pham di",
+        // ra không gì, và model đã tự bịa các link sản phẩm thay vào.
         'link', 'xem', 'xin', 'chi', 'tiet', 'them', 'gui', 'cho', 'dua', 'di',
-        // A request to change the presentation of what was just listed: "tóm tắt lại
-        // theo dạng table", "tóm tắt lại thành bảng". Without these the message was
-        // searched as the query "tóm tắt", which matched unrelated products.
+        // Một yêu cầu đổi cách trình bày phần vừa được liệt kê: "tóm tắt lại
+        // theo dạng table", "tóm tắt lại thành bảng". Không có chúng, tin nhắn đã
+        // được tìm như truy vấn "tóm tắt", và khớp với những sản phẩm không liên quan.
         'tom', 'tat', 'lai', 'table', 'bang', 'dang', 'giup', 'nhé', 'theo', 'thanh',
     ];
 
     /**
-     * Scripts the assistant never writes in: CJK ideographs and punctuation, kana,
-     * Hangul, halfwidth/fullwidth forms, Cyrillic, Thai, Arabic, Hebrew, Devanagari.
-     * Latin punctuation, "×", "µ" and Vietnamese diacritics stay outside these
-     * ranges, so normal answers are untouched.
+     * Các bảng chữ trợ lý không bao giờ viết: chữ tượng hình và dấu câu CJK, kana,
+     * Hangul, dạng halfwidth/fullwidth, Cyrillic, Thai, Arabic, Hebrew, Devanagari.
+     * Dấu câu Latin, "×", "µ" và dấu tiếng Việt nằm ngoài các khoảng này,
+     * nên câu trả lời bình thường không bị ảnh hưởng.
      */
     protected const FOREIGN_SCRIPT_CLASS = '[\x{3000}-\x{30FF}\x{3400}-\x{4DBF}\x{4E00}-\x{9FFF}\x{F900}-\x{FAFF}\x{1100}-\x{11FF}\x{AC00}-\x{D7AF}\x{FF00}-\x{FFEF}\x{0400}-\x{04FF}\x{0E00}-\x{0E7F}\x{0600}-\x{06FF}\x{0590}-\x{05FF}\x{0900}-\x{097F}]';
 
     /**
-     * Filler words that must not drive a match on their own. "thuốc"/"sản phẩm" are
-     * here because they appear in most category and product names at once.
+     * Từ xóa (filler) không được phép tự nó tự kéo một kết quả khớp. "thuốc"/"sản phẩm"
+     * nằm ở đây vì chúng xuất hiện đồng thời trong tên phần lớn danh mục và sản phẩm.
      *
-     * Accent-free spellings are listed only where they cannot collide with a
-     * meaningful word: "ho" (cough) and "tim" (heart) are left out even though "hỗ"
-     * and "tìm" are filler, because folding makes the two indistinguishable.
+     * Cách viết không dấu chỉ được liệt kê khi không thể trùng với một từ có nghĩa:
+     * "ho" (ho) và "tim" (trái tim) bị bỏ ra dù là filler, vì fold làm hai từ
+     * không thể phân biệt.
      */
     protected const QUERY_NOISE_TOKENS = [
         'có', 'co', 'không', 'khong', 'ko', 'gì', 'gi', 'nào', 'nao',
@@ -293,13 +292,13 @@ PROMPT;
     ];
 
     /**
-     * Price questions, stripped as whole phrases before the narrowing windows are
-     * built. "que thử thai giá bao nhiêu" searched on "bao nhiêu", which matched
-     * "cần trung hòa lượng acid dịch vị bao nhiêu" in an antacid's usage text and
-     * answered a pregnancy-test question with a stomach medicine.
+     * Các câu hỏi về giá, được bỏ nguyên cụm trước khi xây dựng các cửa sổ thu hẹp.
+     * "que thu thai gia bao nhieu" đã tìm trên "bao nhiêu", trùng với
+     * "can trung hoa luong acid dich vi bao nhieu" trong cách dùng của thuốc tham vị,
+     * và đã trả lời câu hỏi que thử thai bằng thuốc dạ dày.
      *
-     * Phrases, not tokens: "bao" alone is meaningful ("bao cao su"), "giá" folds
-     * together with "già" ("nước oxy già"). Longest first so the whole phrase goes.
+     * Dùng cụm từ, không dùng token lẻ: "bao" một mình có nghĩa ("bao cao su"),
+     * "giá" fold trùng với "gia" ("nước oxy già"). Đặt dài nhất trước để nguyên cụm được bỏ.
      */
     protected const QUERY_PRICE_PHRASES = [
         'gia bao nhieu', 'het bao nhieu', 'gia ca bao nhieu',
@@ -307,15 +306,15 @@ PROMPT;
     ];
 
     /**
-     * Rows fetched per keyword tier before keepGenuineMatches() throws away the
-     * accent-blind LIKE hits. Larger than the 5 shown so a handful of false matches
-     * cannot starve a tier that does hold real ones.
+     * Số dòng fetch mỗi tầng từ khóa trước khi keepGenuineMatches() loại các kết quả
+     * LIKE mờ tìm không dấu. Lớn hơn con 5 hiển thị để một vài kết quả sai không thể
+     * làm chết đôi một tầng từ thật có kết quả.
      */
     protected const QUERY_MATCH_FETCH_LIMIT = 25;
 
     /**
-     * Fallback replies that only say the AI provider is unavailable. They are shown
-     * to the customer but excluded from the AI-facing history by
+     * Các câu trả lời dự phòng chỉ nói nhà cung cấp AI không khả dụng. Chúng được
+     * hiện cho khách nhưng bị loại khỏi lịch sử cung cấp cho AI bởi
      * sanitizeHistoryForAi().
      */
     protected const UNINFORMATIVE_FALLBACK_TYPES = [
@@ -323,8 +322,8 @@ PROMPT;
     ];
 
     /**
-     * Function schema for AI provider tool calling.
-     * Defines the search_products function for structured product queries.
+     * Schema function cho tool calling của nhà cung cấp AI.
+     * Định nghĩa function search_products cho các truy vấn sản phẩm có cấu trúc.
      *
      * @return array
      */
@@ -426,7 +425,7 @@ PROMPT;
     }
 
     /**
-     * Get the system prompt for AI assistant.
+     * Lấy system prompt của trợ lý AI.
      *
      * @return string
      */
@@ -436,29 +435,29 @@ PROMPT;
     }
 
     /**
-     * Initialize ChatbotService with dependency injection.
+     * Khởi tạo ChatbotService bằng dependency injection.
      *
-     * @param InventoryService $inventoryService
-     * @param CheckoutService $checkoutService
-     * @param AuditLogService $auditLogService
+     * @param TonKhoService $tonKhoService
+     * @param ThanhToanService $thanhToanService
+     * @param NhatKyKiemToanService $nhatKyKiemToanService
      */
     public function __construct(
         AiProviderService $aiService,
-        InventoryService $inventoryService,
-        CheckoutService $checkoutService,
-        AuditLogService $auditLogService
+        TonKhoService $tonKhoService,
+        ThanhToanService $thanhToanService,
+        NhatKyKiemToanService $nhatKyKiemToanService
     ) {
         $this->aiService = $aiService;
-        $this->inventoryService = $inventoryService;
-        $this->checkoutService = $checkoutService;
-        $this->auditLogService = $auditLogService;
+        $this->tonKhoService = $tonKhoService;
+        $this->thanhToanService = $thanhToanService;
+        $this->nhatKyKiemToanService = $nhatKyKiemToanService;
     }
 
     /**
-     * Validate if message is meaningful enough to process.
+     * Kiểm tra tin nhắn có đủ ý nghĩa để xử lý hay không.
      *
-     * @param string $message User message
-     * @return array Validation result with success flag and reason
+     * @param string $message Tin nhắn của người dùng
+     * @return array Kết quả kiểm tra với cờ success và lý do
      */
     public function validateMessage(string $message): array
     {
@@ -472,7 +471,7 @@ PROMPT;
             ];
         }
         
-        // Spam/repeated characters detection
+        // Phát hiện spam/ký tự lặp lại
         if (preg_match('/^([a-zA-Z0-9À-ỹ])\1{4,}$/u', $trimmed)) {
             return [
                 'valid' => false,
@@ -480,7 +479,7 @@ PROMPT;
             ];
         }
         
-        // Contains only special characters
+        // Chỉ gồm ký tự đặc biệt
         if (preg_match('/^[^a-zA-ZÀ-ỹ0-9\s]+$/', $trimmed)) {
             return [
                 'valid' => false,
@@ -488,7 +487,7 @@ PROMPT;
             ];
         }
         
-        // Bad words detection from config
+        // Phát hiện từ xấu từ config
         $badWords = config('blacklists.chatbot', []);
         if (!empty($badWords) && $this->containsBlacklistedTerm($trimmed, $badWords)) {
             return [
@@ -566,12 +565,12 @@ PROMPT;
     }
 
     /**
-     * Process user message and generate AI response.
+     * Xử lý tin nhắn người dùng và tạo câu trả lời AI.
      *
-     * @param string $message User message content
-     * @param int $userId User ID
-     * @param array $context Conversation context
-     * @return array Response with AI message and metadata
+     * @param string $message Nội dung tin nhắn người dùng
+     * @param int $userId ID người dùng
+     * @param array $context Ngữ cảnh cuộc trò chuyện
+     * @return array Câu trả lời gồm tin nhắn AI và metadata
      * @throws \Exception
      */
     public function processMessage(string $message, int $userId, array $context): array
@@ -713,8 +712,8 @@ PROMPT;
                 ];
             $response = $this->aiService->chat($messages, $chatOptions);
 
-            $products = [];
-            $categories = [];
+            $sanPhams = [];
+            $danhMucs = [];
             $explanations = [];
             $showDisclaimer = false;
             $responseText = '';
@@ -762,16 +761,16 @@ PROMPT;
                             $lookupSymptoms
                         );
 
-                        $products = $catalogResponse['products'];
-                        $categories = $catalogResponse['categories'];
+                        $sanPhams = $catalogResponse['products'];
+                        $danhMucs = $catalogResponse['categories'];
                         $explanations = $catalogResponse['explanations'];
                         $showDisclaimer = $catalogResponse['show_disclaimer'];
                         $responseType = $catalogResponse['response_type'] ?? 'general';
                         $responseText = $this->shouldUseGroundedAiStep()
                             ? $this->buildGroundedAiResponse(
                                 $catalogLookupMessage,
-                                $products,
-                                $categories,
+                                $sanPhams,
+                                $danhMucs,
                                 $explanations,
                                 $catalogResponse['response'],
                                 $showDisclaimer
@@ -784,16 +783,16 @@ PROMPT;
                         $limit = (int) ($arguments['limit'] ?? 6);
                         $categoryResponse = $this->buildCategoryLookupResponseFromQuery($query, $workingMessage, $limit);
 
-                        $products = $categoryResponse['products'];
-                        $categories = $categoryResponse['categories'];
+                        $sanPhams = $categoryResponse['products'];
+                        $danhMucs = $categoryResponse['categories'];
                         $explanations = $categoryResponse['explanations'];
                         $showDisclaimer = $categoryResponse['show_disclaimer'];
                         $responseType = $categoryResponse['response_type'] ?? 'general';
                         $responseText = $this->shouldUseGroundedAiStep()
                             ? $this->buildGroundedAiResponse(
                                 $workingMessage,
-                                $products,
-                                $categories,
+                                $sanPhams,
+                                $danhMucs,
                                 $explanations,
                                 $categoryResponse['response'],
                                 false
@@ -827,8 +826,8 @@ PROMPT;
                             $userId
                         );
 
-                        $products = $safetyResponse['products'];
-                        $categories = [];
+                        $sanPhams = $safetyResponse['products'];
+                        $danhMucs = [];
                         $explanations = [];
                         $showDisclaimer = $safetyResponse['show_disclaimer'];
                         $responseType = $safetyResponse['response_type'];
@@ -873,18 +872,18 @@ PROMPT;
                         $showDisclaimer,
                         $contextSymptoms
                     );
-                    $products = $catalogResponse['products'];
-                    $categories = $catalogResponse['categories'];
+                    $sanPhams = $catalogResponse['products'];
+                    $danhMucs = $catalogResponse['categories'];
                     $explanations = $catalogResponse['explanations'];
                     $showDisclaimer = $catalogResponse['show_disclaimer'];
                     $responseType = $catalogResponse['response_type'] ?? 'general';
 
                     $assistantText = $hadInternalToolNarration ? '' : $responseText;
-                    $hasCatalogData = !empty($products) || !empty($categories);
+                    $hasCatalogData = !empty($sanPhams) || !empty($danhMucs);
 
                     if (!$hasCatalogData) {
-                        // The lookup found nothing, so its "chưa thấy sản phẩm" block
-                        // would contradict a reply that already stands on its own.
+                        // Lúc tra không ra gì nên khối "chưa thấy sản phẩm" của nó
+                        // sẽ mọc lẫn với câu trả lời đã tự đứng được sẵn.
                         $responseText = $assistantText !== ''
                             ? $assistantText
                             : $catalogResponse['response'];
@@ -896,8 +895,8 @@ PROMPT;
                         $responseText = $this->shouldUseGroundedAiStep()
                             ? $this->buildGroundedAiResponse(
                                 $catalogLookupMessage,
-                                $products,
-                                $categories,
+                                $sanPhams,
+                                $danhMucs,
                                 $explanations,
                                 $fallbackResponse,
                                 $showDisclaimer
@@ -908,19 +907,19 @@ PROMPT;
             }
 
             if (trim($responseText) === '') {
-                $responseText = (!empty($products) || !empty($categories))
+                $responseText = (!empty($sanPhams) || !empty($danhMucs))
                     ? 'Da tim du lieu lien quan. Anh/chi xem cac goi y ben duoi de tiep tuc.'
                     : 'Da nhan duoc yeu cau. Anh/chi co the mo ta cu the hon de em ho tro chinh xac.';
             }
 
             $responseText = $this->sanitizeAssistantResponse($responseText);
             $responseText = $this->enforceMetaResponsePolicy($workingMessage, $responseText);
-            $responseText = $this->formatFriendlyProductLinks($responseText, $products);
+            $responseText = $this->formatFriendlyProductLinks($responseText, $sanPhams);
 
-            // A turn that retrieved nothing has no product link to offer. Anything the
-            // model wrote in that shape came from its memory of an earlier turn, with a
-            // host and a label it made up.
-            if (empty($products)) {
+            // Lượt không tra được gì thì không có link sản phẩm để đề xuất. Bất cứ
+            // gì model viết theo hình dáng đó đều đến từ nhớ của nó về một lượt trước,
+            // kèm cả host và nhãn tự do nó bịa ra.
+            if (empty($sanPhams)) {
                 $responseText = $this->stripInventedProductLinks($responseText);
             }
 
@@ -933,8 +932,8 @@ PROMPT;
             $result = [
                 'success' => true,
                 'response' => $responseText,
-                'products' => $products,
-                'categories' => $categories,
+                'products' => $sanPhams,
+                'categories' => $danhMucs,
                 'explanations' => $explanations,
                 'show_disclaimer' => $showDisclaimer,
                 'disclaimer' => $showDisclaimer
@@ -951,15 +950,15 @@ PROMPT;
                 $message,
                 (microtime(true) - $startTime) * 1000,
                 $responseType,
-                $products,
-                $categories,
+                $sanPhams,
+                $danhMucs,
                 $showDisclaimer
             );
 
             return $result;
         } catch (\Exception $e) {
             Log::error('Message processing failed', [
-                'MaKH' => $userId,
+                'ma_nd' => $userId,
                 'message' => $message,
                 'error' => $e->getMessage()
             ]);
@@ -1051,7 +1050,7 @@ PROMPT;
                         ];
                     }
                 } catch (\Exception $categoryFallbackError) {
-                    Log::error('Category fallback failed', ['error' => $categoryFallbackError->getMessage()]);
+                    Log::error('DanhMuc fallback failed', ['error' => $categoryFallbackError->getMessage()]);
                 }
             }
 
@@ -1107,8 +1106,8 @@ PROMPT;
     }
 
     /**
-     * Provider metadata of the provider that actually served the reply, so the
-     * admin trace stays accurate after a failover.
+     * Metadata nhà cung cấp đã thực sự phục vụ câu trả lời, để vết dò
+     * phía quản trị vẫn chính xác sau khi failover.
      */
     protected function describeAiProviderForDebug(): array
     {
@@ -1125,8 +1124,8 @@ PROMPT;
     {
         $message = $this->normalizeIntentText($exception->getMessage());
 
-        // Gateway/upstream failures often contain the word "forbidden" in the body,
-        // so they must be matched before the auth keywords below.
+        // Lỗi gateway/upstream thường chứa từ "forbidden" trong body,
+        // nên phải khớp trước các từ khóa auth phía dưới.
         if ($this->containsAnyKeyword($message, [
             'user location is not supported',
             'location is not supported',
@@ -1150,10 +1149,10 @@ PROMPT;
             return 'provider_upstream_error';
         }
 
-        // Before the auth block: a rate-limit body routinely names the credential
-        // ("your api key has exceeded its quota"), and the loose `api key` token below
-        // would otherwise tell the customer their access was revoked when the provider
-        // is merely overloaded.
+        // Đặt trước khối auth: body giới hạn tỷ lệ thường đề cập đến credential
+        // ("your api key has exceeded its quota"), và token `api key` lỏng lẽo phía
+        // dưới nếu không sẽ báo khách rằng quyền truy cập bị thu hồi trong khi
+        // nhà cung cấp chỉ là quá tải.
         if ($this->containsAnyKeyword($message, [
             'high demand',
             'quota',
@@ -1208,15 +1207,15 @@ PROMPT;
     }
 
     /**
-     * Rewrite product URLs the model printed as prose, leaving markdown links alone.
+     * Viết lại các URL sản phẩm model in như văn bản thường, giữ nguyên markdown link.
      *
-     * Two alternatives, because a model asked for a link writes both `(url)` and a bare
-     * `url`, and neither may touch an existing `[label](url)`:
-     *   1. `(url)` whose opening paren is not the `](` of a markdown link
-     *   2. a bare url not preceded by `](`
+     * Hai phương án, vì model được yêu cầu đưa link sẽ viết cả `(url)` và `url` trần,
+     * và cả hai đều không được chạm vào `[label](url)` có sẵn:
+     *   1. `(url)` có dấu mở ngoặc không phải là `](` của một markdown link
+     *   2. url trần không đứng trước bởi `](`
      *
-     * The previous version anchored on `(?!\))` alone, so a paren-wrapped URL — the
-     * common case — was skipped entirely and shipped to the widget raw.
+     * Phiên bản trước chỉ neo trên `(?!\))`, nên URL bọc ngoặc — trường hợp phổ
+     * biến nhất — bị bỏ qua hoàn toàn và gửi widget nguyên bản.
      *
      * @param array<int, string> $urls
      */
@@ -1234,29 +1233,29 @@ PROMPT;
             $responseText = preg_replace($pattern, $replacement, $responseText) ?? $responseText;
         }
 
-        // Tidy the punctuation a stripped URL leaves behind: " , còn 300 ." and doubled spaces.
+        // Dọn lại dấu câu mà việc gỡ bỏ URL để lại: " , còn 300 ." và khoảng trắng kép.
         $responseText = preg_replace('/[ \t]+([,;.])/u', '$1', $responseText) ?? $responseText;
         $responseText = preg_replace('/[ \t]{2,}/u', ' ', $responseText) ?? $responseText;
 
         return trim($responseText);
     }
 
-    protected function formatFriendlyProductLinks(string $responseText, array $products): string
+    protected function formatFriendlyProductLinks(string $responseText, array $sanPhams): string
     {
         $responseText = trim($responseText);
-        if ($responseText === '' || empty($products)) {
+        if ($responseText === '' || empty($sanPhams)) {
             return $responseText;
         }
 
-        foreach ($products as $product) {
-            $url = trim((string) ($product['url'] ?? ''));
+        foreach ($sanPhams as $sanPham) {
+            $url = trim((string) ($sanPham['url'] ?? ''));
             if ($url === '') {
                 continue;
             }
 
-            // self::PRODUCT_LINK_LABEL, not the product name: the widget promotes a link
-            // to a button on an exact label match, so "Xem chi tiết Smecta" stayed a
-            // plain inline link.
+            // self::PRODUCT_LINK_LABEL, không phải tên sản phẩm: widget chỉ nâng
+            // link lên thành nút bấm khi nhận khớp đúng nhãn, nên "Xem chi tiết Smecta"
+            // trước đây vẫn là link inline thường.
             $responseText = $this->replaceRawProductUrls(
                 $responseText,
                 [$url],
@@ -1268,16 +1267,15 @@ PROMPT;
     }
 
     /**
-     * Remove product links the model wrote on its own.
+     * Gỡ bỏ các link sản phẩm model tự viết.
      *
-     * A turn that never called the catalogue tool gets an empty product list, but the
-     * model still remembers ids from earlier turns and writes its own links:
-     * "[Sản phẩm 322](http://localhost/products/322)" — a host without the dev port,
-     * a label that is an id rather than a name, and a product this answer never
-     * looked up. Only real product cards carry a link, and they are rendered from
-     * `$products` after this runs.
+     * Lượt không gọi tool danh mục sẽ nhận danh sách sản phẩm rỗng, nhưng model vẫn
+     * nhớ id từ các lượt trước và tự viết link: "[San phẩm 322](http://localhost/products/322)"
+     * — một host thiếu port dev, một nhãn là id chứ không phải tên, và một sản phẩm
+     * mà câu trả lời này chưa bao giờ tra cứu. Chỉ card sản phẩm thật mới có link,
+     * và chúng được render từ `$sanPhams` sau khi bước này chạy.
      *
-     * A `/products?category=` listing URL is not a product and is left alone.
+     * URL listing dạng `/products?category=` không phải sản phẩm và được để nguyên.
      */
     protected function stripInventedProductLinks(string $responseText): string
     {
@@ -1285,21 +1283,21 @@ PROMPT;
             return $responseText;
         }
 
-        // Markdown link whose target is a single product: drop the whole link.
+        // Markdown link mà đích đến là một sản phẩm đơn lẻ: bỏ cả link.
         $responseText = preg_replace(
             '/\[([^\]]*)\]\((?:https?:\/\/[^\s)]*)?\/products\/\d+[^\s)]*\)/u',
             '',
             $responseText
         ) ?? $responseText;
 
-        // Bare or parenthesised product URL the model printed as plain text.
+        // URL sản phẩm trần hoặc bọc ngoặc mà model in như văn bản thường.
         $responseText = preg_replace(
             '/\(?\s*(?:https?:\/\/[^\s)]*)?\/products\/\d+[^\s)]*\s*\)?/u',
             '',
             $responseText
         ) ?? $responseText;
 
-        // Tidy what the removal left behind: empty bullets, doubled spaces, blank runs.
+        // Dọn những gì việc gỡ bỏ để lại: bullet rỗng, khoảng trắng kép, khoảng trống liên tiếp.
         $responseText = preg_replace('/^[ \t]*[-*•]\s*$/mu', '', $responseText) ?? $responseText;
         $responseText = preg_replace('/[ \t]{2,}/u', ' ', $responseText) ?? $responseText;
         $responseText = preg_replace('/[ \t]+\n/u', "\n", $responseText) ?? $responseText;
@@ -1327,6 +1325,9 @@ PROMPT;
             $responseText = preg_replace($patterns, '', $responseText) ?? $responseText;
         }
 
+        // Nhà cung cấp thỉnh thoảng nhả tiền tố chế độ agent ([MODE: EXECUTE]...)
+        // trước nội dung thật; đây là rác điều khiển, không phải chữ gửi khách.
+        $responseText = preg_replace('/^\s*\[MODE:\s*[A-Z_]+\]\s*/iu', '', $responseText) ?? $responseText;
         $responseText = $this->sanitizeInlineMathForPlainText($responseText);
         $responseText = $this->stripForeignScriptArtifacts($responseText);
         $responseText = $this->stripRedundantDisclaimer($responseText);
@@ -1337,10 +1338,9 @@ PROMPT;
     }
 
     /**
-     * Words containing a script the assistant never answers in. The provider mixes
-     * in Chinese, Korean or Cyrillic fragments now and then ("tha酸", "중풍"), and
-     * half a word is not worth keeping, so the whole word goes and the punctuation
-     * it leaves behind is tidied up.
+     * Các từ chứa bảng chữ trợ lý không bao giờ trả lời. Nhà cung cấp thỉnh thoảng
+     * trộn vào đoạn Trung, Hàn hoặc Cyrillic ("tha酸", "중풍"), và nửa từ không đáng
+     * giữ nên cả từ bị gỡ, phần dấu câu để lại được dọn lại.
      */
     protected function stripForeignScriptArtifacts(string $responseText): string
     {
@@ -1362,19 +1362,19 @@ PROMPT;
     }
 
     /**
-     * The widget already renders one disclaimer box per conversation from
-     * `show_disclaimer`, so a "tham khảo ý kiến dược sĩ/bác sĩ" tail in the text
-     * itself says the same thing twice - and unlike the box it repeats on every
-     * answer. The prompt asks the provider not to add it; this removes it when the
-     * provider does anyway.
+     * Widget đã render một ô disclaimer mỗi cuộc trò chuyện từ `show_disclaimer`,
+     * nên phần đuôi câu "tham khảo ý kiến dược sĩ/bác sĩ" trong bản thân văn bản
+     * lặp lại đúng điều đó hai lần — và khác với ô disclaimer, nó lặp lại trên
+     * mỗi câu trả lời. Prompt đã yêu cầu nhà cung cấp không thêm vào; bước này
+     * gỡ bỏ khi nhà cung cấp vẫn thêm.
      */
     protected function stripRedundantDisclaimer(string $responseText): string
     {
         $original = $responseText;
         $responseText = rtrim($responseText);
 
-        // Two passes: the reminder arrives either as its own trailing line or as the
-        // last sentence of the closing paragraph.
+        // Chạy hai lượt: lời nhắc đến hoặc như một dòng riêng ở cuối, hoặc như
+        // câu cuối cùng của đoạn kết.
         for ($pass = 0; $pass < 2; $pass++) {
             $lines = preg_split('/\R/u', $responseText) ?: [];
             $lastIndex = null;
@@ -1410,16 +1410,16 @@ PROMPT;
             $responseText = rtrim(implode("\n", $lines));
         }
 
-        // Never strip the entire answer down to nothing.
+        // Không bao giờ gỡ sạch cả câu trả lời đến trống trơn.
         return trim($responseText) === '' ? $original : $responseText;
     }
 
     /**
-     * True only when the sentence is nothing but the boilerplate: every known
-     * fragment is subtracted and nothing substantive is left. Conditional advice
-     * ("nếu có bệnh nền thì nên hỏi dược sĩ") and real warnings ("có cảnh báo ở mức
-     * nghiêm trọng, nên hỏi dược sĩ") keep words that are not on the list, so they
-     * survive.
+     * Chỉ đúng khi câu đó không còn gì ngoài boilerplate: trừ hết mọi fragment
+     * đã biết và không còn nội dung thật nào lại. Lời khuyên có điều kiện
+     * ("neu co benh nen thi nen hoi duoc si") và cảnh báo thật ("co canh bao o muc
+     * nghiem trong, nen hoi duoc si") giữ những từ không nằm trong danh sách,
+     * nên được giữ lại.
      */
     protected function isBoilerplateDisclaimerSentence(string $sentence): bool
     {
@@ -1765,11 +1765,11 @@ PROMPT;
             return null;
         }
 
-        // A follow-up ("tóm tắt lại theo dạng table") names a format, not a product.
-        // Resolved as a query it became "tóm tắt", which the catalogue's substring
-        // search matched against seven unrelated products, and this builder answered
-        // in PHP before the model was ever reached — so a request for a table came
-        // back as a numbered list. Hand it to the model instead.
+        // Một lượt hỏi theo ("tóm tắt lại theo dạng table") nhắm định dạng, không phải
+        // tên sản phẩm. Xử lý như một truy vấn thì nó trở thành "tóm tắt", mà tìm kiếm
+        // substring của danh mục lại khớp với bảy sản phẩm liên quan gì, và builder
+        // này trả lời bằng PHP trước khi model được đến — nên yêu cầu một bảng
+        // lại về dưới dạng danh sách số. Chuyển nó cho model thay.
         if (!$this->isSymptomRelatedQuery($message) && !$this->isEllipticalFollowUpMessage($message)) {
             $query = $this->resolveCatalogQuery($message);
 
@@ -1795,12 +1795,12 @@ PROMPT;
             return null;
         }
 
-        $products = $this->resolveRecognizedProductsForCatalogResponse($recognizedProducts);
-        if ($products->isEmpty()) {
+        $sanPhams = $this->resolveRecognizedProductsForCatalogResponse($recognizedProducts);
+        if ($sanPhams->isEmpty()) {
             return null;
         }
 
-        $payload = $this->formatProductsPayload($products);
+        $payload = $this->formatProductsPayload($sanPhams);
         $explanations = $this->buildProductExplanations($payload, $message);
         $displayQuery = implode(', ', array_column($payload, 'name'));
         $response = $this->buildDetailedProductResponseText($displayQuery, $payload, $explanations, false);
@@ -1841,9 +1841,9 @@ PROMPT;
 
     protected function extractRecentImageProductsFromContext(array $context): array
     {
-        $products = $context['recent_image_products'] ?? [];
-        if (is_array($products) && !empty($products)) {
-            return $products;
+        $sanPhams = $context['recent_image_products'] ?? [];
+        if (is_array($sanPhams) && !empty($sanPhams)) {
+            return $sanPhams;
         }
 
         $messages = $context['previous_messages'] ?? [];
@@ -1876,14 +1876,14 @@ PROMPT;
                 continue;
             }
 
-            $product = $item['product'] ?? [];
-            if (is_array($product)) {
-                $id = (int) ($product['id'] ?? $product['MaSP'] ?? 0);
+            $sanPham = $item['product'] ?? [];
+            if (is_array($sanPham)) {
+                $id = (int) ($sanPham['id'] ?? $sanPham['ma_sp'] ?? 0);
                 if ($id > 0) {
                     $ids[] = $id;
                 }
 
-                $name = trim((string) ($product['name'] ?? ''));
+                $name = trim((string) ($sanPham['name'] ?? ''));
                 if ($name !== '') {
                     $names[] = $name;
                 }
@@ -1895,13 +1895,13 @@ PROMPT;
             }
         }
 
-        $query = Product::with('category')
+        $query = SanPham::with('danhMuc')
             ->notExpired()
-            ->where('stock_quantity', '>', 0);
+            ->where('so_luong_ton', '>', 0);
 
         $ids = array_values(array_unique(array_filter($ids)));
         if (!empty($ids)) {
-            return $query->whereIn('MaSP', $ids)
+            return $query->whereIn('ma_sp', $ids)
                 ->FEFO()
                 ->limit(5)
                 ->get();
@@ -1909,7 +1909,7 @@ PROMPT;
 
         $results = collect();
         foreach (array_values(array_unique($names)) as $name) {
-            $results = $results->concat($this->searchProducts($name))->unique('MaSP')->values();
+            $results = $results->concat($this->searchProducts($name))->unique('ma_sp')->values();
             if ($results->count() >= 5) {
                 return $results->take(5)->values();
             }
@@ -1946,7 +1946,7 @@ PROMPT;
                 continue;
             }
 
-            $searchResults = $searchResults->concat($results)->unique('MaSP')->values();
+            $searchResults = $searchResults->concat($results)->unique('ma_sp')->values();
 
             if ($searchResults->count() >= 5) {
                 $searchResults = $searchResults->take(5)->values();
@@ -1954,68 +1954,69 @@ PROMPT;
             }
         }
 
-        $products = $this->formatProductsPayload($searchResults);
-        $explanations = $this->buildProductExplanations($products, $originalMessage);
-        $categories = [];
+        $sanPhams = $this->formatProductsPayload($searchResults);
+        $explanations = $this->buildProductExplanations($sanPhams, $originalMessage);
+        $danhMucs = [];
         $displayQuery = $query !== '' ? $query : (string) ($symptomQueries[0] ?? '');
 
         if (($displayQuery === '' || $this->isBroadCatalogQuery($displayQuery)) && !empty($goalQueries)) {
             $displayQuery = $goalQueries[0];
         }
 
-        if (!empty($products)) {
-            $response = $this->buildDetailedProductResponseText($displayQuery, $products, $explanations, $showDisclaimer);
+        if (!empty($sanPhams)) {
+            $response = $this->buildDetailedProductResponseText($displayQuery, $sanPhams, $explanations, $showDisclaimer);
         } else {
             $categoryQuery = $displayQuery;
-            $categories = $this->formatCategoriesPayload($this->searchCategories($displayQuery, 3));
-            if (empty($categories) && !empty($searchQueries)) {
+            $danhMucs = $this->formatCategoriesPayload($this->searchCategories($displayQuery, 3));
+            if (empty($danhMucs) && !empty($searchQueries)) {
                 $categoryQuery = $searchQueries[0];
-                $categories = $this->formatCategoriesPayload($this->searchCategories($categoryQuery, 3));
+                $danhMucs = $this->formatCategoriesPayload($this->searchCategories($categoryQuery, 3));
             }
 
-            if (empty($categories)) {
+            if (empty($danhMucs)) {
                 $tokenQueries = array_values(array_filter(array_merge([$displayQuery], $searchQueries)));
                 $tokenCategories = $this->resolveCategoriesForQueries($tokenQueries, 3);
                 if ($tokenCategories->isNotEmpty()) {
                     $categoryQuery = $displayQuery !== '' ? $displayQuery : (string) ($searchQueries[0] ?? '');
-                    $categories = $this->formatCategoriesPayload($tokenCategories);
+                    $danhMucs = $this->formatCategoriesPayload($tokenCategories);
                 }
             }
 
-            // A therapeutic-area query ("hỗ trợ tiêu hóa") matches a category but no
-            // product name/ingredient/usage, so the keyword search comes back empty
-            // while the matched category is full of relevant stock. Answer with that
-            // stock instead of telling the customer nothing was found. Requires an
-            // unambiguous match: an empty query returns the top categories by volume,
-            // and several matches make "products of the first one" an arbitrary pick.
-            $categoryProducts = $categoryQuery !== '' && count($categories) === 1
-                ? $this->getFeaturedProductsForCategory((int) $categories[0]['id'])
+            // Một truy vấn lĩnh điều trị ("hỗ trợ tiêu hóa") khớp một danh mục nhưng
+            // không khớp tên/hoạt chất/cách dùng sản phẩm nào, nên tìm kiếm từ khóa
+            // ra rỗng trong khi danh mục khớp lại đầy sản phẩm liên quan. Trả lời
+            // bằng tồn kho đó thay vì báo khách không tìm thấy. Yêu cầu một khớp
+            // không nhiều nghĩa: truy vấn rỗng trả về các danh mục nhiều tồn kho nhất,
+            // và nhiều danh mục khớp cùng lúc sẽ làm "sản phẩm của danh mục đầu tiên"
+            // thành một lựa chọn tùy ý.
+            $categoryProducts = $categoryQuery !== '' && count($danhMucs) === 1
+                ? $this->getFeaturedProductsForCategory((int) $danhMucs[0]['id'])
                 : collect();
 
             if ($categoryProducts->isNotEmpty()) {
-                $products = $this->formatProductsPayload($categoryProducts);
-                $explanations = $this->buildProductExplanations($products, $originalMessage);
+                $sanPhams = $this->formatProductsPayload($categoryProducts);
+                $explanations = $this->buildProductExplanations($sanPhams, $originalMessage);
                 $response = $this->buildCategoryProductFallbackResponseText(
-                    $categories[0],
-                    $products,
+                    $danhMucs[0],
+                    $sanPhams,
                     $explanations
                 );
             } else {
-                $response = $this->buildNoProductMatchResponse($displayQuery, $categories, $originalMessage);
+                $response = $this->buildNoProductMatchResponse($displayQuery, $danhMucs, $originalMessage);
             }
         }
 
         return [
             'success' => true,
             'response' => $response,
-            'products' => $products,
-            'categories' => $categories,
+            'products' => $sanPhams,
+            'categories' => $danhMucs,
             'explanations' => $explanations,
             'show_disclaimer' => $showDisclaimer,
             'disclaimer' => $showDisclaimer
                 ? 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.'
                 : null,
-            'response_type' => !empty($products) ? 'product_search' : (!empty($categories) ? 'category_search' : 'general')
+            'response_type' => !empty($sanPhams) ? 'product_search' : (!empty($danhMucs) ? 'category_search' : 'general')
         ];
     }
 
@@ -2032,30 +2033,30 @@ PROMPT;
     ): array {
         $query = trim($query);
         $limit = max(1, min($limit, 10));
-        $categories = $this->searchCategories($query, $query === '' ? min($limit, 6) : $limit);
+        $danhMucs = $this->searchCategories($query, $query === '' ? min($limit, 6) : $limit);
 
-        if ($categories->isEmpty()) {
-            $categories = $this->searchCategories('', 6);
+        if ($danhMucs->isEmpty()) {
+            $danhMucs = $this->searchCategories('', 6);
         }
 
-        if ($categories->isEmpty() && $query !== '') {
+        if ($danhMucs->isEmpty() && $query !== '') {
             return $this->buildCatalogLookupResponse($query, $originalMessage, false);
         }
 
         $featuredProducts = collect();
-        if ($categories->count() === 1) {
-            $featuredProducts = $this->getFeaturedProductsForCategory((int) $categories->first()->MaDM);
+        if ($danhMucs->count() === 1) {
+            $featuredProducts = $this->getFeaturedProductsForCategory((int) $danhMucs->first()->ma_dm);
         }
 
         return [
             'success' => true,
             'response' => $this->buildCategoryResponseText(
-                $this->formatCategoriesPayload($categories),
+                $this->formatCategoriesPayload($danhMucs),
                 $this->formatProductsPayload($featuredProducts),
                 $query
             ),
             'products' => $this->formatProductsPayload($featuredProducts),
-            'categories' => $this->formatCategoriesPayload($categories),
+            'categories' => $this->formatCategoriesPayload($danhMucs),
             'explanations' => [],
             'show_disclaimer' => false,
             'disclaimer' => null,
@@ -2074,16 +2075,16 @@ PROMPT;
 
     protected function buildGroundedAiResponse(
         string $userMessage,
-        array $products,
-        array $categories,
+        array $sanPhams,
+        array $danhMucs,
         array $explanations,
         string $fallbackResponse,
         bool $showDisclaimer
     ): string {
         try {
             $payload = [
-                'products' => array_values($products),
-                'categories' => array_values($categories),
+                'products' => array_values($sanPhams),
+                'categories' => array_values($danhMucs),
                 'explanations' => $explanations,
                 'show_disclaimer' => $showDisclaimer,
             ];
@@ -2116,7 +2117,7 @@ PROMPT;
                 trim((string) ($response['choices'][0]['message']['content'] ?? ''))
             );
             $responseText = $this->enforceMetaResponsePolicy($userMessage, $responseText);
-            $responseText = $this->stripDuplicateCategoryCardLinks($responseText, $categories);
+            $responseText = $this->stripDuplicateCategoryCardLinks($responseText, $danhMucs);
             if ($responseText !== '') {
                 return $responseText;
             }
@@ -2130,20 +2131,20 @@ PROMPT;
     }
 
     /**
-     * Every category in the payload is rendered as a clickable card under the
-     * message, so a link to the same URL inside the text is a duplicate. A line
-     * that was only that link is dropped; elsewhere the label stays as plain text.
+     * Mỗi danh mục trong payload được render như một card bấm được dưới tin nhắn,
+     * nên link đến cùng URL trong văn bản là trùng lặp. Dòng chỉ gồm link đó bị
+     * bỏ; ở chỗ khác nhãn giữ nguyên như văn bản thường.
      */
-    protected function stripDuplicateCategoryCardLinks(string $responseText, array $categories): string
+    protected function stripDuplicateCategoryCardLinks(string $responseText, array $danhMucs): string
     {
         $responseText = trim($responseText);
-        if ($responseText === '' || empty($categories)) {
+        if ($responseText === '' || empty($danhMucs)) {
             return $responseText;
         }
 
         $urls = [];
-        foreach ($categories as $category) {
-            $url = trim((string) ($category['url'] ?? ''));
+        foreach ($danhMucs as $danhMuc) {
+            $url = trim((string) ($danhMuc['url'] ?? ''));
             if ($url !== '') {
                 $urls[] = $url;
             }
@@ -2182,15 +2183,14 @@ PROMPT;
     }
 
     /**
-     * Answer the question that accompanied an uploaded image, grounded on what
-     * the vision step read plus the catalog lookup result. Returns an empty
-     * response when the AI provider is unavailable so the caller can fall back
-     * to its deterministic summary.
+     * Trả lời câu hỏi đi kèm ảnh tải lên, dựa trên kết quả bước đọc ảnh (vision)
+     * cộng với kết quả tra cứu danh mục. Trả về response rỗng khi nhà cung cấp AI
+     * không khả dụng để caller có thể dự phòng bằng phần tóm tắt xác định của nó.
      *
-     * @param string $question Caption typed with the image (may be empty)
-     * @param string $imageDescription Vision description of the image
-     * @param array $parsedProducts Raw products the vision step extracted
-     * @param array $recognizedProducts Catalog match result from ImageRecognitionService
+     * @param string $question Caption nhập kèm ảnh (có thể trống)
+     * @param string $imageDescription Mô tả ảnh từ bước vision
+     * @param array $parsedProducts Sản phẩm thô bước vision trích xuất được
+     * @param array $recognizedProducts Kết quả khớp danh mục từ NhanDienHinhAnhService
      */
     public function answerImageQuestion(
         string $question,
@@ -2252,13 +2252,13 @@ PROMPT;
                 return $empty;
             }
 
-            // Same block the text path renders, appended rather than asked for: the model
-            // used to be handed product URLs and format them itself, which produced raw
-            // links no repair regex could reliably turn back into a button.
+            // Cùng khối mà đường xử lý văn bản render, được gắn thêm chứ không hỏi:
+            // trước đây model được đưa URL sản phẩm và tự format, để ra những link
+            // trần mà không regex nào sửa kịp lỗi để biến thành nút bấm.
             $productBlock = $this->renderRecognizedProductBlock($recognizedProducts);
             if ($productBlock !== '') {
-                // The prompt forbids links, but a model that ignores that must not leak a
-                // bare URL past the block that already carries the button.
+                // Prompt cấm link, nhưng model mặc bỏ qua thì không được để lọt URL
+                // trần qua khối đã có sẵn nút bấm.
                 $responseText = $this->replaceRawProductUrls(
                     $responseText,
                     $this->recognizedProductUrls($recognizedProducts),
@@ -2298,14 +2298,14 @@ PROMPT;
 
     protected function summarizeParsedImageProducts(array $parsedProducts, string $imageDescription): array
     {
-        $products = [];
+        $sanPhams = [];
 
         foreach (array_slice($parsedProducts, 0, 5) as $parsed) {
             if (!is_array($parsed)) {
                 continue;
             }
 
-            $products[] = array_filter([
+            $sanPhams[] = array_filter([
                 'ten_doc_duoc' => trim((string) ($parsed['name'] ?? '')),
                 'ham_luong' => trim((string) ($parsed['dosage'] ?? '')),
                 'hoat_chat' => array_values(array_filter((array) ($parsed['active_ingredients'] ?? []))),
@@ -2318,7 +2318,7 @@ PROMPT;
 
         return [
             'mo_ta_anh' => Str::limit(trim($imageDescription), 400),
-            'products' => $products,
+            'products' => $sanPhams,
         ];
     }
 
@@ -2334,8 +2334,8 @@ PROMPT;
             }
 
             if (($item['matched'] ?? false) === true && is_array($item['product'] ?? null)) {
-                // Deliberately no url: the model cannot mis-format a link it never
-                // receives, and renderProductDetailLines() appends the real one.
+                // Cố ý không có url: model không thể làm rối format một link mà nó
+                // không bao giờ nhận, và renderProductDetailLines() sẽ gắn link thật vào.
                 $inStock[] = [
                     'name' => $item['product']['name'] ?? '',
                     'price' => $item['product']['price'] ?? null,
@@ -2367,10 +2367,10 @@ PROMPT;
     }
 
     /**
-     * Product URLs for the rows the image matched, so a model that ignored the
-     * "no links" rule can have them stripped before the shared block is appended.
+     * URL SanPham cho các dòng mà ảnh khớp được, để model bỏ qua
+     * quy tắc "không đưa link" vẫn được gỡ bỏ trước khi khối dùng chung được gắn vào.
      *
-     * @param array<int, mixed> $recognizedProducts matchProducts() output
+     * @param array<int, mixed> $recognizedProducts khopSanPham() output
      * @return array<int, string>
      */
     protected function recognizedProductUrls(array $recognizedProducts): array
@@ -2384,7 +2384,7 @@ PROMPT;
 
             $id = (int) data_get($item, 'product.id', 0);
             if ($id > 0) {
-                $urls[] = route('products.show', $id);
+                $urls[] = route('san-pham.show', $id);
             }
         }
 
@@ -2392,12 +2392,12 @@ PROMPT;
     }
 
     /**
-     * The catalog block for products the image matched, rendered by the same method the
-     * text path uses so both replies carry an identical "Mở sản phẩm" button.
+     * Khối danh mục cho các sản phẩm ảnh khớp được, render bằng cùng method mà
+     * đường xử lý văn bản dùng để cả hai câu trả lời đều có nút "Mở sản phẩm" giống nhau.
      *
-     * Empty string when the image matched nothing in stock.
+     * Chuỗi rỗng khi ảnh không khớp được gì còn trong kho.
      *
-     * @param array<int, mixed> $recognizedProducts matchProducts() output
+     * @param array<int, mixed> $recognizedProducts kết quả của khopSanPham()
      */
     protected function renderRecognizedProductBlock(array $recognizedProducts): string
     {
@@ -2419,29 +2419,29 @@ PROMPT;
             return '';
         }
 
-        // Re-read the rows: category and usage drive two lines of the shared block and
-        // are not part of the recognition payload.
-        $products = Product::with('category')
-            ->whereIn('MaSP', $ids)
+        // Đọc lại các dòng: danh mục và cách dùng chỉ điều hai dòng của khối dùng
+        // chung và không nằm trong payload nhận dạng.
+        $sanPhams = SanPham::with('danhMuc')
+            ->whereIn('ma_sp', $ids)
             ->FEFO()
             ->get();
 
-        if ($products->isEmpty()) {
+        if ($sanPhams->isEmpty()) {
             return '';
         }
 
-        $lines = $this->renderProductDetailLines($this->formatProductsPayload($products), []);
+        $lines = $this->renderProductDetailLines($this->formatProductsPayload($sanPhams), []);
 
         return trim(implode("\n", $lines));
     }
 
     protected function buildWebsiteIntroductionResponse(): array
     {
-        $categories = $this->formatCategoriesPayload($this->searchCategories('', 4));
+        $danhMucs = $this->formatCategoriesPayload($this->searchCategories('', 4));
 
         $response = 'Dạ, đây là website của Medicare Pharmacy. Hệ thống này hỗ trợ tra cứu sản phẩm nhà thuốc, xem danh mục, tham khảo công dụng cơ bản, kiểm tra tình trạng còn hàng và hỗ trợ đặt hàng trực tuyến.';
 
-        if (!empty($categories)) {
+        if (!empty($danhMucs)) {
             $response .= "\n\nAnh/chị có thể bắt đầu từ một số danh mục nổi bật bên dưới để lọc nhanh sản phẩm phù hợp.";
         } else {
             $response .= "\n\nAnh/chị có thể nhắn tên thuốc, hoạt chất, công dụng hoặc danh mục cần tìm để em hỗ trợ ngay.";
@@ -2451,7 +2451,7 @@ PROMPT;
             'success' => true,
             'response' => $response,
             'products' => [],
-            'categories' => $categories,
+            'categories' => $danhMucs,
             'explanations' => [],
             'show_disclaimer' => false,
             'disclaimer' => null,
@@ -2549,31 +2549,31 @@ PROMPT;
         string $message,
         float $processingTimeMs,
         string $responseType,
-        array $products,
-        array $categories,
+        array $sanPhams,
+        array $danhMucs,
         bool $showDisclaimer
     ): void {
         try {
-            $this->auditLogService->log(
+            $this->nhatKyKiemToanService->ghi(
                 action: 'chatbot_query',
                 modelType: 'Chatbot',
                 modelId: null,
                 oldValues: null,
                 newValues: [
-                    'MaKH' => $userId,
+                    'ma_nd' => $userId,
                     'query' => $message,
                     'response_type' => $responseType,
-                    'products_returned' => count($products),
-                    'categories_returned' => count($categories),
+                    'products_returned' => count($sanPhams),
+                    'categories_returned' => count($danhMucs),
                     'processing_time_ms' => $processingTimeMs,
                     'show_disclaimer' => $showDisclaimer
                 ],
-                // Runs in a queue worker, where there is no authenticated guard.
+                // Chạy trong queue worker, chỗ không có guard xác thực nào.
                 userId: $userId
             );
         } catch (\Throwable $exception) {
             Log::warning('Chatbot audit logging failed', [
-                'MaKH' => $userId,
+                'ma_nd' => $userId,
                 'response_type' => $responseType,
                 'error' => $exception->getMessage(),
             ]);
@@ -2582,45 +2582,45 @@ PROMPT;
 
     protected function searchCategories(string $query = '', int $limit = 5): Collection
     {
-        return Category::query()
-            ->select('MaDM', 'name', 'description', 'icon')
-            ->whereHas('products', function ($builder) {
-                $builder->notExpired()->where('stock_quantity', '>', 0);
+        return DanhMuc::query()
+            ->select('ma_dm', 'ten', 'mo_ta', 'bieu_tuong')
+            ->whereHas('sanPhams', function ($builder) {
+                $builder->notExpired()->where('so_luong_ton', '>', 0);
             })
             ->withCount([
-                'products' => function ($builder) {
-                    $builder->notExpired()->where('stock_quantity', '>', 0);
+                'sanPhams' => function ($builder) {
+                    $builder->notExpired()->where('so_luong_ton', '>', 0);
                 }
             ])
             ->when($query !== '', function ($builder) use ($query) {
                 $builder->where(function ($categoryQuery) use ($query) {
-                    $categoryQuery->where('name', 'like', '%' . $query . '%')
-                        ->orWhere('description', 'like', '%' . $query . '%');
+                    $categoryQuery->where('ten', 'like', '%' . $query . '%')
+                        ->orWhere('mo_ta', 'like', '%' . $query . '%');
                 });
             })
-            ->orderByDesc('products_count')
-            ->orderBy('name')
+            ->orderByDesc('san_phams_count')
+            ->orderBy('ten')
             ->limit($limit)
             ->get();
     }
 
     protected function getFeaturedProductsForCategory(int $categoryId): Collection
     {
-        return Product::with('category')
+        return SanPham::with('danhMuc')
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
-            ->where('MaDM', $categoryId)
+            ->where('so_luong_ton', '>', 0)
+            ->where('ma_dm', $categoryId)
             ->FEFO()
             ->limit(3)
             ->get();
     }
 
     /**
-     * Category lookup for functional queries. searchCategories() LIKE-matches the
-     * whole phrase, so "hỗ trợ tiêu hóa nhanh" misses the "Thuốc tiêu hóa" category
-     * that holds every product being asked for. Matching runs in PHP over folded
-     * name + description: the table is tiny, and the collation cannot be trusted to
-     * ignore Vietnamese accents (MySQL utf8mb4_unicode_ci does, SQLite does not).
+     * Tra cứu DanhMuc cho các truy vấn theo công dụng. searchCategories() LIKE khớp
+     * nguyên cụm, nên "ho tro tieu hoa nhanh" không ra danh mục "Thuốc tiêu hóa"
+     * đang giữ mọi sản phẩm cần hỏi. Việc khớp chạy trong PHP trên tên + mô tả
+     * đã fold: bảng rất nhỏ, và không thể tin collation để bỏ qua dấu tiếng Việt
+     * (MySQL utf8mb4_unicode_ci làm được, SQLite thì không).
      *
      * @param array<int, string> $queries Ordered by preference
      */
@@ -2637,26 +2637,26 @@ PROMPT;
             return collect();
         }
 
-        $categories = $this->searchCategories('', 50);
-        if ($categories->isEmpty()) {
+        $danhMucs = $this->searchCategories('', 50);
+        if ($danhMucs->isEmpty()) {
             return collect();
         }
 
         $haystacks = [];
-        foreach ($categories as $category) {
-            $haystacks[(int) $category->MaDM] = VietnameseText::fold(
-                trim(((string) $category->name) . ' ' . ((string) $category->description))
+        foreach ($danhMucs as $danhMuc) {
+            $haystacks[(int) $danhMuc->ma_dm] = VietnameseText::fold(
+                trim(((string) $danhMuc->ten) . ' ' . ((string) $danhMuc->mo_ta))
             );
         }
 
         foreach (array_keys($candidates) as $candidate) {
-            $matched = $categories->filter(fn ($category): bool => VietnameseText::containsWord(
-                $haystacks[(int) $category->MaDM] ?? '',
+            $matched = $danhMucs->filter(fn ($danhMuc): bool => VietnameseText::containsWord(
+                $haystacks[(int) $danhMuc->ma_dm] ?? '',
                 $candidate
             ))->values();
 
-            // Matching more than a handful means the candidate is a generic word
-            // ("thuoc"), not a therapeutic area.
+            // Khớp quá một vài dòng nghĩa là ứng cử viên là từ chung ("thuốc"),
+            // chứ không phải một lĩnh điều trị.
             if ($matched->isNotEmpty() && $matched->count() <= $limit) {
                 return $matched->take($limit);
             }
@@ -2666,23 +2666,22 @@ PROMPT;
     }
 
     /**
-     * Folded n-grams of the query, longest first, with filler words dropped so
-     * "hỗ trợ tiêu hóa nhanh" gets tried as "tieu hoa". Single tokens shorter than
-     * 4 characters are skipped: they match far too much to identify a category.
+     * Các n-gram fold của truy vấn, dài nhất trước, đã bỏ từ xóa để
+     * "ho tro tieu hoa nhanh" được thử như "tiêu hóa". Token đơn ngắn hơn
+     * 4 ký tự bị bỏ qua: chúng khớp quá nhiều để xác định một danh mục.
      *
-     * Diacritics are kept, because the product variant of this lookup feeds SQL
-     * LIKE: MySQL's utf8mb4_unicode_ci ignores accents but SQLite does not, so
-     * folding here would make tests and production disagree.
+     * Dấu tiếng Việt được giữ, vì biến thể tìm sản phẩm của bước trả này nạp vào
+     * SQL LIKE: utf8mb4_unicode_ci của MySQL bỏ qua dấu nhưng SQLite thì không,
+     * nên fold ở đây sẽ làm test và production khác nhau.
      *
-     * Within one length the rightmost n-gram comes first, because a Vietnamese noun
-     * phrase carries its topic at the end: "giảm đau dạ dày" must resolve through
-     * "dạ dày" (antacids) and not through "giảm đau", which would offer NSAIDs -
-     * the one class of painkiller that makes a stomach complaint worse.
+     * Trong cùng một độ dài, n-gram bên phải đứng trước, vì một cụm danh từ
+     * tiếng Việt để chủ đề ở cuối: "giam dau da day" phải đi qua "đau dạ dày" (thuốc
+     * tham vị) chứ không phải "giảm đau" — sẽ đề xuất NSAID, đúng nhóm thuốc
+     * giảm đau làm đau dạ dày tệ hơn.
      *
-     * A multi-word query is never reduced to a single token: "tiêu hóa" narrowed to
-     * "hóa" matched "chống oxy hóa" and offered vitamin E for indigestion. Below two
-     * tokens the query is better answered as "not found", which lets the category
-     * lookup take over.
+     * Truy vấn nhiều từ không bao giờ bị rút còn về một token: "tiêu hóa" hẹp
+     * xuống "hóa" đã khớp "chống oxy hóa" và đề xuất vitamin E cho bệnh tiêu hóa.
+     * Dưới hai token, nên trả "không tìm thấy" để buộc tra danh mục làm việc.
      *
      * @return array<int, string>
      */
@@ -2727,11 +2726,11 @@ PROMPT;
     }
 
     /**
-     * Drop "giá bao nhiêu" and friends from an already-normalized query.
+     * Bỏ "gia bao nhieu" và các biến thể khỏi truy vấn đã normalize.
      *
-     * Matched on the folded text so "gia"/"giá" and "nhieu"/"nhiêu" are one rule, but
-     * cut out of the original by word position: the candidates are searched with LIKE
-     * against real product text, which keeps its diacritics.
+     * Khớp trên văn bản đã fold để "giá"/"gia" và "nhiều"/"nhieu" là một quy tắc,
+     * nhưng cắt ra khỏi bản gốc theo vị trí từ: các ứng cử viên được tìm bằng LIKE
+     * trên văn bản sản phẩm thật, vẫn giữ dấu tiếng Việt.
      */
     protected function stripPricePhrases(string $normalized): string
     {
@@ -2761,9 +2760,9 @@ PROMPT;
     }
 
     /**
-     * Whether the query is clean enough to quote back to the customer. What reaches
-     * the response builders is often a stripped fragment of the question ("hiên tai
-     * ở website trang danh muc không"), which reads like a bug when echoed.
+     * Truy vấn có đủ sạch để trích dẫn lại cho khách. Cái đến tay các response
+     * builder thường là một đoạn rút ra khỏi câu hỏi ("hien tai o website trang
+     * danh muc khong"), đọc sẽ như một bug khi được echo lại.
      */
     protected function isPresentableQuery(string $query): bool
     {
@@ -2784,41 +2783,41 @@ PROMPT;
         return $this->stripQueryNoiseTokens($tokens) === $tokens;
     }
 
-    protected function formatProductsPayload(Collection $products): array
+    protected function formatProductsPayload(Collection $sanPhams): array
     {
-        return $products->map(function ($product) {
+        return $sanPhams->map(function ($sanPham) {
             return [
-                'id' => $product->MaSP,
-                'name' => $product->name,
-                'price' => $product->price_vnd,
-                'stock_quantity' => (int) $product->stock_quantity,
-                'image_url' => $product->image_url,
-                'ingredients' => $product->ingredients,
-                'usage' => $product->usage,
-                'expiration_date' => optional($product->expiration_date)->toDateString(),
-                'category' => $product->category ? $product->category->name : null,
-                'url' => route('products.show', $product->MaSP)
+                'id' => $sanPham->ma_sp,
+                'name' => $sanPham->ten,
+                'price' => $sanPham->price_vnd,
+                'stock_quantity' => (int) $sanPham->so_luong_ton,
+                'image_url' => $sanPham->image_url,
+                'ingredients' => $sanPham->thanh_phan,
+                'usage' => $sanPham->cach_dung,
+                'expiration_date' => optional($sanPham->ngay_het_han)->toDateString(),
+                'category' => $sanPham->danhMuc ? $sanPham->danhMuc->ten : null,
+                'url' => route('san-pham.show', $sanPham->ma_sp)
             ];
         })->values()->all();
     }
 
-    protected function formatCategoriesPayload(Collection $categories): array
+    protected function formatCategoriesPayload(Collection $danhMucs): array
     {
-        return $categories->map(function ($category) {
+        return $danhMucs->map(function ($danhMuc) {
             return [
-                'id' => $category->MaDM,
-                'name' => $category->name,
-                'description' => $category->description,
-                'icon' => $category->icon,
-                'product_count' => (int) ($category->products_count ?? 0),
-                'url' => route('products.index', ['category' => $category->MaDM])
+                'id' => $danhMuc->ma_dm,
+                'name' => $danhMuc->ten,
+                'description' => $danhMuc->mo_ta,
+                'icon' => $danhMuc->bieu_tuong,
+                'product_count' => (int) ($danhMuc->san_phams_count ?? 0),
+                'url' => route('san-pham.index', ['category' => $danhMuc->ma_dm])
             ];
         })->values()->all();
     }
 
     protected function buildDetailedProductResponseText(
         string $query,
-        array $products,
+        array $sanPhams,
         array $explanations,
         bool $showDisclaimer
     ): string {
@@ -2835,7 +2834,7 @@ PROMPT;
 
         $lines = [$intro, ''];
 
-        foreach ($this->renderProductDetailLines($products, $explanations) as $line) {
+        foreach ($this->renderProductDetailLines($sanPhams, $explanations) as $line) {
             $lines[] = $line;
         }
 
@@ -2843,19 +2842,18 @@ PROMPT;
     }
 
     /**
-     * Products found through the category that matched the query, after the keyword
-     * search over product name/ingredients/usage came back empty. The raw query is
-     * deliberately not echoed: it reaches here as a stripped fragment of the
-     * question ("gì hỗ trơ tiêu hóa nhanh không"), and the category name already
-     * says what was matched.
+     * Sản phẩm tìm được qua danh mục khớp với truy vấn, khi tìm kiếm từ khóa trên
+     * tên/hoạt chất/cách dùng đã ra rỗng. Truy vấn gốc cố ý không được echo lại:
+     * nó đến đây như một đoạn rút ra khỏi câu hỏi ("gi ho tro tieu hoa nhanh khong"),
+     * và tên danh mục đã nói rõ cái gì đã được khớp.
      */
     protected function buildCategoryProductFallbackResponseText(
-        array $category,
-        array $products,
+        array $danhMuc,
+        array $sanPhams,
         array $explanations
     ): string {
-        $categoryName = (string) ($category['name'] ?? '');
-        $productCount = (int) ($category['product_count'] ?? 0);
+        $categoryName = (string) ($danhMuc['name'] ?? '');
+        $productCount = (int) ($danhMuc['product_count'] ?? 0);
         $scope = $productCount > 0
             ? "**{$categoryName}** (đang có {$productCount} sản phẩm)"
             : "**{$categoryName}**";
@@ -2865,7 +2863,7 @@ PROMPT;
             '',
         ];
 
-        foreach ($this->renderProductDetailLines($products, $explanations) as $line) {
+        foreach ($this->renderProductDetailLines($sanPhams, $explanations) as $line) {
             $lines[] = $line;
         }
 
@@ -2877,32 +2875,32 @@ PROMPT;
     /**
      * @return array<int, string>
      */
-    protected function renderProductDetailLines(array $products, array $explanations): array
+    protected function renderProductDetailLines(array $sanPhams, array $explanations): array
     {
         $lines = [];
 
-        foreach ($products as $index => $product) {
-            $lines[] = ($index + 1) . '. **' . $product['name'] . '**';
-            $lines[] = '- Danh mục: ' . ($product['category'] ?? 'Chưa phân loại');
-            $lines[] = '- Giá tham khảo: ' . VietnameseHelper::formatCurrency($product['price']);
-            $lines[] = '- Tồn kho hiện tại: ' . $product['stock_quantity'] . ' sản phẩm';
+        foreach ($sanPhams as $index => $sanPham) {
+            $lines[] = ($index + 1) . '. **' . $sanPham['name'] . '**';
+            $lines[] = '- Danh mục: ' . ($sanPham['category'] ?? 'Chưa phân loại');
+            $lines[] = '- Giá tham khảo: ' . VietnameseHelper::formatCurrency($sanPham['price']);
+            $lines[] = '- Tồn kho hiện tại: ' . $sanPham['stock_quantity'] . ' sản phẩm';
 
-            if (!empty($product['usage'])) {
-                $lines[] = '- Công dụng: ' . $this->summarizeText($product['usage'], 180);
+            if (!empty($sanPham['usage'])) {
+                $lines[] = '- Công dụng: ' . $this->summarizeText($sanPham['usage'], 180);
             }
 
-            if (!empty($explanations[$product['id']])) {
-                $lines[] = '- Phù hợp vì: ' . $explanations[$product['id']];
+            if (!empty($explanations[$sanPham['id']])) {
+                $lines[] = '- Phù hợp vì: ' . $explanations[$sanPham['id']];
             }
 
-            $lines[] = '- Xem chi tiết: [' . self::PRODUCT_LINK_LABEL . '](' . $product['url'] . ')';
+            $lines[] = '- Xem chi tiết: [' . self::PRODUCT_LINK_LABEL . '](' . $sanPham['url'] . ')';
             $lines[] = '';
         }
 
         return $lines;
     }
 
-    protected function buildNoProductMatchResponse(string $query, array $categories, string $originalMessage): string
+    protected function buildNoProductMatchResponse(string $query, array $danhMucs, string $originalMessage): string
     {
         $query = $this->isPresentableQuery($query) ? $query : '';
         $lines = [];
@@ -2913,19 +2911,19 @@ PROMPT;
             $lines[] = 'Dạ, hiện tại em chưa tìm thấy sản phẩm phù hợp với mô tả vừa rồi.';
         }
 
-        if (!empty($categories)) {
+        if (!empty($danhMucs)) {
             $lines[] = '';
             $lines[] = 'Anh/chị có thể xem các danh mục gần nhất để lọc nhanh hơn:';
 
-            foreach ($categories as $category) {
-                $line = '- **' . $category['name'] . '**';
-                if (!empty($category['product_count'])) {
-                    $line .= ' (' . $category['product_count'] . ' sản phẩm)';
+            foreach ($danhMucs as $danhMuc) {
+                $line = '- **' . $danhMuc['name'] . '**';
+                if (!empty($danhMuc['product_count'])) {
+                    $line .= ' (' . $danhMuc['product_count'] . ' sản phẩm)';
                 }
-                if (!empty($category['description'])) {
-                    $line .= ': ' . $this->summarizeText($category['description'], 120);
+                if (!empty($danhMuc['description'])) {
+                    $line .= ': ' . $this->summarizeText($danhMuc['description'], 120);
                 }
-                $line .= ' - [Mở danh mục](' . $category['url'] . ')';
+                $line .= ' - [Mở danh mục](' . $danhMuc['url'] . ')';
                 $lines[] = $line;
             }
         }
@@ -2940,7 +2938,7 @@ PROMPT;
         return trim(implode("\n", $lines));
     }
 
-    protected function buildCategoryResponseText(array $categories, array $products, string $query): string
+    protected function buildCategoryResponseText(array $danhMucs, array $sanPhams, string $query): string
     {
         $query = $this->isPresentableQuery($query) ? $query : '';
         $lines = [
@@ -2950,53 +2948,53 @@ PROMPT;
             ''
         ];
 
-        foreach ($categories as $category) {
-            $line = '- **' . $category['name'] . '**';
-            if (!empty($category['product_count'])) {
-                $line .= ' (' . $category['product_count'] . ' sản phẩm)';
+        foreach ($danhMucs as $danhMuc) {
+            $line = '- **' . $danhMuc['name'] . '**';
+            if (!empty($danhMuc['product_count'])) {
+                $line .= ' (' . $danhMuc['product_count'] . ' sản phẩm)';
             }
-            if (!empty($category['description'])) {
-                $line .= ': ' . $this->summarizeText($category['description'], 120);
+            if (!empty($danhMuc['description'])) {
+                $line .= ': ' . $this->summarizeText($danhMuc['description'], 120);
             }
-            $line .= ' - [Xem danh mục](' . $category['url'] . ')';
+            $line .= ' - [Xem danh mục](' . $danhMuc['url'] . ')';
             $lines[] = $line;
         }
 
-        if (!empty($products)) {
+        if (!empty($sanPhams)) {
             $lines[] = '';
             $lines[] = 'Một vài sản phẩm tiêu biểu trong danh mục phù hợp:';
 
-            foreach ($products as $product) {
-                $lines[] = '- **' . $product['name'] . '** - ' . VietnameseHelper::formatCurrency($product['price']) . ' - [Xem chi tiết](' . $product['url'] . ')';
+            foreach ($sanPhams as $sanPham) {
+                $lines[] = '- **' . $sanPham['name'] . '** - ' . VietnameseHelper::formatCurrency($sanPham['price']) . ' - [Xem chi tiết](' . $sanPham['url'] . ')';
             }
         }
 
         return trim(implode("\n", $lines));
     }
 
-    protected function buildProductExplanations(array $products, string $originalMessage): array
+    protected function buildProductExplanations(array $sanPhams, string $originalMessage): array
     {
         $explanations = [];
 
-        foreach ($products as $product) {
-            $explanations[$product['id']] = $this->buildProductExplanationFromData($product, $originalMessage);
+        foreach ($sanPhams as $sanPham) {
+            $explanations[$sanPham['id']] = $this->buildProductExplanationFromData($sanPham, $originalMessage);
         }
 
         return $explanations;
     }
 
-    protected function buildProductExplanationFromData(array $product, string $originalMessage): string
+    protected function buildProductExplanationFromData(array $sanPham, string $originalMessage): string
     {
-        if (!empty($product['usage'])) {
-            return 'Công dụng đang lưu trên hệ thống là ' . $this->summarizeText($product['usage'], 160) . '.';
+        if (!empty($sanPham['usage'])) {
+            return 'Công dụng đang lưu trên hệ thống là ' . $this->summarizeText($sanPham['usage'], 160) . '.';
         }
 
-        if (!empty($product['ingredients'])) {
-            return 'Sản phẩm có thành phần nổi bật: ' . $this->summarizeText($product['ingredients'], 120) . '.';
+        if (!empty($sanPham['ingredients'])) {
+            return 'Sản phẩm có thành phần nổi bật: ' . $this->summarizeText($sanPham['ingredients'], 120) . '.';
         }
 
-        if (!empty($product['category'])) {
-            return 'Sản phẩm thuộc danh mục ' . $product['category'] . ', phù hợp để anh/chị tham khảo thêm các lựa chọn cùng nhóm.';
+        if (!empty($sanPham['category'])) {
+            return 'Sản phẩm thuộc danh mục ' . $sanPham['category'] . ', phù hợp để anh/chị tham khảo thêm các lựa chọn cùng nhóm.';
         }
 
         return $this->isSymptomRelatedQuery($originalMessage)
@@ -3006,8 +3004,8 @@ PROMPT;
 
     protected function buildSymptomGuidanceResponse(string $message, ?int $userAge = null): array
     {
-        // The account already knows the age, so asking for it again makes the bot
-        // look like it ignores the profile it holds.
+        // Tài khoản đã biết tuổi rồi, nên hỏi lại sẽ làm bot như bỏ qua hồ sơ
+        // mà nó đang giữ.
         $ageKnown = $userAge !== null;
         $normalizedMessage = $this->normalizeIntentText($message);
         $isDiarrheaMessage = Str::contains($normalizedMessage, ['tieu chay', 'ia chay']);
@@ -3278,11 +3276,11 @@ PROMPT;
     }
 
     /**
-     * Questions about recreational or illegal drug use. Matched on whole tokens
-     * only, and the list deliberately leaves out Vietnamese slang that doubles as
-     * an everyday word ("đá", "cỏ", "ke", "bóng đá"), plus controlled substances
-     * that are legitimate medicines ("morphin", "methadone", "fentanyl") - a
-     * customer asking about those needs a pharmacist answer, not this guardrail.
+     * Các câu hỏi về chất lậu hoặc chất cấm. Chỉ khớp trên nguyên token, và danh
+     * sách cố ý bỏ qua tiếng lóng Việt vừa là từ thông thường ("dạ", "cơ", "kê",
+     * "bóng đá"), cũng như các chất kiểm soát mà vẫn là thuốc hợp pháp ("morphin",
+     * "methadone", "fentanyl") — khách hỏi về chúng cần câu trả lời từ dược sĩ,
+     * chứ không phải hàng rào này.
      */
     protected const ILLICIT_SUBSTANCE_KEYWORDS = [
         'ma tuy', 'can sa', 'heroin', 'cocaine', 'cocain', 'crack',
@@ -3343,13 +3341,13 @@ PROMPT;
     }
 
     /**
-     * Red flags live in `medical_red_flags` so a pharmacist can add a warning sign
-     * without a code change. Only emergency/urgent rows flagged `chat_short_circuit`
-     * reach here — patient-context rows ("đang mang thai", "bé 1 tuổi") and `caution`
-     * rows ("kéo dài", "bệnh nền") are handled further down the ladder, otherwise an
-     * ordinary product question would be answered with emergency guidance.
+     * Red flags nằm trong `medical_red_flags` để dược sĩ có thể thêm dấu hiệu cảnh
+     * báo mà không cần sửa code. Chỉ các dòng emergency/urgent có cờ `chat_short_circuit`
+     * đến được đây — các dòng ngữ cảnh bệnh nhân ("đang mang thai", "bé 1 tuổi") và
+     * các dòng `caution` ("kéo dài", "bệnh nền") được xử lý thấp hơn trong bậc thang,
+     * nếu không một câu hỏi sản phẩm thường sẽ được trả lời bằng hướng dẫn cấp cứu.
      *
-     * Cached per request: this runs on every inbound message.
+     * Cache theo từng request: bước này chạy trên mỗi tin nhắn đến.
      *
      * @return array<int, string>
      */
@@ -3360,7 +3358,7 @@ PROMPT;
         }
 
         try {
-            $keywords = MedicalRedFlag::active()
+            $keywords = CoDoYTe::active()
                 ->chatShortCircuit()
                 ->whereIn('severity', ['emergency', 'urgent'])
                 ->pluck('keywords')
@@ -3370,7 +3368,7 @@ PROMPT;
                 ->values()
                 ->all();
         } catch (\Throwable $exception) {
-            // A missing table or a dead connection must not silence urgent detection.
+            // Table thiếu hoặc kết nối chết không được phép tắt phát hiện cấp cứu.
             Log::warning('Falling back to built-in urgent keywords', [
                 'error' => $exception->getMessage(),
             ]);
@@ -3378,18 +3376,18 @@ PROMPT;
             $keywords = [];
         }
 
-        // An empty table means the knowledge base was never seeded, not that
-        // nothing is dangerous. Never let that turn urgent detection off.
+        // Table rỗng nghĩa là cơ sở kiến thức chưa được seed, chứ không phải
+        // không có gì nguy hiểm. Không bao giờ để điều đó tắt phát hiện cấp cứu.
         $this->urgentKeywordsCache = $keywords !== [] ? $keywords : self::URGENT_KEYWORDS_FALLBACK;
 
         return $this->urgentKeywordsCache;
     }
 
     /**
-     * Tier 2.5: hand a real screening case over to the dedicated /health-check page.
+     * Tầng 2.5: chuyển một case sàng lọc thật sự sang trang /health-check riêng.
      *
-     * The chat frame is too narrow for the 5-step wizard, so the widget only
-     * recognises the case and offers a link. No AI call, no catalog lookup.
+     * Khung chat quá hẹp cho wizard 5 bước, nên widget chỉ nhận diện case và đưa
+     * ra một link. Không gọi AI, không tra danh mục.
      */
     protected function tryTriageHandoffResponse(string $message, array $context): ?array
     {
@@ -3397,12 +3395,12 @@ PROMPT;
             return null;
         }
 
-        // Explicit product hunting ("có thuốc đau đầu không") is a catalog job.
+        // Tìm sản phẩm rõ ràng ("có thuốc đau đầu không") là việc của danh mục.
         if ($this->wantsProductSuggestionForSymptom($message)) {
             return null;
         }
 
-        // Follow-up turns already have their own curated guidance downstream.
+        // Các lượt hỏi theo đã có hướng dẫn biên soạn riêng ở phía dưới.
         if ($this->isHealthFollowUpMessage($message) || $this->isCauseQuestion($message)) {
             return null;
         }
@@ -3419,8 +3417,8 @@ PROMPT;
     }
 
     /**
-     * A stated duration or several symptoms at once is what the wizard actually
-     * needs to grade severity, so those are the cases worth handing over.
+     * Một thời gian được nêu ra hoặc nhiều triệu chứng cùng lúc là những gì wizard
+     * thực sự cần để xếp mức độ, nên đó là những case đang được chuyển giao.
      */
     protected function needsStructuredTriage(string $message): bool
     {
@@ -3448,21 +3446,21 @@ PROMPT;
             'disclaimer' => 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.',
             'response_type' => 'triage_handoff',
             'triage_handoff' => [
-                'url' => route('health.check'),
+                'url' => route('sang-loc.kiem-tra'),
                 'label' => __('messages.chatbot.triage_handoff_label'),
             ],
         ];
     }
 
     /**
-     * PHP owns every match and decision here; the AI only extracted the name.
+     * PHP giữ toàn bộ việc khớp và quyết định; AI chỉ trích xuất tên.
      */
     protected function buildDrugSafetyCheckResponse(string $productName, int $userId): array
     {
         $productName = trim($productName);
-        $product = $productName !== '' ? $this->searchProducts($productName)->first() : null;
+        $sanPham = $productName !== '' ? $this->searchProducts($productName)->first() : null;
 
-        if ($product === null) {
+        if ($sanPham === null) {
             return [
                 'response' => __('messages.chatbot.drug_safety_not_found', [
                     'name' => $productName !== '' ? $productName : 'này',
@@ -3473,16 +3471,16 @@ PROMPT;
             ];
         }
 
-        // Health profile data is personal, so it is only read once consent is on record.
-        $user = User::with('healthProfile')->find($userId);
-        $profile = $user?->healthProfile?->hasConsented() ? $user->healthProfile : null;
+        // Dữ liệu hồ sơ sức khỏe là dữ liệu cá nhân, nên chỉ đọc khi đã có đồng ý trên hồ sơ.
+        $nguoiDung = NguoiDung::with('hoSoSucKhoe')->find($userId);
+        $profile = $nguoiDung?->hoSoSucKhoe?->hasConsented() ? $nguoiDung->hoSoSucKhoe : null;
 
-        $result = app(DrugSafetyService::class)->checkProduct($product, $profile, $user);
+        $result = app(AnToanThuocService::class)->kiemTraSanPham($sanPham, $profile, $nguoiDung);
         $warnings = $result['warnings'] ?? [];
-        $payload = $this->formatProductsPayload(collect([$product]));
+        $payload = $this->formatProductsPayload(collect([$sanPham]));
 
         if ($warnings === []) {
-            $lines = [__('messages.chatbot.drug_safety_clear', ['name' => $product->name])];
+            $lines = [__('messages.chatbot.drug_safety_clear', ['name' => $sanPham->ten])];
             if ($profile === null) {
                 $lines[] = __('messages.chatbot.drug_safety_no_profile');
             }
@@ -3496,7 +3494,7 @@ PROMPT;
         }
 
         $hasMajor = false;
-        $lines = [__('messages.chatbot.drug_safety_found', ['name' => $product->name]), ''];
+        $lines = [__('messages.chatbot.drug_safety_found', ['name' => $sanPham->ten]), ''];
 
         foreach ($warnings as $warning) {
             $severity = (string) ($warning['severity'] ?? 'minor');
@@ -4588,9 +4586,9 @@ PROMPT;
     }
 
     /**
-     * Travel and leisure questions ("đi Đà Nẵng chơi thì nên đi đâu?") are out of
-     * scope; catching them locally avoids an AI round trip for an answer the
-     * assistant is not allowed to give anyway.
+     * Các câu hỏi du lịch giải trí ("đi Đà Nẵng chơi thì nên đi đâu?") nằm ngoài
+     * phạm vi; bắt chúng tại đây tránh một lượt gọi AI cho một câu trả lời mà
+     * trợ lý cũng không được phép trả lời.
      */
     protected function isLeisureTravelIntent(string $message): bool
     {
@@ -4609,7 +4607,7 @@ PROMPT;
         $tokens = preg_split('/\s+/', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
         foreach ($tokens as $index => $token) {
-            // Bare "chơi" is leisure unless it is part of a product ("đồ chơi").
+            // "chơi" đọc lập là giải trí, trừ khi là một phần của sản phẩm ("đồ chơi").
             if ($token === 'choi' && !in_array($tokens[$index - 1] ?? '', ['do', 'dung', 'bo'], true)) {
                 return true;
             }
@@ -4640,9 +4638,9 @@ PROMPT;
     }
 
     /**
-     * "tìm thuốc ở nhà thuốc Long Châu tại Đà Nẵng" - the assistant cannot look
-     * inside a competitor's catalog, and treating the whole sentence as a product
-     * keyword produced nonsense searches like `nhà long châu tại đà nẵng`.
+     * "tìm thuốc ở nhà thuốc Long Châu tại Đà Nẵng" — trợ lý không thể nhìn vào
+     * catalog của đối thủ, và việc coi cả câu là từ khóa sản phẩm đã tạo ra các
+     * tìm kiếm vô nghĩa như `nha long chau tai da nang`.
      */
     protected function isOtherPharmacyIntent(string $message): bool
     {
@@ -4693,8 +4691,8 @@ PROMPT;
     }
 
     /**
-     * Keep only the product part of a competitor question, so "tìm paracetamol ở
-     * nhà thuốc Long Châu Đà Nẵng" still searches for "paracetamol".
+     * Giữ lại phần sản phẩm của một câu hỏi về nhà thuốc khác, để "tìm paracetamol ở
+     * nhà thuốc Long Châu Đà Nẵng" vẫn tìm trên "paracetamol".
      */
     protected function resolveOtherPharmacyProductQuery(string $message): string
     {
@@ -4714,8 +4712,8 @@ PROMPT;
     }
 
     /**
-     * Drop filler words left at the edges of an extracted query so the reply
-     * shows `paracetamol` instead of `paracetamol ở`.
+     * Bỏ các từ xóa còn lại ở hai đầu của truy vấn đã trích xuất để câu trả lời
+     * hiện `paracetamol` chứ không phải `paracetamol o`.
      */
     protected function trimQueryFillerWords(string $query): string
     {
@@ -4745,8 +4743,8 @@ PROMPT;
     }
 
     /**
-     * Remove competitor names, pharmacy words and place names while keeping the
-     * original accents, so the remaining text still reads like a product query.
+     * Gỡ bỏ tên đối thủ, từ nhà thuốc và tên địa danh mà vẫn giữ dấu gốc,
+     * để phần văn bản còn lại vẫn đọc như một truy vấn sản phẩm.
      */
     protected function stripPharmacyLocationNoise(string $text): string
     {
@@ -4961,9 +4959,10 @@ PROMPT;
             $name = preg_replace('/\s+/u', ' ', (string) $name);
             $name = trim((string) $name);
 
-            // "tôi là nam hay nữ?" is a question about gender, not a self-introduction:
-            // the capture is the whole clause and must not become a name. Same for a
-            // bare gender word, an occupation, or a question the customer asked.
+            // "tôi là nam hay nữ?" là câu hỏi về giới tính, chứ không phải tự giới
+            // thiệu: đoạn bắt được là nguyên mệnh đề và không được trở thành tên.
+            // Tương tự với một từ giới tính đơn lập, một nghề nghiệp, hay câu hỏi
+            // khách đã hỏi.
             if ($this->isNotAPersonName($name)) {
                 $name = '';
                 continue;
@@ -5007,26 +5006,26 @@ PROMPT;
     }
 
     /**
-     * Reject captures that are clearly not a customer's personal name.
+     * Loại bỏ các đoạn bắt được rõ ràng không phải tên cá nhân của khách.
      *
-     * "tôi là nam hay nữ?" matches `(?:tôi là)\s+(.+)` and captures `nam hay nữ?`.
-     * Without this check, "nam" was extracted as the customer's name, so the assistant
-     * addressed them as "Nam" from then on. Same for occupations and questions.
+     * "toi la nam hay nu?" khớp với `(?:toi la)\s+(.+)` và bắt được `nam hay nu?`.
+     * Không có bước kiểm tra này, "nam" đã bị trích xuất làm tên khách, và trợ lý
+     * gọi họ là "Nam" từ lúc đó. Tương tự với nghề nghiệp và câu hỏi.
      */
     protected function isNotAPersonName(string $name): bool
     {
         $normalized = $this->normalizeIntentText($name);
-        // Trailing particles ("nữ ạ", "nam nhé") are politeness, not part of the word.
+        // Các trợ từ cuối câu ("nữ à", "nam nhé") là sự lịch sự, chứ không phải phần của từ.
         $trimmed = trim(preg_replace('/\s+(?:a|ạ|à|nhe|nhé|nha|da|dạ|vay|vậy)$/u', '', $normalized) ?? $normalized);
 
         if ($trimmed === '') {
             return true;
         }
 
-        // A question mark is decisive. So is a question word — but "hay" is NOT one:
-        // folding turns the imperative "hãy cho mình biết" into "hay cho minh biet",
-        // and a name capture that contains it would be dropped for the wrong reason.
-        // Gender questions are matched as the whole phrase instead.
+        // Dấu hỏi quyết định. Từ hỏi cũng vậy — nhưng "hay" KHÔNG phải từ hỏi:
+        // fold làm câu mệnh lệnh "hay cho mình biết" vẫn giữ nguyên, và một tên
+        // bắt được chứa nó sẽ bị bỏ vì một lý do sai.
+        // Các câu hỏi giới tính được khớp như nguyên cụm thay thế.
         if (str_contains($name, '?')
             || preg_match('/\b(?:ai|gi|sao|khong|phai khong|dung khong)\b/u', $trimmed) === 1
         ) {
@@ -5037,8 +5036,8 @@ PROMPT;
             return true;
         }
 
-        // Occupations, roles and pure-gender terms that are not common given names.
-        // "nu" (nữ) is blocked; "nam" is allowed because it is a very common given name.
+        // Các nghề nghiệp, vai trò và từ giới tính thuần túy không phải tên thường dùng.
+        // "nữ" (nữ) bị chặn; "nam" được phép vì là tên rất phổ biến.
         $occupations = [
             'nu', 'gioi tinh',
             'bac si', 'duoc si', 'y ta', 'dieu duong', 'nhan vien', 'sinh vien',
@@ -5156,8 +5155,9 @@ PROMPT;
     }
 
     /**
-     * Age from the customer's own profile, or null when unknown (guest, or no
-     * birth_date on file). Triage rules treat null as unknown, not as an adult.
+     * Tuổi từ hồ sơ của chính khách, hoặc null khi không biết (khách vãng lai,
+     * hoặc không có birth_date). Các quy tắc sàng lọc coi null là chưa biết,
+     * chứ không phải người lớn.
      */
     protected function resolveUserAge(int $userId): ?int
     {
@@ -5166,7 +5166,7 @@ PROMPT;
         }
 
         // ponytail: direct lookup per turn; add request-scoped caching if profiling shows chatbot turns bound on this read.
-        return User::find($userId)?->ageInYears();
+        return NguoiDung::find($userId)?->ageInYears();
     }
 
     protected function resolveUserDisplayName(string $message, array $context): ?string
@@ -5402,7 +5402,7 @@ PROMPT;
         $queries = [];
 
         foreach ($this->symptomMapFromDatabase() as $needle => $entry) {
-            // Word-boundary, not substring: a short alias must not fire mid-word.
+            // Khớp theo từ hoàn chỉnh, không phải substring: alias ngắn không được kích hoạt giữa một từ.
             if (!VietnameseText::containsWord($normalized, $needle)) {
                 continue;
             }
@@ -5418,11 +5418,11 @@ PROMPT;
     }
 
     /**
-     * Some aliases collide with everyday Vietnamese once diacritics are stripped:
-     * "nước sốt" is a sauce, "sốt ruột" is impatience, "con ngựa" is a horse. Decide
-     * by the words on either side of the alias. Guard words come from
-     * `medical_symptoms.guard_words`, so a pharmacist adding an ambiguous alias can
-     * guard it without a code change.
+     * Một số alias trùng với tiếng Việt thông thường sau khi dấu đã được gỡ:
+     * "nước sốt" là một loại sốt chấm, "sốt ruột" là sự nóng nảy, "con ngựa" là
+     * con ngựa. Quyết định bằng các từ ở hai bên của alias. Guard words lấy từ
+     * `medical_symptoms.guard_words`, nên dược sĩ thêm một alias trùng nghĩa
+     * có thể tự cảnh báo nó mà không cần sửa code.
      *
      * @param array<int, string> $guards
      */
@@ -5451,21 +5451,21 @@ PROMPT;
             $before = $tokens[$index - 1] ?? '';
             $after = $tokens[$index + $length] ?? '';
 
-            // One occurrence with no guard on either side means the alias really is
-            // being used in its medical sense here.
+            // Một lần xuất hiện mà không có guard nào ở hai bên nghĩa là alias thực sự
+            // đang được dùng theo nghĩa y khoa tại đây.
             if (!in_array($before, $guards, true) && !in_array($after, $guards, true)) {
                 return false;
             }
         }
 
-        // Matched only via the regex (e.g. inside a longer token) — treat as everyday.
+        // Chỉ khớp qua regex (ví dụ bên trong một token dài hơn) — coi như là nghĩa thông thường.
         return $found;
     }
 
     /**
-     * Symptom aliases live in `medical_symptoms`, keyed by accent-free alias so a
-     * pharmacist can teach the bot a new spelling without touching code.
-     * Falls back to `catalog_query` when set, otherwise the Vietnamese name.
+     * Các alias triệu chứng nằm trong `medical_symptoms`, khóa bởi alias không dấu
+     * để dược sĩ dạy cho bot một cách viết mới mà không phải sửa code.
+     * Dự phòng về `catalog_query` khi có giá trị, không thì dùng tên tiếng Việt.
      *
      * @return array<string, array{query: string, guards: array<int, string>}>
      */
@@ -5478,7 +5478,7 @@ PROMPT;
         $map = [];
 
         try {
-            foreach (MedicalSymptom::active()->get(['name_vi', 'aliases', 'guard_words', 'catalog_query']) as $symptom) {
+            foreach (TrieuChungYTe::active()->get(['name_vi', 'aliases', 'guard_words', 'catalog_query']) as $symptom) {
                 $query = $symptom->catalog_query ?: $symptom->name_vi;
                 $guards = collect($symptom->guard_words ?? [])
                     ->map(fn ($word) => $this->normalizeIntentText((string) $word))
@@ -5502,7 +5502,7 @@ PROMPT;
             $map = [];
         }
 
-        // Unseeded table must not silently disable symptom detection.
+        // Table chưa seed không được im lặng tắt phát hiện triệu chứng.
         $this->symptomMapCache = $map !== [] ? $map : $this->fallbackSymptomMap();
 
         return $this->symptomMapCache;
@@ -5526,11 +5526,11 @@ PROMPT;
     }
 
     /**
-     * Build conversation messages array for the AI provider.
+     * Xây dựng mảng tin nhắn cuộc trò chuyện cho nhà cung cấp AI.
      *
-     * @param string $currentMessage Current user message
-     * @param array $context Conversation context with previous messages
-     * @return array Array of message objects
+     * @param string $currentMessage Tin nhắn hiện tại của người dùng
+     * @param array $context Ngữ cảnh cuộc trò chuyện kèm các tin nhắn trước
+     * @return array Mảng các object tin nhắn
      */
     protected function buildConversationMessages(string $currentMessage, array $context): array
     {
@@ -5548,7 +5548,7 @@ PROMPT;
 
         $userId = (int) ($context['user_id'] ?? 0);
         if ($userId > 0) {
-            $gender = User::where('MaKH', $userId)->value('gender');
+            $gender = NguoiDung::where('ma_nd', $userId)->value('gioi_tinh');
             if ($gender === 'male') {
                 $messages[] = [
                     'role' => 'system',
@@ -5566,17 +5566,17 @@ PROMPT;
             $history = $this->sanitizeHistoryForAi($context['previous_messages']);
             $latestTopic = $this->findLatestUserTopic($history);
 
-            // Only for a message that carries no topic of its own. Anchoring every
-            // turn would fight the customer whenever they change subject.
+            // Chỉ áp dụng cho tin nhắn không mang chủ đề riêng nào. Ghim chủ đề cho
+            // mỗi lượt sẽ mâu thuẫn với khách mới khi họ đổi chủ đề.
             $isElliptical = $latestTopic !== '' && $this->isEllipticalFollowUpMessage($currentMessage);
 
             if ($isElliptical) {
-                // Telling the provider which topic to use is not enough: with the
-                // reported transcript in context it kept answering the older drug
-                // question even when the instruction named the newer topic and the
-                // user turn carried the resolved reference. So the older topics are
-                // withheld for this turn - a contentless message can only mean the
-                // exchange right above it, and what is absent cannot be answered.
+                // Chỉ báo cho nhà cung cấp dùng chủ đề nào là chưa đủ: với đoạn hội thoại
+                // đã báo cáo nằm trong ngữ cảnh, nó vẫn trả lời câu hỏi về thuốc cũ
+                // dù lệnh đã gọi tên chủ đề mới và lượt người dùng đã mang tham
+                // chiếu đã giải quyết. Vì vậy các chủ đề cũ bị giữ lại trong lượt này
+                // — tin nhắn không có nội dung chỉ có thể chỉ đến đoạn hội thoại ngay
+                // phía trên, và phần không có mặt thì không thể trả lời.
                 $history = $this->keepLatestExchange($history);
             }
 
@@ -5605,13 +5605,13 @@ PROMPT;
     }
 
     /**
-     * Conversation history as the provider should see it.
+     * Lịch sử cuộc trò chuyện theo cái nhà cung cấp nên thấy.
      *
-     * Two kinds of noise made the model answer the wrong question: the "AI provider
-     * is unavailable" notices (no content, yet they leave the question they replaced
-     * looking unanswered) and the identical retries a customer sends after one, which
-     * can fill most of the window with an abandoned topic. Both are kept in the
-     * database and in the UI - they are only dropped from the AI-facing window.
+     * Hai loại nhiễu đã làm model trả lời sai câu hỏi: các thông báo "nhà cung cấp
+     * AI không khả dụng" (không có nội dung, nhưng để lại câu hỏi bị thay dường như
+     * chưa được trả lời) và các lần gửi lại giống hết mà khách gửi sau đó, có thể
+     * chiếm phần lớn cửa sổ bằng một chủ đề đã bỏ cuộc. Cả hai vẫn được giữ trong
+     * database và trên UI - chúng chỉ bị bỏ khỏi cửa sổ đưa cho AI.
      *
      * @param array<int, mixed> $previousMessages
      * @return array<int, array{role: string, content: string}>
@@ -5639,8 +5639,8 @@ PROMPT;
                 continue;
             }
 
-            // Collapse a run of same-role turns down to the newest phrasing. This also
-            // keeps roles alternating, which the Anthropic messages mode requires.
+            // Rút các lượt cùng role liên tiếp xuống thành cách diễn đạt mới nhất.
+            // Điều này cũng giữ các role xen kẽ, điều chế mà Anthropic messages cần.
             $lastIndex = count($history) - 1;
             if ($lastIndex >= 0 && $history[$lastIndex]['role'] === $role) {
                 $history[$lastIndex]['content'] = $content;
@@ -5660,9 +5660,9 @@ PROMPT;
     }
 
     /**
-     * Assistant turns that only apologise for an unavailable provider. Other
-     * fallback types (catalog lookup after a provider error, urgent-medical
-     * guardrail) carry real content and stay in the window.
+     * Các lượt trợ lý chỉ xin lỗi vì nhà cung cấp không khả dụng. Các loại dự phòng
+     * khác (trả danh mục sau lỗi nhà cung cấp, hàng rào y khoa cấp cứu) có nội dung
+     * thật và được giữ lại trong cửa sổ.
      */
     protected function isUninformativeFallbackTurn(array $message): bool
     {
@@ -5684,10 +5684,10 @@ PROMPT;
     }
 
     /**
-     * Latest topic the customer raised, used to resolve elliptical follow-ups
-     * ("có ổn không?") which the model otherwise attaches to whichever older topic
-     * looks unanswered - the reported case answered a drug question from four turns
-     * earlier instead of the medicine list right above it.
+     * Chủ đề mới nhất khách đã nêu ra, dùng để giải quyết các câu hỏi rút gọn
+     * ("cơm ổn không?") mà nếu không model sẽ gắn vào bất kỳ chủ đề cũ nào trông
+     * như chưa được trả lời — case đã báo cáo đã trả lời một câu hỏi về thuốc từ
+     * bốn lượt trước thay vì danh sách thuốc ngay phía trên.
      *
      * @param array<int, array{role: string, content: string}> $history
      */
@@ -5710,8 +5710,8 @@ PROMPT;
     }
 
     /**
-     * The trailing user/assistant pair, which is the only context an elliptical
-     * follow-up can refer to.
+     * Cặp user/assistant cuối cùng, là ngữ cảnh duy nhất mà một câu hỏi rút gọn
+     * có thể chỉ đến.
      *
      * @param array<int, array{role: string, content: string}> $history
      * @return array<int, array{role: string, content: string}>
@@ -5728,14 +5728,14 @@ PROMPT;
     }
 
     /**
-     * A short message that carries no topic of its own once filler is removed, so
-     * it can only be read against the previous turn.
+     * Một tin nhắn ngắn không mang chủ đề riêng nào sau khi từ xóa đã bỏ,
+     * nên chỉ có thể đọc dựa vào lượt trước.
      */
     /**
-     * QUERY_NOISE_TOKENS folded, so a token list compared against folded text matches.
+     * QUERY_NOISE_TOKENS đã fold, để danh sách token so sánh với văn bản fold sẽ khớp.
      *
-     * The constant holds accented and unaccented spellings; tokenizeNormalizedIntentText
-     * folds, so "sản"/"phẩm" arrive as "san"/"pham" and would never match the raw entry.
+     * Hằng số giữ cả cách viết có dấu và không dấu; tokenizeNormalizedIntentText fold,
+     * nên "sản"/"phẩm" đến dạng "san"/"pham" và không bao giờ khớp với bản ghi gốc.
      *
      * @return array<int, string>
      */
@@ -5755,17 +5755,17 @@ PROMPT;
         }
 
         $tokens = $this->tokenizeNormalizedIntentText($normalized);
-        // Ten, not six: a politely phrased follow-up ("tóm tắt lại theo dạng table
-        // giúp tôi nhé") carries eight tokens, every one of them topic-free. The
-        // allow-list below is what actually decides, so the cap only guards against
-        // scanning a long paragraph.
+        // Mười, chứ không phải sáu: một câu hỏi rút gọn diễn đạt lịch sự
+        // ("tóm tắt lại theo dạng table giúp tôi nhé") mang tám token, và không token
+        // nào có chủ đề. Danh sách cho phép phía dưới mới là thứ quyết định thật,
+        // nên giới hạn này chỉ để chặn việc quét một đoạn văn dài.
         if (empty($tokens) || count($tokens) > 10) {
             return false;
         }
 
-        // Noise words ("sản phẩm", "cho", "xem") carry no topic either, and are already
-        // excluded from search queries for the same reason. Allowed here so
-        // "cho xem link sản phẩm đi" resolves as the follow-up it is.
+        // Các từ nhiễu ("sản phẩm", "cho", "xem") cũng không mang chủ đề, và đã bị
+        // loại khỏi truy vấn tìm kiếm vì cùng lý do. Cho phép ở đây để
+        // "cho xem link san pham di" được giải quyết đúng như một câu hỏi rút gọn.
         return $this->onlyContainsTokens(
             $tokens,
             array_merge(self::ELLIPTICAL_FOLLOW_UP_TOKENS, $this->normalizedNoiseTokens())
@@ -5773,7 +5773,7 @@ PROMPT;
     }
 
     /**
-     * Check if query is symptom-related.
+     * Kiểm tra truy vấn có liên quan đến triệu chứng hay không.
      */
     protected function isSymptomRelatedQuery(string $query): bool
     {
@@ -5797,9 +5797,9 @@ PROMPT;
     }
 
     /**
-     * "đau", "cảm", "ốm" and "ho" collide with everyday words once diacritics are
-     * stripped ("ở đâu", "nước cam", "cảm ơn", "họ"), so they are matched here
-     * instead of through the accent-insensitive keyword list.
+     * "đau", "cảm", "ốm" và "ho" trùng với các từ thông thường sau khi dấu bị gỡ
+     * ("ở đâu", "nước cam", "cảm ơn", "hố"), nên chúng được khớp tại đây
+     * thay vì qua danh sách từ khóa không phân biệt dấu.
      */
     protected function containsAmbiguousSymptomWord(string $query): bool
     {
@@ -5808,7 +5808,7 @@ PROMPT;
             return false;
         }
 
-        // When the user typed diacritics, the accented spelling is authoritative.
+        // Khi người dùng gõ có dấu, cách viết có dấu là chuẩn.
         if ($lower !== Str::lower(Str::ascii($lower))) {
             return preg_match('/(?<!\p{L})(?:đau|ốm|ho)(?!\p{L})/u', $lower) === 1
                 || preg_match('/(?<!\p{L})cảm(?!\p{L})(?!\s+(?:ơn|thấy|nhận|giác|tình|xúc|ứng))/u', $lower) === 1;
@@ -5818,8 +5818,8 @@ PROMPT;
     }
 
     /**
-     * Accent-free typing keeps the ambiguity, so each candidate word is accepted
-     * only when its neighbours do not mark the non-symptom meaning.
+     * Cách viết không dấu vẫn giữ sự nhiều nghĩa, nên mỗi từ ứng cử viên chỉ được
+     * chấp nhận khi các từ xung quanh không đánh dấu nghĩa không phải triệu chứng.
      */
     protected function containsUnaccentedSymptomWord(string $normalizedMessage): bool
     {
@@ -5834,12 +5834,12 @@ PROMPT;
                 'before' => ['nuoc', 'trai', 'qua', 'ly', 'coc', 'mui', 'vitamin'],
                 'after' => ['on', 'thay', 'nhan', 'giac', 'tinh', 'xuc', 'ung'],
             ],
-            // "ôm nhau", "ôm chặt"
+            // "ốm nhau", "ốm chát"
             'om' => [
                 'before' => [],
                 'after' => ['nhau', 'chat', 'lay'],
             ],
-            // "hỗ trợ", "họ tên", "họ nói", "hộ khẩu"
+            // "hỗ trợ", "họ tên", "hộ khẩu", "hố sâu"
             'ho' => [
                 'before' => ['nha', 'ma'],
                 'after' => ['tro', 'ten', 'hang', 'khau', 'so', 'noi', 'ay', 'do', 'nay', 'la', 'ngheo', 'gia'],
@@ -5876,7 +5876,7 @@ PROMPT;
             return false;
         }
 
-        // Markdown link: [text](https://...)
+        // Markdown link: [văn bản](https://...)
         if (preg_match('/^\[[^\]]+\]\((https?:\/\/[^\s)]+)\)$/iu', $trimmed) === 1) {
             return true;
         }
@@ -5885,7 +5885,7 @@ PROMPT;
             return true;
         }
 
-        // Raw URL-like payload without additional sentence context.
+        // Payload dạng URL trần, không kèm ngữ cảnh câu văn bên cạnh.
         if (preg_match('/^(https?:\/\/|www\.)\S+$/iu', $trimmed) === 1) {
             return true;
         }
@@ -5894,7 +5894,7 @@ PROMPT;
     }
 
     /**
-     * Check if response contains medical advice.
+     * Kiểm tra câu trả lời có chứa lời khuyên y khoa hay không.
      */
     protected function containsMedicalAdvice(string $response): bool
     {
@@ -5915,69 +5915,69 @@ PROMPT;
     }
 
     /**
-     * Search products based on query string.
+     * Tìm sản phẩm dựa trên chuỗi truy vấn.
      */
     public function searchProducts(string $query): Collection
     {
         $query = trim($query);
         $queryLower = mb_strtolower($query, 'UTF-8');
 
-        $products = Product::with('category')
+        $sanPhams = SanPham::with('danhMuc')
             ->notExpired()
-            ->where('stock_quantity', '>', 0)
+            ->where('so_luong_ton', '>', 0)
             ->where(function ($q) use ($query) {
-                $q->where('name', 'LIKE', $query)
-                    ->orWhere('name', 'LIKE', "{$query} %")
-                    ->orWhere('name', 'LIKE', "% {$query}")
-                    ->orWhere('name', 'LIKE', "% {$query} %");
+                $q->where('ten', 'LIKE', $query)
+                    ->orWhere('ten', 'LIKE', "{$query} %")
+                    ->orWhere('ten', 'LIKE', "% {$query}")
+                    ->orWhere('ten', 'LIKE', "% {$query} %");
             })
             ->FEFO()
             ->limit(5)
             ->get();
 
-        if ($products->count() < 5) {
-            $partialMatches = Product::with('category')
+        if ($sanPhams->count() < 5) {
+            $partialMatches = SanPham::with('danhMuc')
                 ->notExpired()
-                ->where('stock_quantity', '>', 0)
+                ->where('so_luong_ton', '>', 0)
                 ->where(function ($q) use ($query) {
-                    $q->where('name', 'LIKE', "%{$query}%")
-                        ->orWhere('ingredients', 'LIKE', "%{$query}%")
-                        ->orWhere('usage', 'LIKE', "%{$query}%");
+                    $q->where('ten', 'LIKE', "%{$query}%")
+                        ->orWhere('thanh_phan', 'LIKE', "%{$query}%")
+                        ->orWhere('cach_dung', 'LIKE', "%{$query}%");
                 })
-                ->when($products->isNotEmpty(), function ($q) use ($products) {
-                    $q->whereNotIn('MaSP', $products->pluck('MaSP'));
+                ->when($sanPhams->isNotEmpty(), function ($q) use ($sanPhams) {
+                    $q->whereNotIn('ma_sp', $sanPhams->pluck('ma_sp'));
                 })
                 ->FEFO()
                 ->limit(self::QUERY_MATCH_FETCH_LIMIT)
                 ->get();
 
             $partialMatches = $this->keepGenuineMatches($partialMatches, $query)
-                ->take(5 - $products->count());
+                ->take(5 - $sanPhams->count());
 
             if ($partialMatches->isNotEmpty()) {
-                $products = $products->concat($partialMatches)->values();
+                $sanPhams = $sanPhams->concat($partialMatches)->values();
             }
         }
 
-        if ($products->isEmpty()) {
-            $products = $this->searchProductsByNarrowingQuery($query);
+        if ($sanPhams->isEmpty()) {
+            $sanPhams = $this->searchProductsByNarrowingQuery($query);
         }
 
-        if ($products->isEmpty() && mb_strlen($query, 'UTF-8') >= 3) {
+        if ($sanPhams->isEmpty() && mb_strlen($query, 'UTF-8') >= 3) {
             $words = array_filter(explode(' ', $queryLower), function ($word) {
                 return mb_strlen($word, 'UTF-8') >= 2;
             });
 
             if (!empty($words)) {
-                $queryBuilder = Product::with('category')
+                $queryBuilder = SanPham::with('danhMuc')
                     ->notExpired()
-                    ->where('stock_quantity', '>', 0);
+                    ->where('so_luong_ton', '>', 0);
 
                 $queryBuilder->where(function ($q) use ($words) {
                     foreach ($words as $word) {
                         $q->where(function ($subQ) use ($word) {
-                            $subQ->where('name', 'LIKE', "{$word}%")
-                                ->orWhere('name', 'LIKE', "% {$word}%");
+                            $subQ->where('ten', 'LIKE', "{$word}%")
+                                ->orWhere('ten', 'LIKE', "% {$word}%");
                         });
                     }
                 });
@@ -5985,8 +5985,8 @@ PROMPT;
                 $candidates = $queryBuilder->limit(20)->get();
 
                 if ($candidates->isNotEmpty()) {
-                    $candidates = $candidates->map(function ($product) use ($queryLower, $words) {
-                        $nameLower = mb_strtolower($product->name, 'UTF-8');
+                    $candidates = $candidates->map(function ($sanPham) use ($queryLower, $words) {
+                        $nameLower = mb_strtolower($sanPham->ten, 'UTF-8');
                         $score = 0;
 
                         if ($nameLower === $queryLower) {
@@ -6014,27 +6014,27 @@ PROMPT;
                             $score -= 10;
                         }
 
-                        $product->similarity = $score;
-                        return $product;
+                        $sanPham->similarity = $score;
+                        return $sanPham;
                     })->sortByDesc('similarity')->values();
 
-                    $products = $candidates->filter(function ($product) {
-                        return $product->similarity >= 15;
+                    $sanPhams = $candidates->filter(function ($sanPham) {
+                        return $sanPham->similarity >= 15;
                     })->take(5);
                 }
             }
         }
 
-        return $products;
+        return $sanPhams;
     }
 
     /**
-     * Last resort before fuzzy name scoring: retry the keyword search on
-     * progressively shorter parts of the query, longest first.
+     * Phương án cuối trước khi chấm điểm tên fuzzy: thử lại tìm kiếm từ khóa trên
+     * các phần ngắn dần của truy vấn, dài nhất trước.
      *
-     * The tiers above match the whole phrase, so one extra word sinks the search -
-     * "dạ dày" finds four medicines while "đau dạ dày" found none, even though the
-     * stock that answers it is the same.
+     * Các tầng ở trên khớp nguyên cụm, nên một từ thừa làm chìm tìm kiếm -
+     * "dạ dày" tìm ra bốn loại thuốc trong khi "đau dạ dày" ra không gì,
+     * dù tồn kho trả lời cho cả hai là như nhau.
      */
     protected function searchProductsByNarrowingQuery(string $query): Collection
     {
@@ -6045,13 +6045,13 @@ PROMPT;
                 continue;
             }
 
-            $matches = Product::with('category')
+            $matches = SanPham::with('danhMuc')
                 ->notExpired()
-                ->where('stock_quantity', '>', 0)
+                ->where('so_luong_ton', '>', 0)
                 ->where(function ($builder) use ($candidate) {
-                    $builder->where('name', 'LIKE', "%{$candidate}%")
-                        ->orWhere('ingredients', 'LIKE', "%{$candidate}%")
-                        ->orWhere('usage', 'LIKE', "%{$candidate}%");
+                    $builder->where('ten', 'LIKE', "%{$candidate}%")
+                        ->orWhere('thanh_phan', 'LIKE', "%{$candidate}%")
+                        ->orWhere('cach_dung', 'LIKE', "%{$candidate}%");
                 })
                 ->FEFO()
                 ->limit(self::QUERY_MATCH_FETCH_LIMIT)
@@ -6068,32 +6068,32 @@ PROMPT;
     }
 
     /**
-     * Keep only the rows where the phrase really occurs as a whole word.
+     * Chỉ giữ lại các dòng mà cụm từ thực sự xuất hiện như một từ hoàn chỉnh.
      *
-     * LIKE decides accent sensitivity by collation, and MySQL's utf8mb4_unicode_ci
-     * ignores Vietnamese diacritics entirely, so `%thử thai%` matched "hấp thu thải
-     * trừ" inside an antacid's pharmacology text — a pregnancy-test question answered
-     * with a stomach medicine. Substring matching is the other half of it: "bao nhiêu"
-     * hit "trung hòa lượng acid dịch vị bao nhiêu".
+     * LIKE quyết định độ nhạy dấu qua collation, và utf8mb4_unicode_ci của MySQL
+     * bỏ qua hoàn toàn dấu tiếng Việt, nên `%thu thai%` đã khớp "hap thu thai tru"
+     * trong văn bản được học của thuốc tham vị — câu hỏi về que thử thai trả lời
+     * bằng thuốc dạ dày. Khớp substring là nửa còn lại: "bao nhiêu" trúng
+     * "trung hòa lượng acid dịch vị bao nhiêu".
      *
-     * Diacritics are enforced only when the customer typed them, so "dau da day" keeps
-     * finding "đau dạ dày" while "thử thai" no longer matches "thu thải".
+     * Dấu tiếng Việt chỉ được ép buộc khi khách tự gõ có dấu, nên "đau dạ dày"
+     * vẫn tìm ra "đau dạ dày" trong khi "thụ thai" không còn trúng "thu thai" nữa.
      */
-    protected function keepGenuineMatches(Collection $products, string $phrase): Collection
+    protected function keepGenuineMatches(Collection $sanPhams, string $phrase): Collection
     {
         $phrase = trim($phrase);
-        if ($phrase === '' || $products->isEmpty()) {
-            return $products;
+        if ($phrase === '' || $sanPhams->isEmpty()) {
+            return $sanPhams;
         }
 
-        return $products
-            ->filter(fn (Product $product): bool => $this->phraseOccursInProduct($product, $phrase))
+        return $sanPhams
+            ->filter(fn (SanPham $sanPham): bool => $this->phraseOccursInProduct($sanPham, $phrase))
             ->values();
     }
 
-    protected function phraseOccursInProduct(Product $product, string $phrase): bool
+    protected function phraseOccursInProduct(SanPham $sanPham, string $phrase): bool
     {
-        foreach ([$product->name, $product->ingredients, $product->usage] as $field) {
+        foreach ([$sanPham->ten, $sanPham->thanh_phan, $sanPham->cach_dung] as $field) {
             if ($this->phraseOccursAsWord((string) $field, $phrase)) {
                 return true;
             }
@@ -6108,8 +6108,8 @@ PROMPT;
             return false;
         }
 
-        // Typed without diacritics: fold both sides, which is what lets a customer
-        // search "dau da day". Typed with them: they have to survive the match.
+        // Gõ không dấu: fold cả hai bên, chính điều này cho phép khách tìm
+        // "đau dạ dày". Gõ có dấu: dấu phải sống sót qua bước khớp.
         if ($this->normalizeIntentText($phrase) === mb_strtolower($phrase, 'UTF-8')) {
             return VietnameseText::containsWord($this->normalizeIntentText($haystack), $phrase);
         }
@@ -6121,7 +6121,7 @@ PROMPT;
     }
 
     /**
-     * Recommend products based on symptoms.
+     * Gợi ý sản phẩm dựa trên triệu chứng.
      */
     public function recommendBySymptoms(string $symptoms): array
     {
@@ -6191,21 +6191,21 @@ PROMPT;
     }
 
     /**
-     * Create draft order from recognized products.
+     * Tạo đơn hàng nháp từ các sản phẩm đã nhận diện.
      *
-     * @param array $products Array of products with quantities
-     * @param int $userId User ID
-     * @return array Draft order data with validation results
+     * @param array $sanPhams Mảng sản phẩm kèm số lượng
+     * @param int $userId ID người dùng
+     * @return array Dữ liệu đơn nháp kèm kết quả kiểm tra
      * @throws \Exception
      */
-    public function createDraftOrder(array $products, int $userId): array
+    public function createDraftOrder(array $sanPhams, int $userId): array
     {
         try {
             $validProducts = [];
             $invalidProducts = [];
             $totalAmount = 0;
 
-            foreach ($products as $productData) {
+            foreach ($sanPhams as $productData) {
                 if (!isset($productData['product']) || !$productData['matched']) {
                     $invalidProducts[] = [
                         'name' => $productData['parsed_name'] ?? 'Unknown',
@@ -6215,51 +6215,51 @@ PROMPT;
                     continue;
                 }
 
-                $product = $productData['product'];
+                $sanPham = $productData['product'];
                 $quantity = $productData['quantity'] ?? 1;
 
-                if ($product['stock_quantity'] < $quantity) {
+                if ($sanPham['stock_quantity'] < $quantity) {
                     $invalidProducts[] = [
-                        'name' => $product['name'],
-                        'reason' => "Không đủ hàng trong kho. Chỉ còn {$product['stock_quantity']} sản phẩm.",
-                        'available_quantity' => $product['stock_quantity']
+                        'name' => $sanPham['name'],
+                        'reason' => "Không đủ hàng trong kho. Chỉ còn {$sanPham['stock_quantity']} sản phẩm.",
+                        'available_quantity' => $sanPham['stock_quantity']
                     ];
                     continue;
                 }
 
-                if ($product['is_expired']) {
+                if ($sanPham['is_expired']) {
                     $invalidProducts[] = [
-                        'name' => $product['name'],
+                        'name' => $sanPham['name'],
                         'reason' => 'Sản phẩm đã hết hạn',
-                        'expiration_date' => $product['expiration_date']
+                        'expiration_date' => $sanPham['expiration_date']
                     ];
                     continue;
                 }
 
-                $unitPrice = (int) round((float) $product['price']);
+                $unitPrice = (int) round((float) $sanPham['price']);
                 $itemTotal = $unitPrice * $quantity;
                 $totalAmount += $itemTotal;
 
                 $validProducts[] = [
-                    'MaSP' => $product['id'],
-                    'name' => $product['name'],
+                    'ma_sp' => $sanPham['id'],
+                    'name' => $sanPham['name'],
                     'price' => $unitPrice,
                     'quantity' => $quantity,
                     'subtotal' => $itemTotal,
-                    'image_url' => $product['image_url'],
-                    'stock_quantity' => $product['stock_quantity'],
+                    'image_url' => $sanPham['image_url'],
+                    'stock_quantity' => $sanPham['stock_quantity'],
                     'dosage' => $productData['dosage'] ?? null,
                     'instructions' => $productData['instructions'] ?? null
                 ];
             }
 
-            $this->auditLogService->log(
+            $this->nhatKyKiemToanService->ghi(
                 action: 'chatbot_order_created',
                 modelType: 'Chatbot',
                 modelId: null,
                 oldValues: null,
                 newValues: [
-                    'MaKH' => $userId,
+                    'ma_nd' => $userId,
                     'source' => 'AI Chatbot',
                     'order_type' => 'draft',
                     'total_amount' => $totalAmount,
@@ -6283,7 +6283,7 @@ PROMPT;
             ];
         } catch (\Exception $e) {
             Log::error('Draft order creation failed', [
-                'MaKH' => $userId,
+                'ma_nd' => $userId,
                 'error' => $e->getMessage()
             ]);
 

@@ -11,13 +11,13 @@
             <!-- Breadcrumb -->
             <nav aria-label="breadcrumb" class="mb-4">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('admin.products.index') }}">Sản Phẩm</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.bang-dieu-khien') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.san-pham.index') }}">Sản Phẩm</a></li>
                     <li class="breadcrumb-item active">Thêm Mới</li>
                 </ol>
             </nav>
 
-            <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" id="createProductForm">
+            <form action="{{ route('admin.san-pham.store') }}" method="POST" enctype="multipart/form-data" id="createProductForm">
                 @csrf
 
                 <div class="row g-4">
@@ -40,17 +40,17 @@
                             <!-- Category -->
                             <div class="mb-3">
                                 <label for="MaDM" class="form-label fw-medium">Danh Mục <span class="text-danger">*</span></label>
-                                <select class="form-select select2-basic @error('MaDM') is-invalid @enderror"
+                                <select class="form-select select2-basic @error('ma_dm') is-invalid @enderror"
                                     id="MaDM" name="MaDM" required>
                                     <option value="">-- Chọn danh mục --</option>
-                                    @foreach($categories as $category)
-                                        <option value="{{ $category->MaDM }}" data-code="{{ $category->code }}" {{ old('MaDM') == $category->MaDM ? 'selected' : '' }}>
-                                            {{ $category->name }}
+                                    @foreach($danhMucs as $category)
+                                        <option value="{{ $category->ma_dm }}" data-code="{{ $category->code }}" {{ old('ma_dm') == $category->ma_dm ? 'selected' : '' }}>
+                                            {{ $category->ten }}
                                         </option>
                                     @endforeach
                                 </select>
                                 <div class="form-text" id="productCodeHint">Mã sản phẩm sẽ tự sinh sau khi chọn danh mục.</div>
-                                @error('MaDM')
+                                @error('ma_dm')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -182,7 +182,7 @@
                                 <button type="submit" class="btn btn-primary btn-lg">
                                     <i class="bi bi-plus-circle me-2"></i>Thêm Sản Phẩm
                                 </button>
-                                <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary">
+                                <a href="{{ route('admin.san-pham.index') }}" class="btn btn-outline-secondary">
                                     <i class="bi bi-arrow-left me-2"></i>Quay Lại
                                 </a>
                             </div>
@@ -198,7 +198,7 @@
 @push('scripts')
 <script type="module">
     function updateProductCodeHint() {
-        const select = document.getElementById('MaDM');
+        const select = document.getElementById('ma_dm');
         const hint = document.getElementById('productCodeHint');
         const code = select.selectedOptions[0]?.dataset.code;
         hint.textContent = code
@@ -206,7 +206,7 @@
             : 'Mã sản phẩm sẽ tự sinh sau khi chọn danh mục.';
     }
 
-    document.getElementById('MaDM')?.addEventListener('change', updateProductCodeHint);
+    document.getElementById('ma_dm')?.addEventListener('change', updateProductCodeHint);
     updateProductCodeHint();
 
     function previewImage(input) {

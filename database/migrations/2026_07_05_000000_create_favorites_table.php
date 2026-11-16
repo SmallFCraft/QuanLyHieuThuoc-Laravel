@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('favorites', function (Blueprint $table) {
-            $table->id('MaYT');
-            $table->foreignId('MaKH')->constrained('users', 'MaKH')->cascadeOnDelete();
-            $table->foreignId('MaSP')->constrained('products', 'MaSP')->cascadeOnDelete();
+        Schema::create('yeu_thiches', function (Blueprint $table) {
+            $table->id('ma_yt');
+            $table->foreignId('ma_nd')->constrained('nguoi_dungs', 'ma_nd')->cascadeOnDelete();
+            $table->foreignId('ma_sp')->constrained('san_phams', 'ma_sp')->cascadeOnDelete();
             $table->timestamps();
 
-            $table->unique(['MaKH', 'MaSP'], 'favorites_user_product_unique');
-            $table->index('MaSP', 'favorites_masp_index');
+            $table->unique(['ma_nd', 'ma_sp'], 'yeu_thiches_nguoi_dung_san_pham_unique');
+            $table->index('ma_sp', 'yeu_thiches_ma_sp_index');
         });
     }
 
@@ -27,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('favorites');
+        Schema::dropIfExists('yeu_thiches');
     }
 };

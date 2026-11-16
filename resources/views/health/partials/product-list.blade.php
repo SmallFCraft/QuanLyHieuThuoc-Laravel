@@ -98,7 +98,7 @@
                     @endif
 
                     <div class="health-product__action">
-                        {{-- Four identical "Xem chi tiết" links would give a screen
+                        {{-- Four identical "Xem chi tiet" links would give a screen
                              reader four identical accessible names. --}}
                         <a href="{{ $product['url'] ?? '#' }}"
                            class="health-btn health-btn-ghost w-100 text-center text-decoration-none health-no-print"
@@ -128,7 +128,7 @@
              on the first line, where the sentence it introduces starts. --}}
         <p class="small text-gray-600 mt-3 mb-0 health-no-print">
             <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
-            <a href="{{ route('profile.edit') }}" class="health-link health-link--accent health-link--inline">
+            <a href="{{ route('ho-so.edit') }}" class="health-link health-link--accent health-link--inline">
                 {{ __('messages.health.safety_check_no_profile') }}
             </a>
         </p>

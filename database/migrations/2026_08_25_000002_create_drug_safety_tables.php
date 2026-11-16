@@ -8,8 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('drug_interactions', function (Blueprint $table) {
-            $table->id('MaTT');
+        Schema::create('tuong_tac_thuocs', function (Blueprint $table) {
+            $table->id('ma_tt');
             $table->string('ingredient_a', 120);
             $table->string('ingredient_b', 120);
             $table->enum('severity', ['major', 'moderate', 'minor'])->default('moderate');
@@ -18,12 +18,12 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->unique(['ingredient_a', 'ingredient_b'], 'drug_interactions_pair_unique');
+            $table->unique(['ingredient_a', 'ingredient_b'], 'tuong_tac_thuocs_cap_duoc_pha_che_unique');
             $table->index('ingredient_b');
         });
 
-        Schema::create('drug_contraindications', function (Blueprint $table) {
-            $table->id('MaCCD');
+        Schema::create('chung_chi_dinh_thuocs', function (Blueprint $table) {
+            $table->id('ma_ccd');
             $table->string('ingredient', 120);
             $table->enum('condition_type', [
                 'pregnancy', 'breastfeeding', 'age_under', 'age_over', 'chronic_disease', 'allergy',
@@ -40,7 +40,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('drug_contraindications');
-        Schema::dropIfExists('drug_interactions');
+        Schema::dropIfExists('chung_chi_dinh_thuocs');
+        Schema::dropIfExists('tuong_tac_thuocs');
     }
 };

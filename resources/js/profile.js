@@ -1,9 +1,9 @@
 /**
- * Trang tài khoản: điều hướng tab, kiểm tra tại chỗ, nháp form, ảnh đại diện.
+ * Trang tai khoan: dieu huong tab, kiem tra tai cho, nhap form, anh dai dien.
  *
- * Gom từ các khối <script> rải trong từng partial. Mỗi phần tự kiểm tra phần tử
- * của mình tồn tại rồi mới chạy, nên file này nạp chung với app.js mà không lỗi
- * trên các trang khác.
+ * Gom tu cac khoi <script> rai trong tung partial. Moi phan tu kiem tra phan tu
+ * cua minh ton tai roi moi chay, nen file nay nap chung voi app.js ma khong loi
+ * tren cac trang khac.
  */
 const DRAFT_DEBOUNCE_MS = 600;
 
@@ -11,7 +11,7 @@ function lang(key, fallback) {
     return window.PharmacyProfileLang?.[key] ?? fallback;
 }
 
-/* ---------- Điều hướng tab qua hash ---------- */
+/* ---------- Dieu huong tab qua hash ---------- */
 
 function activateTab(hash) {
     const tabs = document.querySelectorAll(`a[data-bs-toggle="pill"][href="${hash}"]`);
@@ -20,8 +20,8 @@ function activateTab(hash) {
         return false;
     }
 
-    // Sidebar và dải tab mobile là hai bộ link cho cùng một tab: kích hoạt bộ đang
-    // hiển thị, Bootstrap sẽ đồng bộ phần còn lại qua target chung.
+    // Sidebar va dai tab mobile la hai bo link cho cung mot tab: kich hoat bo dang
+    // hien thi, Bootstrap se dong bo phan con lai qua target chung.
     const visible = [...tabs].find((tab) => tab.offsetParent !== null) ?? tabs[0];
 
     window.bootstrap?.Tab?.getOrCreateInstance(visible).show();
@@ -36,11 +36,11 @@ function activateTabFromHash() {
         return;
     }
 
-    // #order-23 tới từ email và từ tab tổng quan: mở tab đơn hàng rồi cuộn tới đơn đó.
+    // #order-23 toi tu email va tu tab tong quan: mo tab don hang roi cuon toi don do.
     if (hash.startsWith('#order-')) {
         activateTab('#orders');
 
-        // Chờ Bootstrap hiện xong panel, nếu không getBoundingClientRect trả về 0.
+        // Cho Bootstrap hien xong panel, neu khong getBoundingClientRect tra ve 0.
         window.requestAnimationFrame(() => {
             const order = document.querySelector(hash);
 
@@ -75,12 +75,12 @@ function initTabs() {
             const href = event.target.getAttribute('href');
 
             if (href) {
-                // replaceState, không pushState: mỗi lần đổi tab thêm một mục vào
-                // history khiến nút back phải bấm nhiều lần mới rời được trang.
+                // replaceState, khong pushState: moi lan doi tab them mot muc vao
+                // history khien nut back phai bam nhieu lan moi roi duoc trang.
                 window.history.replaceState(null, '', href);
             }
 
-            // Dải tab mobile cuộn ngang, tab vừa chọn có thể đang nằm ngoài khung.
+            // Dai tab mobile cuon ngang, tab vua chon co the dang nam ngoai khung.
             document
                 .querySelector(`.profile-tabbar__link[href="${href}"]`)
                 ?.scrollIntoView({ inline: 'center', block: 'nearest' });
@@ -89,7 +89,7 @@ function initTabs() {
 
     window.addEventListener('hashchange', activateTabFromHash);
 
-    // Link "Xem tất cả" trong tab tổng quan trỏ sang tab khác.
+    // Link "Xem tat ca" trong tab tong quan tro sang tab khac.
     document.addEventListener('click', (event) => {
         const link = event.target.closest?.('[data-profile-goto-tab]');
 
@@ -114,7 +114,7 @@ function initTabs() {
     });
 }
 
-/* ---------- Kiểm tra tại chỗ ---------- */
+/* ---------- Kiem tra tai cho ---------- */
 
 const VALIDATORS = {
     required: (value) => value.trim() !== '',
@@ -143,7 +143,7 @@ function setFieldError(field, message) {
     }
 }
 
-/** Trả về true khi hợp lệ. Kiểm khi blur, không phải mỗi lần gõ. */
+/** Tra ve true khi hop le. Kiem khi blur, khong phai moi lan go. */
 function validateField(field) {
     const rule = field.dataset.validate;
     const check = rule ? VALIDATORS[rule] : null;
@@ -159,7 +159,7 @@ function validateField(field) {
     return valid;
 }
 
-/* ---------- Nháp form ---------- */
+/* ---------- Nhap form ---------- */
 
 function readDraft(key) {
     try {
@@ -186,7 +186,7 @@ function initProfileForm() {
     fields.forEach((field) => {
         field.addEventListener('blur', () => validateField(field));
 
-        // Khi đã báo lỗi thì xoá lỗi ngay lúc người dùng sửa, không đợi blur lần nữa.
+        // Khi da bao loi thi xoa loi ngay luc nguoi dung sua, khong doi blur lan nua.
         field.addEventListener('input', () => {
             if (field.classList.contains('is-invalid')) {
                 validateField(field);
@@ -202,8 +202,8 @@ function initProfileForm() {
         fields.forEach((field) => {
             const saved = draft[field.name];
 
-            // Chỉ đổ lại giá trị khác với dữ liệu server: nháp trùng server thì không
-            // có gì để "phục hồi" và thông báo sẽ gây nhầm lẫn.
+            // Chi do lai gia tri khac voi du lieu server: nhap trung server thi khong
+            // co gi de "phuc hoi" va thong bao se gay nham lan.
             if (typeof saved === 'string' && saved !== field.value) {
                 field.value = saved;
                 restored = true;
@@ -238,7 +238,7 @@ function initProfileForm() {
             window.localStorage.setItem(key, JSON.stringify(payload));
             discardButton?.classList.remove('d-none');
         } catch (error) {
-            // Hết quota hoặc chế độ riêng tư: bỏ qua, form vẫn submit bình thường.
+            // Het quota hoac che do rieng tu: bo qua, form van submit binh thuong.
         }
     };
 
@@ -252,7 +252,7 @@ function initProfileForm() {
             window.localStorage.removeItem(key);
         }
 
-        // Nạp lại để lấy đúng giá trị server, thay vì tự đoán giá trị ban đầu.
+        // Nap lai de lay dung gia tri server, thay vi tu doan gia tri ban dau.
         window.location.reload();
     });
 
@@ -261,15 +261,15 @@ function initProfileForm() {
 
         if (invalid.length > 0) {
             event.preventDefault();
-            // Đưa con trỏ về ô lỗi đầu tiên — WCAG focus management.
+            // Dua con tro ve o loi dau tien — WCAG focus management.
             invalid[0].focus();
             invalid[0].scrollIntoView({ block: 'center', behavior: 'auto' });
 
             return;
         }
 
-        // Submit thật rồi mới xoá nháp: nếu server trả lỗi validate, giá trị vẫn về
-        // qua old(), nên không cần giữ nháp nữa.
+        // Submit that roi moi xoa nhap: neu server tra loi validate, gia tri van ve
+        // qua old(), nen khong can giu nhap nua.
         if (key) {
             window.localStorage.removeItem(key);
         }
@@ -283,7 +283,7 @@ function initProfileForm() {
     });
 }
 
-/* ---------- Ảnh đại diện ---------- */
+/* ---------- Anh dai dien ---------- */
 
 function initAvatar() {
     const form = document.querySelector('[data-avatar-form]');
@@ -303,8 +303,8 @@ function initAvatar() {
             return;
         }
 
-        // Kiểm ở client trước để không phải tải cả file lên rồi mới bị từ chối.
-        // Ngưỡng lấy từ data-max-size-kb, cùng nguồn config với server.
+        // Kiem o client truoc de khong phai tai ca file len roi moi bi tu choi.
+        // Nguong lay tu data-max-size-kb, cung nguon config voi server.
         const maxKb = Number(input.dataset.maxSizeKb || 5120);
         const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
 
@@ -325,7 +325,7 @@ function initAvatar() {
         form.submit();
     });
 
-    // Xoá ảnh là hành động không hoàn tác được: hỏi lại trước khi gửi.
+    // Xoa anh la hanh dong khong hoan tac duoc: hoi lai truoc khi gui.
     document.querySelector('[data-avatar-remove-form]')?.addEventListener('submit', (event) => {
         const button = event.target.querySelector('[data-confirm]');
 
@@ -335,7 +335,7 @@ function initAvatar() {
     });
 }
 
-/* ---------- Mật khẩu ---------- */
+/* ---------- Mat khau ---------- */
 
 function initPasswordControls() {
     document.querySelectorAll('[data-password-toggle]').forEach((button) => {
@@ -383,8 +383,8 @@ function initPasswordControls() {
             return;
         }
 
-        // Bốn tiêu chí của messages.profile.new_password_hint: độ dài, chữ hoa,
-        // chữ thường, số. Không phải điểm entropy, chỉ phản chiếu đúng quy tắc server.
+        // Bon tieu chi cua messages.profile.new_password_hint: do dai, chu hoa,
+        // chu thuong, so. Khong phai diem entropy, chi phan chieu dung quy tac server.
         const score = [
             value.length >= 8,
             /[A-Z]/.test(value),
@@ -406,7 +406,7 @@ function initPasswordControls() {
     });
 }
 
-/* ---------- Xoá tài khoản ---------- */
+/* ---------- Xoa tai khoan ---------- */
 
 function initDeleteAccount() {
     const trigger = document.querySelector('[data-delete-account-trigger]');
@@ -419,8 +419,8 @@ function initDeleteAccount() {
 
     trigger.addEventListener('click', () => {
         if (!window.Swal?.fire) {
-            // Không có SweetAlert thì vẫn phải xác nhận — đây là hành động không
-            // hoàn tác được, không được phép gửi đi im lặng.
+            // Khong co SweetAlert thi van phai xac nhan — day la hanh dong khong
+            // hoan tac duoc, khong duoc phep gui di im lang.
             if (window.confirm(strings.title)) {
                 form.submit();
             }

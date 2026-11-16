@@ -2,23 +2,23 @@
 
 @section('title', 'Chi tiết sản phẩm')
 @section('page-title', 'Chi tiết sản phẩm')
-@section('page-subtitle', $product->name)
+@section('page-subtitle', $sanPham->ten)
 
 @section('content')
 <div class="container-fluid px-0">
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.products.index') }}">Sản phẩm</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ $product->display_code }}</li>
+            <li class="breadcrumb-item"><a href="{{ route('admin.bang-dieu-khien') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('admin.san-pham.index') }}">Sản phẩm</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ $sanPham->display_code }}</li>
         </ol>
     </nav>
 
     <div class="row g-3 g-xl-4">
         <div class="col-lg-4">
             <section class="admin-card h-100">
-                @if($product->image_url)
-                    <img src="{{ $product->image_url }}" alt="Ảnh {{ $product->name }}" class="admin-product-media">
+                @if($sanPham->image_url)
+                    <img src="{{ $sanPham->image_url }}" alt="Ảnh {{ $sanPham->ten }}" class="admin-product-media">
                 @else
                     <div class="admin-product-placeholder">
                         <div class="text-center">
@@ -29,15 +29,15 @@
                 @endif
 
                 <div class="mt-3">
-                    <h2 class="h5 fw-bold mb-1">{{ $product->name }}</h2>
-                    <div class="text-secondary small">Mã sản phẩm {{ $product->display_code }}</div>
+                    <h2 class="h5 fw-bold mb-1">{{ $sanPham->ten }}</h2>
+                    <div class="text-secondary small">Mã sản phẩm {{ $sanPham->display_code }}</div>
                 </div>
 
                 <div class="d-grid gap-2 mt-4">
-                    <a href="{{ route('admin.products.edit', $product->MaSP) }}" class="btn btn-warning">
+                    <a href="{{ route('admin.san-pham.edit', $sanPham->ma_sp) }}" class="btn btn-warning">
                         <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Chỉnh sửa
                     </a>
-                    <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary">
+                    <a href="{{ route('admin.san-pham.index') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Quay lại danh sách
                     </a>
                 </div>
@@ -49,25 +49,25 @@
                 <div class="col-sm-6 col-xl-3">
                     <div class="stat-card">
                         <p class="stat-label">Giá bán</p>
-                        <div class="stat-value">{{ $product->formatted_price }}</div>
+                        <div class="stat-value">{{ $sanPham->formatted_price }}</div>
                     </div>
                 </div>
                 <div class="col-sm-6 col-xl-3">
-                    <div class="stat-card {{ $product->isLowStock() ? 'expiring' : 'revenue' }}">
+                    <div class="stat-card {{ $sanPham->isLowStock() ? 'expiring' : 'revenue' }}">
                         <p class="stat-label">Tồn kho</p>
-                        <div class="stat-value">{{ $product->stock_quantity }}</div>
+                        <div class="stat-value">{{ $sanPham->so_luong_ton }}</div>
                     </div>
                 </div>
                 <div class="col-sm-6 col-xl-3">
                     <div class="stat-card orders">
                         <p class="stat-label">Ngưỡng cảnh báo</p>
-                        <div class="stat-value">{{ $product->reorder_point }}</div>
+                        <div class="stat-value">{{ $sanPham->muc_canh_bao }}</div>
                     </div>
                 </div>
                 <div class="col-sm-6 col-xl-3">
-                    <div class="stat-card {{ $product->isExpired() ? 'expiring' : ($product->isExpiringSoon(30) ? 'orders' : 'lowstock') }}">
+                    <div class="stat-card {{ $sanPham->isExpired() ? 'expiring' : ($sanPham->isExpiringSoon(30) ? 'orders' : 'lowstock') }}">
                         <p class="stat-label">Hạn dùng</p>
-                        <div class="stat-value" style="font-size:1.1rem;">{{ $product->formatted_expiration_date }}</div>
+                        <div class="stat-value" style="font-size:1.1rem;">{{ $sanPham->formatted_expiration_date }}</div>
                     </div>
                 </div>
             </div>
@@ -84,19 +84,19 @@
                     <div class="col-md-6">
                         <div class="border rounded p-3 h-100">
                             <div class="text-secondary small">Danh mục</div>
-                            <div class="fw-semibold">{{ $product->category->name ?? 'Chưa phân loại' }}</div>
+                            <div class="fw-semibold">{{ $sanPham->danhMuc->ten ?? 'Chưa phân loại' }}</div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="border rounded p-3 h-100">
                             <div class="text-secondary small">Số lô</div>
-                            <div class="fw-semibold">{{ $product->batch_number }}</div>
+                            <div class="fw-semibold">{{ $sanPham->so_lo }}</div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="border rounded p-3 h-100">
                             <div class="text-secondary small">Trạng thái tồn kho</div>
-                            @if($product->isLowStock())
+                            @if($sanPham->isLowStock())
                                 <span class="badge text-bg-danger">Tồn kho thấp</span>
                             @else
                                 <span class="badge text-bg-success">Bình thường</span>
@@ -106,9 +106,9 @@
                     <div class="col-md-6">
                         <div class="border rounded p-3 h-100">
                             <div class="text-secondary small">Trạng thái hạn dùng</div>
-                            @if($product->isExpired())
+                            @if($sanPham->isExpired())
                                 <span class="badge text-bg-danger">Đã hết hạn</span>
-                            @elseif($product->isExpiringSoon(30))
+                            @elseif($sanPham->isExpiringSoon(30))
                                 <span class="badge text-bg-warning">Sắp hết hạn</span>
                             @else
                                 <span class="badge text-bg-success">Còn hạn</span>
@@ -129,11 +129,11 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <h3 class="h6 fw-bold">Thành phần</h3>
-                        <div class="text-secondary">{!! $product->ingredients ?: '<em>Chưa có thông tin.</em>' !!}</div>
+                        <div class="text-secondary">{!! $sanPham->thanh_phan ?: '<em>Chưa có thông tin.</em>' !!}</div>
                     </div>
                     <div class="col-md-6">
                         <h3 class="h6 fw-bold">Hướng dẫn sử dụng</h3>
-                        <div class="text-secondary">{!! $product->usage ?: '<em>Chưa có thông tin.</em>' !!}</div>
+                        <div class="text-secondary">{!! $sanPham->cach_dung ?: '<em>Chưa có thông tin.</em>' !!}</div>
                     </div>
                 </div>
             </section>

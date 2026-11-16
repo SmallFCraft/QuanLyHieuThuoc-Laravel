@@ -9,12 +9,12 @@ use Illuminate\Http\Request;
 class EmailVerificationNotificationController extends Controller
 {
     /**
-     * Send a new email verification notification.
+     * Gửi một thông báo xác minh email mới.
      */
     public function store(Request $request): RedirectResponse
     {
         if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(route('home', absolute: false));
+            return redirect()->intended(route('trang-chu', absolute: false));
         }
 
         $request->user()->sendEmailVerificationNotification();

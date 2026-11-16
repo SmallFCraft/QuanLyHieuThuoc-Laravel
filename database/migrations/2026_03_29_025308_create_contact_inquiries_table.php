@@ -11,15 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('contact_inquiries', function (Blueprint $table) {
-            $table->id('MaLH');
+        Schema::create('yeu_cau_lien_hes', function (Blueprint $table) {
+            $table->id('ma_lh');
             $table->string('name');
             $table->string('email');
             $table->string('phone', 20);
             $table->text('message');
             $table->enum('status', ['new', 'read', 'responded'])->default('new');
             $table->timestamps();
-            
+
             $table->index('status');
             $table->index('email');
             $table->index('created_at');
@@ -31,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('contact_inquiries');
+        Schema::dropIfExists('yeu_cau_lien_hes');
     }
 };

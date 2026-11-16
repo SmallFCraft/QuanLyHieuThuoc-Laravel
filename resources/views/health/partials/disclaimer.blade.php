@@ -2,7 +2,7 @@
      times — but compact where the popup can be reopened to read it in full.
 
      Two shapes, decided by $disclaimerReviewable:
-       * reopenable (the normal case): title + "Xem lại", with the body in the DOM for
+       * reopenable (the normal case): title + "Xem lai", with the body in the DOM for
          screen readers and restored by @media print for the clinic copy;
        * not reopenable (an emergency result, where the popup is suppressed so it can
          never cover the 115 button): the body renders inline and the link is withheld,

@@ -35,7 +35,7 @@ function cartAddUpdateBadge(count) {
     }
 }
 
-/** Đồng bộ badge navbar giỏ hàng (thêm/xóa/sửa trên trang cart) */
+/** Dong bo badge navbar gio hang (them/xoa/sua tren trang cart) */
 window.cartNavbarSetCount = cartAddUpdateBadge;
 
 function cartAddToast(icon, title, text) {

@@ -4,7 +4,7 @@ use App\Helpers\VietnameseHelper;
 
 if (!function_exists('format_currency_vi')) {
     /**
-     * Format currency to Vietnamese format
+     * Định dạng tiền tệ theo định dạng tiếng Việt
      */
     function format_currency_vi($amount): string
     {
@@ -14,7 +14,7 @@ if (!function_exists('format_currency_vi')) {
 
 if (!function_exists('order_status_text')) {
     /**
-     * Get Vietnamese order status text
+     * Lấy văn bản trạng thái đơn hàng tiếng Việt
      */
     function order_status_text(string $status): string
     {
@@ -24,7 +24,7 @@ if (!function_exists('order_status_text')) {
 
 if (!function_exists('role_text')) {
     /**
-     * Get Vietnamese role text
+     * Lấy văn bản vai trò tiếng Việt
      */
     function role_text(string $role): string
     {
