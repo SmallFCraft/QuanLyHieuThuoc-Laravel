@@ -12,6 +12,7 @@ use App\Services\NhacUongThuocService;
 use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -188,6 +189,21 @@ class NhacUongThuocServiceTest extends TestCase
     {
         Mail::fake();
         $this->reminder(['next_remind_at' => now()->addDay()]);
+
+        $this->assertSame(0, $this->service->guiDungHan());
+        Mail::assertNothingQueued();
+    }
+
+    /**
+     * The hosting incident: the reminders table was missing there, so the every-15-minute
+     * cron burned exit code 1 and a full stack trace into the log, hourly, forever. The
+     * dispatcher degrades to a no-op success instead — the fix is the migration; this
+     * only keeps the cron log red-free until it has run.
+     */
+    public function test_gui_dung_han_khong_nem_loi_khi_bang_chua_duoc_tao(): void
+    {
+        Mail::fake();
+        Schema::dropIfExists('nhac_uong_thuocs');
 
         $this->assertSame(0, $this->service->guiDungHan());
         Mail::assertNothingQueued();

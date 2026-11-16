@@ -8,6 +8,7 @@ use App\Models\DanhMuc;
 use App\Models\SanPham;
 use App\Models\PhienSangLoc;
 use App\Models\NguoiDung;
+use App\Services\Triage\Ai\SangLocAiSuKienService;
 use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -195,6 +196,114 @@ class HangDoiQuyetDinhSangLocTest extends TestCase
             ->assertJsonPath('redirect_url', route('sang-loc.ket-qua', $phien->ma_sl));
 
         $this->assertArrayNotHasKey('result_url', (array) $job->refresh()->result);
+    }
+
+    /**
+     * The hosting incident: the evaluation job ran the fact-extraction call with the
+     * shared failover budget, so a 30s primary timeout left the fallback max(1, ceil(30-30))
+     * = 1s and it died at exactly 1001ms (log, 2026-11-17 06:09). The worker has no browser
+     * waiting, so its fact extraction must opt into per-provider budgets; the inline
+     * controller path must keep the shared budget.
+     */
+    public function test_cong_viec_danh_gia_dung_ngan_sach_rieng_cho_trich_xuat(): void
+    {
+        Queue::fake();
+        Http::fake(['*' => Http::response($this->toolCall([
+            'symptom_codes' => ['headache'],
+            'needs_more_info' => false,
+            'missing_questions' => [],
+        ]))]);
+        config()->set('chatbot.ai.triage.fact_extraction', true);
+
+        $captured = [];
+        $this->app->bind(SangLocAiSuKienService::class, function () use (&$captured) {
+            return new class ($this->app->make(\App\Services\NhatKyKiemToanService::class), $captured) extends SangLocAiSuKienService {
+                /** @var array<int, array<string, mixed>> */
+                public array $capturedOptions = [];
+
+                public function __construct(\App\Services\NhatKyKiemToanService $audit, array &$captured)
+                {
+                    parent::__construct($audit);
+                    $this->capturedOptions = &$captured;
+                }
+
+                public function callProvider(\App\Services\AiProviderService $provider, array $messages, array $options = []): array
+                {
+                    $this->capturedOptions[] = $options;
+
+                    return parent::callProvider($provider, $messages, $options);
+                }
+            };
+        });
+
+        $phien = $this->startSession();
+        $this->answerAllSteps($phien);
+
+        $job = AiJob::where('kind', AiJob::KIND_TRIAGE_EVALUATION)->firstOrFail();
+        (new XuLyDanhGiaSangLoc($job->uuid))->handle(
+            app(\App\Services\Triage\SangLocYTeService::class),
+            app(\App\Services\AiJobService::class)
+        );
+
+        $this->assertNotSame([], $captured, 'The worker evaluation must reach the provider.');
+        $this->assertSame(
+            true,
+            $captured[0]['dedicated_budgets'] ?? null,
+            'Fact extraction inside the worker must use per-provider budgets.'
+        );
+    }
+
+    /** The inline (synchronous request) path keeps the shared budget: a browser is waiting. */
+    public function test_quyet_dinh_truc_tiep_giu_ngan_sach_chung(): void
+    {
+        Http::fake(['*' => Http::response($this->toolCall([
+            'symptom_codes' => ['headache'],
+            'needs_more_info' => false,
+            'missing_questions' => [],
+        ]))]);
+        config()->set('chatbot.ai.triage.fact_extraction', true);
+
+        // Force the inline path: an abandoned evaluation for THIS session makes
+        // decideOutcome() skip the queue and decide inline.
+        $phien0 = $this->startSession();
+        AiJob::create([
+            'uuid' => 'forced-inline-uuid',
+            'ma_nd' => $this->nguoiDung->ma_nd,
+            'kind' => AiJob::KIND_TRIAGE_EVALUATION,
+            'status' => 'failed',
+            'payload' => ['ma_sl' => $phien0->ma_sl],
+        ]);
+
+        $captured = [];
+        $this->app->bind(SangLocAiSuKienService::class, function () use (&$captured) {
+            return new class ($this->app->make(\App\Services\NhatKyKiemToanService::class), $captured) extends SangLocAiSuKienService {
+                /** @var array<int, array<string, mixed>> */
+                public array $capturedOptions = [];
+
+                public function __construct(\App\Services\NhatKyKiemToanService $audit, array &$captured)
+                {
+                    parent::__construct($audit);
+                    $this->capturedOptions = &$captured;
+                }
+
+                public function callProvider(\App\Services\AiProviderService $provider, array $messages, array $options = []): array
+                {
+                    $this->capturedOptions[] = $options;
+
+                    return parent::callProvider($provider, $messages, $options);
+                }
+            };
+        });
+
+        $phien = $this->startSession();
+        $this->answerAllSteps($phien);
+
+        $this->assertNotSame([], $captured, 'The inline decision must reach the provider.');
+        $this->assertArrayNotHasKey(
+            'dedicated_budgets',
+            $captured[0],
+            'Inline fact extraction keeps the shared budget for the waiting browser.'
+        );
     }
 
     public function test_vong_theo_sau_song_sot_qua_lan_chuyen_hang_doi(): void

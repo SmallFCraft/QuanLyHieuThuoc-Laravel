@@ -70,7 +70,10 @@ class XuLyDanhGiaSangLoc implements ShouldQueue
         Auth::onceUsingId((int) $job->ma_nd);
 
         try {
-            $result = $triage->danhGia($phien, HoSoSucKhoe::consentedFor((int) $job->ma_nd));
+            // Worker: không browser nào đang chờ, nên trích xuất sự thật dùng ngân sách
+            // riêng cho từng nhà cung cấp thay vì ngân sách chung — phần dư của primary
+            // từng ép fallback xuống 1s và mọi lần chuyển dự phòng thành thất bại.
+            $result = $triage->danhGia($phien, HoSoSucKhoe::consentedFor((int) $job->ma_nd), trongWorker: true);
 
             if ($triage->canHoiLamRo($phien, $result)) {
                 $triage->luuCChamLamRo($phien, $result);

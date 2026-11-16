@@ -509,7 +509,7 @@ class SangLocYTeService
      * Trích xuất chi tiết AI, khi bật, chỉ tham gia ở bước 3 và không thể làm nhẹ
      * kết quả — xem resolveOutcomeWithAi().
      */
-    public function danhGia(PhienSangLoc $phien, ?HoSoSucKhoe $hoSo = null): array
+    public function danhGia(PhienSangLoc $phien, ?HoSoSucKhoe $hoSo = null, bool $trongWorker = false): array
     {
         $nguoiDung = $phien->nguoiDung ?? NguoiDung::find($phien->ma_nd);
         $text = $this->collectedText($phien);
@@ -528,7 +528,7 @@ class SangLocYTeService
         }
 
         $facts = $this->buildFacts($phien, $nguoiDung, $hoSo);
-        $resolved = $this->resolveOutcomeWithAi($phien, $text, $cacTrieuChung, $facts);
+        $resolved = $this->resolveOutcomeWithAi($phien, $text, $cacTrieuChung, $facts, $trongWorker);
         $quyTac = $resolved['rule'];
         $cacTrieuChung = $resolved['symptoms'];
         $ai = $resolved['ai'];
@@ -596,7 +596,8 @@ class SangLocYTeService
         PhienSangLoc $phien,
         string $text,
         Collection $cacTrieuChung,
-        array $facts
+        array $facts,
+        bool $trongWorker = false
     ): array {
         $quyTacGoc = $this->resolveRule($cacTrieuChung, $facts);
         $factService = app(SangLocAiSuKienService::class);
@@ -610,6 +611,7 @@ class SangLocYTeService
             $text,
             $this->symptomDictionary()->pluck('code')->all(),
             $this->wizardTranscript($phien),
+            $trongWorker,
         );
 
         if ($aiFacts === null) {

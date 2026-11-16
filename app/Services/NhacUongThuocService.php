@@ -7,6 +7,7 @@ use App\Models\NhacUongThuoc;
 use App\Models\DonHang;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Dùng và gửi các nhắc uống thuốc dựa trên đơn hàng đã hoàn thành.
@@ -135,9 +136,17 @@ class NhacUongThuocService
 
     /**
      * Gửi mỗi nhắc uống đến hạn và kéo lịch của nó lên phía trước.
+     *
+     * Bảng thiếu (môi trường chưa chạy migration mới) là một lượt im lặng, không
+     * phải lỗi: cron 15 phút một lần đọc exit code 1 kèm stack trace cả ngày trên
+     * hosting, trong khi lệnh này không có đối tượng nào để phục vụ.
      */
     public function guiDungHan(): int
     {
+        if (! Schema::hasTable((new NhacUongThuoc)->getTable())) {
+            return 0;
+        }
+
         $daGui = 0;
 
         NhacUongThuoc::due()

@@ -104,6 +104,9 @@ class SangLocAiSuKienService extends SangLocAiService
      *
      * @param  array<int, string>  $allowedCodes  Giá trị `medical_symptoms.code` đang hoạt động.
      *                                            Truyền vào nên lớp này không thêm truy vấn nào.
+     * @param  bool  $trongWorker  Ngữ cảnh không có browser chờ (job đánh giá trong worker):
+     *                               bật ngân sách riêng cho từng nhà cung cấp — ngân sách chung
+     *                               ép fallback xuống phần dư của primary, thực tế là 1s.
      * @return array{
      *     symptom_codes: array<int, string>,
      *     duration_days: int|null,
@@ -116,7 +119,7 @@ class SangLocAiSuKienService extends SangLocAiService
      *     provider: array<string, mixed>
      * }|null
      */
-    public function trichXuat(PhienSangLoc $phien, string $text, array $allowedCodes, array $wizardTranscript = []): ?array
+    public function trichXuat(PhienSangLoc $phien, string $text, array $allowedCodes, array $wizardTranscript = [], bool $trongWorker = false): ?array
     {
         if (! $this->daBat() || trim($text) === '') {
             return null;
@@ -133,13 +136,21 @@ class SangLocAiSuKienService extends SangLocAiService
         try {
             $provider = $this->provider();
 
-            $response = $this->callProvider($provider, [
-                ['role' => 'system', 'content' => $this->systemPrompt()],
-                ['role' => 'user', 'content' => $this->buildUserMessage($phien, $text, $wizardTranscript, $known['prompt'])],
-            ], [
-                'functions' => [$this->toolSchema($allowedCodes)],
-                'function_call' => 'auto',
-            ]);
+            $response = $trongWorker
+                ? $this->callProviderInWorker($provider, [
+                    ['role' => 'system', 'content' => $this->systemPrompt()],
+                    ['role' => 'user', 'content' => $this->buildUserMessage($phien, $text, $wizardTranscript, $known['prompt'])],
+                ], [
+                    'functions' => [$this->toolSchema($allowedCodes)],
+                    'function_call' => 'auto',
+                ])
+                : $this->callProvider($provider, [
+                    ['role' => 'system', 'content' => $this->systemPrompt()],
+                    ['role' => 'user', 'content' => $this->buildUserMessage($phien, $text, $wizardTranscript, $known['prompt'])],
+                ], [
+                    'functions' => [$this->toolSchema($allowedCodes)],
+                    'function_call' => 'auto',
+                ]);
 
             $raw = $this->decodeToolCall($response);
 
