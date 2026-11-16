@@ -29,7 +29,7 @@ return [
         // vision step read plus the catalog lookup).
         'image_answer' => env('AI_IMAGE_ANSWER', true),
 
-        // Health triage ("Sàng lọc"). On by default: AI is the primary layer of the
+        // Health triage ("Sang loc"). On by default: AI is the primary layer of the
         // feature. The rule engine still decides every outcome, and each seam
         // degrades to the deterministic result when the provider is unavailable, so
         // "on" is safe. Env vars exist only as a kill switch.
@@ -48,7 +48,7 @@ return [
             // Fact extraction and the pharmacist draft may run inside the wizard's form
             // POST, so they keep the fail-fast budget.
             'timeout' => env('AI_TRIAGE_TIMEOUT', 30),
-            // The advice rewrite only ever runs from ProcessTriageAdviceRewrite, so it
+            // The advice rewrite only ever runs from XuLyVietLaiLoiKhuyen, so it
             // does not need to fail fast. Measured 2026-08-28: the same provider answered
             // in 2s, 7s, 33s and 62s on comparable prompts, and a budget sized for the
             // fast case discards the answer in the slow one.
@@ -76,8 +76,8 @@ return [
     | Image Upload Configuration
     |--------------------------------------------------------------------------
     |
-    | Prescription and receipt uploads. Read by ChatbotController (validation),
-    | ImageRecognitionService (storage) and chatbot:cleanup-images (retention).
+    | Prescription and receipt uploads. Read by TroLyChatbotController (validation),
+    | NhanDienHinhAnhService (storage) and chatbot:cleanup-images (retention).
     |
     | Not configured here: rate limits, which are route middleware — see the
     | `throttle:` calls in routes/api.php. Chat history is capped by the
@@ -86,8 +86,8 @@ return [
     */
 
     'images' => [
-        // Giới hạn dung lượng và định dạng dùng chung với ảnh đại diện — xem
-        // config/uploads.php. Client kiểm ở cùng ngưỡng nên không lệch với server.
+        // Gioi han dung luong va dinh dang dung chung voi anh dai dien — xem
+        // config/uploads.php. Client kiem o cung nguong nen khong lech voi server.
         'max_size' => env('UPLOAD_MAX_SIZE_KB', 5120), // KB
         'allowed_types' => ['jpeg', 'jpg', 'png'],
         'storage_path' => 'chatbot-uploads',

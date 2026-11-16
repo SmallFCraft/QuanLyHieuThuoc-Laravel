@@ -9,15 +9,15 @@ use Symfony\Component\HttpFoundation\Response;
 class SecurityHeaders
 {
     /**
-     * Handle an incoming request.
+     * Xử lý một request đến.
      *
      * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
-        
-        // Set security headers
+
+        // Đặt các header bảo mật
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-XSS-Protection', '1; mode=block');
@@ -29,7 +29,7 @@ class SecurityHeaders
         // camera vẫn đóng: ảnh vào bằng <input type="file">, không bằng camera stream.
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(self), camera=()');
         
-        // Content Security Policy (adjust as needed for your application)
+        // Content Security Policy (chỉnh sửa theo nhu cầu ứng dụng của bạn)
         $response->headers->set('Content-Security-Policy', 
             "default-src 'self'; " .
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.datatables.net; " .

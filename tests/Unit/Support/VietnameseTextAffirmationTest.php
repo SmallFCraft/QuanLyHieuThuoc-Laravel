@@ -50,7 +50,7 @@ class VietnameseTextAffirmationTest extends TestCase
     }
 
     #[DataProvider('affirmationProvider')]
-    public function test_a_confirmation_is_recognised(string $answer): void
+    public function test_xac_nhan_duoc_nhan_dien(string $answer): void
     {
         $this->assertTrue(VietnameseText::isAffirmation($answer), $answer);
     }
@@ -73,7 +73,7 @@ class VietnameseTextAffirmationTest extends TestCase
     }
 
     #[DataProvider('denialProvider')]
-    public function test_a_denial_is_never_a_confirmation(string $answer): void
+    public function test_phu_dinh_khong_bao_gio_la_xac_nhan(string $answer): void
     {
         $this->assertFalse(VietnameseText::isAffirmation($answer), $answer);
     }
@@ -99,7 +99,7 @@ class VietnameseTextAffirmationTest extends TestCase
     }
 
     #[DataProvider('nonCommittalProvider')]
-    public function test_a_non_committal_answer_is_not_a_confirmation(string $answer): void
+    public function test_cau_tra_loi_khong_khang_dinh_khong_la_xac_nhan(string $answer): void
     {
         $this->assertFalse(VietnameseText::isAffirmation($answer), $answer);
     }
@@ -122,7 +122,7 @@ class VietnameseTextAffirmationTest extends TestCase
     }
 
     #[DataProvider('foldCollisionProvider')]
-    public function test_a_fold_collision_does_not_confirm(string $answer): void
+    public function test_va_cham_ghep_am_khong_xac_nhan(string $answer): void
     {
         $this->assertFalse(VietnameseText::isAffirmation($answer), $answer);
     }
@@ -142,7 +142,7 @@ class VietnameseTextAffirmationTest extends TestCase
     }
 
     #[DataProvider('restrictiveProvider')]
-    public function test_a_narrowed_yes_is_detected(string $answer, bool $expected): void
+    public function test_cau_tra_loi_ham_noi_duoc_phat_hien(string $answer, bool $expected): void
     {
         $this->assertSame($expected, VietnameseText::isRestrictive($answer), $answer);
     }
@@ -174,7 +174,7 @@ class VietnameseTextAffirmationTest extends TestCase
     }
 
     #[DataProvider('retractionProvider')]
-    public function test_a_retracted_yes_is_not_an_affirmation(string $answer, bool $expected): void
+    public function test_cau_tra_loi_yes_bi_rut_lai_khong_la_xac_nhan(string $answer, bool $expected): void
     {
         $this->assertSame($expected, VietnameseText::isAffirmation($answer), $answer);
     }
@@ -206,7 +206,7 @@ class VietnameseTextAffirmationTest extends TestCase
     }
 
     #[DataProvider('falseYesProvider')]
-    public function test_an_answer_that_only_looks_like_a_yes_is_rejected(string $answer): void
+    public function test_cau_tra_loi_giong_yes_nhung_khong_phai_bi_tu_choi(string $answer): void
     {
         $this->assertFalse(VietnameseText::isAffirmation($answer), $answer);
     }
@@ -236,7 +236,7 @@ class VietnameseTextAffirmationTest extends TestCase
     }
 
     #[DataProvider('denialClassifierProvider')]
-    public function test_an_explicit_denial_is_recognised(string $answer, bool $expected): void
+    public function test_phu_dinh_ro_rang_duoc_nhan_dien(string $answer, bool $expected): void
     {
         $this->assertSame($expected, VietnameseText::isDenial($answer), $answer);
     }

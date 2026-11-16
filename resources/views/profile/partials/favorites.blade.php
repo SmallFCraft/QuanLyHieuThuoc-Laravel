@@ -14,24 +14,24 @@
     @if($favoriteItems->isNotEmpty())
         <div class="row g-3 g-xl-4">
             @foreach($favoriteItems as $favorite)
-                @php($product = $favorite->product)
-                @continue(!$product)
+                @php($sanPham = $favorite->sanPham)
+                @continue(!$sanPham)
 
-                <div class="col-md-6 col-xl-4" data-favorite-item data-product-id="{{ $product->MaSP }}">
+                <div class="col-md-6 col-xl-4" data-favorite-item data-product-id="{{ $sanPham->ma_sp }}">
                     <x-product-card
-                        :product="$product"
+                        :san-pham="$sanPham"
                         card-class="profile-favorite-card"
                         media-class="profile-favorite-card__media"
                         body-class="profile-favorite-card__body"
                         icon-size="2.5rem"
-                        :show-cart="$product->stock_quantity > 0"
+                        :show-cart="$sanPham->so_luong_ton > 0"
                     >
                         <x-slot:topAction>
                             <button type="button"
                                     class="profile-favorite-card__remove store-product-card__icon-action"
                                     data-profile-favorite-remove
-                                    data-product-id="{{ $product->MaSP }}"
-                                    aria-label="{{ __('messages.profile.remove_favorite') }}: {{ $product->name }}"
+                                    data-product-id="{{ $sanPham->ma_sp }}"
+                                    aria-label="{{ __('messages.profile.remove_favorite') }}: {{ $sanPham->ten }}"
                                     title="{{ __('messages.profile.remove_favorite') }}">
                                 <i class="bi bi-heart-fill"></i>
                             </button>
@@ -53,7 +53,7 @@
             </div>
             <h6 class="fw-bold text-gray-800 mb-2">{{ __('messages.profile.favorites_empty_title') }}</h6>
             <p class="text-gray-500 mb-4">{{ __('messages.profile.favorites_empty_desc') }}</p>
-            <a href="{{ route('products.index') }}" class="btn profile-btn-primary">
+            <a href="{{ route('san-pham.index') }}" class="btn profile-btn-primary">
                 <i class="bi bi-search me-2" aria-hidden="true"></i>{{ __('messages.profile.shop_now') }}
             </a>
         </div>

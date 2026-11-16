@@ -2,13 +2,13 @@
 
 namespace App\Traits;
 
-use App\Models\AuditLog;
+use App\Models\NhatKyKiemToan;
 use Illuminate\Support\Facades\Auth;
 
 trait Auditable
 {
     /**
-     * Boot the auditable trait for a model.
+     * Boot trait auditable cho một model.
      */
     public static function bootAuditable()
     {
@@ -26,7 +26,7 @@ trait Auditable
     }
 
     /**
-     * Log model creation
+     * Ghi log việc tạo model
      */
     protected function auditCreated()
     {
@@ -34,7 +34,7 @@ trait Auditable
     }
 
     /**
-     * Log model update
+     * Ghi log việc cập nhật model
      */
     protected function auditUpdated()
     {
@@ -51,7 +51,7 @@ trait Auditable
     }
 
     /**
-     * Log model deletion
+     * Ghi log việc xóa model
      */
     protected function auditDeleted()
     {
@@ -59,12 +59,12 @@ trait Auditable
     }
 
     /**
-     * Create an audit log entry
+     * Tạo một dòng nhật ký kiểm toán
      */
     protected function createAuditLog(string $action, ?array $oldValues, ?array $newValues)
     {
-        AuditLog::create([
-            'MaKH' => Auth::id(),
+        NhatKyKiemToan::create([
+            'ma_nd' => Auth::id(),
             'action' => $action,
             'model_type' => get_class($this),
             'MaDoiTuong' => $this->getKey(),
@@ -76,13 +76,13 @@ trait Auditable
     }
 
     /**
-     * Get auditable attributes (excluding timestamps and sensitive data)
+     * Lấy các attribute có thể audit (loại bỏ timestamp và dữ liệu nhạy cảm)
      */
     protected function getAuditableAttributes(): array
     {
         $attributes = $this->getAttributes();
-        
-        // Remove sensitive and non-auditable fields
+
+        // Bỏ các field nhạy cảm và không nên audit
         $exclude = ['password', 'remember_token', 'created_at', 'updated_at', 'deleted_at'];
         
         return array_diff_key($attributes, array_flip($exclude));

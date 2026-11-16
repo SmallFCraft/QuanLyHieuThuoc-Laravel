@@ -15,11 +15,11 @@ use Illuminate\Support\Str;
  */
 final class LongChauProduct
 {
-    /** products.name and products.image are both VARCHAR(255). */
+    /** san_phams.ten and san_phams.hinh_anh are both VARCHAR(255). */
     private const MAX_NAME = 255;
     private const MAX_URL = 255;
 
-    /** products.price is DECIMAL(10,2) and the admin form caps it at 99,999,999. */
+    /** san_phams.gia is DECIMAL(10,2) and the admin form caps it at 99,999,999. */
     private const MAX_PRICE = 99_999_999;
 
     /**
@@ -189,8 +189,8 @@ final class LongChauProduct
     }
 
     /**
-     * "Caffeine 65mg, Paracetamol 500mg" — the shape DrugSafetyService expects
-     * when it tokenises products.ingredients for interaction and allergy checks.
+     * "Caffeine 65mg, Paracetamol 500mg" — the shape AnToanThuocService expects
+     * when it tokenises san_phams.thanh_phan for interaction and allergy checks.
      */
     private static function formatIngredients(mixed $ingredients): ?string
     {
@@ -214,7 +214,7 @@ final class LongChauProduct
 
     /**
      * Indications and dosage arrive as separate HTML blocks. Both are flattened to
-     * text because the storefront renders products.usage through Blade's escaping
+     * text because the storefront renders san_phams.cach_dung through Blade's escaping
      * `{{ }}`, which would otherwise show the raw tags to customers.
      */
     private static function formatUsage(array $product): ?string

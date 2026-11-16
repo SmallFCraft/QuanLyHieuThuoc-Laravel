@@ -3,10 +3,10 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | Nhà Thuốc Long Châu catalog crawler
+    | Nha Thuoc Long Chau catalog crawler
     |--------------------------------------------------------------------------
     |
-    | Long Châu runs Next.js with server-side rendering, so every product page
+    | Long Chau runs Next.js with server-side rendering, so every product page
     | ships the full product JSON inside a __NEXT_DATA__ script tag. The crawler
     | reads that instead of scraping markup.
     |
@@ -28,7 +28,7 @@ return [
         ],
 
         /*
-        | A plain browser User-Agent. Long Châu's robots.txt does not disallow
+        | A plain browser User-Agent. Long Chau's robots.txt does not disallow
         | product paths and sets no Crawl-delay, but the request still has to
         | identify as a normal client to get the rendered page.
         */
@@ -48,7 +48,7 @@ return [
 
         /*
         | Share of pages that may lack __NEXT_DATA__ before the run aborts.
-        | Isolated misses are dead URLs; a large share means Long Châu changed
+        | Isolated misses are dead URLs; a large share means Long Chau changed
         | its page structure and the mapping needs review before writing rows.
         */
         'max_missing_json_ratio' => 0.2,

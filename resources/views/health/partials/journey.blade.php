@@ -1,7 +1,7 @@
 @php
     // Same five rows the collapsed "what you told us" details renders, promoted to the
     // page's spine: the visitor asked a question and the answers that produced it belong
-    // in view, not behind a chevron. `skipped` is a real answer here too — "bỏ qua" is
+    // in view, not behind a chevron. `skipped` is a real answer here too — "bo qua" is
     // information, and hiding it would imply the rule engine had more to go on than it
     // did.
     $data = $session->collected_data ?? [];

@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', __('triage_report.detail_title') . ' SL-' . $session->MaSL)
-@section('page-title', __('triage_report.detail_title') . ' SL-' . $session->MaSL)
+@section('title', __('triage_report.detail_title') . ' SL-' . $session->ma_sl)
+@section('page-title', __('triage_report.detail_title') . ' SL-' . $session->ma_sl)
 @section('page-subtitle', __('triage_report.subtitle'))
 
 @push('styles')
@@ -38,7 +38,7 @@
 
 <div class="container-fluid px-0">
     <div class="mb-3">
-        <a class="btn btn-outline-secondary triage-back-btn" href="{{ route('admin.triageReports.index') }}">
+        <a class="btn btn-outline-secondary triage-back-btn" href="{{ route('admin.bao-cao-sang-loc.index') }}">
             <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>{{ __('triage_report.back_to_list') }}
         </a>
     </div>
@@ -70,8 +70,8 @@
                 <dl class="triage-detail-list mb-0">
                     <dt>{{ __('triage_report.table.customer') }}</dt>
                     <dd>
-                        {{ $session->user->name ?? __('triage_report.table.unknown') }}
-                        <div class="small text-secondary">{{ $session->user->email ?? '#' . $session->MaKH }}</div>
+                        {{ $session->nguoiDung->ho_ten ?? __('triage_report.table.unknown') }}
+                        <div class="small text-secondary">{{ $session->nguoiDung->email ?? '#' . $session->ma_nd }}</div>
                     </dd>
 
                     <dt>{{ __('triage_report.table.status') }}</dt>
@@ -84,7 +84,7 @@
                     <dd><time datetime="{{ $session->created_at->toIso8601String() }}">{{ $session->created_at->format('d/m/Y H:i') }}</time></dd>
 
                     <dt>{{ __('triage_report.table.pharmacist') }}</dt>
-                    <dd>{{ $session->pharmacist->name ?? '—' }}</dd>
+                    <dd>{{ $session->pharmacist->ho_ten ?? '—' }}</dd>
 
                     <dt>{{ __('triage_report.detail.reviewed_at') }}</dt>
                     <dd>{{ $session->reviewed_at ? $session->reviewed_at->format('d/m/Y H:i') : '—' }}</dd>

@@ -61,7 +61,7 @@
                     <h3 class="fw-bold mb-1 text-gray-900">{{ __('messages.send_message_heading') }}</h3>
                     <p class="text-gray-500 mb-4">{{ __('messages.send_message_subheading') }}</p>
                     
-                    <form action="{{ route('contact.submit') }}" method="POST">
+                    <form action="{{ route('lien-he.gui') }}" method="POST">
                         @csrf
                         
                         <div class="row g-3">

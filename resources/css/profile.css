@@ -1,9 +1,9 @@
 /*
- * Trang tài khoản: một bảng style duy nhất.
+ * Trang tai khoan: mot bang style duy nhat.
  *
- * Trước đây mỗi partial mang một khối <style> riêng, nên cùng một ô input có ba
- * bán kính bo góc và hai chiều cao tuỳ theo tab. Tất cả dùng lại token --pharma-*
- * của theme.css để hồ sơ không lệch khỏi phần còn lại của storefront.
+ * Truoc day moi partial mang mot khoi <style> rieng, nen cung mot o input co ba
+ * ban kinh bo goc va hai chieu cao tuy theo tab. Tat ca dung lai token --pharma-*
+ * cua theme.css de ho so khong lech khoi phan con lai cua storefront.
  */
 
 .profile-page {
@@ -16,7 +16,7 @@
     --profile-danger: #b91c1c;
 }
 
-/* ---------- Ảnh đại diện ---------- */
+/* ---------- Anh dai dien ---------- */
 
 .profile-avatar {
     display: inline-flex;
@@ -29,7 +29,7 @@
     color: #ffffff;
     font-weight: 700;
     line-height: 1;
-    /* Ảnh vuông từ điện thoại có thể lệch tỉ lệ; cover + center giữ mặt ở giữa. */
+    /* Anh vuong tu dien thoai co the lech ti le; cover + center giu mat o giua. */
     object-position: center;
 }
 
@@ -47,7 +47,7 @@
     position: absolute;
     right: -2px;
     bottom: -2px;
-    /* 44px là ngưỡng tap target tối thiểu; nút này là điều khiển chính của khối. */
+    /* 44px la nguong tap target toi thieu; nut nay la dieu khien chinh cua khoi. */
     width: 44px;
     height: 44px;
     display: inline-flex;
@@ -73,7 +73,7 @@
     outline-offset: 2px;
 }
 
-/* ---------- Điều hướng tab ---------- */
+/* ---------- Dieu huong tab ---------- */
 
 .profile-nav {
     display: flex;
@@ -96,8 +96,8 @@
     transition: background-color var(--pharma-motion), color var(--pharma-motion);
 }
 
-/* Vạch trái báo tab đang chọn — thêm một dấu hiệu ngoài màu, để người khó phân
-   biệt màu vẫn thấy được tab hiện tại. */
+/* Vach trai bao tab dang chon — them mot dau hieu ngoai mau, de nguoi kho phan
+   biet mau van thay duoc tab hien tai. */
 .profile-nav-link::before {
     content: '';
     position: absolute;
@@ -142,8 +142,8 @@
     text-align: center;
 }
 
-/* Dưới lg sidebar thành một dải tab cuộn ngang. 6 tab không vừa 320px nếu chia
-   đều, nên chúng giữ bề rộng riêng và dải tự cuộn. */
+/* Duoi lg sidebar thanh mot dai tab cuon ngang. 6 tab khong vua 320px neu chia
+   deu, nen chung giu be rong rieng va dai tu cuon. */
 .profile-tabbar {
     display: flex;
     gap: 0.4rem;
@@ -193,7 +193,7 @@
     outline-offset: -2px;
 }
 
-/* ---------- Thẻ và tiêu đề khối ---------- */
+/* ---------- The va tieu de khoi ---------- */
 
 .profile-card {
     background: var(--pharma-surface-strong);
@@ -209,8 +209,8 @@
     }
 }
 
-/* Thẻ hồ sơ không nhấc lên khi hover như thẻ sản phẩm: đây là vùng đọc và nhập,
-   không phải phần tử bấm được, nên chuyển động sẽ báo sai chức năng. */
+/* The ho so khong nhac len khi hover nhu the san pham: day la vung doc va nhap,
+   khong phai phan tu bam duoc, nen chuyen dong se bao sai chuc nang. */
 .profile-card:hover {
     transform: none;
     box-shadow: var(--pharma-shadow);
@@ -263,7 +263,7 @@
     color: #6b7280;
 }
 
-/* ---------- Trường nhập ---------- */
+/* ---------- Truong nhap ---------- */
 
 .profile-page .form-label {
     display: flex;
@@ -279,7 +279,7 @@
     color: var(--profile-accent);
 }
 
-/* Bắt buộc: dấu * kèm chữ "bắt buộc" cho screen reader, không chỉ dựa vào ký tự. */
+/* Bat buoc: dau * kem chu "bat buoc" cho screen reader, khong chi dua vao ky tu. */
 .profile-page .form-label--required::after {
     content: '*';
     color: var(--profile-danger);
@@ -293,7 +293,7 @@
     border: 1px solid rgba(21, 128, 61, 0.18);
     background: rgba(255, 255, 255, 0.92);
     color: #111827;
-    /* 16px: dưới ngưỡng này iOS tự phóng to trang khi focus vào input. */
+    /* 16px: duoi nguong nay iOS tu phong to trang khi focus vao input. */
     font-size: 1rem;
     box-shadow: none;
     transition: border-color var(--pharma-motion), box-shadow var(--pharma-motion), background-color var(--pharma-motion);
@@ -324,7 +324,7 @@
     opacity: 1;
 }
 
-/* Chỉ đọc khác vô hiệu: vẫn chọn và copy được, nên không làm mờ như disabled. */
+/* Chi doc khac vo hieu: van chon va copy duoc, nen khong lam mo nhu disabled. */
 .profile-page .form-control[readonly] {
     background: rgba(249, 250, 251, 0.95);
     color: #374151;
@@ -358,7 +358,7 @@
     border-radius: 0 var(--profile-radius-sm) var(--profile-radius-sm) 0;
 }
 
-/* Lỗi nằm ngay dưới ô, chiếm cả bề rộng input-group thay vì kẹp giữa các phần. */
+/* Loi nam ngay duoi o, chiem ca be rong input-group thay vi kep giua cac phan. */
 .profile-page .invalid-feedback {
     display: block;
     margin-top: 0.3rem;
@@ -374,7 +374,7 @@
     font-size: 0.8rem;
 }
 
-/* ---------- Nút ---------- */
+/* ---------- Nut ---------- */
 
 .profile-page .btn {
     min-height: 44px;
@@ -419,7 +419,7 @@
     color: #065f46;
 }
 
-/* Hành động phá huỷ tách hẳn màu và vị trí khỏi nút chính — xem tab Cài đặt. */
+/* Hanh dong pha huy tach han mau va vi tri khoi nut chinh — xem tab Cai dat. */
 .profile-btn-danger {
     border: 1px solid rgba(185, 28, 28, 0.28);
     background: rgba(254, 242, 242, 0.95);
@@ -441,7 +441,7 @@
     outline-color: rgba(185, 28, 28, 0.4);
 }
 
-/* ---------- Chuyển tab ---------- */
+/* ---------- Chuyen tab ---------- */
 
 .profile-page .tab-pane.active {
     animation: profile-tab-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -458,7 +458,7 @@
     }
 }
 
-/* ---------- Thẻ chỉ số ---------- */
+/* ---------- The chi so ---------- */
 
 .profile-stat-grid {
     display: grid;
@@ -497,7 +497,7 @@
 }
 
 .profile-stat__value {
-    /* tabular-nums: các thẻ cạnh nhau không nhảy bề rộng khi số thay đổi. */
+    /* tabular-nums: cac the canh nhau khong nhay be rong khi so thay doi. */
     font-variant-numeric: tabular-nums;
     font-size: 1.5rem;
     font-weight: 700;
@@ -525,14 +525,14 @@
     color: #047857;
 }
 
-/* ---------- Tab tổng quan ---------- */
+/* ---------- Tab tong quan ---------- */
 
 .profile-overview-grid {
     display: grid;
-    /* minmax(0, 1fr), không phải 1fr: `1fr` là `minmax(auto, 1fr)`, và `auto` không
-       cho track co nhỏ hơn min-content của item. Tên thuốc dùng white-space: nowrap
-       nên min-content là cả chuỗi (overflow: hidden không giảm min-content), khiến
-       track phình tới 1300px và thẻ tràn khỏi cột. */
+    /* minmax(0, 1fr), khong phai 1fr: `1fr` la `minmax(auto, 1fr)`, va `auto` khong
+       cho track co nho hon min-content cua item. Ten thuoc dung white-space: nowrap
+       nen min-content la ca chuoi (overflow: hidden khong giam min-content), khien
+       track phinh toi 1300px va the tran khoi cot. */
     grid-template-columns: minmax(0, 1fr);
     gap: var(--profile-gap);
 }
@@ -584,8 +584,8 @@ a.profile-overview-item:focus-visible {
     color: var(--profile-accent);
 }
 
-/* Ảnh sản phẩm trong danh sách yêu thích. position: relative bắt buộc —
-   x-product-image dùng position: absolute + inset: 0 cho cả ảnh và icon dự phòng. */
+/* Anh san pham trong danh sach yeu thich. position: relative bat buoc —
+   x-product-image dung position: absolute + inset: 0 cho ca anh va icon du phong. */
 .profile-overview-thumb {
     position: relative;
     display: block;
@@ -604,9 +604,9 @@ a.profile-overview-item:focus-visible {
 }
 
 .profile-overview-item__title {
-    /* block bắt buộc: thẻ này là <span> (nằm trong <a>, không được dùng <p>), và
-       text-overflow: ellipsis không có tác dụng trên inline element — tên thuốc dài
-       tràn khỏi thẻ và đè lên giá. */
+    /* block bat buoc: the nay la <span> (nam trong <a>, khong duoc dung <p>), va
+       text-overflow: ellipsis khong co tac dung tren inline element — ten thuoc dai
+       tran khoi the va de len gia. */
     display: block;
     margin: 0;
     font-size: 0.9rem;
@@ -629,15 +629,15 @@ a.profile-overview-item:focus-visible {
 
 .profile-overview-item__value {
     flex-shrink: 0;
-    /* Giá là một mẩu ngắn, nhưng "1.234.000 ₫" gặp ô hẹp sẽ bị ngắt dòng giữa số. */
+    /* Gia la mot mau ngan, nhung "1.234.000 ₫" gap o hep se bi ngat dong giua so. */
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     color: #047857;
 }
 
-/* Dưới 576px giá chiếm ~81px trong ~250px bề rộng thẻ, để tên thuốc còn 44px —
-   ellipsis lúc đó không nói được gì. Cho giá xuống dòng riêng, canh phải. */
+/* Duoi 576px gia chiem ~81px trong ~250px be rong the, de ten thuoc con 44px —
+   ellipsis luc do khong noi duoc gi. Cho gia xuong dong rieng, canh phai. */
 @media (max-width: 575.98px) {
     .profile-overview-item {
         flex-wrap: wrap;
@@ -658,8 +658,8 @@ a.profile-overview-item:focus-visible {
     text-align: center;
 }
 
-/* Thanh tiến độ hoàn thiện hồ sơ. Kèm số phần trăm bằng chữ, vì một thanh màu
-   không nói được giá trị cho người dùng screen reader. */
+/* Thanh tien do hoan thien ho so. Kem so phan tram bang chu, vi mot thanh mau
+   khong noi duoc gia tri cho nguoi dung screen reader. */
 .profile-progress {
     height: 8px;
     border-radius: 999px;
@@ -674,7 +674,7 @@ a.profile-overview-item:focus-visible {
     transition: width 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* ---------- Dải trạng thái ---------- */
+/* ---------- Dai trang thai ---------- */
 
 .profile-flash {
     display: flex;
@@ -707,21 +707,21 @@ a.profile-overview-item:focus-visible {
     }
 }
 
-/* ---------- Vùng nguy hiểm ---------- */
+/* ---------- Vung nguy hiem ---------- */
 
 .profile-danger-zone {
     border: 1px solid rgba(185, 28, 28, 0.24);
     background: rgba(254, 242, 242, 0.75);
 }
 
-/* Đơn hàng được mở từ email hoặc từ tab tổng quan: viền sáng lên trong 2 giây để
-   người dùng thấy mình đã tới đúng đơn nào. */
+/* Don hang duoc mo tu email hoac tu tab tong quan: vien sang len trong 2 giay de
+   nguoi dung thay minh da toi dung don nao. */
 .order-history-entry.is-highlighted {
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35);
     transition: box-shadow var(--pharma-motion);
 }
 
-/* ---------- Yêu thích ---------- */
+/* ---------- Yeu thich ---------- */
 
 .profile-favorites__count {
     display: inline-flex;
@@ -745,7 +745,7 @@ a.profile-overview-item:focus-visible {
     font-size: 2rem;
 }
 
-/* ---------- Tôn trọng prefers-reduced-motion ---------- */
+/* ---------- Ton trong prefers-reduced-motion ---------- */
 
 @media (prefers-reduced-motion: reduce) {
     .profile-page *,

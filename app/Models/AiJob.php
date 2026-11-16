@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class AiJob extends Model
 {
-    protected $primaryKey = 'MaAJ';
+    protected $primaryKey = 'ma_aj';
 
     public const KIND_CHAT = 'chat';
     public const KIND_TRIAGE_EVALUATION = 'triage_eval';
@@ -14,24 +14,29 @@ class AiJob extends Model
     public const KIND_TRIAGE_BRIEFING = 'triage_briefing';
 
     /**
-     * Never picked up by a worker after this long means no worker is running.
+     * Không được worker nào nhận sau thời gian này nghĩa là sẽ không có worker nào đến.
      *
-     * Measured against pickup, not execution: a worker claims a job within a second
-     * and flips it to `running`, and `isStranded()` returns false for anything not
-     * `queued`. So a job still queued after 12s is one nobody is coming for — however
-     * long the provider call itself then takes.
+     * Đo theo thời điểm nhận, không phải thời gian chạy: worker nhận công việc và đánh
+     * dấu thành `running`, còn `isStranded()` trả về false cho mọi thứ không phải
+     * `queued`. Ngưỡng phải vượt qua độ trễ nhận của worker: worker daemon nhận trong
+     * vòng một giây, nhưng worker cron mỗi phút trên hosting chia sẻ (`queue:work
+     * --stop-when-empty`) chỉ nhận được công việc ở tick kế tiếp — cách tới 60s cộng
+     * thời gian khởi động. Giá trị 12s làm mọi công việc thua cuộc đua này: trang kết
+     * quả bỏ cuộc công việc và xoá khỏi hàng đợi vài giây trước tick.
      */
-    public const SYNC_FALLBACK_SECONDS = 12;
+    public const SYNC_FALLBACK_SECONDS = 75;
 
     /**
-     * A `running` job older than this lost its worker, so it stops counting as proof
-     * that one is alive. Matches ProcessChatbotMessage::$timeout.
+     * Công việc `running` già hơn thời gian này đã mất worker, nên không còn tính là
+     * bằng chứng có worker đang sống. Khớp với XuLyTinNhanChatbot::$timeout.
      */
     public const WORKER_ALIVE_SECONDS = 120;
 
+    protected $table = 'ai_jobs';
+
     protected $fillable = [
         'uuid',
-        'MaKH',
+        'ma_nd',
         'kind',
         'status',
         'payload',
@@ -52,7 +57,7 @@ class AiJob extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'MaKH', 'MaKH');
+        return $this->belongsTo(NguoiDung::class, 'ma_nd', 'ma_nd');
     }
 
     public function isFinished(): bool
@@ -61,15 +66,15 @@ class AiJob extends Model
     }
 
     /**
-     * Still queued long enough that no worker can be running. A `running` job is
-     * simply a slow AI call and must not be duplicated.
+     * Vẫn nằm trong hàng đợi dài đến mức không thể có worker nào đang chạy. Công việc
+     * `running` chỉ đơn giản là một lời gọi AI chậm và không được nhân bản lại.
      *
-     * The age test alone is not enough: with one worker and a 45s+45s provider budget,
-     * a job can legitimately wait behind the one in flight for far longer than
-     * SYNC_FALLBACK_SECONDS. So a job queued behind a worker that is demonstrably
-     * alive — another job of this customer's is `running` and younger than
-     * WORKER_ALIVE_SECONDS — is waiting, not stranded, and running it inline would
-     * block the single-process dev server for nothing.
+     * Riêng bài test độ tuổi là không đủ: với một worker và ngân sách 45s+45s của
+     * nhà cung cấp, một công việc có thể hợp lệ nằm đợi sau công việc đang chạy lâu
+     * hơn nhiều so với SYNC_FALLBACK_SECONDS. Vì vậy công việc nằm đợi sau một worker
+     * rõ ràng còn sống — công việc khác của cùng khách đang `running` và mới hơn
+     * WORKER_ALIVE_SECONDS — là đang chờ, không phải bị bỏ rơi, và chạy nó inline chỉ
+     * chặn dev server một tiến trình vô văn.
      */
     public function isStranded(): bool
     {
@@ -85,14 +90,14 @@ class AiJob extends Model
     }
 
     /**
-     * Evidence that a worker is consuming the queue right now: a job that reached
-     * `running` recently. Scoped to this customer, so one stalled tenant cannot
-     * keep another's job pinned in "waiting".
+     * Bằng chứng một worker đang tiêu thụ hàng đợi lúc này: công việc vừa đạt trạng
+     * thái `running` gần đây. Giới hạn trong phạm vi khách này, để một tenant bị kẹt
+     * không thể giữ công việc của khách khác nằm trong trạng thái "waiting".
      */
     protected function hasLiveWorker(): bool
     {
         return static::query()
-            ->where('MaKH', $this->MaKH)
+            ->where('ma_nd', $this->ma_nd)
             ->where('status', 'running')
             ->where('started_at', '>=', now()->subSeconds(self::WORKER_ALIVE_SECONDS))
             ->exists();

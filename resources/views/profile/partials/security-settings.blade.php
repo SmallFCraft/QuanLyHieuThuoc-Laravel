@@ -28,8 +28,8 @@
                     <i class="bi bi-{{ $field['icon'] }}" aria-hidden="true"></i>{{ $field['label'] }}
                 </label>
                 <div class="input-group">
-                    {{-- Không có icon dẫn đầu: nhãn phía trên đã mang đúng icon đó, và
-                         41px của input-group-text làm placeholder bị cắt ở 320px. --}}
+                    {{-- Khong co icon dan dau: nhan phia tren da mang dung icon do, va
+                         41px cua input-group-text lam placeholder bi cat o 320px. --}}
                     <input type="password"
                            class="form-control @error($field['id'], 'updatePassword') is-invalid @enderror"
                            id="{{ $field['id'] }}"
@@ -37,8 +37,8 @@
                            autocomplete="{{ $field['autocomplete'] }}"
                            placeholder="{{ $field['placeholder'] }}"
                            style="border-radius: var(--profile-radius-sm) 0 0 var(--profile-radius-sm); border-left-width: 1px;">
-                    {{-- Nút hiện/ẩn mật khẩu: aria-pressed để screen reader biết đang ở
-                         trạng thái nào, không chỉ dựa vào hình con mắt. --}}
+                    {{-- Nut hien/an mat khau: aria-pressed de screen reader biet dang o
+                         trang thai nao, khong chi dua vao hinh con mat. --}}
                     <button class="btn profile-btn-ghost" type="button"
                             data-password-toggle="{{ $field['id'] }}"
                             aria-pressed="false"
@@ -55,8 +55,8 @@
                     <span class="profile-field__hint">{{ $field['hint'] }}</span>
                 @endif
                 @if($field['id'] === 'password')
-                    {{-- Chỉ báo độ mạnh mật khẩu, cập nhật khi người dùng nhập. Kèm chữ,
-                         vì một thanh màu không nói được gì với screen reader. --}}
+                    {{-- Chi bao do manh mat khau, cap nhat khi nguoi dung nhap. Kem chu,
+                         vi mot thanh mau khong noi duoc gi voi screen reader. --}}
                     <div class="profile-progress mt-2" data-password-strength-track hidden>
                         <div class="profile-progress__bar" data-password-strength-bar style="width: 0"></div>
                     </div>

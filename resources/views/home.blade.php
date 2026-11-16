@@ -26,10 +26,10 @@
                     </p>
 
                     <div class="d-flex flex-column flex-sm-row gap-2 gap-sm-3 justify-content-center justify-content-lg-start mb-4">
-                        <a href="{{ route('products.index') }}" class="btn btn-glass-success btn-lg px-4 px-sm-5 py-2 py-sm-3 rounded-pill fw-semibold shadow-sm d-inline-flex align-items-center justify-content-center">
+                        <a href="{{ route('san-pham.index') }}" class="btn btn-glass-success btn-lg px-4 px-sm-5 py-2 py-sm-3 rounded-pill fw-semibold shadow-sm d-inline-flex align-items-center justify-content-center">
                             <i class="bi bi-bag-heart me-2"></i>{{ __('messages.home_shop_now') }}
                         </a>
-                        <a href="{{ route('contact') }}" class="btn btn-lg px-4 px-sm-5 py-2 py-sm-3 rounded-pill fw-semibold d-inline-flex align-items-center justify-content-center home-glass-panel text-success border-0">
+                        <a href="{{ route('lien-he') }}" class="btn btn-lg px-4 px-sm-5 py-2 py-sm-3 rounded-pill fw-semibold d-inline-flex align-items-center justify-content-center home-glass-panel text-success border-0">
                             <i class="bi bi-chat-dots me-2"></i>{{ __('messages.home_get_advice') }}
                         </a>
                     </div>
@@ -51,11 +51,11 @@
 
                     <div class="home-stat-row mt-3 mt-md-4">
                         <div class="home-glass-panel home-stat-card rounded-4">
-                            <span class="home-stat-value">{{ number_format($sellableProductCount, 0, ',', '.') }}</span>
+                            <span class="home-stat-value">{{ number_format($soSanPhamBanDuoc, 0, ',', '.') }}</span>
                             <span class="home-stat-label">{{ __('messages.home_stat_products_label') }}</span>
                         </div>
                         <div class="home-glass-panel home-stat-card rounded-4">
-                            <span class="home-stat-value">{{ number_format($sellableCategoryCount, 0, ',', '.') }}</span>
+                            <span class="home-stat-value">{{ number_format($soDanhMucBanDuoc, 0, ',', '.') }}</span>
                             <span class="home-stat-label">{{ __('messages.home_stat_categories_label') }}</span>
                         </div>
                         <div class="home-glass-panel home-stat-card rounded-4">
@@ -101,8 +101,8 @@
         </div>
     </section>
 
-    <!-- Danh mục -->
-    @if($categories->isNotEmpty())
+    <!-- Danh muc -->
+    @if($danhMucs->isNotEmpty())
     <section class="home-categories-section pb-4 pb-md-5 position-relative overflow-hidden" id="danh-muc">
         <div class="home-section-mesh home-section-mesh--subtle" aria-hidden="true"></div>
         <div class="container position-relative">
@@ -111,19 +111,19 @@
                     <span class="text-success fw-bold text-uppercase small" style="letter-spacing: 0.06em;">{{ __('messages.home_explore') }}</span>
                     <h2 class="h4 fw-bold text-dark mb-0 mt-1">{{ __('messages.home_categories') }}</h2>
                 </div>
-                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0 home-section-link">
+                <a href="{{ route('san-pham.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0 home-section-link">
                     <span>{{ __('messages.home_view_all') }}</span><i class="bi bi-arrow-right" aria-hidden="true"></i>
                 </a>
             </div>
             <div class="row g-3 g-lg-4">
-                @foreach($categories as $category)
+                @foreach($danhMucs as $danhMuc)
                     <div class="col-6 col-md-4 col-lg-3 col-xl-2-4">
-                        <a href="{{ route('products.category', $category->MaDM) }}" class="home-category-card text-decoration-none">
+                        <a href="{{ route('san-pham.danh-muc', $danhMuc->ma_dm) }}" class="home-category-card text-decoration-none">
                             <div class="home-category-icon">
-                                <i class="bi bi-{{ $category->icon ?? 'grid-fill' }}" style="font-size: 1.5rem;"></i>
+                                <i class="bi bi-{{ $danhMuc->icon ?? 'grid-fill' }}" style="font-size: 1.5rem;"></i>
                             </div>
-                            <span class="fw-semibold text-truncate d-block text-dark mb-1" title="{{ $category->name }}">{{ $category->name }}</span>
-                            <span class="home-category-count">{{ $category->products_count }} {{ mb_strtolower(__('messages.products')) }}</span>
+                            <span class="fw-semibold text-truncate d-block text-dark mb-1" title="{{ $danhMuc->ten }}">{{ $danhMuc->ten }}</span>
+                            <span class="home-category-count">{{ $danhMuc->so_san_pham }} {{ mb_strtolower(__('messages.products')) }}</span>
                             <i class="bi bi-arrow-up-right home-category-arrow" aria-hidden="true"></i>
                         </a>
                     </div>
@@ -133,7 +133,7 @@
     </section>
     @endif
 
-    <!-- Sản phẩm mới ra mắt -->
+    <!-- San pham moi ra mat -->
     <section class="py-4 py-md-5 position-relative overflow-hidden" id="moi-ra-mat">
         <div class="home-section-mesh" aria-hidden="true"></div>
         <div class="container position-relative">
@@ -143,16 +143,16 @@
                     <h2 class="h3 fw-bold text-dark mt-1 mb-0">{{ __('messages.home_new_products') }}</h2>
                     <p class="text-muted small mb-0 mt-1 d-none d-md-block">{{ __('messages.home_new_products_desc') }}</p>
                 </div>
-                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0 home-section-link">
+                <a href="{{ route('san-pham.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0 home-section-link">
                     <span>{{ __('messages.home_view_all') }}</span><i class="bi bi-arrow-right" aria-hidden="true"></i>
                 </a>
             </div>
 
             <div class="row g-3 g-md-4">
-                @forelse($newProducts as $product)
+                @forelse($sanPhamMoi as $sanPham)
                     <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
                         <x-product-card
-                            :product="$product"
+                            :san-pham="$sanPham"
                             card-class="home-product-card border-0"
                             media-class="home-product-media"
                             body-class="home-product-body"
@@ -164,7 +164,7 @@
                                 <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle px-2 py-1 rounded-pill">
                                     <i class="bi bi-stars me-1"></i>{{ __('messages.home_new_badge') }}
                                 </span>
-                                @if($product->stock_quantity == 0)
+                                @if($sanPham->so_luong_ton == 0)
                                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
                                         <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
                                     </span>
@@ -187,7 +187,7 @@
         </div>
     </section>
 
-    <!-- Sản phẩm nổi bật (theo lượt xem) -->
+    <!-- San pham noi bat (theo luot xem) -->
     <section class="py-4 py-md-5 position-relative overflow-hidden" id="noi-bat">
         <div class="home-section-mesh" aria-hidden="true"></div>
         <div class="container position-relative">
@@ -197,16 +197,16 @@
                     <h2 class="h3 fw-bold text-dark mt-1 mb-0">{{ __('messages.home_featured_products') }}</h2>
                     <p class="text-muted small mb-0 mt-1 d-none d-md-block">{{ __('messages.home_featured_desc') }}</p>
                 </div>
-                <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0 home-section-link">
+                <a href="{{ route('san-pham.index') }}" class="btn btn-sm btn-outline-success rounded-pill px-3 flex-shrink-0 home-section-link">
                     <span>{{ __('messages.home_view_all') }}</span><i class="bi bi-arrow-right" aria-hidden="true"></i>
                 </a>
             </div>
 
             <div class="row g-3 g-md-4">
-                @forelse($featuredProducts as $product)
+                @forelse($sanPhamNoiBat as $sanPham)
                     <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
                         <x-product-card
-                            :product="$product"
+                            :san-pham="$sanPham"
                             card-class="home-product-card border-0"
                             media-class="home-product-media"
                             body-class="home-product-body"
@@ -215,12 +215,12 @@
                             detail-label="{{ __('messages.home_view_details') }}"
                         >
                             <x-slot:badges>
-                                @if($product->views_count > 0)
+                                @if($sanPham->luot_xem > 0)
                                     <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1 rounded-pill">
-                                        <i class="bi bi-eye-fill me-1"></i>{{ __('messages.home_views_count', ['count' => number_format($product->views_count)]) }}
+                                        <i class="bi bi-eye-fill me-1"></i>{{ __('messages.home_views_count', ['count' => number_format($sanPham->luot_xem)]) }}
                                     </span>
                                 @endif
-                                @if($product->stock_quantity == 0)
+                                @if($sanPham->so_luong_ton == 0)
                                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1 rounded-pill">
                                         <i class="bi bi-x-circle me-1"></i>{{ __('messages.out_of_stock') }}
                                     </span>
@@ -236,7 +236,7 @@
                             </div>
                             <h3 class="h5 fw-bold text-dark">{{ __('messages.home_no_featured') }}</h3>
                             <p class="text-muted mb-0 px-3">{{ __('messages.home_explore_more_desc') }}</p>
-                            <a href="{{ route('products.index') }}" class="btn btn-success rounded-pill mt-3 px-4" style="background: #10b981; border-color: #10b981;">{{ __('messages.home_go_to_store') }}</a>
+                            <a href="{{ route('san-pham.index') }}" class="btn btn-success rounded-pill mt-3 px-4" style="background: #10b981; border-color: #10b981;">{{ __('messages.home_go_to_store') }}</a>
                         </div>
                     </div>
                 @endforelse
@@ -244,7 +244,7 @@
         </div>
     </section>
 
-    <!-- Vì sao chọn chúng tôi -->
+    <!-- Vi sao chon chung toi -->
     <section class="py-4 py-md-5 position-relative overflow-hidden">
         <div class="home-section-mesh" aria-hidden="true"></div>
         <div class="container position-relative py-2">
@@ -284,7 +284,7 @@
         </div>
     </section>
 
-    <!-- Quy trình -->
+    <!-- Quy trinh -->
     <section class="py-4 py-md-5 position-relative overflow-hidden">
         <div class="home-section-mesh home-section-mesh--subtle" aria-hidden="true"></div>
         <div class="container position-relative">
@@ -318,7 +318,7 @@
         </div>
     </section>
 
-    <!-- FAQ (details/summary: hiển thị nội dung ổn định + glass rõ nét) -->
+    <!-- FAQ (details/summary: hien thi noi dung on dinh + glass ro net) -->
     <section class="home-faq-section py-4 py-md-5 position-relative overflow-hidden">
         <div class="home-faq-section__mesh" aria-hidden="true"></div>
         <div class="container position-relative" style="z-index: 1;">
@@ -344,7 +344,7 @@
                         <details class="home-faq-item">
                             <summary class="home-faq-summary">{{ __('messages.home_faq3_q') }}</summary>
                             <div class="home-faq-body">
-                                {{ __('messages.home_faq3_a_part1') }} <a href="{{ route('contact') }}" class="text-success fw-semibold text-decoration-none">{{ __('messages.home_faq3_a_contact') }}</a> {{ __('messages.home_faq3_a_part2') }}
+                                {{ __('messages.home_faq3_a_part1') }} <a href="{{ route('lien-he') }}" class="text-success fw-semibold text-decoration-none">{{ __('messages.home_faq3_a_contact') }}</a> {{ __('messages.home_faq3_a_part2') }}
                             </div>
                         </details>
                     </div>
@@ -378,7 +378,7 @@
                                 {{ __('messages.home_create_account') }}
                             </a>
                         @else
-                            <a href="{{ route('products.index') }}" class="btn btn-light btn-lg text-success fw-bold px-4 px-lg-5 py-3 rounded-pill shadow">
+                            <a href="{{ route('san-pham.index') }}" class="btn btn-light btn-lg text-success fw-bold px-4 px-lg-5 py-3 rounded-pill shadow">
                                 {{ __('messages.home_continue_shopping') }}
                             </a>
                         @endguest

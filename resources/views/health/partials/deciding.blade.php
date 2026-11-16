@@ -4,7 +4,7 @@
      with JavaScript off the reload link does the same job. --}}
 <div class="health-card p-4 p-md-5"
      data-triage-deciding
-     data-poll-url="{{ route('health.decision', $pendingJobId) }}"
+     data-poll-url="{{ route('sang-loc.quyet-dinh', $pendingJobId) }}"
      data-slow-notice="{{ __('messages.health.deciding_slow') }}">
 
     <div class="d-flex gap-3 align-items-start mb-4">
@@ -33,7 +33,7 @@
 
     @include('health.partials.trail', ['answeredSteps' => $answeredSteps])
 
-    <a href="{{ route('health.check') }}" class="health-btn health-btn-ghost">
+    <a href="{{ route('sang-loc.kiem-tra') }}" class="health-btn health-btn-ghost">
         <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>{{ __('messages.health.deciding_retry') }}
     </a>
 </div>

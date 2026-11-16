@@ -4,17 +4,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Giới hạn tải ảnh dùng chung
+    | Gioi han tai anh dung chung
     |--------------------------------------------------------------------------
     |
-    | Một nguồn duy nhất cho cả ảnh đại diện và ảnh gửi trong chatbot: hai chỗ
-    | từng khai báo giới hạn riêng, nên chỉ cần sửa lệch một bên là client chặn
-    | ở ngưỡng này còn server chặn ở ngưỡng khác.
+    | Mot nguon duy nhat cho ca anh dai dien va anh gui trong chatbot: hai cho
+    | tung khai bao gioi han rieng, nen chi can sua lech mot ben la client chan
+    | o nguong nay con server chan o nguong khac.
     |
     */
 
     'images' => [
-        // KB. Client dùng lại giá trị này qua config('uploads.images.max_size').
+        // KB. Client dung lai gia tri nay qua config('uploads.images.max_size').
         'max_size' => env('UPLOAD_MAX_SIZE_KB', 5120),
         'allowed_types' => ['jpeg', 'jpg', 'png'],
     ],
@@ -22,8 +22,8 @@ return [
     'avatars' => [
         'disk' => 'public',
         'path' => 'avatars',
-        // Ảnh gốc từ điện thoại thường 3000px+; avatar lớn nhất hiển thị ở 96px,
-        // nên thu về 512px là đủ cho màn hình 2x mà không giữ file vài MB.
+        // Anh goc tu dien thoai thuong 3000px+; avatar lon nhat hien thi o 96px,
+        // nen thu ve 512px la du cho man hinh 2x ma khong giu file vai MB.
         'max_dimension' => 512,
     ],
 

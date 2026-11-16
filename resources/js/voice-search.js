@@ -1,29 +1,29 @@
 /**
- * Tìm kiếm bằng giọng nói cho ô tìm kiếm ở header.
+ * Tim kiem bang giong noi cho o tim kiem o header.
  *
- * Nhận diện chạy hoàn toàn trong browser bằng Web Speech API: không byte audio nào
- * rời máy khách. Server chỉ nhận TEXT qua /api/voice/normalize để sửa lệch phát âm
- * vùng miền. Đo 2026-09-01: cả hai AI provider của repo đều không có STT tiếng Việt
- * dùng được — một model trả "pm", một model bịa tên thuốc.
+ * Nhan dien chay hoan toan trong browser bang Web Speech API: khong byte audio nao
+ * roi may khach. Server chi nhan TEXT qua /api/voice/normalize de sua lech phat am
+ * vung mien. Do 2026-09-01: ca hai AI provider cua repo deu khong co STT tieng Viet
+ * dung duoc — mot model tra "pm", mot model bia ten thuoc.
  *
- * Không có SpeechRecognition (Firefox để nó sau cờ dom.webspeech.recognition.enable)
- * thì file này không làm gì: icon kính lúp giữ nguyên chỗ và ô tìm kiếm gõ như cũ.
+ * Khong co SpeechRecognition (Firefox de no sau co dom.webspeech.recognition.enable)
+ * thi file nay khong lam gi: icon kinh lup giu nguyen cho va o tim kiem go nhu cu.
  */
 
-/** Tự dừng nếu không nghe được gì: mic sáng vô hạn là một lỗi, không phải tính năng. */
+/** Tu dung neu khong nghe duoc gi: mic sang vo han la mot loi, khong phai tinh nang. */
 const SILENCE_MS = 8000;
 
 /**
- * Ngân sách của lời gọi chuẩn hoá. Cao hơn search.voice.ai_timeout (8s) một chút
- * để server còn kịp tự trả lỗi trước khi client tự bỏ — nếu client bỏ trước thì
- * mọi lỗi server đều hiện thành "timeout" và không ai debug được.
+ * Ngan sach cua loi goi chuan hoa. Cao hon search.voice.ai_timeout (8s) mot chut
+ * de server con kip tu tra loi truoc khi client tu bo — neu client bo truoc thi
+ * moi loi server deu hien thanh "timeout" va khong ai debug duoc.
  *
- * Không có mốc này thì một proxy treo để nút disabled vĩnh viễn: đo được
- * 2026-09-02, state='working' và disabled=true vẫn còn sau 9 giây.
+ * Khong co moc nay thi mot proxy treo de nut disabled vinh vien: do duoc
+ * 2026-09-02, state='working' va disabled=true van con sau 9 giay.
  */
 const NORMALIZE_TIMEOUT_MS = 10000;
 
-/** Khóa sessionStorage để tự động nghe sau khi reload vì vừa cấp quyền micro. */
+/** Khoa sessionStorage de tu dong nghe sau khi reload vi vua cap quyen micro. */
 const AUTOSTART_KEY = 'pharmacy_voice_autostart';
 
 function lang(key, fallback = '') {
@@ -46,14 +46,14 @@ class VoiceSearch {
         this.heard = '';
         this.previous = '';
 
-        // Dính cả trang: bấm lại cũng vô ích trong phiên này vì khách đã bấm Chặn
-        // hoặc Permissions-Policy chặn. setState() đọc cờ này nên nút không bị bật
-        // lại — trước đây setState('idle') bật lại ngay trong cùng một task.
+        // Dinh ca trang: bam lai cung vo ich trong phien nay vi khach da bam Chan
+        // hoac Permissions-Policy chan. setState() doc co nay nen nut khong bi bat
+        // lai — truoc day setState('idle') bat lai ngay trong cung mot task.
         this.denied = false;
 
         this.status = this.createStatus();
 
-        // Dải ở xa ô trong DOM, nên buộc quan hệ bằng aria thay vì bằng vị trí.
+        // Dai o xa o trong DOM, nen buoc quan he bang aria thay vi bang vi tri.
         this.input.setAttribute('aria-describedby', 'voice-status');
 
         this.positionBound = () => this.positionStatus();
@@ -63,11 +63,11 @@ class VoiceSearch {
         window.addEventListener('resize', this.positionBound, { passive: true });
         document.addEventListener('pharmacy:header-state', this.positionBound);
 
-        // Dải là một overlay position: fixed ở z-index 10000, trên cả header. Không
-        // có đường tắt nào thì một lần bị từ chối mic để nó nằm đó suốt lượt truy cập,
-        // và search-autocomplete.js:106-107 cộng chiều cao của nó vào offset panel —
-        // đo được 2026-09-02 ở 1440px: panel tụt xuống 56px thay vì 8px (dải cao 36px
-        // cộng 12px đệm).
+        // Dai la mot overlay position: fixed o z-index 10000, tren ca header. Khong
+        // co duong tat nao thi mot lan bi tu choi mic de no nam do suot luot truy cap,
+        // va search-autocomplete.js:106-107 cong chieu cao cua no vao offset panel —
+        // do duoc 2026-09-02 o 1440px: panel tut xuong 56px thay vi 8px (dai cao 36px
+        // cong 12px dem).
         this.dismissBound = (event) => this.handleOutsideClick(event);
         this.keyBound = (event) => this.handleKeydown(event);
         document.addEventListener('click', this.dismissBound);
@@ -75,12 +75,12 @@ class VoiceSearch {
 
         this.watchMicrophonePermission();
 
-        // Dải nằm ở cuối <body> nên thứ tự Tab tự nhiên đặt nó sau cả trang — đo
-        // 2026-09-02: 60 lần Tab không tới được nút trong dải. KHÔNG chuyển nó vào
-        // trong header để sửa: .site-header có backdrop-filter, thứ tạo containing
-        // block cho position: fixed, nên mọi toạ độ positionStatus() tính ra sẽ lệch
-        // đúng bằng offset của header (đo được: top 200 -> 250, left 100 -> 130).
-        // Thay vào đó bắc cầu Tab bằng JS, hai chiều.
+        // Dai nam o cuoi <body> nen thu tu Tab tu nhien dat no sau ca trang — do
+        // 2026-09-02: 60 lan Tab khong toi duoc nut trong dai. KHONG chuyen no vao
+        // trong header de sua: .site-header co backdrop-filter, thu tao containing
+        // block cho position: fixed, nen moi toa do positionStatus() tinh ra se lech
+        // dung bang offset cua header (do duoc: top 200 -> 250, left 100 -> 130).
+        // Thay vao do bac cau Tab bang JS, hai chieu.
         this.tabBound = (event) => this.handleTab(event);
         this.input.addEventListener('keydown', this.tabBound);
         this.status.addEventListener('keydown', this.tabBound);
@@ -88,8 +88,8 @@ class VoiceSearch {
     createStatus() {
         const status = document.createElement('div');
         status.className = 'voice-status';
-        // role + aria-live: người dùng trình đọc màn hình phải biết máy đang nghe,
-        // đang xử lý hay đã lỗi, mà không bị lấy mất focus khỏi ô tìm kiếm.
+        // role + aria-live: nguoi dung trinh doc man hinh phai biet may dang nghe,
+        // dang xu ly hay da loi, ma khong bi lay mat focus khoi o tim kiem.
         status.setAttribute('role', 'status');
         status.setAttribute('aria-live', 'polite');
         status.id = 'voice-status';
@@ -100,12 +100,12 @@ class VoiceSearch {
     }
 
     /**
-     * Đặt dải ngay dưới form, kẹp trong viewport ở CẢ HAI mép.
+     * Dat dai ngay duoi form, kep trong viewport o CA HAI mep.
      *
-     * Chỉ kẹp mép trái là đủ cho desktop nhưng không đủ cho 375px: đo được
-     * 2026-09-02, một câu dài đẩy dải tới left=114 right=465 trong viewport 375px và
-     * nút "Dùng nguyên văn" ra ngoài 75px. position: fixed không sinh scrollbar nên
-     * phần đó không với tới được. GUTTER = 12 giống
+     * Chi kep mep trai la du cho desktop nhung khong du cho 375px: do duoc
+     * 2026-09-02, mot cau dai day dai toi left=114 right=465 trong viewport 375px va
+     * nut "Dung nguyen van" ra ngoai 75px. position: fixed khong sinh scrollbar nen
+     * phan do khong voi toi duoc. GUTTER = 12 giong
      * SearchAutocomplete.positionSuggestions().
      */
     positionStatus() {
@@ -128,8 +128,8 @@ class VoiceSearch {
             'aria-label',
             {
                 listening: lang('listening', 'Đang nghe'),
-                // 'working' rơi vào nhánh mặc định trước đây, nên một nút đang disabled
-                // và đang quay tự giới thiệu là "Tìm bằng giọng nói".
+                // 'working' roi vao nhanh mac dinh truoc day, nen mot nut dang disabled
+                // va dang quay tu gioi thieu la "Tim bang giong noi".
                 working: lang('working', 'Đang xử lý...'),
             }[state] ?? lang('start', 'Tìm bằng giọng nói')
         );
@@ -138,8 +138,8 @@ class VoiceSearch {
         const icon = this.button.querySelector('i');
 
         if (icon) {
-            // bi-mic-fill lúc nghe, bi-arrow-repeat lúc chờ server: hình dạng đổi chứ
-            // không chỉ đổi màu, vì màu một mình không truyền được trạng thái.
+            // bi-mic-fill luc nghe, bi-arrow-repeat luc cho server: hinh dang doi chu
+            // khong chi doi mau, vi mau mot minh khong truyen duoc trang thai.
             icon.className = {
                 listening: 'bi bi-mic-fill',
                 working: 'bi bi-arrow-repeat',
@@ -160,9 +160,9 @@ class VoiceSearch {
         this.positionStatus();
     }
     /**
-     * Dải kết quả. Nhãn đổi theo `confident` của server: tầng T1 phiên âm là một
-     * PHỎNG ĐOÁN, không phải một lần khớp catalog, và trình bày hai thứ đó giống
-     * nhau là điều khiến "Par xê ta môn năm trăm" trông như một kết quả thật.
+     * Dai ket qua. Nhan doi theo `confident` cua server: tang T1 phien am la mot
+     * PHONG DOAN, khong phai mot lan khop catalog, va trinh bay hai thu do giong
+     * nhau la dieu khien "Par xe ta mon nam tram" trong nhu mot ket qua that.
      */
     showResult(data) {
         const heard = data.heard || this.heard;
@@ -178,7 +178,7 @@ class VoiceSearch {
 
         const value = document.createElement('span');
         value.className = 'voice-status__heard';
-        // textContent, không innerHTML: đây là chữ do người dùng nói ra.
+        // textContent, khong innerHTML: day la chu do nguoi dung noi ra.
         value.textContent = heard;
 
         const undo = document.createElement('button');
@@ -211,7 +211,7 @@ class VoiceSearch {
             return;
         }
 
-        // Đang nghe thì Escape huỷ luôn session, không chỉ tắt dải.
+        // Dang nghe thi Escape huy luon session, khong chi tat dai.
         if (this.recognition) {
             this.stop();
         }
@@ -257,17 +257,17 @@ class VoiceSearch {
     }
 
     /**
-     * Đường ra duy nhất của dải. hideStatus() là chi tiết bên trong; dismiss() còn
-     * bắn lại pharmacy:header-state để search-autocomplete.js đo lại offset ngay,
-     * thay vì chờ lần cuộn kế tiếp.
+     * Duong ra duy nhat cua dai. hideStatus() la chi tiet ben trong; dismiss() con
+     * ban lai pharmacy:header-state de search-autocomplete.js do lai offset ngay,
+     * thay vi cho lan cuon ke tiep.
      */
     dismiss() {
         this.hideStatus();
         document.dispatchEvent(new CustomEvent('pharmacy:header-state'));
     }
     toggle() {
-        // 'working' là lúc đang chờ server: nút đã disabled nên click không tới được
-        // đây, nhưng bàn phím và script tự động thì có.
+        // 'working' la luc dang cho server: nut da disabled nen click khong toi duoc
+        // day, nhung ban phim va script tu dong thi co.
         if (this.button.dataset.state === 'working') {
             return;
         }
@@ -286,14 +286,14 @@ class VoiceSearch {
         const recognition = new Recognition();
 
         recognition.lang = 'vi-VN';
-        // continuous = false: một truy vấn tìm kiếm là một câu. Nghe liên tục làm mic
-        // sáng vô hạn và ăn pin cho một ô mà khách đã nói xong.
+        // continuous = false: mot truy van tim kiem la mot cau. Nghe lien tuc lam mic
+        // sang vo han va an pin cho mot o ma khach da noi xong.
         recognition.continuous = false;
-        // interimResults: hiện chữ đang nghe ngay trong ô — người nói cần thấy máy
-        // đang nghe. Chỉ kết quả isFinal mới được gửi lên server.
+        // interimResults: hien chu dang nghe ngay trong o — nguoi noi can thay may
+        // dang nghe. Chi ket qua isFinal moi duoc gui len server.
         recognition.interimResults = true;
-        // 3 alternative: server thử từng cái, nên một lần nghe lệch ở lựa chọn đầu
-        // vẫn còn hai cơ hội khớp catalog mà không tốn thêm lời gọi AI nào.
+        // 3 alternative: server thu tung cai, nen mot lan nghe lech o lua chon dau
+        // van con hai co hoi khop catalog ma khong ton them loi goi AI nao.
         recognition.maxAlternatives = 3;
 
         recognition.onresult = (event) => this.handleResult(event);
@@ -308,10 +308,10 @@ class VoiceSearch {
         try {
             recognition.start();
         } catch {
-            // Gán SAU start(): start() ném nghĩa là không có session nào, nên cũng
-            // không có `end` nào để nhả this.recognition. Gán trước là để nút chết
-            // vĩnh viễn — toggle() sẽ mãi vào nhánh stop() của một session không tồn
-            // tại. Đo được 2026-09-02: log ["new","start"] rồi ["stop","stop"].
+            // Gan SAU start(): start() nem nghia la khong co session nao, nen cung
+            // khong co `end` nao de nha this.recognition. Gan truoc la de nut chet
+            // vinh vien — toggle() se mai vao nhanh stop() cua mot session khong ton
+            // tai. Do duoc 2026-09-02: log ["new","start"] roi ["stop","stop"].
             this.fail('generic');
 
             return;
@@ -322,10 +322,10 @@ class VoiceSearch {
     }
 
     /**
-     * abort(), không phải stop(): theo spec Web Speech, stop() nghĩa là "ngừng nghe
-     * và cố trả kết quả từ audio đã nhận", còn abort() mới là huỷ. Nhãn của nút là
-     * "Đang nghe, bấm để dừng" — khách bấm để HUỶ, không phải để chốt một câu họ
-     * vừa nhận ra là nói sai.
+     * abort(), khong phai stop(): theo spec Web Speech, stop() nghia la "ngung nghe
+     * va co tra ket qua tu audio da nhan", con abort() moi la huy. Nhan cua nut la
+     * "Dang nghe, bam de dung" — khach bam de HUY, khong phai de chot mot cau ho
+     * vua nhan ra la noi sai.
      */
     stop() {
         this.release();
@@ -335,23 +335,23 @@ class VoiceSearch {
     }
 
     /**
-     * Một chỗ duy nhất nhả tài nguyên của một session, gọi được nhiều lần. */
+     * Mot cho duy nhat nha tai nguyen cua mot session, goi duoc nhieu lan. */
     release() {
         clearTimeout(this.silenceTimer);
         this.silenceTimer = null;
     }
 
     /**
-     * Tự bắt đầu nghe sau khi trang tải lại.
+     * Tu bat dau nghe sau khi trang tai lai.
      *
-     * Cờ trong sessionStorage chỉ sống trong tab này và chỉ một lần: xóa ngay khi
-     * đọc. Không xóa thì mọi lần tải lại sau (F5, back/forward) cũng bật mic, và một
-     * trang bán thuốc tự mở micro là hành vi khách không đồng ý.
+     * Co trong sessionStorage chi song trong tab nay va chi mot lan: xoa ngay khi
+     * doc. Khong xoa thi moi lan tai lai sau (F5, back/forward) cung bat mic, va mot
+     * trang ban thuoc tu mo micro la hanh vi khach khong dong y.
      *
-     * Chờ cú click đầu tiên thay vì start() ngay: Chrome đòi user gesture, nên lời
-     * gọi ngay sau reload chỉ nhận not-allowed — vừa khoá nút vừa bày dải lỗi "cần
-     * cho phép micro" cho một quyền khách vừa cấp. Click đầu tiên là gesture hợp lệ
-     * và cũng là lúc khách thật sự muốn dùng.
+     * Cho cu click dau tien thay vi start() ngay: Chrome doi user gesture, nen loi
+     * goi ngay sau reload chi nhan not-allowed — vua khoa nut vua bay dai loi "can
+     * cho phep micro" cho mot quyen khach vua cap. Click dau tien la gesture hop le
+     * va cung la luc khach that su muon dung.
      */
     autostartFromSession() {
         if (sessionStorage.getItem(AUTOSTART_KEY) !== '1') {
@@ -361,7 +361,7 @@ class VoiceSearch {
         sessionStorage.removeItem(AUTOSTART_KEY);
 
         const kickstart = () => {
-            // Bấm thẳng vào nút mic thì toggle() đã lo xong trước đó.
+            // Bam thang vao nut mic thi toggle() da lo xong truoc do.
             if (this.recognition || this.button.dataset.state === 'working') {
                 return;
             }
@@ -374,13 +374,13 @@ class VoiceSearch {
     }
 
     /**
-     * Cấp quyền micro xong thì tải lại trang rồi tự nghe.
+     * Cap quyen micro xong thi tai lai trang roi tu nghe.
      *
-     * Quyền đổi ở hai đường: prompt của trình duyệt lúc bấm mic (Chrome hay trả
-     * `not-allowed` cho chính session vừa được cấp, và trang đã khoá nút vì lỗi đó),
-     * hoặc khách mở ổ khoá trên thanh địa chỉ để bỏ Chặn. Cả hai chỉ hết kẹt sau khi
-     * trang tải lại, nên đổi sang 'granted' là reload. Chỉ lần đổi mới reload —
-     * trang mới đọc lại quyền đã 'granted' nên không có vòng lặp.
+     * Quyen doi o hai duong: prompt cua trinh duyet luc bam mic (Chrome hay tra
+     * `not-allowed` cho chinh session vua duoc cap, va trang da khoa nut vi loi do),
+     * hoac khach mo o khoa tren thanh dia chi de bo Chan. Ca hai chi het ket sau khi
+     * trang tai lai, nen doi sang 'granted' la reload. Chi lan doi moi reload —
+     * trang moi doc lai quyen da 'granted' nen khong co vong lap.
      */
     watchMicrophonePermission() {
         if (!navigator.permissions?.query) {
@@ -401,15 +401,15 @@ class VoiceSearch {
                 window.location.reload();
             });
         }).catch(() => {
-            // Safari/Firefox cũ ném TypeError cho 'microphone'. Không quan sát được thì
-            // khách bấm mic như trước, không có gì hỏng.
+            // Safari/Firefox cu nem TypeError cho 'microphone'. Khong quan sat duoc thi
+            // khach bam mic nhu truoc, khong co gi hong.
         });
     }
 
     armSilenceTimer() {
         this.release();
-        // abort() cùng lý do như stop(): hết 8 giây im lặng thì huỷ, không chốt một
-        // câu nghe được nửa vời.
+        // abort() cung ly do nhu stop(): het 8 giay im lang thi huy, khong chot mot
+        // cau nghe duoc nua voi.
         this.silenceTimer = setTimeout(() => this.stop(), SILENCE_MS);
     }
     handleResult(event) {
@@ -420,17 +420,17 @@ class VoiceSearch {
             .slice(0, 3);
 
         if (!result.isFinal) {
-            // Chỉ gia hạn khi CÒN đang nghe. Gia hạn cả ở kết quả cuối là để một timer
-            // 8 giây sống qua lúc normalize() đang bay: stop() giờ tự đặt state, nên
-            // nó sẽ bật lại nút giữa lúc request chưa về và một click nữa mở session
-            // thứ hai đè lên session chưa xong.
+            // Chi gia han khi CON dang nghe. Gia han ca o ket qua cuoi la de mot timer
+            // 8 giay song qua luc normalize() dang bay: stop() gio tu dat state, nen
+            // no se bat lai nut giua luc request chua ve va mot click nua mo session
+            // thu hai de len session chua xong.
             this.armSilenceTimer();
 
             if (alternatives.length === 0) {
                 return;
             }
 
-            // Chỉ hiện tạm trong ô, chưa gọi server: kết quả tạm đổi từng từ.
+            // Chi hien tam trong o, chua goi server: ket qua tam doi tung tu.
             this.input.value = alternatives[0];
 
             return;
@@ -449,7 +449,7 @@ class VoiceSearch {
     handleError(event) {
         this.release();
 
-        // not-allowed: khách đã bấm Chặn, hoặc Permissions-Policy chặn.
+        // not-allowed: khach da bam Chan, hoac Permissions-Policy chan.
         if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
             this.denied = true;
         }
@@ -461,9 +461,9 @@ class VoiceSearch {
         this.release();
         this.recognition = null;
 
-        // Kết quả tạm đã ghi vào ô nhưng không có kết quả cuối nào: chữ đó chưa qua
-        // /api/voice/normalize, không có dải, không có nút nào để bỏ nó. Trả ô về chữ
-        // cũ thay vì để "pa ra xê ta" nằm đó rồi Enter tìm nguyên văn.
+        // Ket qua tam da ghi vao o nhung khong co ket qua cuoi nao: chu do chua qua
+        // /api/voice/normalize, khong co dai, khong co nut nao de bo no. Tra o ve chu
+        // cu thay vi de "pa ra xe ta" nam do roi Enter tim nguyen van.
         if (this.heard === '' && this.input.value !== this.previous) {
             this.input.value = this.previous;
         }
@@ -475,8 +475,8 @@ class VoiceSearch {
     async normalize(alternatives) {
         this.setState('working');
 
-        // AbortController chứ không phải Promise.race: bỏ mà không huỷ request thì
-        // kết nối vẫn treo và một lượt nói sau vẫn xếp hàng sau nó.
+        // AbortController chu khong phai Promise.race: bo ma khong huy request thi
+        // ket noi van treo va mot luot noi sau van xep hang sau no.
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), NORMALIZE_TIMEOUT_MS);
 
@@ -501,10 +501,10 @@ class VoiceSearch {
             this.applyText(data.text || this.heard);
             this.showResult(data);
         } catch (error) {
-            // Endpoint lỗi, 429, timeout hay mất mạng: chữ khách nói vẫn ở trong ô và
-            // sửa được, nhưng phải nói rõ là bước sửa phát âm KHÔNG chạy. Trước đây
-            // nhánh này hiện y như một lần thành công — đo được 2026-09-02: 429 ra
-            // dải "Nghe được: thuốc ho" với tone info.
+            // Endpoint loi, 429, timeout hay mat mang: chu khach noi van o trong o va
+            // sua duoc, nhung phai noi ro la buoc sua phat am KHONG chay. Truoc day
+            // nhanh nay hien y nhu mot lan thanh cong — do duoc 2026-09-02: 429 ra
+            // dai "Nghe duoc: thuoc ho" voi tone info.
             this.applyText(this.heard);
             this.showStatus(
                 errorMessage(error?.name === 'AbortError' ? 'timeout' : 'network'),
@@ -517,20 +517,20 @@ class VoiceSearch {
     }
 
     /**
-     * Điền ô rồi bắn event `input`.
+     * Dien o roi ban event `input`.
      *
-     * Không gọi hàm nào của panel gợi ý: search-autocomplete.js đã lắng `input`, nên
-     * bắn event lại dùng đúng đường gõ tay — cùng debounce 300ms, cùng AbortController,
-     * cùng điều hướng bàn phím. Không tự submit form: nghe sai mà nhảy sang trang thuốc
-     * khác là hỏng theo hướng tệ nhất trong một app nhà thuốc.
+     * Khong goi ham nao cua panel goi y: search-autocomplete.js da lang `input`, nen
+     * ban event lai dung dung duong go tay — cung debounce 300ms, cung AbortController,
+     * cung dieu huong ban phim. Khong tu submit form: nghe sai ma nhay sang trang thuoc
+     * khac la hong theo huong te nhat trong mot app nha thuoc.
      *
-     * Thứ tự ba dòng dưới đây là cố ý. handleFocus() của panel fetch NGAY, không qua
-     * debounce (search-autocomplete.js:151-158), còn handleInput() thì có debounce
-     * 300ms. Nên: xoá ô trước để lần focus không fetch gì (chuỗi rỗng dưới minChars),
-     * rồi mới điền và bắn `input` để đúng một request debounce đi ra. Đo 2026-09-02:
-     * thứ tự cũ (điền -> input -> focus) cho HAI request /api/search/suggestions y hệt
-     * nhau; chỉ đổi chỗ focus lên đầu vẫn còn hai khi ô đang có chữ cũ, vì focus fetch
-     * theo chữ cũ đó.
+     * Thu tu ba dong duoi day la co y. handleFocus() cua panel fetch NGAY, khong qua
+     * debounce (search-autocomplete.js:151-158), con handleInput() thi co debounce
+     * 300ms. Nen: xoa o truoc de lan focus khong fetch gi (chuoi rong duoi minChars),
+     * roi moi dien va ban `input` de dung mot request debounce di ra. Do 2026-09-02:
+     * thu tu cu (dien -> input -> focus) cho HAI request /api/search/suggestions y het
+     * nhau; chi doi cho focus len dau van con hai khi o dang co chu cu, vi focus fetch
+     * theo chu cu do.
      */
     applyText(text) {
         this.input.value = '';
@@ -540,9 +540,9 @@ class VoiceSearch {
     }
 
     fail(code) {
-        // Chỉ trả ô về chữ cũ khi lượt nói CHƯA cho kết quả nào. Engine có thể bắn
-        // một lỗi muộn sau khi normalize đã thành công — đo được 2026-09-02: ô đi từ
-        // "canxi" sang "men vi sinh" rồi bị kéo về "canxi" kèm dải đỏ.
+        // Chi tra o ve chu cu khi luot noi CHUA cho ket qua nao. Engine co the ban
+        // mot loi muon sau khi normalize da thanh cong — do duoc 2026-09-02: o di tu
+        // "canxi" sang "men vi sinh" roi bi keo ve "canxi" kem dai do.
         if (this.heard === '') {
             this.input.value = this.previous;
         }
@@ -555,16 +555,16 @@ class VoiceSearch {
 document.addEventListener('DOMContentLoaded', () => {
     const button = document.querySelector('[data-voice-search]');
     const input = document.getElementById('header-search');
-    // isSecureContext: trên http://<LAN-IP>:8123 (điện thoại vào bằng IP nội bộ) symbol
-    // vẫn tồn tại nên trước đây data-voice-ready được đặt, kính lúp bị ẩn, và nút mic lỗi
-    // ở mọi lần bấm. Web Speech chỉ chạy ở secure context; http://localhost là trustworthy
-    // origin nên dev server không bị ảnh hưởng (đo 2026-09-02: isSecureContext=true).
+    // isSecureContext: tren http://<LAN-IP>:8123 (dien thoai vao bang IP noi bo) symbol
+    // van ton tai nen truoc day data-voice-ready duoc dat, kinh lup bi an, va nut mic loi
+    // o moi lan bam. Web Speech chi chay o secure context; http://localhost la trustworthy
+    // origin nen dev server khong bi anh huong (do 2026-09-02: isSecureContext=true).
     const supported = window.isSecureContext
         && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
     if (!button || !input || !supported) {
-        // Không hỗ trợ: không đặt data-voice-ready, nên CSS giữ icon kính lúp và nút
-        // micro không bao giờ hiện. Người dùng Firefox không thấy một nút bấm không chạy.
+        // Khong ho tro: khong dat data-voice-ready, nen CSS giu icon kinh lup va nut
+        // micro khong bao gio hien. Nguoi dung Firefox khong thay mot nut bam khong chay.
         return;
     }
 

@@ -1,25 +1,25 @@
 /**
- * Bộ lọc danh mục và phân trang catalog không tải lại trang.
+ * Bo loc danh muc va phan trang catalog khong tai lai trang.
  *
- * Trước đây mỗi lần chọn danh mục là một lần tải lại trang: người dùng bị đưa về
- * đầu trang và phải cuộn xuống lại để chọn danh mục kế tiếp. Giờ chỉ khối
- * [data-catalog-results] được thay, vị trí cuộn giữ nguyên.
+ * Truoc day moi lan chon danh muc la mot lan tai lai trang: nguoi dung bi dua ve
+ * dau trang va phai cuon xuong lai de chon danh muc ke tiep. Gio chi khoi
+ * [data-catalog-results] duoc thay, vi tri cuon giu nguyen.
  *
- * Progressive enhancement: mọi danh mục và số trang vẫn là <a href> thật. Không có
- * JS thì trình duyệt điều hướng như cũ và không nhánh nào ở đây chạy.
+ * Progressive enhancement: moi danh muc va so trang van la <a href> that. Khong co
+ * JS thi trinh duyet dieu huong nhu cu va khong nhanh nao o day chay.
  */
 const RESULTS_SELECTOR = '[data-catalog-results]';
 const TOTAL_SELECTOR = '[data-catalog-total]';
 const FILTER_LINK_SELECTOR = '.catalog-filter-link, .nav-category-link';
-// Paginator mặc định của Laravel là nav[role="navigation"] không có class .pagination;
-// bắt cả hai để việc đổi theme phân trang không âm thầm tắt tính năng này.
+// Paginator mac dinh cua Laravel la nav[role="navigation"] khong co class .pagination;
+// bat ca hai de viec doi theme phan trang khong am tham tat tinh nang nay.
 const PAGINATION_SELECTOR = `${RESULTS_SELECTOR} nav[role="navigation"], ${RESULTS_SELECTOR} .pagination`;
 
 function getResults() {
     return document.querySelector(RESULTS_SELECTOR);
 }
 
-/** Chỉ nhận link cùng origin trỏ về chính trang catalog — link ngoài đi đường thường. */
+/** Chi nhan link cung origin tro ve chinh trang catalog — link ngoai di duong thuong. */
 function isCatalogUrl(url) {
     return url.origin === window.location.origin && url.pathname.startsWith('/products');
 }
@@ -30,8 +30,8 @@ function setBusy(container, busy) {
 }
 
 /**
- * Đồng bộ trạng thái đang chọn trên sidebar, dropdown header và dòng tóm tắt mobile.
- * Server không render lại phần này (nó nằm ngoài khối kết quả) nên client phải tự bù.
+ * Dong bo trang thai dang chon tren sidebar, dropdown header va dong tom tat mobile.
+ * Server khong render lai phan nay (no nam ngoai khoi ket qua) nen client phai tu bu.
  */
 function markActiveCategory(url) {
     const activeId = new URL(url).searchParams.get('category');
@@ -57,7 +57,7 @@ function markActiveCategory(url) {
     }
 }
 
-/** Trên mobile panel danh mục là <details> mở ra che hết màn hình — chọn xong thì đóng. */
+/** Tren mobile panel danh muc la <details> mo ra che het man hinh — chon xong thi dong. */
 function collapseMobilePanel() {
     if (window.matchMedia('(min-width: 992px)').matches) {
         return;
@@ -100,9 +100,9 @@ async function loadResults(url, { push = true, scrollToTop = false } = {}) {
 
         container.innerHTML = html;
 
-        // Con số ở hero nằm ngoài khối kết quả nên server không render lại nó; bỏ qua
-        // là màn hình có hai tổng số đá nhau — "263 sản phẩm" trong khối, "3132" ở
-        // tiêu đề mà screen reader vừa đọc.
+        // Con so o hero nam ngoai khoi ket qua nen server khong render lai no; bo qua
+        // la man hinh co hai tong so da nhau — "263 san pham" trong khoi, "3132" o
+        // tieu de ma screen reader vua doc.
         const total = document.querySelector(TOTAL_SELECTOR);
 
         if (total && Number.isFinite(data.total)) {
@@ -115,13 +115,13 @@ async function loadResults(url, { push = true, scrollToTop = false } = {}) {
 
         markActiveCategory(url);
 
-        // Thẻ sản phẩm mới cần gắn lại nút yêu thích và áp lại trạng thái đã lưu.
+        // The san pham moi can gan lai nut yeu thich va ap lai trang thai da luu.
         document.dispatchEvent(new CustomEvent('pharmacy:content-updated', {
             detail: { container },
         }));
 
-        // Chỉ cuộn khi đầu khối đã trôi lên trên khung nhìn, và chỉ với phân trang —
-        // đổi danh mục thì giữ nguyên chỗ đứng, đó là cả lý do có file này.
+        // Chi cuon khi dau khoi da troi len tren khung nhin, va chi voi phan trang —
+        // doi danh muc thi giu nguyen cho dung, do la ca ly do co file nay.
         if (scrollToTop && container.getBoundingClientRect().top < 0) {
             container.scrollIntoView({
                 behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
@@ -131,7 +131,7 @@ async function loadResults(url, { push = true, scrollToTop = false } = {}) {
 
         return true;
     } catch (error) {
-        // Thất bại thì trả về điều hướng thường, người dùng vẫn tới được nơi cần tới.
+        // That bai thi tra ve dieu huong thuong, nguoi dung van toi duoc noi can toi.
         window.location.href = url;
         return false;
     } finally {
@@ -172,7 +172,7 @@ document.addEventListener('click', (event) => {
     loadResults(url.toString(), { scrollToTop: isPagination });
 });
 
-// Nút back/forward: URL đã đổi bằng pushState nên phải tự nạp lại khối kết quả.
+// Nut back/forward: URL da doi bang pushState nen phai tu nap lai khoi ket qua.
 window.addEventListener('popstate', () => {
     if (getResults()) {
         loadResults(window.location.href, { push: false });

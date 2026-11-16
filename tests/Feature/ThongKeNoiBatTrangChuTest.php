@@ -1,0 +1,55 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\DanhMuc;
+use App\Models\SanPham;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * The hero's stat strip used to hard-code "10k+ sản phẩm" and "24/7 tư vấn" while the
+ * catalog held 3,132 sellable rows and the pharmacy answered 8:00-20:00. Both numbers
+ * now come from the same filter the catalog sells by, so the claim cannot drift.
+ */
+class ThongKeNoiBatTrangChuTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_thong_ke_noi_bat_chi_dem_san_pham_cua_hang_thuc_su_ban_duoc(): void
+    {
+        $painRelief = DanhMuc::create(['ten' => 'Thuốc giảm đau']);
+        $skincare = DanhMuc::create(['ten' => 'Chăm sóc da']);
+        $empty = DanhMuc::create(['ten' => 'Danh mục rỗng']);
+
+        $this->product($painRelief, 'Paracetamol Stada 500mg');
+        $this->product($painRelief, 'Panadol Extra đỏ GSK');
+        $this->product($skincare, 'Kem dưỡng ẩm Ceradan');
+        $this->product($skincare, 'Sữa rửa mặt hết hàng', ['so_luong_ton' => 0]);
+        $this->product($empty, 'Siro ho đã hết hạn', ['ngay_het_han' => now()->subDay()]);
+
+        $html = $this->get(route('trang-chu'))->assertOk()->getContent();
+
+        // 3 bán được, không tính hàng hết và hàng quá hạn. 2 danh mục còn hàng, không
+        // tính danh mục chỉ còn hàng quá hạn.
+        $this->assertStringContainsString('<span class="home-stat-value">3</span>', $html);
+        $this->assertStringContainsString('<span class="home-stat-value">2</span>', $html);
+
+        // Số cũ ghi cứng phải biến mất hẳn.
+        $this->assertStringNotContainsString('10k+', $html);
+    }
+
+    private function product(DanhMuc $danhMuc, string $name, array $overrides = []): SanPham
+    {
+        return SanPham::create(array_merge([
+            'ma_dm' => $danhMuc->ma_dm,
+            'ten' => $name,
+            'gia' => 45000,
+            'han_dung_thang' => 36,
+            'ngay_het_han' => now()->addMonths(36),
+            'so_luong_ton' => 40,
+            'muc_canh_bao' => 10,
+            'so_lo' => 'LC-' . fake()->unique()->numerify('########'),
+        ], $overrides));
+    }
+}

@@ -1,0 +1,1392 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\DanhMuc;
+use App\Models\AnhChatbot;
+use App\Models\TinNhanChat;
+use App\Models\SanPham;
+use App\Models\NguoiDung;
+use App\Services\ChatbotService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Mockery\MockInterface;
+use Tests\TestCase;
+
+class TruyVetPhienChatbotTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /**
+     * Every upload in this class goes through ImageRecognitionService::storeImage(), so
+     * the disk is faked once here rather than per test. Without it the suite writes real
+     * files into storage/app/private/chatbot-uploads and never cleans them up.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Storage::fake('local');
+    }
+
+    public function test_tra_loi_tin_nhan_chatbot_gom_session_id(): void
+    {
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+
+        $this->mock(ChatbotService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('processMessage')
+                ->once()
+                ->andReturn([
+                    'success' => true,
+                    'response' => 'Dạ, em đã ghi nhận câu hỏi.',
+                    'products' => [],
+                    'danhMucs' => [],
+                    'show_disclaimer' => false,
+                    'response_type' => 'health_consultation',
+                    'debug' => [
+                        'fallback_type' => 'provider_unavailable_no_catalog_match',
+                        'provider_error_type' => 'capacity_or_rate_limit',
+                    ],
+                ]);
+        });
+
+        $response = $this->actingAs($nguoiDung)->postJson('/api/chatbot/message', [
+            'message' => 'Tôi cần tư vấn thuốc cảm',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure(['session_id']);
+
+        $sessionId = $response->json('session_id');
+
+        $this->assertTrue(Str::isUuid($sessionId));
+        $this->assertDatabaseHas('tin_nhan_chats', [
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'user',
+            'content' => 'Tôi cần tư vấn thuốc cảm',
+        ]);
+
+        $assistantMessage = TinNhanChat::where('session_id', $sessionId)
+            ->where('role', 'assistant')
+            ->first();
+
+        $this->assertSame(
+            'provider_unavailable_no_catalog_match',
+            $assistantMessage->metadata['debug']['fallback_type'] ?? null
+        );
+        $this->assertSame(
+            'health_consultation',
+            $assistantMessage->metadata['response_type'] ?? null
+        );
+    }
+
+    public function test_tin_nhan_chatbot_truyen_session_id_hien_tai_vao_ngu_canh_dich_vu(): void
+    {
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $capturedSessionId = null;
+
+        $this->mock(ChatbotService::class, function (MockInterface $mock) use ($nguoiDung, &$capturedSessionId) {
+            $mock->shouldReceive('processMessage')
+                ->once()
+                ->with(
+                    'đây là phiên chat mã id là gì?',
+                    \Mockery::on(static fn ($userId): bool => (int) $userId === (int) $nguoiDung->getAuthIdentifier()),
+                    \Mockery::on(static function (array $context) use (&$capturedSessionId): bool {
+                        $capturedSessionId = (string) ($context['session_id'] ?? '');
+
+                        return $capturedSessionId !== ''
+                            && Str::isUuid($capturedSessionId)
+                            && ($context['current_session_id'] ?? null) === $capturedSessionId
+                            && array_key_exists('previous_messages', $context)
+                            && array_key_exists('name_memory_messages', $context)
+                            && array_key_exists('recent_image_products', $context);
+                    })
+                )
+                ->andReturn([
+                    'success' => true,
+                    'response' => 'Dạ, mã phiên chat hiện tại là CHAT-TEST. ID đầy đủ: test.',
+                    'products' => [],
+                    'danhMucs' => [],
+                    'explanations' => [],
+                    'show_disclaimer' => false,
+                    'disclaimer' => null,
+                    'response_type' => 'general',
+                ]);
+        });
+
+        $response = $this->actingAs($nguoiDung)->postJson('/api/chatbot/message', [
+            'message' => 'đây là phiên chat mã id là gì?',
+            'context' => [
+                'session_id' => 'client-spoofed-session-id',
+                'current_session_id' => 'client-spoofed-current-session-id',
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('session_id', $capturedSessionId);
+
+        $this->assertNotSame('client-spoofed-session-id', $capturedSessionId);
+        $this->assertTrue(Str::isUuid((string) $capturedSessionId));
+    }
+
+    public function test_tin_nhan_chatbot_truyen_bo_nho_ten_da_khai_bao_vuot_ngu_canh_gan_day(): void
+    {
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $sessionId = (string) Str::uuid();
+        $baseTime = now()->subHour();
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'user',
+            'content' => 'minh la Huy',
+            'created_at' => $baseTime,
+            'updated_at' => $baseTime,
+        ]);
+
+        for ($index = 1; $index <= 12; $index++) {
+            TinNhanChat::create([
+                'ma_nd' => $nguoiDung->ma_nd,
+                'session_id' => $sessionId,
+                'role' => 'user',
+                'content' => 'tin nhan ngan ' . $index,
+                'created_at' => $baseTime->copy()->addSeconds($index),
+                'updated_at' => $baseTime->copy()->addSeconds($index),
+            ]);
+        }
+
+        $this->mock(ChatbotService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('processMessage')
+                ->once()
+                ->with('toi ten la gi?', \Mockery::type('int'), \Mockery::on(function (array $context): bool {
+                    $recentContents = array_column($context['previous_messages'] ?? [], 'content');
+                    $memoryContents = array_column($context['name_memory_messages'] ?? [], 'content');
+
+                    return !in_array('minh la Huy', $recentContents, true)
+                        && in_array('minh la Huy', $memoryContents, true);
+                }))
+                ->andReturn([
+                    'success' => true,
+                    'response' => 'Da, em nho ten trong phien chat nay la Huy.',
+                    'products' => [],
+                    'danhMucs' => [],
+                    'show_disclaimer' => false,
+                ]);
+        });
+
+        $this
+            ->actingAs($nguoiDung)
+            ->withSession(['chat_session_id' => $sessionId])
+            ->postJson('/api/chatbot/message', [
+                'message' => 'toi ten la gi?',
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+    }
+
+    public function test_tin_nhan_chatbot_truyen_san_pham_tu_anh_gan_day_de_theo_doi(): void
+    {
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $sessionId = (string) Str::uuid();
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => 'Đã nhận dạng được 1 sản phẩm từ hình ảnh.',
+            'products' => [
+                [
+                    'matched' => true,
+                    'product' => [
+                        'id' => 123,
+                        'name' => 'Vitamin E 400IU',
+                    ],
+                ],
+            ],
+        ]);
+
+        $capturedContext = null;
+
+        $this->mock(ChatbotService::class, function (MockInterface $mock) use (&$capturedContext) {
+            $mock->shouldReceive('processMessage')
+                ->once()
+                ->andReturnUsing(function (string $message, int $userId, array $context) use (&$capturedContext): array {
+                    $capturedContext = $context;
+
+                    return [
+                    'success' => true,
+                    'response' => 'Dạ, đây là Vitamin E 400IU.',
+                    'products' => [],
+                    'danhMucs' => [],
+                    'show_disclaimer' => false,
+                    ];
+                });
+        });
+
+        $this
+            ->actingAs($nguoiDung)
+            ->withSession(['chat_session_id' => $sessionId])
+            ->postJson('/api/chatbot/message', [
+                'message' => 'thuốc đó có công dụng gì?',
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertNotEmpty($capturedContext['recent_image_products'] ?? [], json_encode($capturedContext, JSON_UNESCAPED_UNICODE));
+        $this->assertSame('Vitamin E 400IU', $capturedContext['recent_image_products'][0]['product']['name'] ?? null);
+        $this->assertStringContainsString('Vitamin E 400IU', $capturedContext['previous_messages'][0]['content'] ?? '');
+    }
+
+    public function test_tin_nhan_chatbot_truyen_lich_su_theo_thu_tu_thoi_gian(): void
+    {
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $sessionId = (string) Str::uuid();
+        $baseTime = now()->subMinutes(10);
+
+        $turns = [
+            ['role' => 'user', 'content' => 'có nên xài crack hay không'],
+            ['role' => 'assistant', 'content' => 'Dạ, em không thể tư vấn về việc sử dụng ma túy.'],
+            ['role' => 'user', 'content' => 'có thuốc gì hỗ trơ tiêu hóa nhanh không?'],
+            ['role' => 'assistant', 'content' => 'Dạ, danh mục Thuốc tiêu hóa có các sản phẩm sau.'],
+        ];
+
+        foreach ($turns as $index => $turn) {
+            TinNhanChat::create([
+                'ma_nd' => $nguoiDung->ma_nd,
+                'session_id' => $sessionId,
+                'role' => $turn['role'],
+                'content' => $turn['content'],
+                'created_at' => $baseTime->copy()->addSeconds($index),
+                'updated_at' => $baseTime->copy()->addSeconds($index),
+            ]);
+        }
+
+        $capturedContext = null;
+
+        $this->mock(ChatbotService::class, function (MockInterface $mock) use (&$capturedContext) {
+            $mock->shouldReceive('processMessage')
+                ->once()
+                ->andReturnUsing(function (string $message, int $userId, array $context) use (&$capturedContext): array {
+                    $capturedContext = $context;
+
+                    return [
+                        'success' => true,
+                        'response' => 'Dạ, em đã ghi nhận.',
+                        'products' => [],
+                        'danhMucs' => [],
+                        'show_disclaimer' => false,
+                    ];
+                });
+        });
+
+        $this
+            ->actingAs($nguoiDung)
+            ->withSession(['chat_session_id' => $sessionId])
+            ->postJson('/api/chatbot/message', [
+                'message' => 'có ổn không?',
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        // Sequential keys matter beyond ordering: a key-preserving reverse() encodes
+        // as a JSON object, and the MySQL json column returns object keys sorted, so
+        // the whole conversation reached the model newest-first.
+        $this->assertTrue(array_is_list($capturedContext['previous_messages'] ?? []));
+        $this->assertTrue(array_is_list($capturedContext['name_memory_messages'] ?? []));
+
+        $this->assertSame(
+            array_column($turns, 'content'),
+            array_column($capturedContext['previous_messages'] ?? [], 'content')
+        );
+
+        $this->assertSame(
+            ['có nên xài crack hay không', 'có thuốc gì hỗ trơ tiêu hóa nhanh không?'],
+            array_column($capturedContext['name_memory_messages'] ?? [], 'content')
+        );
+    }
+
+    public function test_lich_su_chatbot_tra_session_id_hien_tai(): void
+    {
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $sessionId = (string) Str::uuid();
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'user',
+            'content' => 'Đau đầu nên dùng gì?',
+        ]);
+
+        $response = $this
+            ->actingAs($nguoiDung)
+            ->withSession(['chat_session_id' => $sessionId])
+            ->getJson('/api/chatbot/history');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('session_id', $sessionId)
+            ->assertJsonPath('count', 1);
+    }
+
+    public function test_tai_anh_chatbot_dung_vision_cua_nha_cung_cap_ai_va_khop_san_pham(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin C 1000mg',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => "```json\n{\"description\":\"Hop thuoc Vitamin C 1000mg\",\"products\":[{\"name\":\"Vitamin C 1000mg\",\"quantity\":1,\"dosage\":\"1000mg\"}]}\n```",
+                        ],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $response = $this
+            ->actingAs($nguoiDung)
+            ->postJson('/api/chatbot/upload-image', [
+                'type' => 'prescription',
+                'message' => 'Thuốc trong ảnh này dùng thế nào?',
+                'image' => UploadedFile::fake()->image('vitamin-c.jpg', 600, 400),
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('recognized_products.0.matched', true)
+            ->assertJsonPath('recognized_products.0.product.name', 'Vitamin C 1000mg')
+            ->assertJsonStructure(['session_id', 'ocr_text', 'processing_time_ms']);
+
+        $this->assertDatabaseHas('tin_nhan_chats', [
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $response->json('session_id'),
+            'role' => 'user',
+            'content' => 'Thuốc trong ảnh này dùng thế nào?',
+        ]);
+
+        Http::assertSent(function ($request): bool {
+            $payload = $request->data();
+            $content = $payload['messages'][0]['content'] ?? [];
+
+            return $request->url() === 'http://localhost:55597/v1/chat/completions'
+                && ($payload['model'] ?? null) === 'vision-model'
+                && ($content[1]['type'] ?? null) === 'image_url'
+                && str_starts_with($content[1]['image_url']['url'] ?? '', 'data:image/jpeg;base64,');
+        });
+    }
+
+    public function test_tai_anh_chatbot_anh_xa_blackmores_bio_c_sang_san_pham_vitamin_c(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Vitamin C 1000mg',
+            'thanh_phan' => 'Acid ascorbic 1000mg',
+            'cach_dung' => 'Bổ sung vitamin C, tăng sức đề kháng.',
+            'so_luong_ton' => 50,
+            'ngay_het_han' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '{"description":"Lọ viên uống Blackmores Bio C 1000mg, 31 tablets","products":[{"name":"Blackmores Bio C","quantity":31,"dosage":"1000mg","instructions":"Reduces the severity and duration of common cold symptoms; high potency one-a-day dose"}]}',
+                        ],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $response = $this
+            ->actingAs($nguoiDung)
+            ->postJson('/api/chatbot/upload-image', [
+                'type' => 'prescription',
+                'image' => UploadedFile::fake()->image('blackmores-bio-c.jpg', 600, 600),
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('recognized_products.0.matched', true)
+            ->assertJsonPath('recognized_products.0.parsed_name', 'Blackmores Bio C')
+            ->assertJsonPath('recognized_products.0.product.name', 'Vitamin C 1000mg');
+
+        $tinNhan = TinNhanChat::where('ma_nd', $nguoiDung->ma_nd)
+            ->where('role', 'assistant')
+            ->latest('ma_tn')
+            ->first();
+
+        $this->assertNotNull($tinNhan);
+        $this->assertStringContainsString('Vitamin C 1000mg', $tinNhan->content);
+    }
+
+    public function test_tai_anh_chatbot_bao_san_pham_khong_khop_thay_vi_doan(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin và khoáng chất']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Zinc 50mg',
+            'thanh_phan' => 'Zinc sulfate 50mg',
+            'cach_dung' => 'Bổ sung kẽm, tăng cường miễn dịch. Uống 1 viên/ngày',
+            'so_luong_ton' => 320,
+            'ngay_het_han' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [
+                    [
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '{"description":"Hộp thuốc Vitamin A 5000 IU của Mekophar, chứa 10 viên nang cứng","products":[{"name":"Vitamin A 5000 IU","dosage":"5000 IU","quantity":1,"active_ingredients":["Retinol"],"category":"Vitamin và khoáng chất","uses":["Bổ sung vitamin A"],"health_goals":["immunity"],"visible_text":"Vitamin A 5000 IU Mekophar hộp 10 viên nang cứng","instructions":"Uống 1 viên mỗi ngày"}]}',
+                        ],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $response = $this
+            ->actingAs($nguoiDung)
+            ->postJson('/api/chatbot/upload-image', [
+                'type' => 'prescription',
+                'image' => UploadedFile::fake()->image('vitamin-a.jpg', 600, 600),
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('recognized_products.0.matched', false)
+            ->assertJsonPath('recognized_products.0.parsed_name', 'Vitamin A 5000 IU')
+            ->assertJsonPath('recognized_products.0.product', null);
+
+        $tinNhan = TinNhanChat::where('ma_nd', $nguoiDung->ma_nd)
+            ->where('role', 'assistant')
+            ->latest('ma_tn')
+            ->first();
+
+        $this->assertNotNull($tinNhan);
+        $this->assertStringContainsString('Vitamin A 5000 IU', $tinNhan->content);
+        $this->assertStringNotContainsString('Zinc 50mg', $tinNhan->content);
+        $this->assertStringContainsString('chưa thấy sản phẩm nào khớp trong kho', $tinNhan->content);
+    }
+
+    public function test_tai_anh_chatbot_tra_loi_cau_hoi_gui_kem_anh(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+        config()->set('chatbot.ai.image_answer', true);
+
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Vitamin và khoáng chất']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Zinc 50mg',
+            'thanh_phan' => 'Zinc sulfate 50mg',
+            'cach_dung' => 'Bổ sung kẽm',
+            'so_luong_ton' => 320,
+            'ngay_het_han' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '{"description":"Hộp Vitamin A 5000 IU của Mekophar, 10 viên nang cứng","products":[{"name":"Vitamin A 5000 IU","dosage":"5000 IU","quantity":1,"active_ingredients":["Retinol"],"uses":["Bổ sung vitamin A"],"visible_text":"Vitamin A 5000 IU Mekophar"}]}',
+                        ],
+                    ]],
+                ])
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Dạ, ảnh anh/chị gửi là Vitamin A 5000 IU của Mekophar, thường dùng để bổ sung vitamin A. Hiện sản phẩm này chưa có trong kho của nhà thuốc ạ.',
+                        ],
+                    ]],
+                ]),
+        ]);
+
+        $response = $this
+            ->actingAs($nguoiDung)
+            ->postJson('/api/chatbot/upload-image', [
+                'type' => 'prescription',
+                'message' => 'đây là thuốc gì?',
+                'image' => UploadedFile::fake()->image('vitamin-a.jpg', 600, 600),
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('show_disclaimer', true);
+
+        $this->assertStringContainsString('Vitamin A 5000 IU của Mekophar', $response->json('response'));
+
+        $tinNhan = TinNhanChat::where('ma_nd', $nguoiDung->ma_nd)
+            ->where('role', 'assistant')
+            ->latest('ma_tn')
+            ->first();
+
+        $this->assertNotNull($tinNhan);
+        $this->assertStringContainsString('bổ sung vitamin A', $tinNhan->content);
+        $this->assertTrue((bool) $tinNhan->show_disclaimer);
+        $this->assertTrue((bool) ($tinNhan->metadata['debug']['image_answer_used_ai'] ?? false));
+    }
+
+    public function test_tai_anh_chatbot_dung_tom_tat_du_phong_khi_buoc_tra_loi_loi(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+        config()->set('chatbot.ai.image_answer', true);
+
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '{"description":"Hộp Vitamin A 5000 IU","products":[{"name":"Vitamin A 5000 IU","dosage":"5000 IU","quantity":1}]}',
+                        ],
+                    ]],
+                ])
+                ->push(['error' => ['message' => 'upstream error']], 502),
+        ]);
+
+        $response = $this
+            ->actingAs($nguoiDung)
+            ->postJson('/api/chatbot/upload-image', [
+                'type' => 'prescription',
+                'message' => 'đây là thuốc gì?',
+                'image' => UploadedFile::fake()->image('vitamin-a.jpg', 600, 600),
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('recognized_products.0.matched', false);
+
+        $this->assertStringContainsString('Vitamin A 5000 IU', $response->json('response'));
+        $this->assertStringContainsString('chưa thấy sản phẩm nào khớp trong kho', $response->json('response'));
+    }
+
+    public function test_tai_anh_chatbot_bao_loi_ro_rang_khi_model_khong_ho_tro_vision(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'text-only-model');
+
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'error' => [
+                    'message' => 'This model does not support image input',
+                ],
+            ], 400),
+        ]);
+
+        $response = $this
+            ->actingAs($nguoiDung)
+            ->postJson('/api/chatbot/upload-image', [
+                'type' => 'prescription',
+                'image' => UploadedFile::fake()->image('label.jpg', 600, 400),
+            ]);
+
+        $response->assertStatus(400)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('debug.vision_supported', false)
+            ->assertJsonPath('debug.provider_error_type', 'vision_not_supported');
+
+        $this->assertStringContainsString('chưa hỗ trợ đọc ảnh', $response->json('error'));
+
+        $anhChatbot = AnhChatbot::where('ma_nd', $nguoiDung->ma_nd)->latest('ma_anh')->first();
+        $this->assertNotNull($anhChatbot);
+        $this->assertStringContainsString('vision_not_supported', (string) $anhChatbot->analysis_result);
+    }
+
+    public function test_tai_anh_hoa_don_chatbot_dung_payload_responses_vision(): void
+    {
+        config()->set('chatbot.ai.mode', 'responses');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Giảm đau']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Paracetamol 500mg',
+            'so_luong_ton' => 20,
+            'ngay_het_han' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/responses' => Http::response([
+                'output_text' => '{"description":"Hoa don co Paracetamol 500mg","products":[{"name":"Paracetamol 500mg","quantity":2,"price":10000}]}',
+            ]),
+        ]);
+
+        $response = $this
+            ->actingAs($nguoiDung)
+            ->postJson('/api/chatbot/upload-image', [
+                'type' => 'receipt',
+                'image' => UploadedFile::fake()->image('receipt.png', 600, 400),
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('recognized_products.0.matched', true)
+            ->assertJsonPath('recognized_products.0.product.name', 'Paracetamol 500mg');
+
+        Http::assertSent(function ($request): bool {
+            $payload = $request->data();
+            $content = $payload['input'][0]['content'] ?? [];
+
+            return $request->url() === 'http://localhost:55597/v1/responses'
+                && ($content[1]['type'] ?? null) === 'input_image'
+                && str_starts_with($content[1]['image_url'] ?? '', 'data:image/jpeg;base64,');
+        });
+    }
+
+    public function test_lich_su_chatbot_khong_lo_session_id_rong(): void
+    {
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+
+        $response = $this
+            ->actingAs($nguoiDung)
+            ->withSession(['chat_session_id' => (string) Str::uuid()])
+            ->getJson('/api/chatbot/history');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('count', 0)
+            ->assertJsonPath('session_id', null);
+    }
+
+    public function test_tin_nhan_chatbot_that_bai_truy_vet_duoc_theo_session_id(): void
+    {
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+
+        $this->mock(ChatbotService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('processMessage')
+                ->once()
+                ->andThrow(new \RuntimeException('AI provider failed'));
+        });
+
+        $response = $this->actingAs($nguoiDung)->postJson('/api/chatbot/message', [
+            'message' => 'Chatbot đang lỗi à?',
+        ]);
+
+        $response->assertStatus(500)
+            ->assertJsonStructure(['session_id']);
+
+        $sessionId = $response->json('session_id');
+
+        $this->assertTrue(Str::isUuid($sessionId));
+        $this->assertDatabaseHas('tin_nhan_chats', [
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'user',
+            'content' => 'Chatbot đang lỗi à?',
+        ]);
+        $this->assertDatabaseHas('tin_nhan_chats', [
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'system',
+            'content' => 'Không thể xử lý tin nhắn do lỗi hệ thống.',
+        ]);
+    }
+
+    public function test_quan_tri_vien_tim_va_doc_duoc_phien_chat(): void
+    {
+        config()->set('chatbot.ai.model', 'vision-model');
+
+        $admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator',
+            'trang_thai' => 'active',
+        ]);
+        $nguoiDung = NguoiDung::factory()->create(['ho_ten' => 'Nguyễn Văn An',
+            'email' => 'nguyenvanan@example.com',
+            'vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $sessionId = (string) Str::uuid();
+        $displayId = 'CHAT-' . strtoupper(substr($sessionId, 0, 8));
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'user',
+            'content' => 'Tôi bị ho',
+        ]);
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'user',
+            'content' => 'Thuốc trong ảnh này là gì?',
+            'metadata' => [
+                'image_upload' => [
+                    'type' => 'prescription',
+                    'status' => 'processed',
+                ],
+            ],
+        ]);
+
+        $imagePath = 'chatbot-uploads/admin-session-test.jpg';
+        Storage::disk('local')->put($imagePath, 'fake image bytes');
+
+        $anhChatbot = AnhChatbot::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'filename' => 'admin-session-test.jpg',
+            'original_name' => 'blackmores-bio-c.jpg',
+            'image_path' => $imagePath,
+            'file_path' => $imagePath,
+            'file_size' => 15360,
+            'mime_type' => 'image/jpeg',
+            'image_type' => 'prescription',
+            'ocr_text' => 'Lọ viên uống Blackmores Bio C 1000mg, 31 tablets',
+            'recognized_products' => [
+                [
+                    'matched' => true,
+                    'parsed_name' => 'Blackmores Bio C',
+                    'product' => [
+                        'id' => 22,
+                        'name' => 'Vitamin C 1000mg',
+                        'stock_quantity' => 50,
+                    ],
+                    'dosage' => '1000mg',
+                    'confidence' => 0.82,
+                ],
+            ],
+            'processed_at' => now(),
+        ]);
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => 'Anh/chị nên mô tả thêm triệu chứng.',
+            'products' => [
+                [
+                    'matched' => true,
+                    'parsed_name' => 'Blackmores Bio C',
+                    'product' => [
+                        'id' => 22,
+                        'name' => 'Vitamin C 1000mg',
+                        'stock_quantity' => 50,
+                    ],
+                    'dosage' => '1000mg',
+                    'confidence' => 0.82,
+                ],
+            ],
+            'show_disclaimer' => true,
+            'metadata' => [
+                'disclaimer' => 'Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.',
+                'response_type' => 'image_product_follow_up',
+                'debug' => [
+                    'ai_provider_used' => true,
+                    'ai_provider_mode' => 'chat_completions',
+                    'ai_provider_model' => 'vision-model',
+                ],
+            ],
+        ]);
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'user',
+            'content' => 'Thuốc này uống sau ăn được không?',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.phien-chat.index', ['q' => $displayId]))
+            ->assertOk()
+            ->assertSee($displayId)
+            ->assertSee('Nguyễn Văn An');
+
+        $this->actingAs($admin)
+            ->get(route('admin.phien-chat.show', $sessionId))
+            ->assertOk()
+            ->assertSee($displayId)
+            ->assertSee('Tôi bị ho')
+            ->assertSee('Anh/chị nên mô tả thêm triệu chứng.')
+            ->assertSee('Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.')
+            ->assertSee(route('admin.phien-chat.anh.show', ['sessionId' => $sessionId, 'image' => $anhChatbot->ma_anh]), false)
+            ->assertSee('Thuốc trong ảnh này là gì?')
+            ->assertSee('Thuốc này uống sau ăn được không?')
+            ->assertSee('Vitamin C 1000mg')
+            ->assertSee('Nhận dạng: Blackmores Bio C')
+            ->assertSee('Model:')
+            ->assertSee('vision-model')
+            ->assertDontSee('Không rõ tên');
+
+        $detailHtml = $this->actingAs($admin)
+            ->get(route('admin.phien-chat.show', $sessionId))
+            ->getContent();
+
+        $this->assertGreaterThanOrEqual(
+            4,
+            substr_count($detailHtml, route('admin.phien-chat.anh.show', ['sessionId' => $sessionId, 'image' => $anhChatbot->ma_anh]))
+        );
+
+        $this->actingAs($admin)
+            ->get(route('admin.phien-chat.anh.show', ['sessionId' => $sessionId, 'image' => $anhChatbot->ma_anh]))
+            ->assertOk()
+            ->assertHeader('content-type', 'image/jpeg');
+    }
+
+    public function test_phien_chat_quan_tri_dung_bo_render_markdown_chung_cho_loi_thoai_tro_ly(): void
+    {
+        $admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator',
+            'trang_thai' => 'active',
+        ]);
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $sessionId = (string) Str::uuid();
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'user',
+            'content' => 'format test',
+        ]);
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => "### Kết quả\n\n1. **Vitamin C**\n2. [Mở sản phẩm](/products/1)\n\nCông thức: \\(1 + \\frac{1}{999} \\approx 1.001\\ldots\\)",
+            'metadata' => [
+                'response_type' => 'general',
+            ],
+        ]);
+
+        $html = $this->actingAs($admin)
+            ->get(route('admin.phien-chat.show', $sessionId))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('window.ChatbotMarkdownRenderer', $html);
+        $this->assertStringContainsString('js-admin-chat-markdown', $html);
+        $this->assertStringContainsString('js-admin-chat-markdown-source', $html);
+        $this->assertStringContainsString('<strong>Vitamin C</strong>', $html);
+        $this->assertStringContainsString('1 + 1/999 ~ 1.001...', $html);
+    }
+
+    public function test_phien_chat_quan_tri_hien_mien_tru_mot_lan_giong_widget_chatbot(): void
+    {
+        $admin = NguoiDung::factory()->create(['vai_tro' => 'Administrator',
+            'trang_thai' => 'active',
+        ]);
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+        $sessionId = (string) Str::uuid();
+        $disclaimer = 'Nội dung do AI tạo ra có thể không chính xác. Vui lòng tham khảo ý kiến dược sĩ hoặc bác sĩ.';
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => 'Tin tư vấn cũ.',
+            'metadata' => ['disclaimer' => $disclaimer],
+            'show_disclaimer' => true,
+            'created_at' => now()->subMinutes(3),
+            'updated_at' => now()->subMinutes(3),
+        ]);
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => 'Tin tư vấn mới nhất.',
+            'metadata' => ['disclaimer' => $disclaimer],
+            'show_disclaimer' => true,
+            'created_at' => now()->subMinutes(2),
+            'updated_at' => now()->subMinutes(2),
+        ]);
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => 'Tin không cần disclaimer.',
+            'show_disclaimer' => false,
+            'created_at' => now()->subMinute(),
+            'updated_at' => now()->subMinute(),
+        ]);
+
+        $html = $this->actingAs($admin)
+            ->get(route('admin.phien-chat.show', $sessionId))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertSame(1, substr_count($html, $disclaimer));
+        $this->assertSame(1, substr_count($html, 'admin-chat-inline-disclaimer'));
+        $this->assertStringNotContainsString('alert alert-warning', $html);
+
+        $latestContentPosition = strpos($html, 'Tin không cần disclaimer.');
+        $disclaimerPosition = strpos($html, $disclaimer);
+
+        $this->assertNotFalse($latestContentPosition);
+        $this->assertNotFalse($disclaimerPosition);
+        $this->assertGreaterThan($latestContentPosition, $disclaimerPosition);
+        $this->assertStringContainsString('Tin tư vấn cũ.', $html);
+        $this->assertStringContainsString('Tin tư vấn mới nhất.', $html);
+    }
+
+    public function test_nguoi_khong_phai_quan_tri_va_khach_vo_danh_khong_truy_cap_duoc_trang_quan_tri_phien_chat(): void
+    {
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User',
+            'trang_thai' => 'active',
+        ]);
+
+        $this->actingAs($nguoiDung)
+            ->get(route('admin.phien-chat.index'))
+            ->assertForbidden();
+
+        auth()->logout();
+
+        $this->get(route('admin.phien-chat.index'))
+            ->assertRedirect(route('login'));
+    }
+
+    /**
+     * Reload path. The widget renders `message.products[].name/price/image_url`, so the
+     * stored shape has to be the same flat one the live turn builds by unwrapping
+     * matchProducts(). Storing the wrapper made every card read undefined and render
+     * "0 đ" with a placeholder icon after a refresh.
+     */
+    public function test_lich_su_tai_anh_tra_san_pham_theo_hinh_dang_widget_render(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'gia' => 8000,
+            'so_luong_ton' => 300,
+            'ngay_het_han' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '{"description":"Hop thuoc Smecta","products":[{"name":"Smecta","quantity":1}]}',
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $upload = $this->actingAs($nguoiDung)->postJson('/api/chatbot/upload-image', [
+            'type' => 'prescription',
+            'image' => UploadedFile::fake()->image('smecta.jpg', 600, 400),
+        ]);
+
+        $upload->assertOk()->assertJsonPath('recognized_products.0.matched', true);
+
+        $history = $this->actingAs($nguoiDung)->getJson('/api/chatbot/history');
+
+        $history->assertOk()->assertJsonPath('success', true);
+
+        $assistant = collect($history->json('messages'))
+            ->last(fn (array $message): bool => $message['role'] === 'assistant' && !empty($message['products']));
+
+        $this->assertNotNull($assistant, 'History has no assistant turn carrying products.');
+
+        $product = $assistant['products'][0];
+
+        $this->assertSame('Smecta', $product['name'] ?? null);
+        $this->assertSame(8000, $product['price'] ?? null);
+        $this->assertSame(300, $product['stock_quantity'] ?? null);
+        $this->assertArrayHasKey('image_url', $product);
+        $this->assertArrayHasKey('id', $product);
+
+        // The wrapper keys must not leak: their presence is what broke the cards.
+        $this->assertArrayNotHasKey('parsed_name', $product);
+        $this->assertArrayNotHasKey('matched', $product);
+        $this->assertArrayNotHasKey('product', $product);
+    }
+
+    /**
+     * The live turn shows the upload from a blob: URL that is revoked seconds later and
+     * cannot survive a reload, so history has to point at the stored bytes instead.
+     */
+    public function test_lich_su_tai_anh_khoi_phuc_anh_nguoi_dung_va_chi_cho_chu_so_huu(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Tiêu hóa']);
+        SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'so_luong_ton' => 300,
+            'ngay_het_han' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '{"description":"Hop thuoc Smecta","products":[{"name":"Smecta","quantity":1}]}',
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $this->actingAs($nguoiDung)
+            ->postJson('/api/chatbot/upload-image', [
+                'type' => 'prescription',
+                'message' => 'Thuốc này là gì?',
+                'image' => UploadedFile::fake()->image('smecta.jpg', 600, 400),
+            ])
+            ->assertOk();
+
+        $history = $this->actingAs($nguoiDung)->getJson('/api/chatbot/history');
+
+        $userTurn = collect($history->json('messages'))
+            ->last(fn (array $message): bool => $message['role'] === 'user');
+
+        $this->assertNotNull($userTurn);
+        $this->assertTrue($userTurn['hasImage'] ?? false, 'User turn lost its image after reload.');
+        $this->assertNotEmpty($userTurn['imageUrl'] ?? null);
+
+        $stored = AnhChatbot::where('ma_nd', $nguoiDung->ma_nd)->latest('ma_anh')->firstOrFail();
+
+        $this->actingAs($nguoiDung)->get($userTurn['imageUrl'])->assertOk();
+
+        $intruder = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+
+        $this->actingAs($intruder)
+            ->get(route('chatbot.anh.show', ['image' => $stored->ma_anh]))
+            ->assertNotFound();
+
+        auth()->logout();
+
+        $this->get(route('chatbot.anh.show', ['image' => $stored->ma_anh]))
+            ->assertRedirect(route('login'));
+    }
+
+    /**
+     * Retention is 24h, so an old session must degrade to a text-only bubble rather
+     * than emit a URL that 404s into a broken-image icon.
+     */
+    public function test_lich_su_bo_url_anh_khi_anh_da_luu_bi_mat(): void
+    {
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $sessionId = (string) Str::uuid();
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'user',
+            'content' => 'Thuốc này là gì?',
+            'metadata' => [
+                'image_upload' => [
+                    'type' => 'prescription',
+                    'status' => 'processed',
+                    // Points at a row the retention command already deleted.
+                    'image_id' => 999999,
+                ],
+            ],
+        ]);
+
+        $history = $this->actingAs($nguoiDung)
+            ->withSession(['chat_session_id' => $sessionId])
+            ->getJson('/api/chatbot/history');
+
+        $userTurn = collect($history->json('messages'))
+            ->last(fn (array $message): bool => $message['role'] === 'user');
+
+        $this->assertFalse($userTurn['hasImage'] ?? false);
+        $this->assertNull($userTurn['imageUrl'] ?? null);
+        $this->assertSame('Thuốc này là gì?', $userTurn['content']);
+    }
+
+    /**
+     * Sessions written before the shape was fixed still hold matchProducts()'s wrapper,
+     * so history has to unwrap on read too — otherwise every pre-existing conversation
+     * keeps rendering "0 đ" with a placeholder icon forever.
+     */
+    public function test_lich_su_chuan_hoa_san_pham_boc_kieu_cu_tu_phien_cu(): void
+    {
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $sessionId = (string) Str::uuid();
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => 'Kho em có sẵn: Smecta.',
+            'products' => [
+                [
+                    'parsed_name' => 'Smecta',
+                    'matched' => true,
+                    'product' => [
+                        'id' => 42,
+                        'name' => 'Smecta',
+                        'price' => 8000,
+                        'stock_quantity' => 300,
+                        'image_url' => 'http://localhost/images/smecta.jpg',
+                    ],
+                    'confidence' => 0.9,
+                ],
+                [
+                    'parsed_name' => 'Không Tồn Tại',
+                    'matched' => false,
+                    'product' => null,
+                    'suggestions' => [],
+                ],
+            ],
+        ]);
+
+        $history = $this->actingAs($nguoiDung)
+            ->withSession(['chat_session_id' => $sessionId])
+            ->getJson('/api/chatbot/history');
+
+        $products = collect($history->json('messages'))
+            ->last(fn (array $message): bool => $message['role'] === 'assistant')['products'];
+
+        // Only the matched row survives, flattened, exactly as the widget expects.
+        $this->assertCount(1, $products);
+        $this->assertSame('Smecta', $products[0]['name']);
+        $this->assertSame(8000, $products[0]['price']);
+        $this->assertSame(300, $products[0]['stock_quantity']);
+        $this->assertArrayNotHasKey('parsed_name', $products[0]);
+    }
+
+    /**
+     * The text path already stores flat rows and they carry no `matched` key, so the
+     * normaliser must pass them through untouched rather than filter them all out.
+     */
+    public function test_lich_su_giu_nguyen_san_pham_tu_duong_van_ban(): void
+    {
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $sessionId = (string) Str::uuid();
+
+        TinNhanChat::create([
+            'ma_nd' => $nguoiDung->ma_nd,
+            'session_id' => $sessionId,
+            'role' => 'assistant',
+            'content' => 'Danh mục tiêu hóa có các sản phẩm sau.',
+            'products' => [
+                [
+                    'id' => 7,
+                    'name' => 'Smecta',
+                    'price' => 8000,
+                    'stock_quantity' => 300,
+                    'image_url' => null,
+                    'url' => 'http://localhost/products/7',
+                ],
+            ],
+        ]);
+
+        $products = collect(
+            $this->actingAs($nguoiDung)
+                ->withSession(['chat_session_id' => $sessionId])
+                ->getJson('/api/chatbot/history')
+                ->json('messages')
+        )->last(fn (array $message): bool => $message['role'] === 'assistant')['products'];
+
+        $this->assertCount(1, $products);
+        $this->assertSame('Smecta', $products[0]['name']);
+        $this->assertSame('http://localhost/products/7', $products[0]['url']);
+    }
+
+    /**
+     * The image reply must carry the same product block the text path renders, so a
+     * "Mở sản phẩm" button appears instead of a raw URL.
+     *
+     * Two stacked defects produced the raw link: the repair regex skipped URLs the model
+     * had wrapped in plain parens — `(?!\))` cannot tell `(url)` from `[x](url)` — and
+     * even when it did fire it emitted the label "Xem chi tiết <name>", which the
+     * renderer's exact-match button test never recognises.
+     */
+    public function test_tra_loi_anh_render_khoi_san_pham_chung_thay_vi_url_tho(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+        config()->set('chatbot.ai.image_answer', true);
+
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
+        $sanPham = SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'cach_dung' => 'Điều trị tiêu chảy.',
+            'so_luong_ton' => 300,
+            'ngay_het_han' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::sequence()
+                ->push(['choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '{"description":"Don thuoc co Smecta","products":[{"name":"Smecta","quantity":1}]}',
+                    ],
+                ]]])
+                // Verbatim shape of the real failure: the model wrapped the URL in plain
+                // parens, which the old repair regex could not touch.
+                ->push(['choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => 'Kho em hiện có: Smecta – 8.000đ, còn 300 (http://localhost/products/'
+                            . $sanPham->ma_sp . ').',
+                    ],
+                ]]]),
+        ]);
+
+        $response = $this->actingAs($nguoiDung)->postJson('/api/chatbot/upload-image', [
+            'type' => 'prescription',
+            'message' => 'đây là thuốc gì?',
+            'image' => UploadedFile::fake()->image('don-thuoc.jpg', 600, 600),
+        ]);
+
+        $response->assertOk()->assertJsonPath('success', true);
+
+        $reply = $response->json('response');
+        $url = route('san-pham.show', $sanPham->ma_sp);
+
+        // Exactly the label the renderer promotes to a button.
+        $this->assertStringContainsString('[Mở sản phẩm](' . $url . ')', $reply);
+        $this->assertStringContainsString('- Tồn kho hiện tại: 300 sản phẩm', $reply);
+        $this->assertStringContainsString('- Giá tham khảo:', $reply);
+
+        // No URL may survive outside a markdown link.
+        $this->assertSame(
+            0,
+            preg_match('/(?<!\]\()' . preg_quote($url, '/') . '/', $reply),
+            'The reply still contains a raw product URL: ' . $reply
+        );
+    }
+
+    /**
+     * Root cause of the raw link: the model was handed product URLs in its prompt. It
+     * cannot format a link it never receives, so the JSON must carry no url field.
+     */
+    public function test_prompt_tra_loi_anh_khong_bao_gio_lo_url_san_pham_cho_model(): void
+    {
+        config()->set('chatbot.ai.mode', 'chat_completions');
+        config()->set('chatbot.ai.base_url', 'http://localhost:55597/v1');
+        config()->set('chatbot.ai.api_key', 'agt_codex_test');
+        config()->set('chatbot.ai.model', 'vision-model');
+        config()->set('chatbot.ai.image_answer', true);
+
+        $nguoiDung = NguoiDung::factory()->create(['vai_tro' => 'User', 'trang_thai' => 'active']);
+        $danhMuc = DanhMuc::factory()->create(['ten' => 'Thuốc tiêu hóa']);
+        $sanPham = SanPham::factory()->create(['ma_dm' => $danhMuc->ma_dm,
+            'ten' => 'Smecta',
+            'so_luong_ton' => 300,
+            'ngay_het_han' => now()->addYear(),
+        ]);
+
+        Http::fake([
+            'http://localhost:55597/v1/chat/completions' => Http::sequence()
+                ->push(['choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '{"description":"Don thuoc co Smecta","products":[{"name":"Smecta","quantity":1}]}',
+                    ],
+                ]]])
+                ->push(['choices' => [[
+                    'message' => ['role' => 'assistant', 'content' => 'Dạ, đây là Smecta ạ.'],
+                ]]]),
+        ]);
+
+        $this->actingAs($nguoiDung)->postJson('/api/chatbot/upload-image', [
+            'type' => 'prescription',
+            'message' => 'đây là thuốc gì?',
+            'image' => UploadedFile::fake()->image('don-thuoc.jpg', 600, 600),
+        ])->assertOk();
+
+        $sanPhamPath = '/products/' . $sanPham->ma_sp;
+
+        // Read decoded data, not the raw body: the JSON payload escapes Vietnamese text
+        // as \uXXXX, so a literal substring search over the body never matches.
+        $answerPrompts = collect(Http::recorded())
+            ->map(fn (array $pair) => $pair[0]->data()['messages'][1]['content'] ?? null)
+            // The vision call sends an array of content parts; the answer call a string.
+            ->filter(fn ($content) => is_string($content) && str_contains($content, 'Kết quả tra cứu'))
+            ->values();
+
+        $this->assertCount(1, $answerPrompts, 'The image answer prompt was never sent.');
+        $this->assertStringNotContainsString($sanPhamPath, $answerPrompts[0]);
+    }
+}

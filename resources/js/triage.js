@@ -89,17 +89,17 @@ function swapStage(html, direction = 'forward') {
  * Put the form into its waiting state.
  *
  * `busy` alone used to change opacity and nothing else, so a customer who pressed
- * "Gửi và tiếp tục" got no signal at all that anything was happening — the spinning
+ * "Gui va tiep tuc" got no signal at all that anything was happening — the spinning
  * they saw was the browser's own progress cursor, which reads as "the machine is
  * slow", not "your answer is being read".
  *
  * `pressed` is the button that was actually clicked. Every submit button is disabled
  * (a second click must not post twice), but only that one spins and swaps its label:
  * marking them all busy would both lie to a screen reader and turn the whole form
- * into a row of identical "Đang xử lý…" labels.
+ * into a row of identical "Dang xu ly…" labels.
  *
  * Back and Skip have no label element — they are short enough that the spinner alone
- * reads as acknowledgement, and swapping "Quay lại" for "Đang xử lý…" would suggest
+ * reads as acknowledgement, and swapping "Quay lai" for "Dang xu ly…" would suggest
  * the wizard is moving forward when it is moving back.
  */
 function setBusy(form, busy, pressed = null) {

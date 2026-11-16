@@ -7,10 +7,10 @@
         </div>
     </div>
 
-    {{-- ponytail: các công tắc này chưa có cột lưu trong DB, nên trạng thái không
-         sống qua lần tải trang. Đánh dấu disabled + nhãn "sắp có" thay vì để chúng
-         trông như đã lưu được — trước đây bật/tắt chỉ ghi console.log.
-         Nâng cấp khi có bảng user_notification_preferences. --}}
+    {{-- ponytail: cac cong tac nay chua co cot luu trong DB, nen trang thai khong
+         song qua lan tai trang. Danh dau disabled + nhan "sap co" thay vi de chung
+         trong nhu da luu duoc — truoc day bat/tat chi ghi console.log.
+         Nang cap khi co bang user_notification_preferences. --}}
     @foreach([
         ['id' => 'orderNotif', 'label' => __('messages.profile.order_notif'), 'desc' => __('messages.profile.order_notif_desc'), 'on' => true],
         ['id' => 'promoNotif', 'label' => __('messages.profile.promo_notif'), 'desc' => __('messages.profile.promo_notif_desc'), 'on' => true],
@@ -45,14 +45,14 @@
         <div class="col-md-6">
             <div class="p-3 rounded-3 bg-emerald-50">
                 <small class="text-gray-500 d-block mb-1">{{ __('messages.profile.role') }}</small>
-                <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-3 py-1">{{ role_text($user->role) }}</span>
+                <span class="badge bg-emerald-100 text-emerald-800 rounded-pill px-3 py-1">{{ role_text($user->vai_tro) }}</span>
             </div>
         </div>
         <div class="col-md-6">
             <div class="p-3 rounded-3 bg-emerald-50">
                 <small class="text-gray-500 d-block mb-1">{{ __('messages.profile.status_label') }}</small>
-                <span class="badge {{ $user->status === 'active' ? 'bg-success' : 'bg-secondary' }} bg-opacity-10 {{ $user->status === 'active' ? 'text-success' : 'text-secondary' }} rounded-pill px-3 py-1">
-                    <i class="bi {{ $user->status === 'active' ? 'bi-check-circle' : 'bi-pause-circle' }} me-1" aria-hidden="true"></i>{{ $user->status === 'active' ? __('messages.auth.status_active') : __('messages.auth.status_inactive') }}
+                <span class="badge {{ $user->trang_thai === 'active' ? 'bg-success' : 'bg-secondary' }} bg-opacity-10 {{ $user->trang_thai === 'active' ? 'text-success' : 'text-secondary' }} rounded-pill px-3 py-1">
+                    <i class="bi {{ $user->trang_thai === 'active' ? 'bi-check-circle' : 'bi-pause-circle' }} me-1" aria-hidden="true"></i>{{ $user->trang_thai === 'active' ? __('messages.auth.status_active') : __('messages.auth.status_inactive') }}
                 </span>
             </div>
         </div>
@@ -85,7 +85,7 @@
         <strong>{{ __('messages.profile.delete_warning_title') }}</strong> {{ __('messages.profile.delete_warning_desc') }}
     </div>
 
-    <form method="POST" action="{{ route('profile.destroy') }}" id="deleteAccountForm">
+    <form method="POST" action="{{ route('ho-so.destroy') }}" id="deleteAccountForm">
         @csrf
         @method('delete')
 

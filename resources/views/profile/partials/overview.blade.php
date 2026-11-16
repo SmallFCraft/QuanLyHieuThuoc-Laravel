@@ -1,20 +1,20 @@
 @php
-    // Mức hoàn thiện hồ sơ tính trên các trường người dùng thực sự điền được.
-    // role/status do hệ thống đặt nên không tính vào đây.
+    // Muc hoan thien ho so tinh tren cac truong nguoi dung thuc su dien duoc.
+    // role/status do he thong dat nen khong tinh vao day.
     $profileFields = [
-        __('messages.profile.name') => filled($user->name),
+        __('messages.profile.name') => filled($user->ho_ten),
         __('messages.profile.email') => filled($user->email),
-        __('messages.profile.phone') => filled($user->phone),
-        __('messages.profile.address') => filled($user->address),
-        __('messages.profile.birth_date') => filled($user->birth_date),
-        __('messages.profile.gender') => filled($user->gender),
-        __('messages.profile.avatar_title') => filled($user->avatar),
+        __('messages.profile.phone') => filled($user->so_dien_thoai),
+        __('messages.profile.address') => filled($user->dia_chi),
+        __('messages.profile.birth_date') => filled($user->ngay_sinh),
+        __('messages.profile.gender') => filled($user->gioi_tinh),
+        __('messages.profile.avatar_title') => filled($user->anh_dai_dien),
     ];
     $filledCount = count(array_filter($profileFields));
     $profilePercent = (int) round($filledCount / max(1, count($profileFields)) * 100);
     $missingFields = array_keys(array_filter($profileFields, fn ($ok) => ! $ok));
 
-    $healthProfile = $user->healthProfile;
+    $healthProfile = $user->hoSoSucKhoe;
     $healthFields = [
         filled($healthProfile?->allergies),
         filled($healthProfile?->chronic_conditions),
@@ -92,15 +92,15 @@
             <ul class="profile-overview-list">
                 @foreach($recentOrders as $order)
                     <li>
-                        <a class="profile-overview-item" href="#order-{{ $order->MaDH }}" data-profile-goto-order="{{ $order->MaDH }}">
+                        <a class="profile-overview-item" href="#order-{{ $order->ma_dh }}" data-profile-goto-order="{{ $order->ma_dh }}">
                             <span class="profile-overview-item__icon"><i class="bi bi-box-seam"></i></span>
                             <span class="profile-overview-item__body">
-                                <span class="profile-overview-item__title">{{ __('messages.profile.order_prefix') }}{{ $order->MaDH }}</span>
+                                <span class="profile-overview-item__title">{{ __('messages.profile.order_prefix') }}{{ $order->ma_dh }}</span>
                                 <span class="profile-overview-item__meta">
-                                    {{ $order->created_at->format('d/m/Y') }} · {{ order_status_text($order->status) }}
+                                    {{ $order->created_at->format('d/m/Y') }} · {{ order_status_text($order->trang_thai) }}
                                 </span>
                             </span>
-                            <span class="profile-overview-item__value">{{ format_currency_vi($order->total_amount) }}</span>
+                            <span class="profile-overview-item__value">{{ format_currency_vi($order->tong_tien) }}</span>
                         </a>
                     </li>
                 @endforeach
@@ -124,7 +124,7 @@
                     <li class="profile-overview-item">
                         <span class="profile-overview-item__icon"><i class="bi bi-capsule"></i></span>
                         <span class="profile-overview-item__body">
-                            <span class="profile-overview-item__title">{{ $reminder->product?->name ?? __('messages.profile.product_not_exist') }}</span>
+                            <span class="profile-overview-item__title">{{ $reminder->sanPham?->ten ?? __('messages.profile.product_not_exist') }}</span>
                             <span class="profile-overview-item__meta">
                                 {{ __('messages.profile.overview_reminder_next') }}:
                                 {{ $reminder->next_remind_at?->format('d/m/Y H:i') ?? '—' }}
@@ -133,7 +133,7 @@
                     </li>
                 @endforeach
             </ul>
-            <a class="btn profile-btn-ghost mt-3" href="{{ route('reminders.index') }}">
+            <a class="btn profile-btn-ghost mt-3" href="{{ route('nhac-uong.index') }}">
                 <i class="bi bi-arrow-right me-1" aria-hidden="true"></i>{{ __('messages.profile.overview_view_reminders') }}
             </a>
         @else
@@ -183,38 +183,38 @@
         </div>
 
         @php
-            // Chỉ 3 dòng: thẻ này nằm cạnh "đơn hàng gần đây" trong lưới 2 cột, dài
-            // hơn thì hai thẻ lệch chiều cao. Danh sách đầy đủ ở tab Yêu thích.
+            // Chi 3 dong: the nay nam canh "don hang gan day" trong luoi 2 cot, dai
+            // hon thi hai the lech chieu cao. Danh sach day du o tab Yeu thich.
             $previewFavorites = $favoriteItems->getCollection()
-                ->map(fn ($favorite) => $favorite->product)
+                ->map(fn ($favorite) => $favorite->sanPham)
                 ->filter()
                 ->take(3);
         @endphp
 
         @if($previewFavorites->isNotEmpty())
             <ul class="profile-overview-list">
-                @foreach($previewFavorites as $product)
+                @foreach($previewFavorites as $sanPham)
                     <li>
-                        <a class="profile-overview-item" href="{{ route('products.show', $product->MaSP) }}">
+                        <a class="profile-overview-item" href="{{ route('san-pham.show', $sanPham->ma_sp) }}">
                             <span class="profile-overview-thumb" data-product-image-container>
                                 <x-product-image
-                                    :src="$product->image_url"
-                                    :alt="$product->name"
+                                    :src="$sanPham->image_url"
+                                    :alt="$sanPham->ten"
                                     class="w-100 h-100 object-fit-cover"
                                     icon-class="text-secondary opacity-25"
                                     icon-size="1.25rem"
                                 />
                             </span>
                             <span class="profile-overview-item__body">
-                                <span class="profile-overview-item__title">{{ $product->name }}</span>
+                                <span class="profile-overview-item__title">{{ $sanPham->ten }}</span>
                                 <span class="profile-overview-item__meta">
-                                    {{ $product->category?->name ?? __('messages.product_category') }}
-                                    @if($product->stock_quantity < 1)
+                                    {{ $sanPham->danhMuc?->ten ?? __('messages.product_category') }}
+                                    @if($sanPham->so_luong_ton < 1)
                                         · <span class="text-danger">{{ __('messages.out_of_stock') }}</span>
                                     @endif
                                 </span>
                             </span>
-                            <span class="profile-overview-item__value">{{ $product->formatted_price }}</span>
+                            <span class="profile-overview-item__value">{{ $sanPham->formatted_price }}</span>
                         </a>
                     </li>
                 @endforeach
@@ -231,7 +231,7 @@
             </a>
         @else
             <p class="profile-overview-empty">{{ __('messages.profile.favorites_empty_desc') }}</p>
-            <a class="btn profile-btn-ghost" href="{{ route('products.index') }}">
+            <a class="btn profile-btn-ghost" href="{{ route('san-pham.index') }}">
                 <i class="bi bi-search me-1" aria-hidden="true"></i>{{ __('messages.profile.shop_now') }}
             </a>
         @endif

@@ -55,7 +55,7 @@ class AiProviderTimeoutOverrideTest extends TestCase
     }
 
     #[DataProvider('modeProvider')]
-    public function test_a_per_call_timeout_reaches_the_http_layer_in_every_mode(string $mode): void
+    public function test_timeout_moi_lan_goi_toi_duoc_tang_http_trong_moi_che_do(string $mode): void
     {
         $this->configureProvider($mode);
 
@@ -65,7 +65,7 @@ class AiProviderTimeoutOverrideTest extends TestCase
         $this->assertSame([8], $service->recordedTimeouts, "Mode {$mode} must honour the override.");
     }
 
-    public function test_without_an_override_the_configured_timeout_is_used(): void
+    public function test_khong_co_ghi_de_thi_dung_timeout_tu_config(): void
     {
         $this->configureProvider('chat_completions');
 
@@ -75,7 +75,7 @@ class AiProviderTimeoutOverrideTest extends TestCase
         $this->assertSame([45], $service->recordedTimeouts);
     }
 
-    public function test_a_zero_or_negative_override_is_clamped_to_one_second(): void
+    public function test_ghi_de_bang_0_hoac_am_bi_kep_ve_1_giay(): void
     {
         $this->configureProvider('chat_completions');
 
@@ -86,7 +86,7 @@ class AiProviderTimeoutOverrideTest extends TestCase
         $this->assertSame([1, 1], $service->recordedTimeouts);
     }
 
-    public function test_the_override_does_not_leak_into_the_next_call(): void
+    public function test_ghi_de_khong_lo_sang_loi_goi_tiep_theo(): void
     {
         $this->configureProvider('chat_completions');
 
@@ -98,7 +98,7 @@ class AiProviderTimeoutOverrideTest extends TestCase
         $this->assertSame([8, 45], $service->recordedTimeouts);
     }
 
-    public function test_vision_calls_are_unaffected_by_the_chat_override(): void
+    public function test_loi_goi_vision_khong_bien_ghi_de_chat(): void
     {
         $this->configureProvider('chat_completions');
 
@@ -116,7 +116,7 @@ class AiProviderTimeoutOverrideTest extends TestCase
      * instead of faking a clock; 2 is the smallest budget that can tell the two
      * behaviours apart, because the 1s Guzzle floor collapses them at 1.
      */
-    public function test_a_per_call_timeout_is_a_budget_for_the_whole_failover_call(): void
+    public function test_timeout_moi_lan_goi_la_ngan_sach_cho_ca_loi_goi_chuyen_du_phong(): void
     {
         $this->configureProvider('chat_completions');
         $this->configureFallbackProvider();
@@ -163,7 +163,7 @@ class AiProviderTimeoutOverrideTest extends TestCase
      * Failover exists for the case where the primary dies fast, and that case must
      * keep working: provider 1 gets essentially the untouched budget.
      */
-    public function test_a_fast_primary_failure_leaves_the_budget_to_the_fallback(): void
+    public function test_nha_cung_cap_chinh_loi_nhanh_tra_ngan_sach_cho_du_phong(): void
     {
         $this->configureProvider('chat_completions');
         $this->configureFallbackProvider();

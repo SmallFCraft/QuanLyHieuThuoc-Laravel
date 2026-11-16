@@ -4,12 +4,12 @@
  * Tập kiểm định cho tìm kiếm bằng giọng nói tiếng Việt.
  *
  * MỤC ĐÍCH
- * Khoá lại hành vi của App\Services\VoiceSearchNormalizer trên đúng những chuỗi mà
+ * Khoá lại hành vi của App\Services\ChuanHoaTimKiemGiongNoi trên đúng những chuỗi mà
  * Chrome Web Speech `vi-VN` thật sự trả về — không phải trên chuỗi lý tưởng. Mỗi ca
  * là một cặp "máy nghe được" ↔ "khách thật sự muốn gì".
  *
  * THƯỚC ĐO — đọc trước khi viết assert
- * "storefrontSearch() trả > 0 sản phẩm" KHÔNG phải thước đo. Product::storefrontSearch()
+ * "storefrontSearch() trả > 0 sản phẩm" KHÔNG phải thước đo. SanPham::storefrontSearch()
  * khớp từng TỪ trong name_folded HOẶC ingredients_folded, nên "ba la bù la" ra 125 sản
  * phẩm và "ê a ê a" ra cả 3.146 sản phẩm. Thước đo dùng được:
  *
@@ -25,7 +25,7 @@
  * Một ca kiểm mà đáp án không tồn tại trong catalog thì luôn đỏ vì lý do sai. Mọi
  * `intended` trong file này đã chạy qua:
  *
- *     Product::notExpired()->storefrontSearch($intended)->count() > 0
+ *     SanPham::notExpired()->storefrontSearch($intended)->count() > 0
  *
  * trên catalog 3.146 sản phẩm / 50 danh mục (đo 2026-09-01). Tên thuốc, thương hiệu
  * và danh mục lấy từ catalog thật; chỉ cách đọc lệch (`said`) là soạn ra.
@@ -38,7 +38,7 @@
  * THÊM CA MỚI
  * 1. Lấy tên/danh mục/thương hiệu THẬT từ catalog rồi bịa cách đọc lệch của nó.
  *    Đừng bịa cả hai đầu.
- * 2. Chạy `php artisan tinker --execute="echo App\Models\Product::notExpired()
+ * 2. Chạy `php artisan tinker --execute="echo App\Models\SanPham::notExpired()
  *    ->storefrontSearch('...')->count();"`. Ra 0 thì đổi `intended`, đừng thêm ca.
  * 3. `alternatives[0]` luôn === `said`. Web Speech trả tối đa 3, tốt nhất trước.
  * 4. `category` phải là một trong: exact, onset-merge, coda-merge, rime-merge,

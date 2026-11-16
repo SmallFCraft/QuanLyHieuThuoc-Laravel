@@ -2,15 +2,15 @@
  * Search Autocomplete Component
  * Provides real-time search suggestions for product search
  *
- * Hai trạng thái, một panel: chưa gõ đủ 2 ký tự thì hiện xu hướng / lịch sử / danh
- * mục / sản phẩm xem nhiều (nguồn là <template id="search-panel-data"> nhúng sẵn
- * trong trang), gõ rồi thì hiện gợi ý từ /api/search/suggestions. Cùng một container
- * cho cả hai, vì hai overlay tranh nhau một ô input sẽ đè lên nhau.
+ * Hai trang thai, mot panel: chua go du 2 ky tu thi hien xu huong / lich su / danh
+ * muc / san pham xem nhieu (nguon la <template id="search-panel-data"> nhung san
+ * trong trang), go roi thi hien goi y tu /api/search/suggestions. Cung mot container
+ * cho ca hai, vi hai overlay tranh nhau mot o input se de len nhau.
  */
 
 import { readHistory, pushHistory, removeHistory, clearHistory, initSearchHistoryCapture, MAX_VISIBLE } from './search-history';
 
-/** Chuỗi giao diện đến từ Blade, không hardcode trong JS. */
+/** Chuoi giao dien den tu Blade, khong hardcode trong JS. */
 function lang(key, fallback = '') {
     return window.PharmacySearchLang?.[key] ?? fallback;
 }
@@ -67,14 +67,14 @@ class SearchAutocomplete {
         document.body.appendChild(this.suggestionsContainer);
         this.positionSuggestions();
 
-        // Nút xoá lịch sử nằm trong panel do JS dựng lại mỗi lần mở, nên bắt sự kiện
-        // ở container thay vì gắn listener cho từng nút.
+        // Nut xoa lich su nam trong panel do JS dung lai moi lan mo, nen bat su kien
+        // o container thay vi gan listener cho tung nut.
         this.suggestionsContainer.addEventListener('click', this.handlePanelClickBound);
 
         window.addEventListener('scroll', this.positionSuggestionsBound, { passive: true });
         window.addEventListener('resize', this.positionSuggestionsBound, { passive: true });
-        // Header thu lại khi cuộn quá 64px (header-scroll.js), làm form.bottom dịch lên
-        // ~4px — panel đang mở phải được đặt lại chứ không lơ lửng lệch chỗ.
+        // Header thu lai khi cuon qua 64px (header-scroll.js), lam form.bottom dich len
+        // ~4px — panel dang mo phai duoc dat lai chu khong lo lung lech cho.
         document.addEventListener('pharmacy:header-state', this.positionSuggestionsBound);
     }
 
@@ -91,18 +91,18 @@ class SearchAutocomplete {
 
         const formRect = form.getBoundingClientRect();
 
-        // Rộng theo ô tìm kiếm, nhưng không hẹp hơn 320px và không tràn viewport: ô nằm
-        // trên hàng header nên ở 375px nó chỉ còn 194px — vừa cho một dòng chữ, không
-        // vừa cho tên thuốc hay hai hàng pill. GUTTER giữ panel không dán vào mép.
+        // Rong theo o tim kiem, nhung khong hep hon 320px va khong tran viewport: o nam
+        // tren hang header nen o 375px no chi con 194px — vua cho mot dong chu, khong
+        // vua cho ten thuoc hay hai hang pill. GUTTER giu panel khong dan vao mep.
         const GUTTER = 12;
         const MIN_WIDTH = 320;
         const available = window.innerWidth - GUTTER * 2;
         const width = Math.min(Math.max(formRect.width, MIN_WIDTH), available);
-        // Neo mép phải của ô rồi kẹp lại: panel mở rộng về bên trái, phía có chỗ.
+        // Neo mep phai cua o roi kep lai: panel mo rong ve ben trai, phia co cho.
         const left = Math.min(Math.max(GUTTER, formRect.right - width), window.innerWidth - GUTTER - width);
 
-        // Dải "nghe được" của voice search chiếm ~40px ngay dưới form khi nó đang
-        // hiện, nên panel phải xuống dưới nó thay vì đè lên.
+        // Dai "nghe duoc" cua voice search chiem ~40px ngay duoi form khi no dang
+        // hien, nen panel phai xuong duoi no thay vi de len.
         const status = document.querySelector('.voice-status[data-visible]');
         const offset = status ? status.getBoundingClientRect().height + 12 : 0;
 
@@ -170,8 +170,8 @@ class SearchAutocomplete {
     }
 
     /**
-     * Xoá một mục hoặc cả lịch sử. Chỉ khối lịch sử được vẽ lại — vẽ lại cả panel sẽ
-     * làm mất vị trí cuộn và nhấp nháy phần xu hướng đứng yên.
+     * Xoa mot muc hoac ca lich su. Chi khoi lich su duoc ve lai — ve lai ca panel se
+     * lam mat vi tri cuon va nhap nhay phan xu huong dung yen.
      */
     handlePanelClick(event) {
         const clear = event.target.closest('[data-history-clear]');
@@ -186,7 +186,7 @@ class SearchAutocomplete {
         const remove = event.target.closest('[data-history-remove]');
 
         if (remove) {
-            // Nút X nằm trong pill là <a>: không chặn thì trang điều hướng luôn.
+            // Nut X nam trong pill la <a>: khong chan thi trang dieu huong luon.
             event.preventDefault();
             event.stopPropagation();
             removeHistory(remove.dataset.historyRemove);
@@ -194,8 +194,8 @@ class SearchAutocomplete {
             return;
         }
 
-        // Bấm một pill xu hướng là điều hướng bằng link, không phải submit form, nên
-        // listener submit ở search-history.js không thấy — ghi lịch sử tại đây.
+        // Bam mot pill xu huong la dieu huong bang link, khong phai submit form, nen
+        // listener submit o search-history.js khong thay — ghi lich su tai day.
         const trending = event.target.closest('[data-search-term]');
 
         if (trending) {
@@ -204,8 +204,8 @@ class SearchAutocomplete {
     }
 
     /**
-     * Panel lúc ô còn trống: lịch sử của khách trước, rồi xu hướng / danh mục / sản
-     * phẩm xem nhiều nhúng sẵn trong trang.
+     * Panel luc o con trong: lich su cua khach truoc, roi xu huong / danh muc / san
+     * pham xem nhieu nhung san trong trang.
      */
     renderPanel() {
         const template = document.getElementById('search-panel-data');
@@ -223,8 +223,8 @@ class SearchAutocomplete {
         }
 
         if (template) {
-            // cloneNode: template dùng lại cho mọi ô tìm kiếm trên trang, nên không
-            // được rút node gốc ra.
+            // cloneNode: template dung lai cho moi o tim kiem tren trang, nen khong
+            // duoc rut node goc ra.
             this.suggestionsContainer.appendChild(template.content.cloneNode(true));
         }
 
@@ -388,8 +388,8 @@ class SearchAutocomplete {
     }
 
     /**
-     * Không có kết quả: nêu rõ từ khoá nào không tìm thấy, rồi hiện lại xu hướng để
-     * khách có đường đi tiếp thay vì một ngõ cụt.
+     * Khong co ket qua: neu ro tu khoa nao khong tim thay, roi hien lai xu huong de
+     * khach co duong di tiep thay vi mot ngo cut.
      */
     renderEmpty(query) {
         const template = document.getElementById('search-panel-data');

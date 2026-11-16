@@ -7,40 +7,40 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Index phiên âm dựng sẵn từ catalog, một dòng mỗi cụm tra cứu được.
+     * Index phien am dung san tu catalog, mot dong moi cum tra cuu duoc.
      *
-     * Là bảng chứ không phải cache vì CACHE_STORE=database: nạp cả index ra rồi
-     * đọc lại mỗi request nghĩa là mỗi lượt voice kéo ~150KB từ bảng `cache`. Một
-     * whereIn trên cột có index đọc vài chục dòng.
+     * La bang chu khong phai cache vi CACHE_STORE=database: nap ca index ra roi
+     * doc lai moi request nghia la moi luot voice keo ~150KB tu bang `cache`. Mot
+     * whereIn tren cot co index doc vai chuc dong.
      *
-     * Dữ liệu ở đây là dẫn xuất — xoá đi rồi chạy `voice:build-phonetics` là dựng
-     * lại được toàn bộ.
+     * Du lieu o day la dan xuat — xoa di roi chay `voice:build-phonetics` la dung
+     * lai duoc toan bo.
      */
     public function up(): void
     {
-        Schema::create('voice_phonetics', function (Blueprint $table) {
+        Schema::create('phien_am_giong_nois', function (Blueprint $table) {
             $table->id();
 
-            // Khoá phiên âm giữ dấu cách giữa các âm tiết: luật so của
-            // VoicePhonetics::within() cần so từng âm tiết, vì một ngưỡng
-            // Levenshtein trên khoá nối liền gộp "vitamin C" với "vitamin D".
-            // Không index riêng: unique (phonetic_key, term_folded) bên dưới đã
-            // phủ leading-prefix, mọi lookup phonetic_key chạy qua nó.
+            // Khoa phien am giu dau cach giua cac am tiet: luat so cua
+            // VoicePhonetics::within() can so tung am tiet, vi mot nguong
+            // Levenshtein tren khoa noi lien gop "vitamin C" voi "vitamin D".
+            // Khong index rieng: unique (phonetic_key, term_folded) ben duoi da
+            // phu leading-prefix, moi lookup phonetic_key chay qua no.
             $this->caseSensitive($table->string('phonetic_key', 191));
 
-            // Hai ký tự đầu của khoá đã bỏ dấu cách. Bộ lọc thô làm trong SQL cho
-            // tầng khớp gần — within() là hàm PHP, không phải vị từ SQL, nên không
-            // có cột này thì phải nạp cả bảng ra PHP mỗi request.
-            // null với cụm dài: tên sản phẩm đầy đủ không bao giờ là ứng viên khớp
-            // GẦN của một câu nói ngắn.
+            // Hai ky tu dau cua khoa da bo dau cach. Bo loc tho lam trong SQL cho
+            // tang khop gan — within() la ham PHP, khong phai vi tu SQL, nen khong
+            // co cot nay thi phai nap ca bang ra PHP moi request.
+            // null voi cum dai: ten san pham day du khong bao gio la ung vien khop
+            // GAN cua mot cau noi ngan.
             $this->caseSensitive($table->string('block_key', 2)->nullable())->index();
 
             $table->string('term', 191);
             $table->string('term_folded', 191);
             $table->enum('kind', ['product', 'category', 'token']);
 
-            // Số sản phẩm chứa cụm này. Chỉ để xếp thứ tự giữa các ứng viên đã hợp
-            // lệ, không để quyết định nhận hay loại.
+            // So san pham chua cum nay. Chi de xep thu tu giua cac ung vien da hop
+            // le, khong de quyet dinh nhan hay loai.
             $table->unsignedInteger('weight')->default(0);
 
             $table->unique(['phonetic_key', 'term_folded']);
@@ -49,18 +49,18 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('voice_phonetics');
+        Schema::dropIfExists('phien_am_giong_nois');
     }
 
     /**
-     * MySQL mặc định utf8mb4_0900_ai_ci — KHÔNG phân biệt hoa/thường. Khoá phiên
-     * âm dùng chữ hoa để mã âm gộp (`S`, `C`, `D`, `N`, `T`, `U`…) bên cạnh chữ
-     * thường của nguyên âm gốc, nên hoa/thường LÀ thông tin: đo được 65 nhóm khoá
-     * bị nhập một khi để mặc định, ví dụ `thUT` ("thuốc") với `thuT` ("thut").
+     * MySQL mac dinh utf8mb4_0900_ai_ci — KHONG phan biet hoa/thuong. Khoa phien
+     * am dung chu hoa de ma am gop (`S`, `C`, `D`, `N`, `T`, `U`…) ben canh chu
+     * thuong cua nguyen am goc, nen hoa/thuong LA thong tin: do duoc 65 nhom khoa
+     * bi nhap mot khi de mac dinh, vi du `thUT` ("thuoc") voi `thuT` ("thut").
      *
-     * SQLite mặc định đã là BINARY và từ chối tên collation của MySQL
-     * ("no such collation sequence"), mà bộ test chạy trên sqlite :memory: —
-     * nên nhánh này bắt buộc, không phải phòng xa.
+     * SQLite mac dinh da la BINARY va tu choi ten collation cua MySQL
+     * ("no such collation sequence"), ma bo test chay tren sqlite :memory: —
+     * nen nhanh nay bat buoc, khong phai phong xa.
      */
     private function caseSensitive(\Illuminate\Database\Schema\ColumnDefinition $column): \Illuminate\Database\Schema\ColumnDefinition
     {

@@ -3,7 +3,7 @@
     $total = (int) ($question['total'] ?? 5);
     $percent = (int) round((($current - 1) / $total) * 100);
 
-    // 5 step names aligned with MedicalTriageService questions & lang/vi/health.php
+    // 5 step names aligned with SangLocYTeService questions & lang/vi/health.php
     $stepNames = [
         1 => __('messages.health.step_1'),
         2 => __('messages.health.step_2'),
