@@ -8,6 +8,7 @@ use App\Models\PhienSangLoc;
 use App\Models\NguoiDung;
 use Database\Seeders\TriThucYTeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 /**
@@ -112,6 +113,86 @@ class TomTatSangLocKhongSanSangTest extends TestCase
             ->assertOk()
             ->assertDontSee(__('messages.health.briefing_unavailable'), false)
             ->assertDontSee('triage-briefing-pending', false);
+    }
+
+    /**
+     * The hosting incident of 2026-11-17: both providers hiccuped exactly twice in a
+     * row, the 2-attempt gate slammed shut forever, and a customer revisiting a day
+     * later got the "unavailable" notice for a session the provider had long since
+     * recovered for. Failed attempts older than a day must age out of the budget, so
+     * the customer's own next visit retries.
+     */
+    public function test_luot_thu_that_bai_da_lau_khong_chiem_ngan_sach_thu_lai(): void
+    {
+        // The retried attempt runs inline (sync queue driver), so its provider result
+        // lands in the same request: a healthy provider writes 'ok'.
+        Http::fake(['*' => Http::response([
+            'choices' => [[
+                'message' => [
+                    'role' => 'assistant',
+                    'function_call' => [
+                        'name' => 'ghi_dien_giai',
+                        'arguments' => json_encode([
+                            'why' => 'Đau đầu nhẹ, mới trong hôm nay, chưa có dấu hiệu cảnh báo.',
+                            'self_care' => ['Nghỉ ngơi nơi yên tĩnh.'],
+                            'watch_for' => ['Sốt cao, nôn nhiều.'],
+                        ], JSON_UNESCAPED_UNICODE),
+                    ],
+                ],
+            ]],
+        ])]);
+
+        $phien = $this->completedSession(['ai_briefing_status' => 'failed']);
+
+        foreach ([2, 1] as $i) {
+            $job = AiJob::create(['uuid' => (string) \Illuminate\Support\Str::uuid(),
+                'ma_nd' => $phien->ma_nd,
+                'kind' => AiJob::KIND_TRIAGE_BRIEFING,
+                'status' => 'done',
+                'payload' => ['ma_sl' => $phien->ma_sl],
+                'result' => ['ai_briefing_status' => 'failed'],
+            ]);
+            AiJob::whereKey($job->getKey())->update(['created_at' => now()->subHours(24 * $i)]);
+        }
+
+        // Budget counts only the last 24h: both old rows age out, the gate reopens and
+        // the page dispatches attempt 3 instead of showing the permanent notice. The
+        // sync queue driver runs it inline, so the attempt lands as a third row; the
+        // column then reflects that attempt's own provider result, not the gate.
+        $this->actingAs($this->nguoiDung)->get(route('sang-loc.ket-qua', $phien->ma_sl));
+
+        $this->assertSame(
+            3,
+            AiJob::where('kind', AiJob::KIND_TRIAGE_BRIEFING)->where('payload->ma_sl', $phien->ma_sl)->count(),
+            'A revisited session whose failures aged out must retry, not stay dead.'
+        );
+        $this->assertNotSame(
+            'failed',
+            $phien->fresh()->ai_briefing_status,
+            'The stale failure must not survive a fresh attempt.'
+        );
+    }
+
+    /** Fresh failures still fill the budget: no retry burn while the provider is down. */
+    public function test_luot_thu_that_bai_con_moi_van_chiem_ngan_sach(): void
+    {
+        $phien = $this->completedSession(['ai_briefing_status' => 'failed']);
+
+        foreach ([1, 2] as $hoursAgo) {
+            $job = AiJob::create(['uuid' => (string) \Illuminate\Support\Str::uuid(),
+                'ma_nd' => $phien->ma_nd,
+                'kind' => AiJob::KIND_TRIAGE_BRIEFING,
+                'status' => 'done',
+                'payload' => ['ma_sl' => $phien->ma_sl],
+                'result' => ['ai_briefing_status' => 'failed'],
+            ]);
+            AiJob::whereKey($job->getKey())->update(['created_at' => now()->subHours($hoursAgo)]);
+        }
+
+        $this->actingAs($this->nguoiDung)->get(route('sang-loc.ket-qua', $phien->ma_sl))
+            ->assertSee(__('messages.health.briefing_unavailable'), false);
+
+        $this->assertSame(2, AiJob::where('kind', AiJob::KIND_TRIAGE_BRIEFING)->where('payload->ma_sl', $phien->ma_sl)->count());
     }
 
     /**

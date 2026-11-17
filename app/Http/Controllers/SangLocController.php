@@ -781,9 +781,13 @@ class SangLocController extends Controller
             return null;
         }
 
+        // Ngân sách thử lại chỉ đếm các lượt trong 24 giờ: provider hỏng đúng lúc
+        // không được khóa phiên vĩnh viễn — attempt cũ già đi, ngân sách tự mở lại
+        // khi chính khách quay lại trang. Trần chi phí: tối đa 2 lượt AI/phiên/ngày.
         $briefingAttempts = AiJob::where('ma_nd', $phien->ma_nd)
             ->where('kind', AiJob::KIND_TRIAGE_BRIEFING)
             ->where('payload->ma_sl', $phien->ma_sl)
+            ->where('created_at', '>=', now()->subDay())
             ->count();
 
         if ($phien->ai_briefing_status !== null && $briefingAttempts >= 2) {
@@ -900,9 +904,11 @@ class SangLocController extends Controller
             return null;
         }
 
+        // Cùng luật 24 giờ với briefing: thất bại cũ già đi, ngân sách tự mở lại.
         $adviceAttempts = AiJob::where('ma_nd', $phien->ma_nd)
             ->where('kind', AiJob::KIND_TRIAGE_ADVICE)
             ->where('payload->ma_sl', $phien->ma_sl)
+            ->where('created_at', '>=', now()->subDay())
             ->count();
 
         if ($phien->ai_status !== null && $adviceAttempts >= 2) {
